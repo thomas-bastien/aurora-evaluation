@@ -19,17 +19,17 @@ export const DashboardHeader = () => {
             </div>
             
             <nav className="hidden md:flex items-center space-x-6">
-              <a href="#" className="text-foreground font-medium hover:text-primary transition-smooth">
+              <a href="/dashboard" className="text-foreground font-medium hover:text-primary transition-smooth">
                 Dashboard
               </a>
-              <a href="#" className="text-muted-foreground hover:text-primary transition-smooth">
-                Evaluations
+              <a href="/sessions" className="text-muted-foreground hover:text-primary transition-smooth">
+                Sessions
               </a>
-              <a href="#" className="text-muted-foreground hover:text-primary transition-smooth">
-                Pitch Sessions
+              <a href="/admin" className="text-muted-foreground hover:text-primary transition-smooth">
+                Admin
               </a>
-              <a href="#" className="text-muted-foreground hover:text-primary transition-smooth">
-                Analytics
+              <a href="/startup/1" className="text-muted-foreground hover:text-primary transition-smooth">
+                Startups
               </a>
             </nav>
           </div>
