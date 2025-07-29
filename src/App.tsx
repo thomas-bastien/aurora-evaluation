@@ -9,6 +9,7 @@ import StartupProfile from "./pages/StartupProfile";
 import VCProfile from "./pages/VCProfile";
 import AdminDashboard from "./pages/AdminDashboard";
 import SessionManagement from "./pages/SessionManagement";
+import EvaluationDashboard from "./pages/EvaluationDashboard";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -26,6 +27,7 @@ const App = () => (
           <Route path="/vc/:id" element={<VCProfile />} />
           <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/sessions" element={<SessionManagement />} />
+          <Route path="/evaluate" element={<EvaluationDashboard />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

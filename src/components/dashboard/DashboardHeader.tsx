@@ -25,6 +25,9 @@ export const DashboardHeader = () => {
               <a href="/sessions" className="text-muted-foreground hover:text-primary transition-smooth">
                 Sessions
               </a>
+              <a href="/evaluate" className="text-muted-foreground hover:text-primary transition-smooth">
+                Evaluate
+              </a>
               <a href="/admin" className="text-muted-foreground hover:text-primary transition-smooth">
                 Admin
               </a>
