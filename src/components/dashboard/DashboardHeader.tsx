@@ -1,7 +1,10 @@
 import { Button } from "@/components/ui/button";
 import { Bell, Search, Settings, User } from "lucide-react";
+import { useUserProfile } from "@/hooks/useUserProfile";
 
 export const DashboardHeader = () => {
+  const { profile } = useUserProfile();
+  
   return (
     <header className="bg-card border-b border-border shadow-soft">
       <div className="max-w-7xl mx-auto px-6 py-4">
@@ -28,9 +31,11 @@ export const DashboardHeader = () => {
               <a href="/evaluate" className="text-muted-foreground hover:text-primary transition-smooth">
                 Evaluate
               </a>
-              <a href="/admin" className="text-muted-foreground hover:text-primary transition-smooth">
-                Admin
-              </a>
+              {profile?.role === 'admin' && (
+                <a href="/admin" className="text-muted-foreground hover:text-primary transition-smooth">
+                  Admin
+                </a>
+              )}
               <a href="/startup/1" className="text-muted-foreground hover:text-primary transition-smooth">
                 Startups
               </a>
