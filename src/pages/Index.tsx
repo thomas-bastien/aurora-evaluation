@@ -25,8 +25,8 @@ const Index = () => {
             
             <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-4">
               <Button size="lg" className="shadow-aurora" asChild>
-                <a href="/dashboard">
-                  Access Dashboard
+                <a href="/auth">
+                  Get Started
                   <ArrowRight className="w-5 h-5 ml-2" />
                 </a>
               </Button>
@@ -124,9 +124,11 @@ const Index = () => {
             <p className="text-lg text-primary-foreground/90 mb-8 max-w-2xl mx-auto">
               Join Aurora's streamlined evaluation platform and eliminate spreadsheets forever.
             </p>
-            <Button variant="secondary" size="lg" className="shadow-strong">
-              Get Started Today
-              <ArrowRight className="w-5 h-5 ml-2" />
+            <Button variant="secondary" size="lg" className="shadow-strong" asChild>
+              <a href="/auth">
+                Get Started Today
+                <ArrowRight className="w-5 h-5 ml-2" />
+              </a>
             </Button>
           </div>
         </div>
