@@ -2,16 +2,21 @@ import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { StatsCard } from "@/components/dashboard/StatsCard";
 import { EvaluationProgress } from "@/components/dashboard/EvaluationProgress";
 import { StartupList } from "@/components/dashboard/StartupList";
+import { useUserProfile } from "@/hooks/useUserProfile";
+import { Button } from "@/components/ui/button";
 import { 
   Building2, 
   Star, 
   TrendingUp, 
   Users, 
   Calendar,
-  BarChart3 
+  BarChart3,
+  Shield
 } from "lucide-react";
 
 const Dashboard = () => {
+  const { profile } = useUserProfile();
+  
   const stats = [
     {
       title: "Total Startups",
@@ -70,12 +75,26 @@ const Dashboard = () => {
       <main className="max-w-7xl mx-auto px-6 py-8">
         {/* Welcome Section */}
         <div className="mb-8">
-          <h2 className="text-3xl font-bold text-foreground mb-2">
-            Welcome back to Aurora Evaluation
-          </h2>
-          <p className="text-lg text-muted-foreground">
-            Manage your startup evaluation pipeline with comprehensive insights and streamlined workflows.
-          </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-3xl font-bold text-foreground mb-2">
+                Welcome back to Aurora Evaluation
+              </h2>
+              <p className="text-lg text-muted-foreground">
+                Manage your startup evaluation pipeline with comprehensive insights and streamlined workflows.
+              </p>
+            </div>
+            {profile?.role === 'admin' && (
+              <Button 
+                variant="outline" 
+                onClick={() => window.location.href = '/admin'}
+                className="flex items-center space-x-2"
+              >
+                <Shield className="w-4 h-4" />
+                <span>Admin View</span>
+              </Button>
+            )}
+          </div>
         </div>
 
         {/* Stats Grid */}
