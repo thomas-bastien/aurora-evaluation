@@ -14,6 +14,90 @@ export type Database = {
   }
   public: {
     Tables: {
+      evaluations: {
+        Row: {
+          created_at: string
+          evaluator_id: string
+          financials_feedback: string | null
+          financials_score: number | null
+          id: string
+          investment_amount: number | null
+          market_feedback: string | null
+          market_score: number | null
+          overall_notes: string | null
+          overall_score: number | null
+          product_feedback: string | null
+          product_score: number | null
+          recommendation: string | null
+          startup_id: string
+          status: string | null
+          team_feedback: string | null
+          team_score: number | null
+          traction_feedback: string | null
+          traction_score: number | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          evaluator_id: string
+          financials_feedback?: string | null
+          financials_score?: number | null
+          id?: string
+          investment_amount?: number | null
+          market_feedback?: string | null
+          market_score?: number | null
+          overall_notes?: string | null
+          overall_score?: number | null
+          product_feedback?: string | null
+          product_score?: number | null
+          recommendation?: string | null
+          startup_id: string
+          status?: string | null
+          team_feedback?: string | null
+          team_score?: number | null
+          traction_feedback?: string | null
+          traction_score?: number | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          evaluator_id?: string
+          financials_feedback?: string | null
+          financials_score?: number | null
+          id?: string
+          investment_amount?: number | null
+          market_feedback?: string | null
+          market_score?: number | null
+          overall_notes?: string | null
+          overall_score?: number | null
+          product_feedback?: string | null
+          product_score?: number | null
+          recommendation?: string | null
+          startup_id?: string
+          status?: string | null
+          team_feedback?: string | null
+          team_score?: number | null
+          traction_feedback?: string | null
+          traction_score?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evaluations_evaluator_id_fkey"
+            columns: ["evaluator_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "evaluations_startup_id_fkey"
+            columns: ["startup_id"]
+            isOneToOne: false
+            referencedRelation: "startups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
@@ -44,12 +128,95 @@ export type Database = {
         }
         Relationships: []
       }
+      startups: {
+        Row: {
+          contact_email: string | null
+          contact_phone: string | null
+          created_at: string
+          created_by: string | null
+          demo_url: string | null
+          description: string | null
+          founded_year: number | null
+          founder_names: string[] | null
+          funding_goal: number | null
+          funding_raised: number | null
+          id: string
+          industry: string | null
+          key_metrics: Json | null
+          location: string | null
+          name: string
+          pitch_deck_url: string | null
+          stage: string | null
+          status: string | null
+          team_size: number | null
+          updated_at: string
+          website: string | null
+        }
+        Insert: {
+          contact_email?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          created_by?: string | null
+          demo_url?: string | null
+          description?: string | null
+          founded_year?: number | null
+          founder_names?: string[] | null
+          funding_goal?: number | null
+          funding_raised?: number | null
+          id?: string
+          industry?: string | null
+          key_metrics?: Json | null
+          location?: string | null
+          name: string
+          pitch_deck_url?: string | null
+          stage?: string | null
+          status?: string | null
+          team_size?: number | null
+          updated_at?: string
+          website?: string | null
+        }
+        Update: {
+          contact_email?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          created_by?: string | null
+          demo_url?: string | null
+          description?: string | null
+          founded_year?: number | null
+          founder_names?: string[] | null
+          funding_goal?: number | null
+          funding_raised?: number | null
+          id?: string
+          industry?: string | null
+          key_metrics?: Json | null
+          location?: string | null
+          name?: string
+          pitch_deck_url?: string | null
+          stage?: string | null
+          status?: string | null
+          team_size?: number | null
+          updated_at?: string
+          website?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "startups_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_current_user_role: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
     }
     Enums: {
       user_role: "vc" | "admin"
