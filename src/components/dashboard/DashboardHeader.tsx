@@ -1,9 +1,15 @@
 import { Button } from "@/components/ui/button";
-import { Bell, Search, Settings, User } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Bell, Search, Settings, User, ChevronDown, Building, Users } from "lucide-react";
 import { useUserProfile } from "@/hooks/useUserProfile";
+import { useNavigate, useLocation } from "react-router-dom";
 
 export const DashboardHeader = () => {
   const { profile } = useUserProfile();
+  const navigate = useNavigate();
+  const location = useLocation();
+  
+  const isActive = (path: string) => location.pathname === path || location.pathname.startsWith(path);
   
   return (
     <header className="bg-card border-b border-border shadow-soft">
@@ -22,23 +28,65 @@ export const DashboardHeader = () => {
             </div>
             
             <nav className="hidden md:flex items-center space-x-6">
-              <a href="/dashboard" className="text-foreground font-medium hover:text-primary transition-smooth">
+              <a 
+                href="/dashboard" 
+                className={`font-medium hover:text-primary transition-smooth ${
+                  isActive('/dashboard') ? 'text-primary' : 'text-muted-foreground'
+                }`}
+              >
                 Dashboard
               </a>
-              <a href="/sessions" className="text-muted-foreground hover:text-primary transition-smooth">
-                Sessions
-              </a>
-              <a href="/evaluate" className="text-muted-foreground hover:text-primary transition-smooth">
+              <a 
+                href="/evaluate" 
+                className={`hover:text-primary transition-smooth ${
+                  isActive('/evaluate') ? 'text-primary' : 'text-muted-foreground'
+                }`}
+              >
                 Evaluate
               </a>
+              <a 
+                href="/sessions" 
+                className={`hover:text-primary transition-smooth ${
+                  isActive('/sessions') ? 'text-primary' : 'text-muted-foreground'
+                }`}
+              >
+                Sessions
+              </a>
+              
+              {/* Ecosystem Dropdown */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button 
+                    className={`flex items-center gap-1 hover:text-primary transition-smooth ${
+                      isActive('/startup') || isActive('/vc') ? 'text-primary' : 'text-muted-foreground'
+                    }`}
+                  >
+                    Ecosystem
+                    <ChevronDown className="w-4 h-4" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="bg-card border border-border shadow-elegant">
+                  <DropdownMenuItem onClick={() => navigate('/startup/1')} className="cursor-pointer">
+                    <Building className="w-4 h-4 mr-2" />
+                    Startups
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate('/vc/1')} className="cursor-pointer">
+                    <Users className="w-4 h-4 mr-2" />
+                    Investors
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              
               {profile?.role === 'admin' && (
-                <a href="/admin" className="text-muted-foreground hover:text-primary transition-smooth">
+                <a 
+                  href="/admin" 
+                  className={`hover:text-primary transition-smooth ${
+                    isActive('/admin') ? 'text-primary' : 'text-muted-foreground'
+                  }`}
+                >
                   Admin
                 </a>
               )}
-              <a href="/startup/1" className="text-muted-foreground hover:text-primary transition-smooth">
-                Startups
-              </a>
             </nav>
           </div>
 
