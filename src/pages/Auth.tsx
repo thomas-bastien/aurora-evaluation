@@ -127,6 +127,21 @@ const Auth = () => {
           </CardHeader>
 
           <CardContent>
+            {/* Test Credentials */}
+            <div className="mb-6 p-4 bg-muted/50 rounded-lg border border-border/50">
+              <h4 className="text-sm font-medium text-foreground mb-2">Test Credentials</h4>
+              <div className="space-y-2 text-xs text-muted-foreground">
+                <div className="flex justify-between">
+                  <span>VC Account:</span>
+                  <span>vc@test.com / password123</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Admin Account:</span>
+                  <span>admin@test.com / password123</span>
+                </div>
+              </div>
+            </div>
+
             <Tabs defaultValue="signin" className="w-full">
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="signin">Sign In</TabsTrigger>
