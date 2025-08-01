@@ -66,11 +66,11 @@ export const DashboardHeader = () => {
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start" className="bg-card border border-border shadow-elegant">
-                  <DropdownMenuItem onClick={() => navigate('/startup/1')} className="cursor-pointer">
+                  <DropdownMenuItem onClick={() => navigate('/startups')} className="cursor-pointer">
                     <Building className="w-4 h-4 mr-2" />
                     Startups
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => navigate('/vc/1')} className="cursor-pointer">
+                  <DropdownMenuItem onClick={() => navigate('/vcs')} className="cursor-pointer">
                     <Users className="w-4 h-4 mr-2" />
                     Investors
                   </DropdownMenuItem>

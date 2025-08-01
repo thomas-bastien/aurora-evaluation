@@ -9,7 +9,9 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import StartupProfile from "./pages/StartupProfile";
+import StartupsList from "./pages/StartupsList";
 import VCProfile from "./pages/VCProfile";
+import VCsList from "./pages/VCsList";
 import AdminDashboard from "./pages/AdminDashboard";
 import SessionManagement from "./pages/SessionManagement";
 import EvaluationDashboard from "./pages/EvaluationDashboard";
@@ -32,9 +34,19 @@ const App = () => (
                 <Dashboard />
               </ProtectedRoute>
             } />
+            <Route path="/startups" element={
+              <ProtectedRoute>
+                <StartupsList />
+              </ProtectedRoute>
+            } />
             <Route path="/startup/:id" element={
               <ProtectedRoute>
                 <StartupProfile />
+              </ProtectedRoute>
+            } />
+            <Route path="/vcs" element={
+              <ProtectedRoute>
+                <VCsList />
               </ProtectedRoute>
             } />
             <Route path="/vc/:id" element={
