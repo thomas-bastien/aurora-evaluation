@@ -98,35 +98,175 @@ export type Database = {
           },
         ]
       }
+      pitch_requests: {
+        Row: {
+          calendly_link: string | null
+          created_at: string
+          id: string
+          meeting_notes: string | null
+          pitch_date: string | null
+          request_date: string | null
+          startup_id: string
+          status: string | null
+          updated_at: string
+          vc_id: string
+        }
+        Insert: {
+          calendly_link?: string | null
+          created_at?: string
+          id?: string
+          meeting_notes?: string | null
+          pitch_date?: string | null
+          request_date?: string | null
+          startup_id: string
+          status?: string | null
+          updated_at?: string
+          vc_id: string
+        }
+        Update: {
+          calendly_link?: string | null
+          created_at?: string
+          id?: string
+          meeting_notes?: string | null
+          pitch_date?: string | null
+          request_date?: string | null
+          startup_id?: string
+          status?: string | null
+          updated_at?: string
+          vc_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pitch_requests_startup_id_fkey"
+            columns: ["startup_id"]
+            isOneToOne: false
+            referencedRelation: "startups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
+          calendly_link: string | null
           created_at: string
+          expertise: string[] | null
           full_name: string | null
           id: string
+          investment_stages: string[] | null
           organization: string | null
           role: Database["public"]["Enums"]["user_role"] | null
           updated_at: string
           user_id: string
         }
         Insert: {
+          calendly_link?: string | null
           created_at?: string
+          expertise?: string[] | null
           full_name?: string | null
           id?: string
+          investment_stages?: string[] | null
           organization?: string | null
           role?: Database["public"]["Enums"]["user_role"] | null
           updated_at?: string
           user_id: string
         }
         Update: {
+          calendly_link?: string | null
           created_at?: string
+          expertise?: string[] | null
           full_name?: string | null
           id?: string
+          investment_stages?: string[] | null
           organization?: string | null
           role?: Database["public"]["Enums"]["user_role"] | null
           updated_at?: string
           user_id?: string
         }
         Relationships: []
+      }
+      sessions: {
+        Row: {
+          avg_score: number | null
+          category: string | null
+          completion_rate: number | null
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          scheduled_date: string | null
+          status: string | null
+          time_slot: string | null
+          updated_at: string
+          vc_participants: number | null
+        }
+        Insert: {
+          avg_score?: number | null
+          category?: string | null
+          completion_rate?: number | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          scheduled_date?: string | null
+          status?: string | null
+          time_slot?: string | null
+          updated_at?: string
+          vc_participants?: number | null
+        }
+        Update: {
+          avg_score?: number | null
+          category?: string | null
+          completion_rate?: number | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          scheduled_date?: string | null
+          status?: string | null
+          time_slot?: string | null
+          updated_at?: string
+          vc_participants?: number | null
+        }
+        Relationships: []
+      }
+      startup_sessions: {
+        Row: {
+          created_at: string
+          id: string
+          order_index: number | null
+          session_id: string
+          startup_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          order_index?: number | null
+          session_id: string
+          startup_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          order_index?: number | null
+          session_id?: string
+          startup_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "startup_sessions_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "startup_sessions_startup_id_fkey"
+            columns: ["startup_id"]
+            isOneToOne: false
+            referencedRelation: "startups"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       startups: {
         Row: {
@@ -205,6 +345,38 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      vc_sessions: {
+        Row: {
+          created_at: string
+          id: string
+          session_id: string
+          status: string | null
+          vc_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          session_id: string
+          status?: string | null
+          vc_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          session_id?: string
+          status?: string | null
+          vc_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vc_sessions_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
           },
         ]
       }
