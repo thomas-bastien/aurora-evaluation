@@ -1,3 +1,5 @@
+import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,57 +13,46 @@ interface Startup {
   fundingRaised: string;
   teamSize: number;
   evaluationScore: number;
-  status: "pending" | "in-review" | "completed" | "selected";
+  status: string;
   lastUpdate: string;
 }
 
 export const StartupList = () => {
-  const startups: Startup[] = [
-    {
-      id: "1",
-      name: "TechFlow AI",
-      category: "AI/ML",
-      stage: "Series A",
-      fundingRaised: "$2.5M",
-      teamSize: 15,
-      evaluationScore: 87,
-      status: "completed",
-      lastUpdate: "2 hours ago"
-    },
-    {
-      id: "2", 
-      name: "GreenEnergy Solutions",
-      category: "CleanTech",
-      stage: "Seed",
-      fundingRaised: "$800K",
-      teamSize: 8,
-      evaluationScore: 82,
-      status: "in-review",
-      lastUpdate: "1 day ago"
-    },
-    {
-      id: "3",
-      name: "HealthTracker Pro",
-      category: "HealthTech",
-      stage: "Pre-Seed",
-      fundingRaised: "$250K",
-      teamSize: 5,
-      evaluationScore: 0,
-      status: "pending",
-      lastUpdate: "3 days ago"
-    },
-    {
-      id: "4",
-      name: "EduVerse Platform",
-      category: "EdTech",
-      stage: "Series A",
-      fundingRaised: "$3.2M",
-      teamSize: 22,
-      evaluationScore: 91,
-      status: "selected",
-      lastUpdate: "5 hours ago"
-    }
-  ];
+  const [startups, setStartups] = useState<Startup[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchStartups = async () => {
+      try {
+        const { data } = await supabase
+          .from('startups')
+          .select('*')
+          .limit(4)
+          .order('created_at', { ascending: false });
+
+        if (data) {
+          const mappedStartups = data.map(startup => ({
+            id: startup.id,
+            name: startup.name,
+            category: startup.industry || 'Unknown',
+            stage: startup.stage || 'Unknown',
+            fundingRaised: startup.funding_raised ? `$${(startup.funding_raised / 1000000).toFixed(1)}M` : 'N/A',
+            teamSize: startup.team_size || 0,
+            evaluationScore: 0, // Will be calculated from evaluations later
+            status: startup.status || 'pending',
+            lastUpdate: new Date(startup.updated_at).toLocaleDateString()
+          }));
+          setStartups(mappedStartups);
+        }
+      } catch (error) {
+        console.error('Error fetching startups:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchStartups();
+  }, []);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -99,7 +90,12 @@ export const StartupList = () => {
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          {startups.map((startup) => (
+          {loading ? (
+            <div className="text-center py-4">Loading startups...</div>
+          ) : startups.length === 0 ? (
+            <div className="text-center py-4">No startups found</div>
+          ) : (
+            startups.map((startup) => (
             <div
               key={startup.id}
               className="flex items-center justify-between p-4 border border-border rounded-lg hover:bg-muted/50 transition-smooth"
@@ -154,7 +150,8 @@ export const StartupList = () => {
                 </Button>
               </div>
             </div>
-          ))}
+            ))
+          )}
         </div>
       </CardContent>
     </Card>

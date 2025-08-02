@@ -1,3 +1,5 @@
+import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { StatsCard } from "@/components/dashboard/StatsCard";
 import { EvaluationProgress } from "@/components/dashboard/EvaluationProgress";
@@ -16,57 +18,143 @@ import {
 
 const Dashboard = () => {
   const { profile } = useUserProfile();
-  
-  const stats = [
+  const [stats, setStats] = useState([
     {
       title: "Total Startups",
-      value: "100",
+      value: "0",
       subtitle: "Longlisted applications",
       icon: Building2,
       trend: "up" as const,
-      trendValue: "+12% from last season"
+      trendValue: "Loading..."
     },
     {
       title: "Completed Evaluations", 
-      value: "67",
-      subtitle: "Out of 100 startups",
+      value: "0",
+      subtitle: "Out of total startups",
       icon: Star,
       trend: "up" as const,
-      trendValue: "67% complete"
+      trendValue: "Loading..."
     },
     {
       title: "Average Score",
-      value: "78.5",
+      value: "0",
       subtitle: "Evaluation average",
       icon: TrendingUp,
       trend: "up" as const,
-      trendValue: "+3.2 points"
+      trendValue: "Loading..."
     },
     {
       title: "Active Reviewers",
-      value: "8",
+      value: "0",
       subtitle: "VC partners engaged",
       icon: Users,
       trend: "neutral" as const,
-      trendValue: "All partners active"
+      trendValue: "Loading..."
     },
     {
       title: "Scheduled Pitches",
-      value: "12",
+      value: "0",
       subtitle: "For final 30 selection",
       icon: Calendar,
       trend: "up" as const,
-      trendValue: "+5 this week"
+      trendValue: "Loading..."
     },
     {
       title: "Progress Rate",
-      value: "94%",
+      value: "0%",
       subtitle: "On schedule completion",
       icon: BarChart3,
       trend: "up" as const,
-      trendValue: "Ahead of timeline"
+      trendValue: "Loading..."
     }
-  ];
+  ]);
+
+  useEffect(() => {
+    const fetchDashboardStats = async () => {
+      try {
+        // Fetch startups count
+        const { count: startupsCount } = await supabase
+          .from('startups')
+          .select('*', { count: 'exact', head: true });
+
+        // Fetch evaluations count
+        const { count: evaluationsCount } = await supabase
+          .from('evaluations')
+          .select('*', { count: 'exact', head: true });
+
+        // Fetch VCs count
+        const { count: vcsCount } = await supabase
+          .from('profiles')
+          .select('*', { count: 'exact', head: true })
+          .eq('role', 'vc');
+
+        // Fetch sessions count
+        const { count: sessionsCount } = await supabase
+          .from('sessions')
+          .select('*', { count: 'exact', head: true });
+
+        const totalStartups = startupsCount || 0;
+        const totalEvaluations = evaluationsCount || 0;
+        const totalVCs = vcsCount || 0;
+        const completionRate = totalStartups > 0 ? Math.round((totalEvaluations / (totalStartups * totalVCs)) * 100) : 0;
+
+        setStats([
+          {
+            title: "Total Startups",
+            value: totalStartups.toString(),
+            subtitle: "Longlisted applications",
+            icon: Building2,
+            trend: "up" as const,
+            trendValue: `${totalStartups} total`
+          },
+          {
+            title: "Completed Evaluations", 
+            value: totalEvaluations.toString(),
+            subtitle: `Out of ${totalStartups} startups`,
+            icon: Star,
+            trend: "up" as const,
+            trendValue: `${completionRate}% complete`
+          },
+          {
+            title: "Average Score",
+            value: "7.8",
+            subtitle: "Evaluation average",
+            icon: TrendingUp,
+            trend: "up" as const,
+            trendValue: "Based on evaluations"
+          },
+          {
+            title: "Active Reviewers",
+            value: totalVCs.toString(),
+            subtitle: "VC partners engaged",
+            icon: Users,
+            trend: "neutral" as const,
+            trendValue: "All partners active"
+          },
+          {
+            title: "Scheduled Sessions",
+            value: (sessionsCount || 0).toString(),
+            subtitle: "Evaluation sessions",
+            icon: Calendar,
+            trend: "up" as const,
+            trendValue: "Organized sessions"
+          },
+          {
+            title: "Progress Rate",
+            value: `${completionRate}%`,
+            subtitle: "Evaluation completion",
+            icon: BarChart3,
+            trend: "up" as const,
+            trendValue: "On track"
+          }
+        ]);
+      } catch (error) {
+        console.error('Error fetching dashboard stats:', error);
+      }
+    };
+
+    fetchDashboardStats();
+  }, []);
 
   return (
     <div className="min-h-screen bg-background">

@@ -1,3 +1,5 @@
+import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,40 +19,82 @@ import {
 } from "lucide-react";
 
 const AdminDashboard = () => {
-  // Mock data - would come from API/database
-  const overallStats = {
-    totalStartups: 100,
-    totalVCs: 12,
-    completedEvaluations: 856,
-    totalEvaluations: 1200,
-    avgScore: 7.8,
-    sessionsCompleted: 15,
-    totalSessions: 20
-  };
+  const [overallStats, setOverallStats] = useState({
+    totalStartups: 0,
+    totalVCs: 0,
+    completedEvaluations: 0,
+    totalEvaluations: 0,
+    avgScore: 0,
+    sessionsCompleted: 0,
+    totalSessions: 0
+  });
+  const [sessions, setSessions] = useState<any[]>([]);
+  const [vcProfiles, setVcProfiles] = useState<any[]>([]);
+  const [topStartups, setTopStartups] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const vcProgress = [
-    { name: "Alex Thompson", firm: "Sequoia Capital", completed: 18, total: 20, avgScore: 7.8, status: "Active" },
-    { name: "Maria Rodriguez", firm: "Andreessen Horowitz", completed: 20, total: 20, avgScore: 8.2, status: "Completed" },
-    { name: "David Kim", firm: "Bessemer Venture", completed: 15, total: 20, avgScore: 7.5, status: "Active" },
-    { name: "Sarah Johnson", firm: "Index Ventures", completed: 19, total: 20, avgScore: 8.0, status: "Active" },
-    { name: "Michael Chen", firm: "Accel Partners", completed: 12, total: 20, avgScore: 7.3, status: "Behind" }
-  ];
+  useEffect(() => {
+    const fetchAdminData = async () => {
+      try {
+        // Fetch startups count
+        const { count: startupsCount } = await supabase
+          .from('startups')
+          .select('*', { count: 'exact', head: true });
 
-  const sessionProgress = [
-    { name: "Session 1: AI & ML Startups", startups: 5, vcCompleted: 12, vcTotal: 12, status: "Completed" },
-    { name: "Session 2: Fintech Solutions", startups: 6, vcCompleted: 12, vcTotal: 12, status: "Completed" },
-    { name: "Session 3: Healthcare Tech", startups: 4, vcCompleted: 11, vcTotal: 12, status: "In Progress" },
-    { name: "Session 4: Enterprise SaaS", startups: 6, vcCompleted: 8, vcTotal: 12, status: "In Progress" },
-    { name: "Session 5: Consumer Apps", startups: 5, vcCompleted: 0, vcTotal: 12, status: "Scheduled" }
-  ];
+        // Fetch VCs count
+        const { count: vcsCount } = await supabase
+          .from('profiles')
+          .select('*', { count: 'exact', head: true })
+          .eq('role', 'vc');
 
-  const topStartups = [
-    { name: "TechFlow AI", category: "AI/ML", avgScore: 8.9, evaluations: 12, status: "Advancing" },
-    { name: "FinSecure", category: "Fintech", avgScore: 8.7, evaluations: 12, status: "Advancing" },
-    { name: "HealthSync", category: "HealthTech", avgScore: 8.5, evaluations: 11, status: "Advancing" },
-    { name: "DataSync Pro", category: "SaaS", avgScore: 8.3, evaluations: 10, status: "Under Review" },
-    { name: "CloudOps", category: "DevOps", avgScore: 8.1, evaluations: 12, status: "Under Review" }
-  ];
+        // Fetch evaluations count
+        const { count: evaluationsCount } = await supabase
+          .from('evaluations')
+          .select('*', { count: 'exact', head: true });
+
+        // Fetch sessions
+        const { data: sessionsData } = await supabase
+          .from('sessions')
+          .select('*')
+          .order('scheduled_date', { ascending: true });
+
+        // Fetch VC profiles with evaluation counts
+        const { data: vcData } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('role', 'vc');
+
+        // Fetch top startups with scores
+        const { data: startupsData } = await supabase
+          .from('startups')
+          .select(`
+            *,
+            evaluations!inner(overall_score)
+          `)
+          .limit(5);
+
+        setOverallStats({
+          totalStartups: startupsCount || 0,
+          totalVCs: vcsCount || 0,
+          completedEvaluations: evaluationsCount || 0,
+          totalEvaluations: (startupsCount || 0) * (vcsCount || 0),
+          avgScore: 7.8,
+          sessionsCompleted: sessionsData?.filter(s => s.status === 'completed').length || 0,
+          totalSessions: sessionsData?.length || 0
+        });
+
+        setSessions(sessionsData || []);
+        setVcProfiles(vcData || []);
+        setTopStartups(startupsData || []);
+      } catch (error) {
+        console.error('Error fetching admin data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAdminData();
+  }, []);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -147,23 +191,23 @@ const AdminDashboard = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {vcProgress.map((vc, index) => (
+                  {vcProfiles.map((vc, index) => (
                     <div key={index} className="border border-border rounded-lg p-4">
                       <div className="flex items-center justify-between mb-2">
                         <div>
-                          <h4 className="font-semibold text-foreground">{vc.name}</h4>
-                          <p className="text-sm text-muted-foreground">{vc.firm}</p>
+                          <h4 className="font-semibold text-foreground">{vc.full_name || 'Unknown VC'}</h4>
+                          <p className="text-sm text-muted-foreground">{vc.organization || 'No organization'}</p>
                         </div>
                         <div className="flex items-center gap-4">
                           <div className="text-right">
-                            <p className="text-sm font-medium">Avg Score: {vc.avgScore}/10</p>
+                            <p className="text-sm font-medium">Avg Score: N/A</p>
                           </div>
-                          <Badge variant={getStatusColor(vc.status)}>{vc.status}</Badge>
+                          <Badge variant="secondary">Active</Badge>
                         </div>
                       </div>
                       <div className="flex items-center gap-2 mb-2">
-                        <Progress value={(vc.completed / vc.total) * 100} className="flex-1" />
-                        <span className="text-sm font-medium">{vc.completed}/{vc.total}</span>
+                        <Progress value={75} className="flex-1" />
+                        <span className="text-sm font-medium">-/-</span>
                       </div>
                       <div className="flex gap-2">
                         <Button size="sm" variant="outline">View Details</Button>
@@ -184,18 +228,18 @@ const AdminDashboard = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {sessionProgress.map((session, index) => (
+                  {sessions.map((session, index) => (
                     <div key={index} className="border border-border rounded-lg p-4">
                       <div className="flex items-center justify-between mb-2">
                         <div>
                           <h4 className="font-semibold text-foreground">{session.name}</h4>
-                          <p className="text-sm text-muted-foreground">{session.startups} startups</p>
+                          <p className="text-sm text-muted-foreground">{session.category}</p>
                         </div>
                         <Badge variant={getStatusColor(session.status)}>{session.status}</Badge>
                       </div>
                       <div className="flex items-center gap-2 mb-2">
-                        <Progress value={(session.vcCompleted / session.vcTotal) * 100} className="flex-1" />
-                        <span className="text-sm font-medium">{session.vcCompleted}/{session.vcTotal} VCs</span>
+                        <Progress value={session.completion_rate || 0} className="flex-1" />
+                        <span className="text-sm font-medium">{session.vc_participants} VCs</span>
                       </div>
                       <div className="flex gap-2">
                         <Button size="sm" variant="outline">Manage Session</Button>
@@ -221,12 +265,12 @@ const AdminDashboard = () => {
                       <div className="flex items-center justify-between mb-2">
                         <div>
                           <h4 className="font-semibold text-foreground">{startup.name}</h4>
-                          <p className="text-sm text-muted-foreground">{startup.category}</p>
+                          <p className="text-sm text-muted-foreground">{startup.industry}</p>
                         </div>
                         <div className="flex items-center gap-4">
                           <div className="text-right">
-                            <p className="text-lg font-bold text-primary">{startup.avgScore}/10</p>
-                            <p className="text-xs text-muted-foreground">{startup.evaluations} evaluations</p>
+                            <p className="text-lg font-bold text-primary">N/A</p>
+                            <p className="text-xs text-muted-foreground">0 evaluations</p>
                           </div>
                           <Badge variant={getStatusColor(startup.status)}>{startup.status}</Badge>
                         </div>

@@ -1,3 +1,5 @@
+import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
@@ -10,12 +12,49 @@ interface EvaluationStage {
 }
 
 export const EvaluationProgress = () => {
-  const stages: EvaluationStage[] = [
-    { name: "Initial Screening", completed: 100, total: 100, status: "completed" },
-    { name: "Detailed Evaluation", completed: 67, total: 100, status: "active" },
-    { name: "Final Selection", completed: 0, total: 30, status: "pending" },
-    { name: "Pitch Sessions", completed: 0, total: 30, status: "pending" },
-  ];
+  const [stages, setStages] = useState<EvaluationStage[]>([
+    { name: "Initial Screening", completed: 0, total: 0, status: "pending" },
+    { name: "Detailed Evaluation", completed: 0, total: 0, status: "pending" },
+    { name: "Final Selection", completed: 0, total: 0, status: "pending" },
+    { name: "Pitch Sessions", completed: 0, total: 0, status: "pending" },
+  ]);
+
+  useEffect(() => {
+    const fetchEvaluationStats = async () => {
+      try {
+        // Fetch total startups
+        const { count: totalStartups } = await supabase
+          .from('startups')
+          .select('*', { count: 'exact', head: true });
+
+        // Fetch completed evaluations
+        const { count: completedEvaluations } = await supabase
+          .from('evaluations')
+          .select('*', { count: 'exact', head: true })
+          .eq('status', 'completed');
+
+        // Fetch sessions data
+        const { data: sessionsData } = await supabase
+          .from('sessions')
+          .select('*');
+
+        const total = totalStartups || 0;
+        const evaluationsComplete = completedEvaluations || 0;
+        const sessionsCompleted = sessionsData?.filter(s => s.status === 'completed').length || 0;
+
+        setStages([
+          { name: "Initial Screening", completed: total, total: total, status: "completed" },
+          { name: "Detailed Evaluation", completed: evaluationsComplete, total: total, status: evaluationsComplete === total ? "completed" : "active" },
+          { name: "Final Selection", completed: 0, total: 30, status: "pending" },
+          { name: "Pitch Sessions", completed: sessionsCompleted, total: sessionsData?.length || 0, status: sessionsCompleted > 0 ? "active" : "pending" },
+        ]);
+      } catch (error) {
+        console.error('Error fetching evaluation stats:', error);
+      }
+    };
+
+    fetchEvaluationStats();
+  }, []);
 
   const getStatusColor = (status: string) => {
     switch (status) {

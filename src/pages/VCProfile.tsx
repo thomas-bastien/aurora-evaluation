@@ -1,4 +1,6 @@
+import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
+import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -8,82 +10,79 @@ import { User, Building, Star, Calendar, MessageSquare, TrendingUp, Clock } from
 
 const VCProfile = () => {
   const { id } = useParams();
+  const [vc, setVc] = useState<any>(null);
+  const [evaluationHistory, setEvaluationHistory] = useState<any[]>([]);
+  const [upcomingSessions, setUpcomingSessions] = useState<any[]>([]);
+  const [meetingRequests, setMeetingRequests] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Mock VC data - would come from API/database
-  const vc = {
-    id: id,
-    name: "Alex Thompson",
-    firm: "Sequoia Capital",
-    role: "Partner",
-    email: "alex.thompson@sequoia.com",
-    expertise: ["AI/ML", "SaaS", "Fintech"],
-    investmentStage: ["Seed", "Series A"],
-    totalEvaluations: 18,
-    avgScore: 7.8,
-    completedSessions: 3,
-    pendingSessions: 1,
-    calendlyLink: "https://calendly.com/alex-thompson"
-  };
+  useEffect(() => {
+    const fetchVCData = async () => {
+      if (!id) return;
 
-  const evaluationHistory = [
-    {
-      startupName: "TechFlow AI",
-      category: "AI/ML",
-      score: 9,
-      date: "2024-01-15",
-      status: "Completed",
-      comments: "Exceptional team with strong technical background."
-    },
-    {
-      startupName: "DataSync Pro",
-      category: "SaaS",
-      score: 7,
-      date: "2024-01-14",
-      status: "Completed",
-      comments: "Good product but needs stronger go-to-market strategy."
-    },
-    {
-      startupName: "FinSecure",
-      category: "Fintech",
-      score: 8,
-      date: "2024-01-13",
-      status: "Completed",
-      comments: "Strong regulatory compliance and security focus."
-    },
-    {
-      startupName: "CloudOps Automation",
-      category: "DevOps",
-      score: 6,
-      date: "2024-01-12",
-      status: "Completed",
-      comments: "Competitive market but good technical execution."
-    }
-  ];
+      try {
+        // Fetch VC profile
+        const { data: vcData } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('user_id', id)
+          .single();
 
-  const upcomingSessions = [
-    {
-      sessionName: "Session 4: Enterprise Software",
-      startupsCount: 6,
-      scheduledDate: "2024-01-20",
-      timeSlot: "2:00 PM - 4:00 PM",
-      status: "Scheduled"
-    }
-  ];
+        // Fetch evaluation history
+        const { data: evaluationsData } = await supabase
+          .from('evaluations')
+          .select(`
+            *,
+            startups(name, industry)
+          `)
+          .eq('evaluator_id', id)
+          .order('created_at', { ascending: false });
 
-  const meetingRequests = [
-    {
-      startupName: "TechFlow AI",
-      requestDate: "2024-01-16",
-      status: "Pending",
-      pitchDate: "TBD"
-    },
-    {
-      startupName: "FinSecure",
-      requestDate: "2024-01-15",
-      status: "Scheduled",
-      pitchDate: "2024-01-25"
-    }
-  ];
+        // Fetch upcoming sessions
+        const { data: sessionsData } = await supabase
+          .from('sessions')
+          .select(`
+            *,
+            vc_sessions!inner(*)
+          `)
+          .eq('vc_sessions.vc_id', id)
+          .eq('status', 'scheduled')
+          .order('scheduled_date', { ascending: true });
+
+        // Fetch meeting requests
+        const { data: meetingsData } = await supabase
+          .from('pitch_requests')
+          .select(`
+            *,
+            startups(name)
+          `)
+          .eq('vc_id', id)
+          .order('created_at', { ascending: false });
+
+        setVc(vcData);
+        setEvaluationHistory(evaluationsData || []);
+        setUpcomingSessions(sessionsData || []);
+        setMeetingRequests(meetingsData || []);
+      } catch (error) {
+        console.error('Error fetching VC data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchVCData();
+  }, [id]);
+
+  if (loading || !vc) {
+    return (
+      <div className="min-h-screen bg-background">
+        <DashboardHeader />
+        <main className="max-w-6xl mx-auto px-6 py-8">
+          <div className="text-center">Loading...</div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -94,16 +93,16 @@ const VCProfile = () => {
         <div className="mb-8">
           <div className="flex items-start justify-between mb-4">
             <div>
-              <h1 className="text-3xl font-bold text-foreground mb-2">{vc.name}</h1>
-              <p className="text-lg text-muted-foreground mb-4">{vc.role} at {vc.firm}</p>
+              <h1 className="text-3xl font-bold text-foreground mb-2">{vc.full_name || 'Unknown VC'}</h1>
+              <p className="text-lg text-muted-foreground mb-4">{vc.role || 'VC Partner'} at {vc.organization || 'Investment Firm'}</p>
               <div className="flex items-center gap-4 mb-4">
-                {vc.expertise.map((area) => (
+                {vc.expertise?.map((area: string) => (
                   <Badge key={area} variant="secondary">{area}</Badge>
-                ))}
+                )) || <Badge variant="outline">No expertise listed</Badge>}
               </div>
             </div>
             <div className="text-right">
-              <div className="text-2xl font-bold text-primary mb-1">{vc.avgScore}/10</div>
+              <div className="text-2xl font-bold text-primary mb-1">N/A</div>
               <div className="text-sm text-muted-foreground">Avg. Score Given</div>
             </div>
           </div>
@@ -116,7 +115,7 @@ const VCProfile = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Total Evaluations</p>
-                  <p className="text-2xl font-bold text-foreground">{vc.totalEvaluations}</p>
+                  <p className="text-2xl font-bold text-foreground">{evaluationHistory.length}</p>
                 </div>
                 <Star className="w-8 h-8 text-primary" />
               </div>
@@ -128,7 +127,7 @@ const VCProfile = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Completed Sessions</p>
-                  <p className="text-2xl font-bold text-foreground">{vc.completedSessions}</p>
+                  <p className="text-2xl font-bold text-foreground">0</p>
                 </div>
                 <Calendar className="w-8 h-8 text-success" />
               </div>
@@ -140,7 +139,7 @@ const VCProfile = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Pending Sessions</p>
-                  <p className="text-2xl font-bold text-foreground">{vc.pendingSessions}</p>
+                  <p className="text-2xl font-bold text-foreground">{upcomingSessions.length}</p>
                 </div>
                 <Clock className="w-8 h-8 text-warning" />
               </div>
@@ -175,21 +174,21 @@ const VCProfile = () => {
                   <CardContent className="pt-6">
                     <div className="flex items-start justify-between mb-4">
                       <div>
-                        <h4 className="font-semibold text-foreground">{evaluation.startupName}</h4>
-                        <p className="text-sm text-muted-foreground">{evaluation.category}</p>
-                        <p className="text-xs text-muted-foreground">{evaluation.date}</p>
+                        <h4 className="font-semibold text-foreground">{evaluation.startups?.name || 'Unknown Startup'}</h4>
+                        <p className="text-sm text-muted-foreground">{evaluation.startups?.industry || 'Unknown Industry'}</p>
+                        <p className="text-xs text-muted-foreground">{new Date(evaluation.created_at).toLocaleDateString()}</p>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Badge variant={evaluation.status === "Completed" ? "default" : "secondary"}>
+                        <Badge variant={evaluation.status === "completed" ? "default" : "secondary"}>
                           {evaluation.status}
                         </Badge>
                         <div className="flex items-center gap-1">
                           <Star className="w-4 h-4 text-primary" />
-                          <span className="font-bold text-primary">{evaluation.score}/10</span>
+                          <span className="font-bold text-primary">{evaluation.overall_score || 'N/A'}/10</span>
                         </div>
                       </div>
                     </div>
-                    <p className="text-sm text-foreground leading-relaxed">{evaluation.comments}</p>
+                    <p className="text-sm text-foreground leading-relaxed">{evaluation.overall_notes || 'No notes provided'}</p>
                   </CardContent>
                 </Card>
               ))}
@@ -204,9 +203,9 @@ const VCProfile = () => {
                   <CardContent className="pt-6">
                     <div className="flex items-start justify-between mb-4">
                       <div>
-                        <h4 className="font-semibold text-foreground">{session.sessionName}</h4>
-                        <p className="text-sm text-muted-foreground">{session.startupsCount} startups to evaluate</p>
-                        <p className="text-sm text-muted-foreground">{session.scheduledDate} • {session.timeSlot}</p>
+                        <h4 className="font-semibold text-foreground">{session.name}</h4>
+                        <p className="text-sm text-muted-foreground">{session.category}</p>
+                        <p className="text-sm text-muted-foreground">{session.scheduled_date} • {session.time_slot}</p>
                       </div>
                       <Badge variant="default">{session.status}</Badge>
                     </div>
@@ -224,10 +223,10 @@ const VCProfile = () => {
                   <CardContent className="pt-6">
                     <div className="flex items-start justify-between mb-4">
                       <div>
-                        <h4 className="font-semibold text-foreground">{request.startupName}</h4>
-                        <p className="text-sm text-muted-foreground">Requested: {request.requestDate}</p>
+                        <h4 className="font-semibold text-foreground">{request.startups?.name || 'Unknown Startup'}</h4>
+                        <p className="text-sm text-muted-foreground">Requested: {new Date(request.created_at).toLocaleDateString()}</p>
                         <p className="text-sm text-muted-foreground">
-                          Pitch Date: {request.pitchDate}
+                          Pitch Date: {request.pitch_date ? new Date(request.pitch_date).toLocaleDateString() : 'TBD'}
                         </p>
                       </div>
                       <Badge 
@@ -264,17 +263,17 @@ const VCProfile = () => {
                   <div>
                     <p className="text-sm font-medium mb-2">Expertise Areas</p>
                     <div className="flex flex-wrap gap-2">
-                      {vc.expertise.map((area) => (
+                      {vc.expertise?.map((area: string) => (
                         <Badge key={area} variant="secondary">{area}</Badge>
-                      ))}
+                      )) || <Badge variant="outline">No expertise listed</Badge>}
                     </div>
                   </div>
                   <div>
                     <p className="text-sm font-medium mb-2">Investment Stages</p>
                     <div className="flex flex-wrap gap-2">
-                      {vc.investmentStage.map((stage) => (
+                      {vc.investment_stages?.map((stage: string) => (
                         <Badge key={stage} variant="outline">{stage}</Badge>
-                      ))}
+                      )) || <Badge variant="outline">No stages listed</Badge>}
                     </div>
                   </div>
                 </CardContent>
@@ -287,7 +286,7 @@ const VCProfile = () => {
                 </CardHeader>
                 <CardContent>
                   <p className="text-sm text-muted-foreground mb-4">
-                    Current Calendly link: {vc.calendlyLink}
+                    Current Calendly link: {vc.calendly_link || 'Not set'}
                   </p>
                   <Button variant="outline" className="w-full">
                     Update Calendly Link

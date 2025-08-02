@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { supabase } from '@/integrations/supabase/client';
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,65 +14,41 @@ import { Calendar, Users, Clock, Play, Pause, Settings, Plus } from "lucide-reac
 
 const SessionManagement = () => {
   const [selectedSession, setSelectedSession] = useState<string | null>(null);
+  const [sessions, setSessions] = useState<any[]>([]);
+  const [vcMembers, setVcMembers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Mock data - would come from API/database
-  const sessions = [
-    {
-      id: "1",
-      name: "Session 1: AI & ML Startups",
-      category: "AI/ML",
-      startups: ["TechFlow AI", "Neural Dynamics", "AI Solutions Pro", "DataMind", "Smart Analytics"],
-      vcParticipants: 12,
-      status: "Completed",
-      scheduledDate: "2024-01-10",
-      timeSlot: "2:00 PM - 4:00 PM",
-      completionRate: 100,
-      avgScore: 8.2
-    },
-    {
-      id: "2", 
-      name: "Session 2: Fintech Solutions",
-      category: "Fintech",
-      startups: ["FinSecure", "PayFlow", "CryptoVault", "BankingNext", "InvestSmart", "TradeTech"],
-      vcParticipants: 12,
-      status: "Completed",
-      scheduledDate: "2024-01-12",
-      timeSlot: "10:00 AM - 12:00 PM",
-      completionRate: 100,
-      avgScore: 7.9
-    },
-    {
-      id: "3",
-      name: "Session 3: Healthcare Technology",
-      category: "HealthTech",
-      startups: ["HealthSync", "MedTech Pro", "CarePlus", "DiagnosticAI"],
-      vcParticipants: 12,
-      status: "In Progress",
-      scheduledDate: "2024-01-15",
-      timeSlot: "3:00 PM - 5:00 PM",
-      completionRate: 75,
-      avgScore: 8.1
-    },
-    {
-      id: "4",
-      name: "Session 4: Enterprise SaaS",
-      category: "SaaS",
-      startups: ["DataSync Pro", "CloudOps", "WorkflowMax", "TeamConnect", "ProjectHub", "SalesForce Next"],
-      vcParticipants: 12,
-      status: "Scheduled",
-      scheduledDate: "2024-01-20",
-      timeSlot: "2:00 PM - 4:00 PM",
-      completionRate: 0,
-      avgScore: 0
-    }
-  ];
+  useEffect(() => {
+    const fetchSessionData = async () => {
+      try {
+        // Fetch sessions with startup counts
+        const { data: sessionsData } = await supabase
+          .from('sessions')
+          .select(`
+            *,
+            startup_sessions(
+              startups(name)
+            )
+          `)
+          .order('scheduled_date', { ascending: true });
 
-  const vcMembers = [
-    { id: "1", name: "Alex Thompson", firm: "Sequoia Capital", specialties: ["AI/ML", "SaaS"] },
-    { id: "2", name: "Maria Rodriguez", firm: "Andreessen Horowitz", specialties: ["Fintech", "Enterprise"] },
-    { id: "3", name: "David Kim", firm: "Bessemer Venture", specialties: ["HealthTech", "AI/ML"] },
-    { id: "4", name: "Sarah Johnson", firm: "Index Ventures", specialties: ["SaaS", "Consumer"] }
-  ];
+        // Fetch VC members
+        const { data: vcData } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('role', 'vc');
+
+        setSessions(sessionsData || []);
+        setVcMembers(vcData || []);
+      } catch (error) {
+        console.error('Error fetching session data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSessionData();
+  }, []);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -173,29 +150,28 @@ const SessionManagement = () => {
                         <div className="flex items-center gap-4 text-sm text-muted-foreground mb-2">
                           <div className="flex items-center gap-1">
                             <Calendar className="w-4 h-4" />
-                            {session.scheduledDate}
+                            {session.scheduled_date}
                           </div>
                           <div className="flex items-center gap-1">
                             <Clock className="w-4 h-4" />
-                            {session.timeSlot}
+                            {session.time_slot}
                           </div>
                           <div className="flex items-center gap-1">
                             <Users className="w-4 h-4" />
-                            {session.vcParticipants} VCs
+                            {session.vc_participants} VCs
                           </div>
                         </div>
                         <p className="text-sm text-muted-foreground">
-                          {session.startups.length} startups: {session.startups.slice(0, 3).join(", ")}
-                          {session.startups.length > 3 && ` +${session.startups.length - 3} more`}
+                          {session.startup_sessions?.length || 0} startups assigned
                         </p>
                       </div>
                       <div className="flex items-center gap-4">
-                        {session.status === "Completed" && (
-                          <div className="text-right">
-                            <div className="text-lg font-bold text-primary">{session.avgScore}/10</div>
-                            <div className="text-xs text-muted-foreground">Avg Score</div>
-                          </div>
-                        )}
+                      {session.status === "completed" && session.avg_score && (
+                        <div className="text-right">
+                          <div className="text-lg font-bold text-primary">{session.avg_score}/10</div>
+                          <div className="text-xs text-muted-foreground">Avg Score</div>
+                        </div>
+                      )}
                         <Badge variant={getStatusColor(session.status)}>{session.status}</Badge>
                       </div>
                     </div>
@@ -204,12 +180,12 @@ const SessionManagement = () => {
                       <div className="flex-1">
                         <div className="flex justify-between text-sm mb-1">
                           <span>Completion Rate</span>
-                          <span>{session.completionRate}%</span>
+                          <span>{session.completion_rate || 0}%</span>
                         </div>
                         <div className="w-full bg-muted rounded-full h-2">
                           <div 
                             className="bg-primary h-2 rounded-full transition-all duration-300" 
-                            style={{ width: `${session.completionRate}%` }}
+                            style={{ width: `${session.completion_rate || 0}%` }}
                           />
                         </div>
                       </div>
@@ -223,13 +199,13 @@ const SessionManagement = () => {
                       >
                         View Details
                       </Button>
-                      {session.status === "Scheduled" && (
+                      {session.status === "scheduled" && (
                         <Button size="sm" className="flex items-center gap-1">
                           <Play className="w-3 h-3" />
                           Start Session
                         </Button>
                       )}
-                      {session.status === "In Progress" && (
+                      {session.status === "in-progress" && (
                         <Button size="sm" variant="outline" className="flex items-center gap-1">
                           <Pause className="w-3 h-3" />
                           Pause Session
@@ -286,13 +262,13 @@ const SessionManagement = () => {
                     <div key={vc.id} className="border border-border rounded-lg p-4">
                       <div className="flex items-center justify-between mb-2">
                         <div>
-                          <h4 className="font-semibold text-foreground">{vc.name}</h4>
-                          <p className="text-sm text-muted-foreground">{vc.firm}</p>
+                          <h4 className="font-semibold text-foreground">{vc.full_name || 'Unknown VC'}</h4>
+                          <p className="text-sm text-muted-foreground">{vc.organization || 'No organization'}</p>
                         </div>
                         <div className="flex gap-2">
-                          {vc.specialties.map((specialty) => (
+                          {vc.expertise?.map((specialty: string) => (
                             <Badge key={specialty} variant="secondary">{specialty}</Badge>
-                          ))}
+                          )) || <Badge variant="outline">No expertise listed</Badge>}
                         </div>
                       </div>
                       <div className="flex gap-2">
