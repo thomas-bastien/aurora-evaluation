@@ -1,11 +1,13 @@
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Bell, Search, Settings, User, ChevronDown, Building, Users } from "lucide-react";
+import { Bell, Search, Settings, User, ChevronDown, Building, Users, LogOut } from "lucide-react";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useNavigate, useLocation } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
 
 export const DashboardHeader = () => {
   const { profile } = useUserProfile();
+  const { signOut } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   
@@ -109,10 +111,24 @@ export const DashboardHeader = () => {
               <Settings className="w-5 h-5" />
             </Button>
             
-            <Button variant="professional" size="sm">
-              <User className="w-4 h-4" />
-              Profile
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="professional" size="sm">
+                  <User className="w-4 h-4" />
+                  Profile
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="bg-card border border-border shadow-elegant">
+                <DropdownMenuItem onClick={() => navigate('/profile')} className="cursor-pointer">
+                  <User className="w-4 h-4 mr-2" />
+                  View Profile
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={signOut} className="cursor-pointer text-destructive">
+                  <LogOut className="w-4 h-4 mr-2" />
+                  Sign Out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       </div>
