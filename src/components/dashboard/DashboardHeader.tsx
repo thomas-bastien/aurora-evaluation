@@ -4,17 +4,17 @@ import { Bell, Search, Settings, User, ChevronDown, Building, Users, LogOut } fr
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-
 export const DashboardHeader = () => {
-  const { profile } = useUserProfile();
-  const { signOut } = useAuth();
+  const {
+    profile
+  } = useUserProfile();
+  const {
+    signOut
+  } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  
   const isActive = (path: string) => location.pathname === path || location.pathname.startsWith(path);
-  
-  return (
-    <header className="bg-card border-b border-border shadow-soft">
+  return <header className="bg-card border-b border-border shadow-soft">
       <div className="max-w-7xl mx-auto px-6 py-4">
         <div className="flex items-center justify-between">
           {/* Logo and Navigation */}
@@ -30,39 +30,20 @@ export const DashboardHeader = () => {
             </div>
             
             <nav className="hidden md:flex items-center space-x-6">
-              <a 
-                href="/dashboard" 
-                className={`font-medium hover:text-primary transition-smooth ${
-                  isActive('/dashboard') ? 'text-primary' : 'text-muted-foreground'
-                }`}
-              >
+              <a href="/dashboard" className={`font-medium hover:text-primary transition-smooth ${isActive('/dashboard') ? 'text-primary' : 'text-muted-foreground'}`}>
                 Dashboard
               </a>
-              <a 
-                href="/evaluate" 
-                className={`hover:text-primary transition-smooth ${
-                  isActive('/evaluate') ? 'text-primary' : 'text-muted-foreground'
-                }`}
-              >
+              <a href="/evaluate" className={`hover:text-primary transition-smooth ${isActive('/evaluate') ? 'text-primary' : 'text-muted-foreground'}`}>
                 Evaluate
               </a>
-              <a 
-                href="/sessions" 
-                className={`hover:text-primary transition-smooth ${
-                  isActive('/sessions') ? 'text-primary' : 'text-muted-foreground'
-                }`}
-              >
+              <a href="/sessions" className={`hover:text-primary transition-smooth ${isActive('/sessions') ? 'text-primary' : 'text-muted-foreground'}`}>
                 Sessions
               </a>
               
               {/* Ecosystem Dropdown */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <button 
-                    className={`flex items-center gap-1 hover:text-primary transition-smooth ${
-                      isActive('/startup') || isActive('/vc') ? 'text-primary' : 'text-muted-foreground'
-                    }`}
-                  >
+                  <button className={`flex items-center gap-1 hover:text-primary transition-smooth ${isActive('/startup') || isActive('/vc') ? 'text-primary' : 'text-muted-foreground'}`}>
                     Ecosystem
                     <ChevronDown className="w-4 h-4" />
                   </button>
@@ -79,16 +60,7 @@ export const DashboardHeader = () => {
                 </DropdownMenuContent>
               </DropdownMenu>
               
-              {profile?.role === 'admin' && (
-                <a 
-                  href="/admin" 
-                  className={`hover:text-primary transition-smooth ${
-                    isActive('/admin') ? 'text-primary' : 'text-muted-foreground'
-                  }`}
-                >
-                  Admin
-                </a>
-              )}
+              {profile?.role === 'admin'}
             </nav>
           </div>
 
@@ -96,11 +68,7 @@ export const DashboardHeader = () => {
           <div className="flex items-center space-x-4">
             <div className="relative hidden lg:block">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-              <input
-                type="text"
-                placeholder="Search startups..."
-                className="w-80 pl-10 pr-4 py-2.5 bg-muted border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-smooth"
-              />
+              <input type="text" placeholder="Search startups..." className="w-80 pl-10 pr-4 py-2.5 bg-muted border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-smooth" />
             </div>
             
             <Button variant="ghost" size="icon">
@@ -132,6 +100,5 @@ export const DashboardHeader = () => {
           </div>
         </div>
       </div>
-    </header>
-  );
+    </header>;
 };
