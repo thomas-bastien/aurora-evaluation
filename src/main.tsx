@@ -1,5 +1,15 @@
+import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App.tsx'
 import './index.css'
+import { reportPerformance } from './utils/performance'
 
-createRoot(document.getElementById("root")!).render(<App />);
+// Initialize performance monitoring
+reportPerformance();
+
+// Performance optimization: Enable concurrent features
+createRoot(document.getElementById("root")!).render(
+  <StrictMode>
+    <App />
+  </StrictMode>
+);

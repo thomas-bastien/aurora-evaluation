@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Bell, Search, Settings, User, ChevronDown, Building, Users, LogOut } from "lucide-react";
+import { Bell, Search, Settings, User, ChevronDown, Building, Users, LogOut } from "@/lib/icons";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";

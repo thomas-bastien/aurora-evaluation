@@ -1,5 +1,6 @@
+import { memo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { LucideIcon } from "lucide-react";
+import { LucideIcon } from "@/lib/icons";
 
 interface StatsCardProps {
   title: string;
@@ -10,7 +11,7 @@ interface StatsCardProps {
   trendValue?: string;
 }
 
-export const StatsCard = ({ 
+export const StatsCard = memo(({ 
   title, 
   value, 
   subtitle, 
@@ -49,4 +50,4 @@ export const StatsCard = ({
       </CardContent>
     </Card>
   );
-};
+});
