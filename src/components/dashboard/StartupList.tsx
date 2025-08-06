@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Star, TrendingUp, Users, DollarSign, Clock } from "lucide-react";
+import { Star, TrendingUp, Users, DollarSign, Clock } from "@/lib/icons";
 
 interface Startup {
   id: string;

@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Star, TrendingUp, Users, Shield, BarChart3, Calendar } from "lucide-react";
+import { ArrowRight, Star, TrendingUp, Users, Shield, BarChart3, Calendar } from "@/lib/icons";
 const Index = () => {
   return <div className="min-h-screen bg-gradient-subtle">
       {/* Hero Section */}
