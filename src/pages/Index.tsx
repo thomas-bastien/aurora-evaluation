@@ -1,9 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Star, TrendingUp, Users, Shield, BarChart3, Calendar } from "lucide-react";
-
 const Index = () => {
-  return (
-    <div className="min-h-screen bg-gradient-subtle">
+  return <div className="min-h-screen bg-gradient-subtle">
       {/* Hero Section */}
       <section className="relative py-20 px-6">
         <div className="max-w-4xl mx-auto text-center">
@@ -18,10 +16,7 @@ const Index = () => {
               <span className="bg-gradient-aurora bg-clip-text text-transparent"> Evaluation Process</span>
             </h1>
             
-            <p className="text-xl text-muted-foreground mb-8 max-w-3xl mx-auto leading-relaxed">
-              Manage the complete evaluation journey from 100 longlisted startups to final pitch sessions. 
-              Centralized scoring, scheduling, and analytics in one powerful platform.
-            </p>
+            <p className="text-xl text-muted-foreground mb-8 max-w-3xl mx-auto leading-relaxed">Manage the complete evaluation journey from 100s of startups to your final investment committee. Centralised scoring, scheduling, and analytics in one AI-driven platform.</p>
             
             <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-4">
               <Button size="lg" className="shadow-aurora" asChild>
@@ -51,7 +46,9 @@ const Index = () => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            <div className="bg-card p-8 rounded-lg shadow-soft hover:shadow-medium transition-smooth animate-fade-in" style={{ animationDelay: "200ms" }}>
+            <div className="bg-card p-8 rounded-lg shadow-soft hover:shadow-medium transition-smooth animate-fade-in" style={{
+            animationDelay: "200ms"
+          }}>
               <div className="w-12 h-12 bg-gradient-primary rounded-lg flex items-center justify-center mb-6">
                 <Star className="w-6 h-6 text-primary-foreground" />
               </div>
@@ -61,7 +58,9 @@ const Index = () => {
               </p>
             </div>
 
-            <div className="bg-card p-8 rounded-lg shadow-soft hover:shadow-medium transition-smooth animate-fade-in" style={{ animationDelay: "300ms" }}>
+            <div className="bg-card p-8 rounded-lg shadow-soft hover:shadow-medium transition-smooth animate-fade-in" style={{
+            animationDelay: "300ms"
+          }}>
               <div className="w-12 h-12 bg-gradient-primary rounded-lg flex items-center justify-center mb-6">
                 <Calendar className="w-6 h-6 text-primary-foreground" />
               </div>
@@ -71,7 +70,9 @@ const Index = () => {
               </p>
             </div>
 
-            <div className="bg-card p-8 rounded-lg shadow-soft hover:shadow-medium transition-smooth animate-fade-in" style={{ animationDelay: "400ms" }}>
+            <div className="bg-card p-8 rounded-lg shadow-soft hover:shadow-medium transition-smooth animate-fade-in" style={{
+            animationDelay: "400ms"
+          }}>
               <div className="w-12 h-12 bg-gradient-primary rounded-lg flex items-center justify-center mb-6">
                 <BarChart3 className="w-6 h-6 text-primary-foreground" />
               </div>
@@ -81,7 +82,9 @@ const Index = () => {
               </p>
             </div>
 
-            <div className="bg-card p-8 rounded-lg shadow-soft hover:shadow-medium transition-smooth animate-fade-in" style={{ animationDelay: "500ms" }}>
+            <div className="bg-card p-8 rounded-lg shadow-soft hover:shadow-medium transition-smooth animate-fade-in" style={{
+            animationDelay: "500ms"
+          }}>
               <div className="w-12 h-12 bg-gradient-primary rounded-lg flex items-center justify-center mb-6">
                 <Users className="w-6 h-6 text-primary-foreground" />
               </div>
@@ -91,7 +94,9 @@ const Index = () => {
               </p>
             </div>
 
-            <div className="bg-card p-8 rounded-lg shadow-soft hover:shadow-medium transition-smooth animate-fade-in" style={{ animationDelay: "600ms" }}>
+            <div className="bg-card p-8 rounded-lg shadow-soft hover:shadow-medium transition-smooth animate-fade-in" style={{
+            animationDelay: "600ms"
+          }}>
               <div className="w-12 h-12 bg-gradient-primary rounded-lg flex items-center justify-center mb-6">
                 <TrendingUp className="w-6 h-6 text-primary-foreground" />
               </div>
@@ -101,7 +106,9 @@ const Index = () => {
               </p>
             </div>
 
-            <div className="bg-card p-8 rounded-lg shadow-soft hover:shadow-medium transition-smooth animate-fade-in" style={{ animationDelay: "700ms" }}>
+            <div className="bg-card p-8 rounded-lg shadow-soft hover:shadow-medium transition-smooth animate-fade-in" style={{
+            animationDelay: "700ms"
+          }}>
               <div className="w-12 h-12 bg-gradient-primary rounded-lg flex items-center justify-center mb-6">
                 <Shield className="w-6 h-6 text-primary-foreground" />
               </div>
@@ -133,8 +140,6 @@ const Index = () => {
           </div>
         </div>
       </section>
-    </div>
-  );
+    </div>;
 };
-
 export default Index;
