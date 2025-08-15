@@ -12,6 +12,7 @@ import StartupProfile from "./pages/StartupProfile";
 import StartupsList from "./pages/StartupsList";
 import VCProfile from "./pages/VCProfile";
 import VCsList from "./pages/VCsList";
+import JurorsList from "./pages/JurorsList";
 import AdminDashboard from "./pages/AdminDashboard";
 import SessionManagement from "./pages/SessionManagement";
 import EvaluationDashboard from "./pages/EvaluationDashboard";
@@ -47,6 +48,11 @@ const App = () => (
             <Route path="/vcs" element={
               <ProtectedRoute>
                 <VCsList />
+              </ProtectedRoute>
+            } />
+            <Route path="/jurors" element={
+              <ProtectedRoute>
+                <JurorsList />
               </ProtectedRoute>
             } />
             <Route path="/vc/:id" element={

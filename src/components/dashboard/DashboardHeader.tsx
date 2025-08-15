@@ -43,7 +43,7 @@ export const DashboardHeader = () => {
               {/* Ecosystem Dropdown */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <button className={`flex items-center gap-1 hover:text-primary transition-smooth ${isActive('/startup') || isActive('/vc') ? 'text-primary' : 'text-muted-foreground'}`}>
+                  <button className={`flex items-center gap-1 hover:text-primary transition-smooth ${isActive('/startup') || isActive('/vc') || isActive('/juror') ? 'text-primary' : 'text-muted-foreground'}`}>
                     Ecosystem
                     <ChevronDown className="w-4 h-4" />
                   </button>
@@ -53,9 +53,9 @@ export const DashboardHeader = () => {
                     <Building className="w-4 h-4 mr-2" />
                     Startups
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => navigate('/vcs')} className="cursor-pointer">
+                  <DropdownMenuItem onClick={() => navigate('/jurors')} className="cursor-pointer">
                     <Users className="w-4 h-4 mr-2" />
-                    Investors
+                    Jury
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
