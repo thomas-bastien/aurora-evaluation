@@ -87,15 +87,15 @@ export default function StartupsList() {
       );
     }
 
-    if (industryFilter) {
+    if (industryFilter && industryFilter !== 'all') {
       filtered = filtered.filter(startup => startup.industry === industryFilter);
     }
 
-    if (stageFilter) {
+    if (stageFilter && stageFilter !== 'all') {
       filtered = filtered.filter(startup => startup.stage === stageFilter);
     }
 
-    if (statusFilter) {
+    if (statusFilter && statusFilter !== 'all') {
       filtered = filtered.filter(startup => startup.status === statusFilter);
     }
 
@@ -334,40 +334,40 @@ export default function StartupsList() {
           </div>
           
           <div className="flex gap-4">
-            <Select value={industryFilter} onValueChange={setIndustryFilter}>
+            <Select value={industryFilter || 'all'} onValueChange={(value) => setIndustryFilter(value === 'all' ? '' : value)}>
               <SelectTrigger className="w-48">
                 <SelectValue placeholder="Filter by industry" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Industries</SelectItem>
+                <SelectItem value="all">All Industries</SelectItem>
                 {industries.map(industry => (
-                  <SelectItem key={industry} value={industry || ''}>{industry}</SelectItem>
+                  <SelectItem key={industry} value={industry || 'unknown'}>{industry}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
 
-            <Select value={stageFilter} onValueChange={setStageFilter}>
+            <Select value={stageFilter || 'all'} onValueChange={(value) => setStageFilter(value === 'all' ? '' : value)}>
               <SelectTrigger className="w-48">
                 <SelectValue placeholder="Filter by stage" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Stages</SelectItem>
+                <SelectItem value="all">All Stages</SelectItem>
                 {stages.map(stage => (
-                  <SelectItem key={stage} value={stage || ''}>
+                  <SelectItem key={stage} value={stage || 'unknown'}>
                     {stage?.charAt(0).toUpperCase() + stage?.slice(1).replace('-', ' ')}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
 
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <Select value={statusFilter || 'all'} onValueChange={(value) => setStatusFilter(value === 'all' ? '' : value)}>
               <SelectTrigger className="w-48">
                 <SelectValue placeholder="Filter by status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Statuses</SelectItem>
+                <SelectItem value="all">All Statuses</SelectItem>
                 {statuses.map(status => (
-                  <SelectItem key={status} value={status || ''}>
+                  <SelectItem key={status} value={status || 'unknown'}>
                     {status?.charAt(0).toUpperCase() + status?.slice(1).replace('-', ' ')}
                   </SelectItem>
                 ))}
