@@ -8,9 +8,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { UserCheck, Building, Users, Plus, Search, Filter } from 'lucide-react';
+import { UserCheck, Building, Users, Plus, Search, Filter, Upload, Download } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
+import { CSVUploadModal } from '@/components/jurors/CSVUploadModal';
+import { DraftModal } from '@/components/jurors/DraftModal';
+import { downloadJurorsCSVTemplate } from '@/utils/jurorsCsvTemplate';
 
 interface Juror {
   id: string;
@@ -27,6 +30,9 @@ export default function JurorsList() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
+  const [csvModalOpen, setCsvModalOpen] = useState(false);
+  const [draftModalOpen, setDraftModalOpen] = useState(false);
+  const [draftData, setDraftData] = useState<Partial<Juror>[]>([]);
   const [inviteForm, setInviteForm] = useState({
     name: '',
     email: '',
@@ -133,6 +139,17 @@ export default function JurorsList() {
     }
   };
 
+  const handleCSVParsed = (data: Partial<Juror>[]) => {
+    setDraftData(data);
+    setDraftModalOpen(true);
+  };
+
+  const handleImportComplete = async () => {
+    // Refresh the jurors list
+    fetchJurors();
+    setDraftData([]);
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
@@ -169,13 +186,22 @@ export default function JurorsList() {
               <h1 className="text-3xl font-bold text-foreground">Jury</h1>
               <p className="text-muted-foreground mt-2">Manage evaluation panel members</p>
             </div>
-            <Dialog open={isInviteDialogOpen} onOpenChange={setIsInviteDialogOpen}>
-              <DialogTrigger asChild>
-                <Button>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Invite Juror
-                </Button>
-              </DialogTrigger>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={downloadJurorsCSVTemplate}>
+                <Download className="h-4 w-4 mr-2" />
+                Download Template
+              </Button>
+              <Button variant="outline" onClick={() => setCsvModalOpen(true)}>
+                <Upload className="h-4 w-4 mr-2" />
+                Upload CSV
+              </Button>
+              <Dialog open={isInviteDialogOpen} onOpenChange={setIsInviteDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Invite Juror
+                  </Button>
+                </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
                   <DialogTitle>Invite New Juror</DialogTitle>
@@ -232,6 +258,7 @@ export default function JurorsList() {
                 </DialogFooter>
               </DialogContent>
             </Dialog>
+            </div>
           </div>
         </div>
 
@@ -310,6 +337,21 @@ export default function JurorsList() {
           </Card>
         )}
       </main>
+
+      {/* CSV Upload Modal */}
+      <CSVUploadModal
+        open={csvModalOpen}
+        onOpenChange={setCsvModalOpen}
+        onDataParsed={handleCSVParsed}
+      />
+      
+      {/* Draft Review Modal */}
+      <DraftModal
+        open={draftModalOpen}
+        onOpenChange={setDraftModalOpen}
+        draftData={draftData}
+        onImportComplete={handleImportComplete}
+      />
     </div>
   );
 }

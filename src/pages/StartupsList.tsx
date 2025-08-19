@@ -444,7 +444,7 @@ export default function StartupsList() {
                   <div className="flex items-center gap-4 text-sm text-muted-foreground">
                     {startup.stage && (
                       <Badge variant="outline" className={getStageColor(startup.stage)}>
-                        {startup.stage}
+                        {startup.stage.charAt(0).toUpperCase() + startup.stage.slice(1).replace('-', ' ')}
                       </Badge>
                     )}
                     {startup.industry && (
