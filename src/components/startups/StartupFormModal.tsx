@@ -6,6 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, X } from 'lucide-react';
+import { normalizeStage } from '@/utils/stageUtils';
 
 interface Startup {
   name: string;
@@ -62,7 +63,11 @@ export function StartupFormModal({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(formData);
+    const normalizedData = {
+      ...formData,
+      stage: normalizeStage(formData.stage)
+    };
+    onSubmit(normalizedData);
     if (mode === 'create') {
       setFormData({ founder_names: [], status: 'pending' });
       setFounderInput('');
@@ -88,7 +93,7 @@ export function StartupFormModal({
   };
 
   const industries = ['Technology', 'Healthcare', 'Finance', 'Education', 'E-commerce', 'SaaS', 'AI/ML', 'Biotech', 'CleanTech', 'Other'];
-  const stages = ['pre-seed', 'seed', 'series-a', 'series-b', 'series-c', 'growth'];
+  const stages = ['Pre-Seed', 'Seed', 'Series A', 'Series B', 'Series C', 'Growth', 'IPO'];
   const statuses = ['pending', 'under-review', 'shortlisted', 'rejected'];
 
   return (
@@ -152,7 +157,7 @@ export function StartupFormModal({
                 <SelectContent>
                   {stages.map(stage => (
                     <SelectItem key={stage} value={stage}>
-                      {stage.charAt(0).toUpperCase() + stage.slice(1).replace('-', ' ')}
+                      {stage}
                     </SelectItem>
                   ))}
                 </SelectContent>

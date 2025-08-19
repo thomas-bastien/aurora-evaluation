@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Upload, FileText } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { normalizeStage } from '@/utils/stageUtils';
 
 interface Startup {
   name: string;
@@ -80,7 +81,7 @@ export function CSVUploadModal({ open, onOpenChange, onDataParsed }: CSVUploadMo
             startup.industry = value;
             break;
           case 'stage':
-            startup.stage = value;
+            startup.stage = normalizeStage(value);
             break;
           case 'location':
             startup.location = value;

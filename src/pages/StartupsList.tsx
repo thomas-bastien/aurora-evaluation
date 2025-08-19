@@ -8,13 +8,15 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Building, MapPin, Users, DollarSign, Calendar, Upload, Plus, Download, Edit, Trash2, Search } from 'lucide-react';
+import { Building, MapPin, Users, DollarSign, Calendar, Upload, Plus, Download, Edit, Trash2, Search, Filter } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CSVUploadModal } from '@/components/startups/CSVUploadModal';
 import { StartupFormModal } from '@/components/startups/StartupFormModal';
 import { DraftModal } from '@/components/startups/DraftModal';
 import { downloadCSVTemplate } from '@/utils/csvTemplate';
 import { useToast } from '@/hooks/use-toast';
+import { getStageColor } from '@/utils/stageUtils';
+import { FilterPanel } from '@/components/common/FilterPanel';
 
 interface Startup {
   id: string;
@@ -47,6 +49,7 @@ export default function StartupsList() {
   const [editingStartup, setEditingStartup] = useState<Startup | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [startupToDelete, setStartupToDelete] = useState<Startup | null>(null);
+  const [filtersOpen, setFiltersOpen] = useState(false);
   
   const { toast } = useToast();
 
@@ -116,14 +119,7 @@ export default function StartupsList() {
     }
   };
 
-  const getStageColor = (stage: string | null) => {
-    switch (stage) {
-      case 'seed': return 'bg-blue-100 text-blue-800';
-      case 'series-a': return 'bg-purple-100 text-purple-800';
-      case 'series-b': return 'bg-indigo-100 text-indigo-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
+  // Remove the old getStageColor function as we're using the one from stageUtils
 
   // Get unique values for filters
   const industries = [...new Set(startups.filter(s => s.industry).map(s => s.industry))];
@@ -331,63 +327,78 @@ export default function StartupsList() {
                 className="pl-10"
               />
             </div>
+            <Button variant="outline" onClick={() => setFiltersOpen(!filtersOpen)}>
+              <Filter className="h-4 w-4 mr-2" />
+              Filters
+            </Button>
           </div>
           
-          <div className="flex gap-4">
-            <Select value={industryFilter || 'all'} onValueChange={(value) => setIndustryFilter(value === 'all' ? '' : value)}>
-              <SelectTrigger className="w-48">
-                <SelectValue placeholder="Filter by industry" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Industries</SelectItem>
-                {industries.map(industry => (
-                  <SelectItem key={industry} value={industry || 'unknown'}>{industry}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <FilterPanel
+            isOpen={filtersOpen}
+            onOpenChange={setFiltersOpen}
+            onClearAll={() => {
+              setSearchTerm('');
+              setIndustryFilter('');
+              setStageFilter('');
+              setStatusFilter('');
+            }}
+            activeFilters={[
+              ...(industryFilter ? [{ label: 'Industry', value: industryFilter, onRemove: () => setIndustryFilter('') }] : []),
+              ...(stageFilter ? [{ label: 'Stage', value: stageFilter, onRemove: () => setStageFilter('') }] : []),
+              ...(statusFilter ? [{ label: 'Status', value: statusFilter, onRemove: () => setStatusFilter('') }] : [])
+            ]}
+          >
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <label className="text-sm font-medium mb-2 block">Industry</label>
+                <Select value={industryFilter || 'all'} onValueChange={(value) => setIndustryFilter(value === 'all' ? '' : value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All Industries" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Industries</SelectItem>
+                    {industries.map(industry => (
+                      <SelectItem key={industry} value={industry || 'unknown'}>{industry}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-            <Select value={stageFilter || 'all'} onValueChange={(value) => setStageFilter(value === 'all' ? '' : value)}>
-              <SelectTrigger className="w-48">
-                <SelectValue placeholder="Filter by stage" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Stages</SelectItem>
-                {stages.map(stage => (
-                  <SelectItem key={stage} value={stage || 'unknown'}>
-                    {stage?.charAt(0).toUpperCase() + stage?.slice(1).replace('-', ' ')}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              <div>
+                <label className="text-sm font-medium mb-2 block">Stage</label>
+                <Select value={stageFilter || 'all'} onValueChange={(value) => setStageFilter(value === 'all' ? '' : value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All Stages" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Stages</SelectItem>
+                    {stages.map(stage => (
+                      <SelectItem key={stage} value={stage || 'unknown'}>
+                        {stage}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-            <Select value={statusFilter || 'all'} onValueChange={(value) => setStatusFilter(value === 'all' ? '' : value)}>
-              <SelectTrigger className="w-48">
-                <SelectValue placeholder="Filter by status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
-                {statuses.map(status => (
-                  <SelectItem key={status} value={status || 'unknown'}>
-                    {status?.charAt(0).toUpperCase() + status?.slice(1).replace('-', ' ')}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            {(searchTerm || industryFilter || stageFilter || statusFilter) && (
-              <Button 
-                variant="outline" 
-                onClick={() => {
-                  setSearchTerm('');
-                  setIndustryFilter('');
-                  setStageFilter('');
-                  setStatusFilter('');
-                }}
-              >
-                Clear Filters
-              </Button>
-            )}
-          </div>
+              <div>
+                <label className="text-sm font-medium mb-2 block">Status</label>
+                <Select value={statusFilter || 'all'} onValueChange={(value) => setStatusFilter(value === 'all' ? '' : value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All Statuses" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Statuses</SelectItem>
+                    {statuses.map(status => (
+                      <SelectItem key={status} value={status || 'unknown'}>
+                        {status?.charAt(0).toUpperCase() + status?.slice(1).replace('-', ' ')}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </FilterPanel>
         </div>
 
         {filteredStartups.length === 0 ? (
@@ -444,7 +455,7 @@ export default function StartupsList() {
                   <div className="flex items-center gap-4 text-sm text-muted-foreground">
                     {startup.stage && (
                       <Badge variant="outline" className={getStageColor(startup.stage)}>
-                        {startup.stage.charAt(0).toUpperCase() + startup.stage.slice(1).replace('-', ' ')}
+                        {startup.stage}
                       </Badge>
                     )}
                     {startup.industry && (

@@ -9,6 +9,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle, CheckCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { normalizeStage } from '@/utils/stageUtils';
 
 interface Startup {
   name: string;
@@ -89,6 +90,10 @@ export function DraftModal({ open, onOpenChange, draftData, onImportComplete }: 
 
   const updateEntry = (index: number, field: keyof Startup, value: any) => {
     const newData = [...editableData];
+    // Normalize stage values
+    if (field === 'stage') {
+      value = normalizeStage(value);
+    }
     newData[index] = { ...newData[index], [field]: value };
     setEditableData(newData);
     
@@ -145,7 +150,7 @@ export function DraftModal({ open, onOpenChange, draftData, onImportComplete }: 
   };
 
   const industries = ['Technology', 'Healthcare', 'Finance', 'Education', 'E-commerce', 'SaaS', 'AI/ML', 'Biotech', 'CleanTech', 'Other'];
-  const stages = ['pre-seed', 'seed', 'series-a', 'series-b', 'series-c', 'growth'];
+  const stages = ['Pre-Seed', 'Seed', 'Series A', 'Series B', 'Series C', 'Growth', 'IPO'];
   const statuses = ['pending', 'under-review', 'shortlisted', 'rejected'];
 
   return (
@@ -230,7 +235,7 @@ export function DraftModal({ open, onOpenChange, draftData, onImportComplete }: 
                         <SelectContent>
                           {stages.map(stage => (
                             <SelectItem key={stage} value={stage}>
-                              {stage.charAt(0).toUpperCase() + stage.slice(1).replace('-', ' ')}
+                              {stage}
                             </SelectItem>
                           ))}
                         </SelectContent>
