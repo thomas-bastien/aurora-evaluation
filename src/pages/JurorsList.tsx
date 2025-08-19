@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { UserCheck, Building, Users, Plus, Search, Filter, Upload, Download, Edit, Trash2 } from 'lucide-react';
+import { UserCheck, Building, Users, Plus, Search, Filter, Upload, Download, Edit, Trash2, Mail } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { CSVUploadModal } from '@/components/jurors/CSVUploadModal';
@@ -41,6 +41,7 @@ export default function JurorsList() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [jurorToDelete, setJurorToDelete] = useState<Juror | null>(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [sendingInvitation, setSendingInvitation] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -114,6 +115,8 @@ export default function JurorsList() {
   const handleFormSubmit = async (data: Partial<Juror>) => {
     try {
       if (editingJuror) {
+        const emailChanged = editingJuror.email !== data.email;
+        
         const { error } = await supabase
           .from('jurors')
           .update(data)
@@ -121,10 +124,45 @@ export default function JurorsList() {
         
         if (error) throw error;
         
-        toast({
-          title: "Juror updated",
-          description: "The juror has been successfully updated.",
-        });
+        // If email was changed, offer to send invitation
+        if (emailChanged) {
+          try {
+            const emailResponse = await supabase.functions.invoke('send-juror-invitation', {
+              body: {
+                jurorName: data.name!,
+                jurorEmail: data.email!,
+                company: data.company,
+                jobTitle: data.job_title
+              }
+            });
+            
+            if (emailResponse.error) {
+              console.error('Failed to send invitation email:', emailResponse.error);
+              toast({
+                title: "Juror updated",
+                description: "The juror has been updated, but the invitation email failed to send to the new address.",
+                variant: "destructive"
+              });
+            } else {
+              toast({
+                title: "Juror updated & invited",
+                description: "The juror has been updated and an invitation email has been sent to the new address.",
+              });
+            }
+          } catch (emailError) {
+            console.error('Error sending invitation email:', emailError);
+            toast({
+              title: "Juror updated",
+              description: "The juror has been updated, but the invitation email failed to send to the new address.",
+              variant: "destructive"
+            });
+          }
+        } else {
+          toast({
+            title: "Juror updated",
+            description: "The juror has been successfully updated.",
+          });
+        }
       } else {
         // Ensure required fields are present
         const insertData = {
@@ -140,10 +178,38 @@ export default function JurorsList() {
         
         if (error) throw error;
         
-        toast({
-          title: "Juror added",
-          description: "The juror has been successfully added.",
-        });
+        // Send invitation email for new jurors
+        try {
+          const emailResponse = await supabase.functions.invoke('send-juror-invitation', {
+            body: {
+              jurorName: insertData.name,
+              jurorEmail: insertData.email,
+              company: insertData.company,
+              jobTitle: insertData.job_title
+            }
+          });
+          
+          if (emailResponse.error) {
+            console.error('Failed to send invitation email:', emailResponse.error);
+            toast({
+              title: "Juror added",
+              description: "The juror has been added, but the invitation email failed to send.",
+              variant: "destructive"
+            });
+          } else {
+            toast({
+              title: "Juror added & invited",
+              description: "The juror has been successfully added and an invitation email has been sent.",
+            });
+          }
+        } catch (emailError) {
+          console.error('Error sending invitation email:', emailError);
+          toast({
+            title: "Juror added",
+            description: "The juror has been added, but the invitation email failed to send.",
+            variant: "destructive"
+          });
+        }
       }
       
       // Refresh the list
@@ -202,6 +268,44 @@ export default function JurorsList() {
 
   // Get unique companies for filter
   const companies = [...new Set(jurors.filter(j => j.company).map(j => j.company))];
+
+  const handleSendInvitation = async (juror: Juror) => {
+    setSendingInvitation(juror.id);
+    
+    try {
+      const emailResponse = await supabase.functions.invoke('send-juror-invitation', {
+        body: {
+          jurorName: juror.name,
+          jurorEmail: juror.email,
+          company: juror.company,
+          jobTitle: juror.job_title
+        }
+      });
+      
+      if (emailResponse.error) {
+        console.error('Failed to send invitation email:', emailResponse.error);
+        toast({
+          title: "Failed to send invitation",
+          description: "There was an error sending the invitation email.",
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: "Invitation sent",
+          description: `An invitation email has been sent to ${juror.name}.`,
+        });
+      }
+    } catch (error) {
+      console.error('Error sending invitation email:', error);
+      toast({
+        title: "Failed to send invitation",
+        description: "There was an error sending the invitation email.",
+        variant: "destructive"
+      });
+    } finally {
+      setSendingInvitation(null);
+    }
+  };
 
   if (loading) {
     return (
@@ -327,7 +431,7 @@ export default function JurorsList() {
                   <TableHead>Company</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Member Since</TableHead>
-                  <TableHead className="w-[100px]">Actions</TableHead>
+                  <TableHead className="w-[140px]">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -360,8 +464,19 @@ export default function JurorsList() {
                         <Button
                           variant="ghost"
                           size="sm"
+                          onClick={() => handleSendInvitation(juror)}
+                          disabled={sendingInvitation === juror.id}
+                          className="h-8 w-8 p-0"
+                          title="Send Invitation"
+                        >
+                          <Mail className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
                           onClick={() => handleEdit(juror)}
                           className="h-8 w-8 p-0"
+                          title="Edit Juror"
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
@@ -370,6 +485,7 @@ export default function JurorsList() {
                           size="sm"
                           onClick={() => handleDelete(juror)}
                           className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                          title="Delete Juror"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
