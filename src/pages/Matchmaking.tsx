@@ -53,15 +53,16 @@ const Matchmaking = () => {
     try {
       setLoading(true);
 
-      // Fetch startups
+      // Fetch active startups
       const { data: startupsData, error: startupsError } = await supabase
         .from('startups')
         .select('*')
+        .in('status', ['pending', 'under-review', 'shortlisted', 'confirmed', 'active'])
         .order('name');
 
       if (startupsError) throw startupsError;
 
-      // Fetch jurors
+      // Fetch active jurors  
       const { data: jurorsData, error: jurorsError } = await supabase
         .from('jurors')
         .select('*')
@@ -110,7 +111,18 @@ const Matchmaking = () => {
   };
 
   const canAccessMatchmaking = () => {
+    return true; // Always allow access for testing
+  };
+
+  const hasCompleteData = () => {
     return startups.length > 0 && jurors.length > 0;
+  };
+
+  const getIncompleteDataWarning = () => {
+    const missingItems = [];
+    if (startups.length === 0) missingItems.push('startups');
+    if (jurors.length === 0) missingItems.push('jurors');
+    return missingItems.length > 0 ? `Missing: ${missingItems.join(', ')}` : null;
   };
 
   const getStartupAssignmentCount = (startupId: string) => {
@@ -140,17 +152,25 @@ const Matchmaking = () => {
 
   const handleConfirmAssignments = async () => {
     try {
+      // Check if we have incomplete data and warn user
+      if (!hasCompleteData()) {
+        const confirmProceed = window.confirm(
+          "Some startups or jurors have not been uploaded yet. Confirming now may leave startups without the required jurors. Continue anyway?"
+        );
+        if (!confirmProceed) return;
+      }
+
       // Delete existing assignments
       await supabase
         .from('startup_assignments')
         .delete()
         .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all
 
-      // Insert new assignments
+      // Insert new assignments with appropriate status
       const assignmentRecords = assignments.map(assignment => ({
         startup_id: assignment.startup_id,
         juror_id: assignment.juror_id,
-        status: 'confirmed'
+        status: hasCompleteData() ? 'confirmed' : 'draft'
       }));
 
       const { error } = await supabase
@@ -160,9 +180,14 @@ const Matchmaking = () => {
       if (error) throw error;
 
       setIsConfirmed(true);
+      
+      const statusMessage = hasCompleteData() 
+        ? "All assignments have been confirmed successfully."
+        : "Assignments have been saved as drafts. You can finalize them once all data is uploaded.";
+
       toast({
         title: "Success",
-        description: "All assignments have been confirmed successfully.",
+        description: statusMessage,
       });
 
     } catch (error) {
@@ -192,53 +217,6 @@ const Matchmaking = () => {
     );
   }
 
-  if (!canAccessMatchmaking()) {
-    return (
-      <div className="min-h-screen bg-background">
-        <DashboardHeader />
-        <main className="max-w-7xl mx-auto px-6 py-8">
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-foreground mb-2">Matchmaking</h1>
-            <p className="text-lg text-muted-foreground">
-              Assign jurors to startups for evaluation
-            </p>
-          </div>
-
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-4 text-warning">
-                <AlertCircle className="w-8 h-8" />
-                <div>
-                  <h3 className="text-lg font-semibold">Prerequisites Required</h3>
-                  <p className="text-muted-foreground">
-                    Matchmaking is only available after all startups and jurors have been uploaded.
-                  </p>
-                  <div className="mt-4 space-y-2">
-                    <div className="flex items-center gap-2">
-                      {startups.length > 0 ? (
-                        <CheckCircle2 className="w-4 h-4 text-success" />
-                      ) : (
-                        <AlertCircle className="w-4 h-4 text-destructive" />
-                      )}
-                      <span>Startups uploaded: {startups.length}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {jurors.length > 0 ? (
-                        <CheckCircle2 className="w-4 h-4 text-success" />
-                      ) : (
-                        <AlertCircle className="w-4 h-4 text-destructive" />
-                      )}
-                      <span>Jurors uploaded: {jurors.length}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </main>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -267,6 +245,23 @@ const Matchmaking = () => {
             </div>
           </div>
         </div>
+
+        {/* Testing Mode Warning */}
+        {!hasCompleteData() && (
+          <Card className="mb-6 border-warning">
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-4">
+                <AlertCircle className="w-6 h-6 text-warning" />
+                <div>
+                  <h3 className="font-semibold text-warning">Testing Mode</h3>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {getIncompleteDataWarning()}. You can still test matchmaking, but assignments will be saved as drafts until all data is uploaded.
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
@@ -300,7 +295,10 @@ const Matchmaking = () => {
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Assignment Status</p>
                   <p className="text-2xl font-bold text-foreground">
-                    {isConfirmed ? "Confirmed" : "Draft"}
+                    {isConfirmed 
+                      ? (hasCompleteData() ? "Confirmed" : "Draft") 
+                      : "Not Saved"
+                    }
                   </p>
                 </div>
                 {isConfirmed ? (
