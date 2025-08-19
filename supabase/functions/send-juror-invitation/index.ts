@@ -27,8 +27,8 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log(`Sending invitation to juror: ${jurorName} (${jurorEmail})`);
 
-    // For testing, always send to test.vagabonds@gmail.com
-    const testEmail = "test.vagabonds@gmail.com";
+    // For testing, always send to lucien98+test.vagabonds@gmail.com
+    const testEmail = "lucien98+test.vagabonds@gmail.com";
 
     const emailResponse = await resend.emails.send({
       from: "Aurora Evaluation Platform <onboarding@resend.dev>",
