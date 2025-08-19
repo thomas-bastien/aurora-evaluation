@@ -16,6 +16,7 @@ import JurorsList from "./pages/JurorsList";
 import AdminDashboard from "./pages/AdminDashboard";
 import SessionManagement from "./pages/SessionManagement";
 import EvaluationDashboard from "./pages/EvaluationDashboard";
+import Matchmaking from "./pages/Matchmaking";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -73,6 +74,11 @@ const App = () => (
             <Route path="/evaluate" element={
               <ProtectedRoute>
                 <EvaluationDashboard />
+              </ProtectedRoute>
+            } />
+            <Route path="/matchmaking" element={
+              <ProtectedRoute>
+                <Matchmaking />
               </ProtectedRoute>
             } />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

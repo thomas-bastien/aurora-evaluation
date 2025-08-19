@@ -259,6 +259,36 @@ export type Database = {
         }
         Relationships: []
       }
+      startup_assignments: {
+        Row: {
+          assigned_by: string | null
+          created_at: string
+          id: string
+          juror_id: string
+          startup_id: string
+          status: string | null
+          updated_at: string
+        }
+        Insert: {
+          assigned_by?: string | null
+          created_at?: string
+          id?: string
+          juror_id: string
+          startup_id: string
+          status?: string | null
+          updated_at?: string
+        }
+        Update: {
+          assigned_by?: string | null
+          created_at?: string
+          id?: string
+          juror_id?: string
+          startup_id?: string
+          status?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       startup_sessions: {
         Row: {
           created_at: string

@@ -176,10 +176,11 @@ const AdminDashboard = () => {
         </div>
 
         <Tabs defaultValue="progress" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="progress">VC Progress</TabsTrigger>
             <TabsTrigger value="sessions">Sessions</TabsTrigger>
             <TabsTrigger value="startups">Top Startups</TabsTrigger>
+            <TabsTrigger value="matchmaking">Matchmaking</TabsTrigger>
             <TabsTrigger value="reports">Reports</TabsTrigger>
           </TabsList>
 
@@ -281,6 +282,27 @@ const AdminDashboard = () => {
                       </div>
                     </div>
                   ))}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="matchmaking" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Matchmaking</CardTitle>
+                <CardDescription>Assign jurors to startups for evaluation</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="text-center py-8">
+                  <Users className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">Startup-Juror Assignment</h3>
+                  <p className="text-muted-foreground mb-4">
+                    Manage the assignment of jurors to startups for evaluation.
+                  </p>
+                  <Button onClick={() => window.location.href = '/matchmaking'}>
+                    Go to Matchmaking
+                  </Button>
                 </div>
               </CardContent>
             </Card>
