@@ -205,12 +205,14 @@ export function CSVUploadModal({ open, onOpenChange, onDataParsed }: CSVUploadMo
               className="hidden"
               onChange={handleFileSelect}
             />
-            <Label htmlFor="file-upload">
-              <Button variant="outline" className="cursor-pointer">
-                <FileText className="h-4 w-4 mr-2" />
-                Choose File
-              </Button>
-            </Label>
+            <Button 
+              variant="outline" 
+              className="cursor-pointer"
+              onClick={() => document.getElementById('file-upload')?.click()}
+            >
+              <FileText className="h-4 w-4 mr-2" />
+              Choose File
+            </Button>
           </div>
           
           <p className="text-xs text-muted-foreground">
