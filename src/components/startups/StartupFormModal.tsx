@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -47,6 +47,18 @@ export function StartupFormModal({
   );
 
   const [founderInput, setFounderInput] = useState('');
+
+  // Update form data when initialData changes (for edit mode)
+  useEffect(() => {
+    if (initialData && mode === 'edit') {
+      setFormData(initialData);
+    } else if (mode === 'create') {
+      setFormData({
+        founder_names: [],
+        status: 'pending'
+      });
+    }
+  }, [initialData, mode, open]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

@@ -6,13 +6,16 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { UserCheck, Building, Users, Plus, Search, Filter, Upload, Download } from 'lucide-react';
+import { UserCheck, Building, Users, Plus, Search, Filter, Upload, Download, Edit, Trash2 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { CSVUploadModal } from '@/components/jurors/CSVUploadModal';
 import { DraftModal } from '@/components/jurors/DraftModal';
+import { JurorFormModal } from '@/components/jurors/JurorFormModal';
 import { downloadJurorsCSVTemplate } from '@/utils/jurorsCsvTemplate';
 
 interface Juror {
@@ -29,16 +32,15 @@ export default function JurorsList() {
   const [filteredJurors, setFilteredJurors] = useState<Juror[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
+  const [companyFilter, setCompanyFilter] = useState('');
   const [csvModalOpen, setCsvModalOpen] = useState(false);
   const [draftModalOpen, setDraftModalOpen] = useState(false);
+  const [formModalOpen, setFormModalOpen] = useState(false);
   const [draftData, setDraftData] = useState<Partial<Juror>[]>([]);
-  const [inviteForm, setInviteForm] = useState({
-    name: '',
-    email: '',
-    job_title: '',
-    company: ''
-  });
+  const [editingJuror, setEditingJuror] = useState<Juror | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [jurorToDelete, setJurorToDelete] = useState<Juror | null>(null);
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -47,7 +49,7 @@ export default function JurorsList() {
 
   useEffect(() => {
     filterJurors();
-  }, [jurors, searchTerm]);
+  }, [jurors, searchTerm, companyFilter]);
 
   const fetchJurors = async () => {
     try {
@@ -79,65 +81,24 @@ export default function JurorsList() {
   };
 
   const filterJurors = () => {
-    if (!searchTerm) {
-      setFilteredJurors(jurors);
-      return;
+    let filtered = jurors;
+
+    if (searchTerm) {
+      filtered = filtered.filter(juror =>
+        juror.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        juror.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (juror.company && juror.company.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (juror.job_title && juror.job_title.toLowerCase().includes(searchTerm.toLowerCase()))
+      );
     }
 
-    const filtered = jurors.filter(juror =>
-      juror.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      juror.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (juror.company && juror.company.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (juror.job_title && juror.job_title.toLowerCase().includes(searchTerm.toLowerCase()))
-    );
+    if (companyFilter && companyFilter !== 'all') {
+      filtered = filtered.filter(juror => juror.company === companyFilter);
+    }
+
     setFilteredJurors(filtered);
   };
 
-  const handleInviteJuror = async () => {
-    if (!inviteForm.name || !inviteForm.email) {
-      toast({
-        title: "Error",
-        description: "Name and email are required",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    try {
-      const { error } = await supabase
-        .from('jurors')
-        .insert([{
-          name: inviteForm.name,
-          email: inviteForm.email,
-          job_title: inviteForm.job_title || null,
-          company: inviteForm.company || null
-        }]);
-
-      if (error) {
-        console.error('Error inviting juror:', error);
-        toast({
-          title: "Error",
-          description: "Failed to invite juror",
-          variant: "destructive"
-        });
-      } else {
-        toast({
-          title: "Success",
-          description: "Juror invited successfully"
-        });
-        setIsInviteDialogOpen(false);
-        setInviteForm({ name: '', email: '', job_title: '', company: '' });
-        fetchJurors();
-      }
-    } catch (error) {
-      console.error('Error inviting juror:', error);
-      toast({
-        title: "Error",
-        description: "Failed to invite juror",
-        variant: "destructive"
-      });
-    }
-  };
 
   const handleCSVParsed = (data: Partial<Juror>[]) => {
     setDraftData(data);
@@ -149,6 +110,98 @@ export default function JurorsList() {
     fetchJurors();
     setDraftData([]);
   };
+
+  const handleFormSubmit = async (data: Partial<Juror>) => {
+    try {
+      if (editingJuror) {
+        const { error } = await supabase
+          .from('jurors')
+          .update(data)
+          .eq('id', editingJuror.id);
+        
+        if (error) throw error;
+        
+        toast({
+          title: "Juror updated",
+          description: "The juror has been successfully updated.",
+        });
+      } else {
+        // Ensure required fields are present
+        const insertData = {
+          name: data.name!,
+          email: data.email!,
+          job_title: data.job_title || null,
+          company: data.company || null
+        };
+        
+        const { error } = await supabase
+          .from('jurors')
+          .insert([insertData]);
+        
+        if (error) throw error;
+        
+        toast({
+          title: "Juror added",
+          description: "The juror has been successfully added.",
+        });
+      }
+      
+      // Refresh the list
+      fetchJurors();
+      setEditingJuror(null);
+    } catch (error) {
+      console.error('Error saving juror:', error);
+      toast({
+        title: "Error",
+        description: "There was an error saving the juror.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleEdit = (juror: Juror) => {
+    setEditingJuror(juror);
+    setFormModalOpen(true);
+  };
+
+  const handleDelete = (juror: Juror) => {
+    setJurorToDelete(juror);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!jurorToDelete) return;
+
+    try {
+      const { error } = await supabase
+        .from('jurors')
+        .delete()
+        .eq('id', jurorToDelete.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Juror deleted",
+        description: "The juror has been successfully deleted.",
+      });
+
+      // Refresh the list
+      fetchJurors();
+    } catch (error) {
+      console.error('Error deleting juror:', error);
+      toast({
+        title: "Error",
+        description: "There was an error deleting the juror.",
+        variant: "destructive",
+      });
+    } finally {
+      setDeleteDialogOpen(false);
+      setJurorToDelete(null);
+    }
+  };
+
+  // Get unique companies for filter
+  const companies = [...new Set(jurors.filter(j => j.company).map(j => j.company))];
 
   if (loading) {
     return (
@@ -195,88 +248,59 @@ export default function JurorsList() {
                 <Upload className="h-4 w-4 mr-2" />
                 Upload CSV
               </Button>
-              <Dialog open={isInviteDialogOpen} onOpenChange={setIsInviteDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Invite Juror
-                  </Button>
-                </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Invite New Juror</DialogTitle>
-                  <DialogDescription>
-                    Add a new member to the evaluation panel
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="name">Name *</Label>
-                    <Input
-                      id="name"
-                      value={inviteForm.name}
-                      onChange={(e) => setInviteForm({ ...inviteForm, name: e.target.value })}
-                      placeholder="Enter full name"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="email">Email *</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      value={inviteForm.email}
-                      onChange={(e) => setInviteForm({ ...inviteForm, email: e.target.value })}
-                      placeholder="Enter email address"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="job_title">Job Title</Label>
-                    <Input
-                      id="job_title"
-                      value={inviteForm.job_title}
-                      onChange={(e) => setInviteForm({ ...inviteForm, job_title: e.target.value })}
-                      placeholder="Enter job title"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="company">Company</Label>
-                    <Input
-                      id="company"
-                      value={inviteForm.company}
-                      onChange={(e) => setInviteForm({ ...inviteForm, company: e.target.value })}
-                      placeholder="Enter company name"
-                    />
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setIsInviteDialogOpen(false)}>
-                    Cancel
-                  </Button>
-                  <Button onClick={handleInviteJuror}>
-                    Invite Juror
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
+              <Button onClick={() => setFormModalOpen(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Juror
+              </Button>
             </div>
           </div>
         </div>
 
         {/* Search and Filter Bar */}
-        <div className="mb-6 flex gap-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-            <Input
-              placeholder="Search jurors by name, email, company, or title..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
+        <div className="mb-6 space-y-4">
+          <div className="flex gap-4 items-center">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+              <Input
+                placeholder="Search jurors by name, email, company, or title..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <Button variant="outline" onClick={() => setFiltersOpen(!filtersOpen)}>
+              <Filter className="h-4 w-4 mr-2" />
+              Filters
+            </Button>
           </div>
-          <Button variant="outline">
-            <Filter className="h-4 w-4 mr-2" />
-            Filters
-          </Button>
+          
+          {filtersOpen && (
+            <div className="flex gap-4">
+              <Select value={companyFilter || 'all'} onValueChange={(value) => setCompanyFilter(value === 'all' ? '' : value)}>
+                <SelectTrigger className="w-48">
+                  <SelectValue placeholder="Filter by company" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Companies</SelectItem>
+                  {companies.map(company => (
+                    <SelectItem key={company} value={company || 'unknown'}>{company}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {(searchTerm || companyFilter) && (
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    setSearchTerm('');
+                    setCompanyFilter('');
+                  }}
+                >
+                  Clear Filters
+                </Button>
+              )}
+            </div>
+          )}
         </div>
 
         {filteredJurors.length === 0 ? (
@@ -303,11 +327,12 @@ export default function JurorsList() {
                   <TableHead>Company</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Member Since</TableHead>
+                  <TableHead className="w-[100px]">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredJurors.map((juror) => (
-                  <TableRow key={juror.id} className="cursor-pointer hover:bg-muted/50">
+                  <TableRow key={juror.id} className="hover:bg-muted/50">
                     <TableCell className="font-medium">{juror.name}</TableCell>
                     <TableCell>{juror.email}</TableCell>
                     <TableCell>{juror.job_title || '-'}</TableCell>
@@ -329,6 +354,26 @@ export default function JurorsList() {
                     </TableCell>
                     <TableCell className="text-muted-foreground">
                       {new Date(juror.created_at).toLocaleDateString()}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEdit(juror)}
+                          className="h-8 w-8 p-0"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDelete(juror)}
+                          className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -352,6 +397,36 @@ export default function JurorsList() {
         draftData={draftData}
         onImportComplete={handleImportComplete}
       />
+
+      {/* Juror Form Modal */}
+      <JurorFormModal
+        open={formModalOpen}
+        onOpenChange={(open) => {
+          setFormModalOpen(open);
+          if (!open) setEditingJuror(null);
+        }}
+        onSubmit={handleFormSubmit}
+        initialData={editingJuror || undefined}
+        mode={editingJuror ? 'edit' : 'create'}
+      />
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Juror</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete {jurorToDelete?.name}? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
