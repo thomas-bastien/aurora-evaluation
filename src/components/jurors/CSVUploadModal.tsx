@@ -27,16 +27,39 @@ export function CSVUploadModal({ open, onOpenChange, onDataParsed }: CSVUploadMo
     const lines = csvText.split('\n').filter(line => line.trim());
     if (lines.length < 2) return [];
 
-    const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+    // Better CSV parsing that handles quoted fields with commas
+    const parseCSVLine = (line: string): string[] => {
+      const result = [];
+      let current = '';
+      let inQuotes = false;
+      
+      for (let i = 0; i < line.length; i++) {
+        const char = line[i];
+        if (char === '"' && (i === 0 || line[i - 1] === ',')) {
+          inQuotes = true;
+        } else if (char === '"' && inQuotes && (i === line.length - 1 || line[i + 1] === ',')) {
+          inQuotes = false;
+        } else if (char === ',' && !inQuotes) {
+          result.push(current.trim());
+          current = '';
+        } else if (char !== '"' || inQuotes) {
+          current += char;
+        }
+      }
+      result.push(current.trim());
+      return result;
+    };
+
+    const headers = parseCSVLine(lines[0]).map(h => h.toLowerCase());
     const data: Partial<Juror>[] = [];
 
     for (let i = 1; i < lines.length; i++) {
-      const values = lines[i].split(',').map(v => v.trim().replace(/"/g, ''));
+      const values = parseCSVLine(lines[i]);
       const juror: Partial<Juror> = {};
 
       headers.forEach((header, index) => {
         const value = values[index] || '';
-        switch (header.toLowerCase()) {
+        switch (header) {
           case 'name':
             juror.name = value;
             break;
@@ -136,12 +159,6 @@ export function CSVUploadModal({ open, onOpenChange, onDataParsed }: CSVUploadMo
             <p className="text-sm text-muted-foreground mb-2">
               Drag and drop your CSV file here, or click to select
             </p>
-            <Label htmlFor="juror-file-upload">
-              <Button variant="outline" className="cursor-pointer">
-                <FileText className="h-4 w-4 mr-2" />
-                Choose File
-              </Button>
-            </Label>
             <Input
               id="juror-file-upload"
               type="file"
@@ -149,6 +166,12 @@ export function CSVUploadModal({ open, onOpenChange, onDataParsed }: CSVUploadMo
               className="hidden"
               onChange={handleFileSelect}
             />
+            <Label htmlFor="juror-file-upload">
+              <Button variant="outline" className="cursor-pointer">
+                <FileText className="h-4 w-4 mr-2" />
+                Choose File
+              </Button>
+            </Label>
           </div>
           
           <p className="text-xs text-muted-foreground">
