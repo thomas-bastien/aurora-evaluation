@@ -287,7 +287,22 @@ export type Database = {
           status?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "startup_assignments_juror_id_fkey"
+            columns: ["juror_id"]
+            isOneToOne: false
+            referencedRelation: "jurors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "startup_assignments_startup_id_fkey"
+            columns: ["startup_id"]
+            isOneToOne: false
+            referencedRelation: "startups"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       startup_sessions: {
         Row: {
