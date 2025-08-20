@@ -53,16 +53,15 @@ const Matchmaking = () => {
     try {
       setLoading(true);
 
-      // Fetch active startups
+      // Fetch all startups (remove status filter to see actual count)
       const { data: startupsData, error: startupsError } = await supabase
         .from('startups')
         .select('*')
-        .in('status', ['pending', 'under-review', 'shortlisted', 'confirmed', 'active'])
         .order('name');
 
       if (startupsError) throw startupsError;
 
-      // Fetch active jurors  
+      // Fetch all jurors
       const { data: jurorsData, error: jurorsError } = await supabase
         .from('jurors')
         .select('*')
@@ -152,13 +151,6 @@ const Matchmaking = () => {
 
   const handleConfirmAssignments = async () => {
     try {
-      // Check if we have incomplete data and warn user
-      if (!hasCompleteData()) {
-        const confirmProceed = window.confirm(
-          "Some startups or jurors have not been uploaded yet. Confirming now may leave startups without the required jurors. Continue anyway?"
-        );
-        if (!confirmProceed) return;
-      }
 
       // Delete existing assignments
       await supabase
@@ -246,16 +238,16 @@ const Matchmaking = () => {
           </div>
         </div>
 
-        {/* Testing Mode Warning */}
-        {!hasCompleteData() && (
-          <Card className="mb-6 border-warning">
+        {/* Info Banner for Missing Data */}
+        {(startups.length === 0 || jurors.length === 0) && (
+          <Card className="mb-6 border-warning bg-warning/5">
             <CardContent className="pt-6">
               <div className="flex items-center gap-4">
                 <AlertCircle className="w-6 h-6 text-warning" />
                 <div>
-                  <h3 className="font-semibold text-warning">Testing Mode</h3>
+                  <h3 className="font-semibold text-warning">⚠️ Some startups or jurors have not been uploaded yet</h3>
                   <p className="text-sm text-muted-foreground mt-1">
-                    {getIncompleteDataWarning()}. You can still test matchmaking, but assignments will be saved as drafts until all data is uploaded.
+                    You can still assign, but assignments may be incomplete.
                   </p>
                 </div>
               </div>
@@ -268,10 +260,10 @@ const Matchmaking = () => {
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Total Startups</p>
-                  <p className="text-2xl font-bold text-foreground">{startups.length}</p>
-                </div>
+                 <div>
+                   <p className="text-sm font-medium text-muted-foreground">Startups uploaded</p>
+                   <p className="text-2xl font-bold text-foreground">{startups.length}</p>
+                 </div>
                 <Building2 className="w-8 h-8 text-primary" />
               </div>
             </CardContent>
@@ -280,10 +272,10 @@ const Matchmaking = () => {
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Available Jurors</p>
-                  <p className="text-2xl font-bold text-foreground">{jurors.length}</p>
-                </div>
+                 <div>
+                   <p className="text-sm font-medium text-muted-foreground">Jurors uploaded</p>
+                   <p className="text-2xl font-bold text-foreground">{jurors.length}</p>
+                 </div>
                 <Users className="w-8 h-8 text-success" />
               </div>
             </CardContent>
