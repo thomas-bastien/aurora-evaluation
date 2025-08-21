@@ -11,21 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
-import { 
-  User, 
-  Building2, 
-  Mail, 
-  Calendar,
-  Save,
-  Star,
-  Target,
-  FileText,
-  TrendingUp,
-  CheckCircle,
-  Clock,
-  AlertCircle
-} from 'lucide-react';
-
+import { User, Building2, Mail, Calendar, Save, Star, Target, FileText, TrendingUp, CheckCircle, Clock, AlertCircle } from 'lucide-react';
 interface ProfileForm {
   full_name: string;
   organization: string;
@@ -33,17 +19,19 @@ interface ProfileForm {
   expertise: string[];
   investment_stages: string[];
 }
-
 interface EvaluationStats {
   total_assigned: number;
   completed: number;
   draft: number;
   average_score: number;
 }
-
 const VCProfile = () => {
-  const { user } = useAuth();
-  const { profile } = useUserProfile();
+  const {
+    user
+  } = useAuth();
+  const {
+    profile
+  } = useUserProfile();
   const [saving, setSaving] = useState(false);
   const [stats, setStats] = useState<EvaluationStats>({
     total_assigned: 0,
@@ -51,7 +39,6 @@ const VCProfile = () => {
     draft: 0,
     average_score: 0
   });
-  
   const [formData, setFormData] = useState<ProfileForm>({
     full_name: '',
     organization: '',
@@ -59,16 +46,8 @@ const VCProfile = () => {
     expertise: [],
     investment_stages: []
   });
-
-  const expertiseOptions = [
-    'AI/ML', 'Fintech', 'Healthcare', 'SaaS', 'E-commerce', 'Blockchain', 
-    'IoT', 'Cybersecurity', 'EdTech', 'Climate Tech', 'Mobility', 'Gaming'
-  ];
-
-  const investmentStageOptions = [
-    'Pre-Seed', 'Seed', 'Series A', 'Series B', 'Series C+', 'Growth'
-  ];
-
+  const expertiseOptions = ['AI/ML', 'Fintech', 'Healthcare', 'SaaS', 'E-commerce', 'Blockchain', 'IoT', 'Cybersecurity', 'EdTech', 'Climate Tech', 'Mobility', 'Gaming'];
+  const investmentStageOptions = ['Pre-Seed', 'Seed', 'Series A', 'Series B', 'Series C+', 'Growth'];
   useEffect(() => {
     if (profile) {
       setFormData({
@@ -81,34 +60,24 @@ const VCProfile = () => {
     }
     fetchEvaluationStats();
   }, [profile]);
-
   const fetchEvaluationStats = async () => {
     if (!user) return;
-
     try {
       // Fetch assignments count
-      const { count: totalAssigned } = await supabase
-        .from('startup_assignments')
-        .select('*', { count: 'exact', head: true })
-        .eq('juror_id', user.id)
-        .eq('status', 'assigned');
+      const {
+        count: totalAssigned
+      } = await supabase.from('startup_assignments').select('*', {
+        count: 'exact',
+        head: true
+      }).eq('juror_id', user.id).eq('status', 'assigned');
 
       // Fetch evaluations
-      const { data: evaluations } = await supabase
-        .from('evaluations')
-        .select('*')
-        .eq('evaluator_id', user.id);
-
+      const {
+        data: evaluations
+      } = await supabase.from('evaluations').select('*').eq('evaluator_id', user.id);
       const completed = evaluations?.filter(e => e.status === 'submitted').length || 0;
       const draft = evaluations?.filter(e => e.status === 'draft').length || 0;
-      
-      const averageScore = evaluations && evaluations.length > 0
-        ? evaluations
-            .filter(e => e.overall_score)
-            .reduce((sum, e) => sum + (e.overall_score || 0), 0) / 
-          evaluations.filter(e => e.overall_score).length
-        : 0;
-
+      const averageScore = evaluations && evaluations.length > 0 ? evaluations.filter(e => e.overall_score).reduce((sum, e) => sum + (e.overall_score || 0), 0) / evaluations.filter(e => e.overall_score).length : 0;
       setStats({
         total_assigned: totalAssigned || 0,
         completed,
@@ -119,28 +88,22 @@ const VCProfile = () => {
       console.error('Error fetching evaluation stats:', error);
     }
   };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
-
     try {
       setSaving(true);
-      
-      const { error } = await supabase
-        .from('profiles')
-        .update({
-          full_name: formData.full_name,
-          organization: formData.organization,
-          calendly_link: formData.calendly_link,
-          expertise: formData.expertise,
-          investment_stages: formData.investment_stages,
-          updated_at: new Date().toISOString()
-        })
-        .eq('user_id', user.id);
-
+      const {
+        error
+      } = await supabase.from('profiles').update({
+        full_name: formData.full_name,
+        organization: formData.organization,
+        calendly_link: formData.calendly_link,
+        expertise: formData.expertise,
+        investment_stages: formData.investment_stages,
+        updated_at: new Date().toISOString()
+      }).eq('user_id', user.id);
       if (error) throw error;
-
       toast.success('Profile updated successfully!');
     } catch (error) {
       console.error('Error updating profile:', error);
@@ -149,7 +112,6 @@ const VCProfile = () => {
       setSaving(false);
     }
   };
-
   const toggleArrayItem = (array: string[], item: string, setter: (items: string[]) => void) => {
     if (array.includes(item)) {
       setter(array.filter(i => i !== item));
@@ -157,12 +119,9 @@ const VCProfile = () => {
       setter([...array, item]);
     }
   };
-
-  const completionRate = stats.total_assigned > 0 ? (stats.completed / stats.total_assigned) * 100 : 0;
-
+  const completionRate = stats.total_assigned > 0 ? stats.completed / stats.total_assigned * 100 : 0;
   if (!profile) {
-    return (
-      <div className="min-h-screen bg-background">
+    return <div className="min-h-screen bg-background">
         <DashboardHeader />
         <main className="max-w-4xl mx-auto px-6 py-8">
           <Card>
@@ -173,18 +132,15 @@ const VCProfile = () => {
             </CardContent>
           </Card>
         </main>
-      </div>
-    );
+      </div>;
   }
-
-  return (
-    <div className="min-h-screen bg-background">
+  return <div className="min-h-screen bg-background">
       <DashboardHeader />
       
       <main className="max-w-4xl mx-auto px-6 py-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground mb-2">VC Profile</h1>
+          <h1 className="text-3xl font-bold text-foreground mb-2">Profile</h1>
           <p className="text-lg text-muted-foreground">
             Manage your profile information and track your evaluation progress
           </p>
@@ -205,36 +161,27 @@ const VCProfile = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="full_name">Full Name</Label>
-                      <Input
-                        id="full_name"
-                        value={formData.full_name}
-                        onChange={(e) => setFormData(prev => ({ ...prev, full_name: e.target.value }))}
-                        placeholder="Enter your full name"
-                        required
-                      />
+                      <Input id="full_name" value={formData.full_name} onChange={e => setFormData(prev => ({
+                      ...prev,
+                      full_name: e.target.value
+                    }))} placeholder="Enter your full name" required />
                     </div>
 
                     <div>
                       <Label htmlFor="organization">Organization</Label>
-                      <Input
-                        id="organization"
-                        value={formData.organization}
-                        onChange={(e) => setFormData(prev => ({ ...prev, organization: e.target.value }))}
-                        placeholder="Your VC firm or organization"
-                        required
-                      />
+                      <Input id="organization" value={formData.organization} onChange={e => setFormData(prev => ({
+                      ...prev,
+                      organization: e.target.value
+                    }))} placeholder="Your VC firm or organization" required />
                     </div>
                   </div>
 
                   <div>
                     <Label htmlFor="calendly_link">Calendly Link</Label>
-                    <Input
-                      id="calendly_link"
-                      type="url"
-                      value={formData.calendly_link}
-                      onChange={(e) => setFormData(prev => ({ ...prev, calendly_link: e.target.value }))}
-                      placeholder="https://calendly.com/your-link"
-                    />
+                    <Input id="calendly_link" type="url" value={formData.calendly_link} onChange={e => setFormData(prev => ({
+                    ...prev,
+                    calendly_link: e.target.value
+                  }))} placeholder="https://calendly.com/your-link" />
                     <p className="text-sm text-muted-foreground mt-1">
                       This will be used to schedule pitch meetings with startups
                     </p>
@@ -245,40 +192,24 @@ const VCProfile = () => {
                   <div>
                     <Label>Areas of Expertise</Label>
                     <div className="flex flex-wrap gap-2 mt-2">
-                      {expertiseOptions.map(expertise => (
-                        <Badge
-                          key={expertise}
-                          variant={formData.expertise.includes(expertise) ? "default" : "outline"}
-                          className="cursor-pointer"
-                          onClick={() => toggleArrayItem(
-                            formData.expertise, 
-                            expertise, 
-                            (items) => setFormData(prev => ({ ...prev, expertise: items }))
-                          )}
-                        >
+                      {expertiseOptions.map(expertise => <Badge key={expertise} variant={formData.expertise.includes(expertise) ? "default" : "outline"} className="cursor-pointer" onClick={() => toggleArrayItem(formData.expertise, expertise, items => setFormData(prev => ({
+                      ...prev,
+                      expertise: items
+                    })))}>
                           {expertise}
-                        </Badge>
-                      ))}
+                        </Badge>)}
                     </div>
                   </div>
 
                   <div>
                     <Label>Investment Stages</Label>
                     <div className="flex flex-wrap gap-2 mt-2">
-                      {investmentStageOptions.map(stage => (
-                        <Badge
-                          key={stage}
-                          variant={formData.investment_stages.includes(stage) ? "default" : "outline"}
-                          className="cursor-pointer"
-                          onClick={() => toggleArrayItem(
-                            formData.investment_stages, 
-                            stage, 
-                            (items) => setFormData(prev => ({ ...prev, investment_stages: items }))
-                          )}
-                        >
+                      {investmentStageOptions.map(stage => <Badge key={stage} variant={formData.investment_stages.includes(stage) ? "default" : "outline"} className="cursor-pointer" onClick={() => toggleArrayItem(formData.investment_stages, stage, items => setFormData(prev => ({
+                      ...prev,
+                      investment_stages: items
+                    })))}>
                           {stage}
-                        </Badge>
-                      ))}
+                        </Badge>)}
                     </div>
                   </div>
 
@@ -368,19 +299,11 @@ const VCProfile = () => {
                 <CardTitle>Quick Actions</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
-                <Button 
-                  variant="outline" 
-                  className="w-full justify-start"
-                  onClick={() => window.location.href = '/evaluate'}
-                >
+                <Button variant="outline" className="w-full justify-start" onClick={() => window.location.href = '/evaluate'}>
                   <Star className="w-4 h-4 mr-2" />
                   Start Evaluations
                 </Button>
-                <Button 
-                  variant="outline" 
-                  className="w-full justify-start"
-                  onClick={() => window.location.href = '/sessions'}
-                >
+                <Button variant="outline" className="w-full justify-start" onClick={() => window.location.href = '/sessions'}>
                   <Calendar className="w-4 h-4 mr-2" />
                   View Sessions
                 </Button>
@@ -389,8 +312,6 @@ const VCProfile = () => {
           </div>
         </div>
       </main>
-    </div>
-  );
+    </div>;
 };
-
 export default VCProfile;
