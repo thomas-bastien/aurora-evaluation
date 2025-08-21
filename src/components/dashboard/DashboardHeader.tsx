@@ -13,6 +13,12 @@ export const DashboardHeader = () => {
   } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/auth');
+  };
+  
   const isActive = (path: string) => location.pathname === path || location.pathname.startsWith(path);
   return <header className="bg-card border-b border-border shadow-soft">
       <div className="max-w-7xl mx-auto px-6 py-4">
@@ -95,7 +101,7 @@ export const DashboardHeader = () => {
                   <User className="w-4 h-4 mr-2" />
                   View Profile
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={signOut} className="cursor-pointer text-destructive">
+                <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer text-destructive">
                   <LogOut className="w-4 h-4 mr-2" />
                   Sign Out
                 </DropdownMenuItem>
