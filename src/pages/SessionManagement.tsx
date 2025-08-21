@@ -11,33 +11,30 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar, Users, Clock, Play, Pause, Settings, Plus } from "lucide-react";
-
 const SessionManagement = () => {
   const [selectedSession, setSelectedSession] = useState<string | null>(null);
   const [sessions, setSessions] = useState<any[]>([]);
   const [vcMembers, setVcMembers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-
   useEffect(() => {
     const fetchSessionData = async () => {
       try {
         // Fetch sessions with startup counts
-        const { data: sessionsData } = await supabase
-          .from('sessions')
-          .select(`
+        const {
+          data: sessionsData
+        } = await supabase.from('sessions').select(`
             *,
             startup_sessions(
               startups(name)
             )
-          `)
-          .order('scheduled_date', { ascending: true });
+          `).order('scheduled_date', {
+          ascending: true
+        });
 
         // Fetch VC members
-        const { data: vcData } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('role', 'vc');
-
+        const {
+          data: vcData
+        } = await supabase.from('profiles').select('*').eq('role', 'vc');
         setSessions(sessionsData || []);
         setVcMembers(vcData || []);
       } catch (error) {
@@ -46,29 +43,30 @@ const SessionManagement = () => {
         setLoading(false);
       }
     };
-
     fetchSessionData();
   }, []);
-
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "Completed": return "default";
-      case "In Progress": return "secondary";
-      case "Scheduled": return "secondary";
-      case "Cancelled": return "destructive";
-      default: return "secondary";
+      case "Completed":
+        return "default";
+      case "In Progress":
+        return "secondary";
+      case "Scheduled":
+        return "secondary";
+      case "Cancelled":
+        return "destructive";
+      default:
+        return "secondary";
     }
   };
-
-  return (
-    <div className="min-h-screen bg-background">
+  return <div className="min-h-screen bg-background">
       <DashboardHeader />
       
       <main className="max-w-7xl mx-auto px-6 py-8">
         {/* Header */}
         <div className="mb-8 flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-foreground mb-2">Session Management</h1>
+            <h1 className="text-3xl font-bold text-foreground mb-2">Your Sessions</h1>
             <p className="text-lg text-muted-foreground">
               Create and manage evaluation sessions with grouped startups
             </p>
@@ -141,8 +139,7 @@ const SessionManagement = () => {
 
           <TabsContent value="overview" className="space-y-6">
             <div className="grid gap-6">
-              {sessions.map((session) => (
-                <Card key={session.id} className="cursor-pointer hover:shadow-md transition-shadow">
+              {sessions.map(session => <Card key={session.id} className="cursor-pointer hover:shadow-md transition-shadow">
                   <CardContent className="pt-6">
                     <div className="flex items-start justify-between mb-4">
                       <div>
@@ -166,12 +163,10 @@ const SessionManagement = () => {
                         </p>
                       </div>
                       <div className="flex items-center gap-4">
-                      {session.status === "completed" && session.avg_score && (
-                        <div className="text-right">
+                      {session.status === "completed" && session.avg_score && <div className="text-right">
                           <div className="text-lg font-bold text-primary">{session.avg_score}/10</div>
                           <div className="text-xs text-muted-foreground">Avg Score</div>
-                        </div>
-                      )}
+                        </div>}
                         <Badge variant={getStatusColor(session.status)}>{session.status}</Badge>
                       </div>
                     </div>
@@ -183,48 +178,37 @@ const SessionManagement = () => {
                           <span>{session.completion_rate || 0}%</span>
                         </div>
                         <div className="w-full bg-muted rounded-full h-2">
-                          <div 
-                            className="bg-primary h-2 rounded-full transition-all duration-300" 
-                            style={{ width: `${session.completion_rate || 0}%` }}
-                          />
+                          <div className="bg-primary h-2 rounded-full transition-all duration-300" style={{
+                        width: `${session.completion_rate || 0}%`
+                      }} />
                         </div>
                       </div>
                     </div>
 
                     <div className="flex gap-2">
-                      <Button 
-                        size="sm" 
-                        variant="outline"
-                        onClick={() => setSelectedSession(session.id)}
-                      >
+                      <Button size="sm" variant="outline" onClick={() => setSelectedSession(session.id)}>
                         View Details
                       </Button>
-                      {session.status === "scheduled" && (
-                        <Button size="sm" className="flex items-center gap-1">
+                      {session.status === "scheduled" && <Button size="sm" className="flex items-center gap-1">
                           <Play className="w-3 h-3" />
                           Start Session
-                        </Button>
-                      )}
-                      {session.status === "in-progress" && (
-                        <Button size="sm" variant="outline" className="flex items-center gap-1">
+                        </Button>}
+                      {session.status === "in-progress" && <Button size="sm" variant="outline" className="flex items-center gap-1">
                           <Pause className="w-3 h-3" />
                           Pause Session
-                        </Button>
-                      )}
+                        </Button>}
                       <Button size="sm" variant="outline" className="flex items-center gap-1">
                         <Settings className="w-3 h-3" />
                         Manage
                       </Button>
                     </div>
                   </CardContent>
-                </Card>
-              ))}
+                </Card>)}
             </div>
           </TabsContent>
 
           <TabsContent value="details" className="space-y-6">
-            {selectedSession ? (
-              <Card>
+            {selectedSession ? <Card>
                 <CardHeader>
                   <CardTitle>Session Details</CardTitle>
                   <CardDescription>Detailed view of the selected session</CardDescription>
@@ -234,9 +218,7 @@ const SessionManagement = () => {
                     Select a session from the overview to view detailed information.
                   </p>
                 </CardContent>
-              </Card>
-            ) : (
-              <Card>
+              </Card> : <Card>
                 <CardHeader>
                   <CardTitle>Session Details</CardTitle>
                   <CardDescription>Select a session to view details</CardDescription>
@@ -246,8 +228,7 @@ const SessionManagement = () => {
                     Click "View Details" on any session from the overview tab to see detailed information.
                   </p>
                 </CardContent>
-              </Card>
-            )}
+              </Card>}
           </TabsContent>
 
           <TabsContent value="participants" className="space-y-6">
@@ -258,33 +239,27 @@ const SessionManagement = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {vcMembers.map((vc) => (
-                    <div key={vc.id} className="border border-border rounded-lg p-4">
+                  {vcMembers.map(vc => <div key={vc.id} className="border border-border rounded-lg p-4">
                       <div className="flex items-center justify-between mb-2">
                         <div>
                           <h4 className="font-semibold text-foreground">{vc.full_name || 'Unknown VC'}</h4>
                           <p className="text-sm text-muted-foreground">{vc.organization || 'No organization'}</p>
                         </div>
                         <div className="flex gap-2">
-                          {vc.expertise?.map((specialty: string) => (
-                            <Badge key={specialty} variant="secondary">{specialty}</Badge>
-                          )) || <Badge variant="outline">No expertise listed</Badge>}
+                          {vc.expertise?.map((specialty: string) => <Badge key={specialty} variant="secondary">{specialty}</Badge>) || <Badge variant="outline">No expertise listed</Badge>}
                         </div>
                       </div>
                       <div className="flex gap-2">
                         <Button size="sm" variant="outline">View Profile</Button>
                         <Button size="sm" variant="outline">Session History</Button>
                       </div>
-                    </div>
-                  ))}
+                    </div>)}
                 </div>
               </CardContent>
             </Card>
           </TabsContent>
         </Tabs>
       </main>
-    </div>
-  );
+    </div>;
 };
-
 export default SessionManagement;
