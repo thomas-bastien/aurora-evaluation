@@ -212,38 +212,55 @@ const Dashboard = () => {
           <div className="bg-gradient-subtle border border-border rounded-lg p-6 shadow-soft">
             <h3 className="text-lg font-semibold text-foreground mb-4">Quick Actions</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <button className="p-4 bg-card border border-border rounded-lg hover:bg-muted transition-smooth text-left">
+              <button 
+                onClick={() => window.location.href = '/evaluate'}
+                className="p-4 bg-card border border-border rounded-lg hover:bg-muted transition-smooth text-left"
+              >
                 <div className="flex items-center space-x-3">
                   <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
                     <Star className="w-5 h-5 text-primary" />
                   </div>
                   <div>
-                    <h4 className="font-medium text-foreground">Start New Evaluation</h4>
-                    <p className="text-sm text-muted-foreground">Begin reviewing pending startups</p>
+                    <h4 className="font-medium text-foreground">
+                      {profile?.role === 'vc' ? 'My Evaluations' : 'Start New Evaluation'}
+                    </h4>
+                    <p className="text-sm text-muted-foreground">
+                      {profile?.role === 'vc' ? 'Review assigned startups' : 'Begin reviewing pending startups'}
+                    </p>
                   </div>
                 </div>
               </button>
               
-              <button className="p-4 bg-card border border-border rounded-lg hover:bg-muted transition-smooth text-left">
+              <button 
+                onClick={() => window.location.href = '/sessions'}
+                className="p-4 bg-card border border-border rounded-lg hover:bg-muted transition-smooth text-left"
+              >
                 <div className="flex items-center space-x-3">
                   <div className="w-10 h-10 bg-success/10 rounded-lg flex items-center justify-center">
                     <Calendar className="w-5 h-5 text-success" />
                   </div>
                   <div>
-                    <h4 className="font-medium text-foreground">Schedule Pitch Session</h4>
-                    <p className="text-sm text-muted-foreground">Coordinate final presentations</p>
+                    <h4 className="font-medium text-foreground">Session Management</h4>
+                    <p className="text-sm text-muted-foreground">Coordinate evaluation sessions</p>
                   </div>
                 </div>
               </button>
               
-              <button className="p-4 bg-card border border-border rounded-lg hover:bg-muted transition-smooth text-left">
+              <button 
+                onClick={() => window.location.href = profile?.role === 'admin' ? '/admin' : '/startups'}
+                className="p-4 bg-card border border-border rounded-lg hover:bg-muted transition-smooth text-left"
+              >
                 <div className="flex items-center space-x-3">
                   <div className="w-10 h-10 bg-warning/10 rounded-lg flex items-center justify-center">
                     <BarChart3 className="w-5 h-5 text-warning" />
                   </div>
                   <div>
-                    <h4 className="font-medium text-foreground">Generate Report</h4>
-                    <p className="text-sm text-muted-foreground">Export evaluation analytics</p>
+                    <h4 className="font-medium text-foreground">
+                      {profile?.role === 'admin' ? 'Admin Dashboard' : 'View Startups'}
+                    </h4>
+                    <p className="text-sm text-muted-foreground">
+                      {profile?.role === 'admin' ? 'Manage system and reports' : 'Browse startup profiles'}
+                    </p>
                   </div>
                 </div>
               </button>

@@ -61,6 +61,11 @@ const App = () => (
                 <VCProfile />
               </ProtectedRoute>
             } />
+            <Route path="/profile" element={
+              <ProtectedRoute>
+                <VCProfile />
+              </ProtectedRoute>
+            } />
             <Route path="/admin" element={
               <ProtectedRoute>
                 <AdminDashboard />

@@ -10,6 +10,9 @@ interface UserProfile {
   role: 'vc' | 'admin';
   created_at: string;
   updated_at: string;
+  calendly_link: string | null;
+  expertise: string[] | null;
+  investment_stages: string[] | null;
 }
 
 export const useUserProfile = () => {
