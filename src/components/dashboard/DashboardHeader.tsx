@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Bell, Search, Settings, User, ChevronDown, Building, Users, LogOut } from "lucide-react";
+import { Bell, Search, Settings, User, ChevronDown, Building, Users, LogOut, Network } from "lucide-react";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -39,14 +39,11 @@ export const DashboardHeader = () => {
               <a href="/sessions" className={`hover:text-primary transition-smooth ${isActive('/sessions') ? 'text-primary' : 'text-muted-foreground'}`}>
                 Sessions
               </a>
-              <a href="/matchmaking" className={`hover:text-primary transition-smooth ${isActive('/matchmaking') ? 'text-primary' : 'text-muted-foreground'}`}>
-                Matchmaking
-              </a>
               
               {/* Ecosystem Dropdown */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <button className={`flex items-center gap-1 hover:text-primary transition-smooth ${isActive('/startup') || isActive('/vc') || isActive('/juror') ? 'text-primary' : 'text-muted-foreground'}`}>
+                  <button className={`flex items-center gap-1 hover:text-primary transition-smooth ${isActive('/startup') || isActive('/vc') || isActive('/juror') || isActive('/matchmaking') ? 'text-primary' : 'text-muted-foreground'}`}>
                     Ecosystem
                     <ChevronDown className="w-4 h-4" />
                   </button>
@@ -59,6 +56,10 @@ export const DashboardHeader = () => {
                   <DropdownMenuItem onClick={() => navigate('/jurors')} className="cursor-pointer">
                     <Users className="w-4 h-4 mr-2" />
                     Jury
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate('/matchmaking')} className="cursor-pointer">
+                    <Network className="w-4 h-4 mr-2" />
+                    Matchmaking
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
