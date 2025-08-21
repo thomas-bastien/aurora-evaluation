@@ -37,15 +37,25 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   const signOut = async () => {
-    try {
-      await supabase.auth.signOut();
-    } catch (error) {
-      // If session doesn't exist or is already expired, we still want to clear local state
-      console.warn('Sign out error (this is usually harmless):', error);
-    }
-    // Always clear local state regardless of API call success
+    // Always clear local state first to ensure immediate logout
     setSession(null);
     setUser(null);
+    
+    try {
+      // Try to notify server, but don't let failure prevent logout
+      await supabase.auth.signOut();
+    } catch (error) {
+      // Session not found errors are expected when JWT is stale
+      console.warn('Sign out API call failed (this is normal for expired sessions):', error);
+    }
+    
+    // Clear all potential localStorage keys that Supabase might use
+    try {
+      localStorage.removeItem('supabase.auth.token');
+      localStorage.removeItem('sb-' + 'fadxytngwiporjqchsem' + '-auth-token');
+    } catch (error) {
+      console.warn('Error clearing localStorage:', error);
+    }
   };
 
   const value = {
