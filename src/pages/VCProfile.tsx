@@ -140,7 +140,7 @@ const VCProfile = () => {
       <main className="max-w-4xl mx-auto px-6 py-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground mb-2">Profile</h1>
+          <h1 className="text-3xl font-bold text-foreground mb-2">User Profile</h1>
           <p className="text-lg text-muted-foreground">
             Manage your profile information and track your evaluation progress
           </p>
