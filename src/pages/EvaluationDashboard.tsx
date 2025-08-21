@@ -50,6 +50,21 @@ const EvaluationDashboard = () => {
     try {
       setLoading(true);
 
+      // First, find the juror record for this authenticated user
+      const { data: juror, error: jurorError } = await supabase
+        .from('jurors')
+        .select('id')
+        .eq('user_id', user?.id)
+        .maybeSingle();
+
+      if (jurorError) throw jurorError;
+      
+      if (!juror) {
+        console.warn('No juror record found for this user');
+        setAssignedStartups([]);
+        return;
+      }
+
       // Fetch startups assigned to this juror
       const {
         data: assignments,
@@ -71,7 +86,7 @@ const EvaluationDashboard = () => {
             demo_url,
             location
           )
-        `).eq('juror_id', user?.id).eq('status', 'assigned');
+        `).eq('juror_id', juror.id).eq('status', 'assigned');
       if (assignmentsError) throw assignmentsError;
 
       // Fetch existing evaluations for these startups
