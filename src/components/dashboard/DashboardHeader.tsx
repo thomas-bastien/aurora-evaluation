@@ -39,6 +39,9 @@ export const DashboardHeader = () => {
               <a href="/sessions" className={`hover:text-primary transition-smooth ${isActive('/sessions') ? 'text-primary' : 'text-muted-foreground'}`}>
                 Sessions
               </a>
+              <a href="/matchmaking" className={`hover:text-primary transition-smooth ${isActive('/matchmaking') ? 'text-primary' : 'text-muted-foreground'}`}>
+                Matchmaking
+              </a>
               
               {/* Ecosystem Dropdown */}
               <DropdownMenu>

@@ -72,7 +72,7 @@ export const StartupAssignmentModal = ({
     );
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (selectedJurorIds.length < 3) {
       toast({
         title: "Insufficient Jurors",
@@ -82,17 +82,56 @@ export const StartupAssignmentModal = ({
       return;
     }
 
-    const newAssignments: Assignment[] = selectedJurorIds.map(jurorId => {
-      const juror = jurors.find(j => j.id === jurorId);
-      return {
+    try {
+      // Import supabase client
+      const { supabase } = await import('@/integrations/supabase/client');
+      
+      // Delete existing assignments for this startup
+      const { error: deleteError } = await supabase
+        .from('startup_assignments')
+        .delete()
+        .eq('startup_id', startup.id);
+      
+      if (deleteError) throw deleteError;
+
+      // Insert new assignments
+      const assignmentRecords = selectedJurorIds.map(jurorId => ({
         startup_id: startup.id,
         juror_id: jurorId,
-        startup_name: startup.name,
-        juror_name: juror?.name || ''
-      };
-    });
+        status: 'assigned'
+      }));
 
-    onComplete(newAssignments);
+      const { error: insertError } = await supabase
+        .from('startup_assignments')
+        .insert(assignmentRecords);
+      
+      if (insertError) throw insertError;
+
+      // Create assignment objects for local state update
+      const newAssignments: Assignment[] = selectedJurorIds.map(jurorId => {
+        const juror = jurors.find(j => j.id === jurorId);
+        return {
+          startup_id: startup.id,
+          juror_id: jurorId,
+          startup_name: startup.name,
+          juror_name: juror?.name || ''
+        };
+      });
+
+      onComplete(newAssignments);
+      
+      toast({
+        title: "Success",
+        description: "Assignment saved successfully to database."
+      });
+    } catch (error) {
+      console.error('Error saving assignment:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save assignment. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   return (
