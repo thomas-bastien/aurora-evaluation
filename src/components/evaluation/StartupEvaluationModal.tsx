@@ -233,7 +233,19 @@ export const StartupEvaluationModal = ({ startup, open, onClose, onEvaluationUpd
       const evaluationData = {
         startup_id: startup.id,
         evaluator_id: user?.id,
-        ...formData,
+        team_score: Math.round(formData.team_score),
+        product_score: Math.round(formData.product_score),
+        market_score: Math.round(formData.market_score),
+        traction_score: Math.round(formData.traction_score),
+        financials_score: Math.round(formData.financials_score),
+        team_feedback: formData.team_feedback,
+        product_feedback: formData.product_feedback,
+        market_feedback: formData.market_feedback,
+        traction_feedback: formData.traction_feedback,
+        financials_feedback: formData.financials_feedback,
+        overall_notes: formData.overall_notes,
+        recommendation: formData.recommendation,
+        investment_amount: formData.investment_amount,
         overall_score: overallScore,
         status
       };
@@ -389,7 +401,7 @@ export const StartupEvaluationModal = ({ startup, open, onClose, onEvaluationUpd
                           [criterion.key]: value[0]
                         }))}
                         max={10}
-                        step={0.5}
+                        step={1}
                         className="w-full"
                       />
                     </div>
