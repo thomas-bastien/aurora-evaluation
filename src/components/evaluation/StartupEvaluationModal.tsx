@@ -51,11 +51,11 @@ interface StartupEvaluationModalProps {
 }
 
 interface EvaluationForm {
-  team_score: number;
-  product_score: number;
-  market_score: number;
-  traction_score: number;
-  financials_score: number;
+  team_score: number | null;
+  product_score: number | null;
+  market_score: number | null;
+  traction_score: number | null;
+  financials_score: number | null;
   team_feedback: string;
   product_feedback: string;
   market_feedback: string;
@@ -63,7 +63,7 @@ interface EvaluationForm {
   financials_feedback: string;
   overall_notes: string;
   recommendation: string;
-  investment_amount: number;
+  investment_amount: number | null;
 }
 
 const evaluationCriteria = [
@@ -109,11 +109,11 @@ export const StartupEvaluationModal = ({ startup, open, onClose, onEvaluationUpd
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState<EvaluationForm>({
-    team_score: 1,
-    product_score: 1,
-    market_score: 1,
-    traction_score: 1,
-    financials_score: 1,
+    team_score: null,
+    product_score: null,
+    market_score: null,
+    traction_score: null,
+    financials_score: null,
     team_feedback: '',
     product_feedback: '',
     market_feedback: '',
@@ -121,7 +121,7 @@ export const StartupEvaluationModal = ({ startup, open, onClose, onEvaluationUpd
     financials_feedback: '',
     overall_notes: '',
     recommendation: '',
-    investment_amount: 0
+    investment_amount: null
   });
 
   useEffect(() => {
@@ -130,11 +130,11 @@ export const StartupEvaluationModal = ({ startup, open, onClose, onEvaluationUpd
     } else if (open) {
       // Reset form for new evaluation
       setFormData({
-        team_score: 1,
-        product_score: 1,
-        market_score: 1,
-        traction_score: 1,
-        financials_score: 1,
+        team_score: null,
+        product_score: null,
+        market_score: null,
+        traction_score: null,
+        financials_score: null,
         team_feedback: '',
         product_feedback: '',
         market_feedback: '',
@@ -142,7 +142,7 @@ export const StartupEvaluationModal = ({ startup, open, onClose, onEvaluationUpd
         financials_feedback: '',
         overall_notes: '',
         recommendation: '',
-        investment_amount: 0
+        investment_amount: null
       });
     }
   }, [open, startup.evaluation_id]);
@@ -160,11 +160,11 @@ export const StartupEvaluationModal = ({ startup, open, onClose, onEvaluationUpd
 
       if (data) {
         setFormData({
-          team_score: data.team_score || 1,
-          product_score: data.product_score || 1,
-          market_score: data.market_score || 1,
-          traction_score: data.traction_score || 1,
-          financials_score: data.financials_score || 1,
+          team_score: data.team_score,
+          product_score: data.product_score,
+          market_score: data.market_score,
+          traction_score: data.traction_score,
+          financials_score: data.financials_score,
           team_feedback: data.team_feedback || '',
           product_feedback: data.product_feedback || '',
           market_feedback: data.market_feedback || '',
@@ -172,7 +172,7 @@ export const StartupEvaluationModal = ({ startup, open, onClose, onEvaluationUpd
           financials_feedback: data.financials_feedback || '',
           overall_notes: data.overall_notes || '',
           recommendation: data.recommendation || '',
-          investment_amount: data.investment_amount || 0
+          investment_amount: data.investment_amount
         });
       }
     } catch (error) {
@@ -185,17 +185,21 @@ export const StartupEvaluationModal = ({ startup, open, onClose, onEvaluationUpd
 
   const calculateOverallScore = () => {
     let totalScore = 0;
+    let totalWeight = 0;
     evaluationCriteria.forEach(criterion => {
-      const score = formData[criterion.key as keyof EvaluationForm] as number;
-      totalScore += score * (criterion.weight / 100);
+      const score = formData[criterion.key as keyof EvaluationForm] as number | null;
+      if (score !== null && score > 0) {
+        totalScore += score * (criterion.weight / 100);
+        totalWeight += criterion.weight / 100;
+      }
     });
-    return totalScore;
+    return totalWeight > 0 ? totalScore / totalWeight : 0;
   };
 
   const validateForm = () => {
     const requiredScores = evaluationCriteria.every(criterion => {
-      const score = formData[criterion.key as keyof EvaluationForm] as number;
-      return score >= 1;
+      const score = formData[criterion.key as keyof EvaluationForm] as number | null;
+      return score !== null && score >= 1 && score <= 10;
     });
 
     const requiredFeedback = evaluationCriteria.every(criterion => {
@@ -204,7 +208,7 @@ export const StartupEvaluationModal = ({ startup, open, onClose, onEvaluationUpd
     });
 
     if (!requiredScores) {
-      toast.error('Please provide scores for all evaluation criteria');
+      toast.error('Please provide scores (1-10) for all evaluation criteria');
       return false;
     }
 
@@ -213,8 +217,8 @@ export const StartupEvaluationModal = ({ startup, open, onClose, onEvaluationUpd
       return false;
     }
 
-    if (!formData.recommendation) {
-      toast.error('Please select a recommendation');
+    if (!formData.recommendation || !['invest', 'maybe', 'pass'].includes(formData.recommendation)) {
+      toast.error('Please select a valid recommendation');
       return false;
     }
 
@@ -230,25 +234,52 @@ export const StartupEvaluationModal = ({ startup, open, onClose, onEvaluationUpd
       setSaving(true);
       const overallScore = calculateOverallScore();
 
-      const evaluationData = {
+      // Prepare evaluation data, handling null values for drafts
+      const evaluationData: any = {
         startup_id: startup.id,
         evaluator_id: user?.id,
-        team_score: Math.round(formData.team_score),
-        product_score: Math.round(formData.product_score),
-        market_score: Math.round(formData.market_score),
-        traction_score: Math.round(formData.traction_score),
-        financials_score: Math.round(formData.financials_score),
-        team_feedback: formData.team_feedback,
-        product_feedback: formData.product_feedback,
-        market_feedback: formData.market_feedback,
-        traction_feedback: formData.traction_feedback,
-        financials_feedback: formData.financials_feedback,
-        overall_notes: formData.overall_notes,
-        recommendation: formData.recommendation,
-        investment_amount: formData.investment_amount,
-        overall_score: overallScore,
         status
       };
+
+      // Only include scores if they are valid (1-10)
+      if (formData.team_score !== null && formData.team_score >= 1 && formData.team_score <= 10) {
+        evaluationData.team_score = Math.round(formData.team_score);
+      }
+      if (formData.product_score !== null && formData.product_score >= 1 && formData.product_score <= 10) {
+        evaluationData.product_score = Math.round(formData.product_score);
+      }
+      if (formData.market_score !== null && formData.market_score >= 1 && formData.market_score <= 10) {
+        evaluationData.market_score = Math.round(formData.market_score);
+      }
+      if (formData.traction_score !== null && formData.traction_score >= 1 && formData.traction_score <= 10) {
+        evaluationData.traction_score = Math.round(formData.traction_score);
+      }
+      if (formData.financials_score !== null && formData.financials_score >= 1 && formData.financials_score <= 10) {
+        evaluationData.financials_score = Math.round(formData.financials_score);
+      }
+
+      // Include feedback fields
+      evaluationData.team_feedback = formData.team_feedback || null;
+      evaluationData.product_feedback = formData.product_feedback || null;
+      evaluationData.market_feedback = formData.market_feedback || null;
+      evaluationData.traction_feedback = formData.traction_feedback || null;
+      evaluationData.financials_feedback = formData.financials_feedback || null;
+      evaluationData.overall_notes = formData.overall_notes || null;
+
+      // Only include recommendation if it's valid
+      if (formData.recommendation && ['invest', 'maybe', 'pass'].includes(formData.recommendation)) {
+        evaluationData.recommendation = formData.recommendation;
+      }
+
+      // Include investment amount if it's a positive number
+      if (formData.investment_amount !== null && formData.investment_amount > 0) {
+        evaluationData.investment_amount = formData.investment_amount;
+      }
+
+      // Calculate overall score only if we have valid scores
+      if (overallScore > 0) {
+        evaluationData.overall_score = overallScore;
+      }
 
       if (startup.evaluation_id) {
         // Update existing evaluation
@@ -388,14 +419,14 @@ export const StartupEvaluationModal = ({ startup, open, onClose, onEvaluationUpd
                           {criterion.label} ({criterion.weight}%)
                         </Label>
                         <span className="text-sm font-medium text-primary">
-                          {formData[criterion.key as keyof EvaluationForm]}/10
+                          {formData[criterion.key as keyof EvaluationForm] || 0}/10
                         </span>
                       </div>
                       <p className="text-sm text-muted-foreground mb-3">
                         {criterion.description}
                       </p>
                       <Slider
-                        value={[formData[criterion.key as keyof EvaluationForm] as number]}
+                        value={[(formData[criterion.key as keyof EvaluationForm] as number) || 1]}
                         onValueChange={(value) => setFormData(prev => ({
                           ...prev,
                           [criterion.key]: value[0]
@@ -477,10 +508,10 @@ export const StartupEvaluationModal = ({ startup, open, onClose, onEvaluationUpd
                       <input
                         id="investment-amount"
                         type="number"
-                        value={formData.investment_amount}
+                        value={formData.investment_amount || ''}
                         onChange={(e) => setFormData(prev => ({
                           ...prev,
-                          investment_amount: parseInt(e.target.value) || 0
+                          investment_amount: e.target.value ? parseInt(e.target.value) : null
                         }))}
                         min="0"
                         max="10000000"
