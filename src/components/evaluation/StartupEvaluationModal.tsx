@@ -475,17 +475,21 @@ export const StartupEvaluationModal = ({ startup, open, onClose, onEvaluationUpd
                     <Label htmlFor="investment-amount">Potential Investment Amount</Label>
                     <div className="flex items-center space-x-2">
                       <span className="text-sm">$</span>
-                      <Slider
-                        value={[formData.investment_amount]}
-                        onValueChange={(value) => setFormData(prev => ({
+                      <input
+                        id="investment-amount"
+                        type="number"
+                        value={formData.investment_amount}
+                        onChange={(e) => setFormData(prev => ({
                           ...prev,
-                          investment_amount: value[0]
+                          investment_amount: parseInt(e.target.value) || 0
                         }))}
-                        max={10000000}
-                        step={50000}
-                        className="flex-1"
+                        min="0"
+                        max="10000000"
+                        step="50000"
+                        className="flex-1 px-3 py-2 border border-input bg-background text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 rounded-md"
+                        placeholder="0"
                       />
-                      <span className="text-sm font-medium">
+                      <span className="text-sm font-medium text-muted-foreground">
                         {formatCurrency(formData.investment_amount)}
                       </span>
                     </div>
