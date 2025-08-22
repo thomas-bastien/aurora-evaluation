@@ -109,11 +109,11 @@ export const StartupEvaluationModal = ({ startup, open, onClose, onEvaluationUpd
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState<EvaluationForm>({
-    team_score: 0,
-    product_score: 0,
-    market_score: 0,
-    traction_score: 0,
-    financials_score: 0,
+    team_score: 1,
+    product_score: 1,
+    market_score: 1,
+    traction_score: 1,
+    financials_score: 1,
     team_feedback: '',
     product_feedback: '',
     market_feedback: '',
@@ -130,11 +130,11 @@ export const StartupEvaluationModal = ({ startup, open, onClose, onEvaluationUpd
     } else if (open) {
       // Reset form for new evaluation
       setFormData({
-        team_score: 0,
-        product_score: 0,
-        market_score: 0,
-        traction_score: 0,
-        financials_score: 0,
+        team_score: 1,
+        product_score: 1,
+        market_score: 1,
+        traction_score: 1,
+        financials_score: 1,
         team_feedback: '',
         product_feedback: '',
         market_feedback: '',
@@ -160,11 +160,11 @@ export const StartupEvaluationModal = ({ startup, open, onClose, onEvaluationUpd
 
       if (data) {
         setFormData({
-          team_score: data.team_score || 0,
-          product_score: data.product_score || 0,
-          market_score: data.market_score || 0,
-          traction_score: data.traction_score || 0,
-          financials_score: data.financials_score || 0,
+          team_score: data.team_score || 1,
+          product_score: data.product_score || 1,
+          market_score: data.market_score || 1,
+          traction_score: data.traction_score || 1,
+          financials_score: data.financials_score || 1,
           team_feedback: data.team_feedback || '',
           product_feedback: data.product_feedback || '',
           market_feedback: data.market_feedback || '',
@@ -195,7 +195,7 @@ export const StartupEvaluationModal = ({ startup, open, onClose, onEvaluationUpd
   const validateForm = () => {
     const requiredScores = evaluationCriteria.every(criterion => {
       const score = formData[criterion.key as keyof EvaluationForm] as number;
-      return score > 0;
+      return score >= 1;
     });
 
     const requiredFeedback = evaluationCriteria.every(criterion => {
@@ -400,6 +400,7 @@ export const StartupEvaluationModal = ({ startup, open, onClose, onEvaluationUpd
                           ...prev,
                           [criterion.key]: value[0]
                         }))}
+                        min={1}
                         max={10}
                         step={1}
                         className="w-full"
