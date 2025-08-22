@@ -463,11 +463,9 @@ export const StartupEvaluationModal = ({ startup, open, onClose, onEvaluationUpd
                         <SelectValue placeholder="Select recommendation" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="strong_yes">Strong Yes - Highly Recommend</SelectItem>
-                        <SelectItem value="yes">Yes - Recommend</SelectItem>
+                        <SelectItem value="invest">Invest - Recommend</SelectItem>
                         <SelectItem value="maybe">Maybe - Consider</SelectItem>
-                        <SelectItem value="no">No - Do Not Recommend</SelectItem>
-                        <SelectItem value="strong_no">Strong No - Reject</SelectItem>
+                        <SelectItem value="pass">Pass - Do Not Recommend</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
