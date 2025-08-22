@@ -230,8 +230,21 @@ export const StartupEvaluationModal = ({ startup, open, onClose, onEvaluationUpd
       return;
     }
 
+    if (!user?.id) {
+      toast.error('Authentication required. Please sign in again.');
+      return;
+    }
+
     try {
       setSaving(true);
+      
+      // Verify current session
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error('Session expired. Please sign in again.');
+        return;
+      }
+
       const overallScore = calculateOverallScore();
 
       // Prepare evaluation data, handling null values for drafts
@@ -419,14 +432,14 @@ export const StartupEvaluationModal = ({ startup, open, onClose, onEvaluationUpd
                           {criterion.label} ({criterion.weight}%)
                         </Label>
                         <span className="text-sm font-medium text-primary">
-                          {formData[criterion.key as keyof EvaluationForm] || 0}/10
+                          {Math.max(1, (formData[criterion.key as keyof EvaluationForm] as number) || 1)}/10
                         </span>
                       </div>
                       <p className="text-sm text-muted-foreground mb-3">
                         {criterion.description}
                       </p>
-                      <Slider
-                        value={[(formData[criterion.key as keyof EvaluationForm] as number) || 1]}
+                       <Slider
+                        value={[Math.max(1, (formData[criterion.key as keyof EvaluationForm] as number) || 1)]}
                         onValueChange={(value) => setFormData(prev => ({
                           ...prev,
                           [criterion.key]: value[0]
