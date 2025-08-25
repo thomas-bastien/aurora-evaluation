@@ -59,7 +59,9 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Use the configured frontend URL from environment or fallback to origin header
     const frontendUrl = Deno.env.get('FRONTEND_URL') || req.headers.get('origin');
-    const signupUrl = `${frontendUrl}/signup?token=${jurorData.invitation_token}`;
+    // Remove trailing slash if present to avoid double slashes
+    const baseUrl = frontendUrl?.replace(/\/$/, '') || '';
+    const signupUrl = `${baseUrl}/signup?token=${jurorData.invitation_token}`;
 
     // For testing, always send to lucien98@gmail.com
     const testEmail = "lucien98@gmail.com";
