@@ -42,11 +42,13 @@ const JurorSignup = () => {
           .maybeSingle();
 
         if (error || !data) {
+          console.error("Token validation error:", error);
           setError("Invalid or expired invitation link.");
         } else {
           setJurorData(data);
         }
       } catch (err) {
+        console.error("Token validation failed:", err);
         setError("Failed to validate invitation.");
       } finally {
         setValidatingToken(false);
