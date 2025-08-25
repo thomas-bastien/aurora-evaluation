@@ -14,22 +14,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
-import { 
-  Star, 
-  Save, 
-  Send, 
-  Info,
-  Building2,
-  DollarSign,
-  Users,
-  Calendar,
-  Globe,
-  FileText,
-  Video,
-  MapPin,
-  Linkedin
-} from "lucide-react";
-
+import { Star, Save, Send, Info, Building2, DollarSign, Users, Calendar, Globe, FileText, Video, MapPin, Linkedin } from "lucide-react";
 interface StartupEvaluationModalProps {
   startup: {
     id: string;
@@ -56,20 +41,17 @@ interface StartupEvaluationModalProps {
   onClose: () => void;
   onEvaluationUpdate: () => void;
 }
-
 interface EvaluationCriterion {
   key: string;
   label: string;
   description: string;
 }
-
 interface EvaluationSection {
   key: string;
   title: string;
   criteria: EvaluationCriterion[];
   guidance: string;
 }
-
 interface EvaluationForm {
   criteria_scores: Record<string, number>; // 0, 1, or 2
   strengths: string[];
@@ -81,134 +63,268 @@ interface EvaluationForm {
   recommendation: string;
   investment_amount: number | null;
 }
-
-const evaluationSections: EvaluationSection[] = [
-  {
-    key: 'problem_statement',
-    title: 'Problem Statement',
-    guidance: 'Does the startup show a clear, evidence-based problem that is significant to the target customer segment?',
-    criteria: [
-      { key: 'problem_logical', label: 'The problem is presented logically and compellingly', description: 'Clear problem articulation' },
-      { key: 'pain_point_clear', label: 'The pain point is clearly articulated', description: 'Pain point definition' },
-      { key: 'issue_size_explained', label: 'The size/significance of the issue is explained', description: 'Problem magnitude' },
-      { key: 'sources_cited', label: 'Sources for claims are cited', description: 'Evidence backing' },
-      { key: 'sources_accurate', label: 'Sources are accurate and verifiable', description: 'Source reliability' },
-      { key: 'target_segment_defined', label: 'Target client segment is clearly defined', description: 'Customer definition' },
-      { key: 'current_solutions_limitations', label: 'Limitations of current/alternative solutions are included', description: 'Gap analysis' }
-    ]
-  },
-  {
-    key: 'solution',
-    title: 'Solution',
-    guidance: 'Does the solution directly address the identified problem with measurable impact?',
-    criteria: [
-      { key: 'solution_addresses_problem', label: 'The solution directly addresses the problem', description: 'Problem-solution fit' },
-      { key: 'impact_measurable', label: 'Impact on clients is measurable with results', description: 'Quantified benefits' },
-      { key: 'solution_clearly_described', label: 'The solution is clearly described', description: 'Solution clarity' },
-      { key: 'use_case_provided', label: 'A use case or product visualization is provided', description: 'Practical examples' },
-      { key: 'website_app_aligns', label: 'A website or app is available and aligns with the description', description: 'Product consistency' }
-    ]
-  },
-  {
-    key: 'market',
-    title: 'Market',
-    guidance: 'Is the market size substantial and well-researched with realistic assumptions?',
-    criteria: [
-      { key: 'market_size_presented', label: 'Market size is presented', description: 'Market sizing' },
-      { key: 'market_large_enough', label: 'Market is large enough to show venture potential', description: 'Venture scalability' },
-      { key: 'figures_realistic', label: 'Figures and logic are realistic (no exaggeration)', description: 'Data credibility' },
-      { key: 'market_aligns_problem', label: 'Market aligns with the defined problem and client segments', description: 'Market-problem fit' },
-      { key: 'reliable_sources_market', label: 'Reliable sources are cited for market trends', description: 'Market research quality' },
-      { key: 'competitors_listed', label: 'Competitors are listed', description: 'Competitive awareness' }
-    ]
-  },
-  {
-    key: 'competitive_advantage',
-    title: 'Competitive Advantage',
-    guidance: 'Is there a clear and defensible competitive advantage over existing solutions?',
-    criteria: [
-      { key: 'comparative_analysis', label: 'A comparative analysis of competitors is conducted', description: 'Competition analysis' },
-      { key: 'advantage_clearly_defined', label: 'Competitive advantage is clearly defined', description: 'Differentiation clarity' }
-    ]
-  },
-  {
-    key: 'business_model',
-    title: 'Business Model',
-    guidance: 'Is the monetization model clear, coherent, and supported by positive unit economics?',
-    criteria: [
-      { key: 'monetization_described', label: 'Monetisation model is clearly described', description: 'Revenue model' },
-      { key: 'unit_economics_positive', label: 'Unit economics are provided and positive', description: 'Economic viability' },
-      { key: 'business_model_coherent', label: 'Business model is coherent and data-backed', description: 'Model consistency' }
-    ]
-  },
-  {
-    key: 'traction_scalability',
-    title: 'Traction & Scalability',
-    guidance: 'Does the company demonstrate meaningful traction with a realistic growth plan?',
-    criteria: [
-      { key: 'positive_traction', label: 'Company shows positive traction', description: 'Growth evidence' },
-      { key: 'key_metrics_presented', label: 'Key metrics are presented', description: 'Performance indicators' },
-      { key: 'growth_plan_3_5_years', label: '3–5 year growth plan is included', description: 'Strategic planning' },
-      { key: 'key_milestones_provided', label: 'Key milestones are provided for 3–5 years', description: 'Milestone planning' },
-      { key: 'revenue_targets_align', label: 'Revenue targets align with SOM', description: 'Market alignment' }
-    ]
-  },
-  {
-    key: 'team',
-    title: 'Team',
-    guidance: 'Does the team have relevant experience and expertise to execute the business plan?',
-    criteria: [
-      { key: 'team_members_introduced', label: 'Core team members are introduced with roles', description: 'Team transparency' },
-      { key: 'achievements_highlighted', label: 'Achievements and relevant experience are highlighted', description: 'Track record' },
-      { key: 'relevant_business_experience', label: 'Team has relevant business experience', description: 'Business expertise' },
-      { key: 'relevant_technical_expertise', label: 'Team has relevant technical expertise', description: 'Technical capability' }
-    ]
-  },
-  {
-    key: 'impact',
-    title: 'Impact',
-    guidance: 'Is there a clear connection to broader societal challenges with factual backing?',
-    criteria: [
-      { key: 'social_problem_described', label: 'A clear description of the social or sustainability problem is provided', description: 'Impact definition' },
-      { key: 'links_societal_challenge', label: 'The problem links to a broader societal challenge (inequality, sustainability, etc.)', description: 'Societal relevance' },
-      { key: 'factual_information_included', label: 'Problem description includes factual information', description: 'Evidence-based impact' },
-      { key: 'impact_sources_accurate', label: 'Sources are cited and accurate', description: 'Impact credibility' }
-    ]
-  },
-  {
-    key: 'investment',
-    title: 'Investment',
-    guidance: 'Is the investment request clear with well-defined use of funds?',
-    criteria: [
-      { key: 'investment_clearly_stated', label: 'The investment request is clearly stated', description: 'Funding clarity' },
-      { key: 'use_of_funds_outlined', label: 'Intended use of funds is outlined with defined goals', description: 'Fund allocation' }
-    ]
-  }
-];
-
-const guidedFeedbackOptions = [
-  { id: 1, label: 'Overall storytelling in the pitch deck' },
-  { id: 2, label: 'Level of detail and factual evidence is insufficient' },
-  { id: 3, label: 'Problem does not seem real/significant enough' },
-  { id: 4, label: 'Clarity of the problem–solution fit is weak' },
-  { id: 5, label: 'Market estimates are unclear/incorrect' },
-  { id: 6, label: 'Business model unclear or not scalable' },
-  { id: 7, label: 'Competitive analysis needs more attention' },
-  { id: 8, label: 'Competitive advantage not strong enough' },
-  { id: 9, label: 'Missing relevant team experience' },
-  { id: 10, label: 'Insufficient information on team roles/functions' },
-  { id: 11, label: 'No track record to support forecasts' },
-  { id: 12, label: 'Company stage unclear' },
-  { id: 13, label: '3–5 year plan lacks milestones/evidence' },
-  { id: 14, label: 'Plan appears over-optimistic' },
-  { id: 15, label: 'Plan not ambitious enough given track record' },
-  { id: 16, label: 'Investment thesis unclear' },
-  { id: 17, label: 'Investment ask does not align with company stage' },
-  { id: 18, label: 'Business does not appear VC-investable' }
-];
-
-export const StartupEvaluationModal = ({ startup, open, onClose, onEvaluationUpdate }: StartupEvaluationModalProps) => {
-  const { user } = useAuth();
+const evaluationSections: EvaluationSection[] = [{
+  key: 'problem_statement',
+  title: 'Problem Statement',
+  guidance: 'Does the startup show a clear, evidence-based problem that is significant to the target customer segment?',
+  criteria: [{
+    key: 'problem_logical',
+    label: 'The problem is presented logically and compellingly',
+    description: 'Clear problem articulation'
+  }, {
+    key: 'pain_point_clear',
+    label: 'The pain point is clearly articulated',
+    description: 'Pain point definition'
+  }, {
+    key: 'issue_size_explained',
+    label: 'The size/significance of the issue is explained',
+    description: 'Problem magnitude'
+  }, {
+    key: 'sources_cited',
+    label: 'Sources for claims are cited',
+    description: 'Evidence backing'
+  }, {
+    key: 'sources_accurate',
+    label: 'Sources are accurate and verifiable',
+    description: 'Source reliability'
+  }, {
+    key: 'target_segment_defined',
+    label: 'Target client segment is clearly defined',
+    description: 'Customer definition'
+  }, {
+    key: 'current_solutions_limitations',
+    label: 'Limitations of current/alternative solutions are included',
+    description: 'Gap analysis'
+  }]
+}, {
+  key: 'solution',
+  title: 'Solution',
+  guidance: 'Does the solution directly address the identified problem with measurable impact?',
+  criteria: [{
+    key: 'solution_addresses_problem',
+    label: 'The solution directly addresses the problem',
+    description: 'Problem-solution fit'
+  }, {
+    key: 'impact_measurable',
+    label: 'Impact on clients is measurable with results',
+    description: 'Quantified benefits'
+  }, {
+    key: 'solution_clearly_described',
+    label: 'The solution is clearly described',
+    description: 'Solution clarity'
+  }, {
+    key: 'use_case_provided',
+    label: 'A use case or product visualization is provided',
+    description: 'Practical examples'
+  }, {
+    key: 'website_app_aligns',
+    label: 'A website or app is available and aligns with the description',
+    description: 'Product consistency'
+  }]
+}, {
+  key: 'market',
+  title: 'Market',
+  guidance: 'Is the market size substantial and well-researched with realistic assumptions?',
+  criteria: [{
+    key: 'market_size_presented',
+    label: 'Market size is presented',
+    description: 'Market sizing'
+  }, {
+    key: 'market_large_enough',
+    label: 'Market is large enough to show venture potential',
+    description: 'Venture scalability'
+  }, {
+    key: 'figures_realistic',
+    label: 'Figures and logic are realistic (no exaggeration)',
+    description: 'Data credibility'
+  }, {
+    key: 'market_aligns_problem',
+    label: 'Market aligns with the defined problem and client segments',
+    description: 'Market-problem fit'
+  }, {
+    key: 'reliable_sources_market',
+    label: 'Reliable sources are cited for market trends',
+    description: 'Market research quality'
+  }, {
+    key: 'competitors_listed',
+    label: 'Competitors are listed',
+    description: 'Competitive awareness'
+  }]
+}, {
+  key: 'competitive_advantage',
+  title: 'Competitive Advantage',
+  guidance: 'Is there a clear and defensible competitive advantage over existing solutions?',
+  criteria: [{
+    key: 'comparative_analysis',
+    label: 'A comparative analysis of competitors is conducted',
+    description: 'Competition analysis'
+  }, {
+    key: 'advantage_clearly_defined',
+    label: 'Competitive advantage is clearly defined',
+    description: 'Differentiation clarity'
+  }]
+}, {
+  key: 'business_model',
+  title: 'Business Model',
+  guidance: 'Is the monetization model clear, coherent, and supported by positive unit economics?',
+  criteria: [{
+    key: 'monetization_described',
+    label: 'Monetisation model is clearly described',
+    description: 'Revenue model'
+  }, {
+    key: 'unit_economics_positive',
+    label: 'Unit economics are provided and positive',
+    description: 'Economic viability'
+  }, {
+    key: 'business_model_coherent',
+    label: 'Business model is coherent and data-backed',
+    description: 'Model consistency'
+  }]
+}, {
+  key: 'traction_scalability',
+  title: 'Traction & Scalability',
+  guidance: 'Does the company demonstrate meaningful traction with a realistic growth plan?',
+  criteria: [{
+    key: 'positive_traction',
+    label: 'Company shows positive traction',
+    description: 'Growth evidence'
+  }, {
+    key: 'key_metrics_presented',
+    label: 'Key metrics are presented',
+    description: 'Performance indicators'
+  }, {
+    key: 'growth_plan_3_5_years',
+    label: '3–5 year growth plan is included',
+    description: 'Strategic planning'
+  }, {
+    key: 'key_milestones_provided',
+    label: 'Key milestones are provided for 3–5 years',
+    description: 'Milestone planning'
+  }, {
+    key: 'revenue_targets_align',
+    label: 'Revenue targets align with SOM',
+    description: 'Market alignment'
+  }]
+}, {
+  key: 'team',
+  title: 'Team',
+  guidance: 'Does the team have relevant experience and expertise to execute the business plan?',
+  criteria: [{
+    key: 'team_members_introduced',
+    label: 'Core team members are introduced with roles',
+    description: 'Team transparency'
+  }, {
+    key: 'achievements_highlighted',
+    label: 'Achievements and relevant experience are highlighted',
+    description: 'Track record'
+  }, {
+    key: 'relevant_business_experience',
+    label: 'Team has relevant business experience',
+    description: 'Business expertise'
+  }, {
+    key: 'relevant_technical_expertise',
+    label: 'Team has relevant technical expertise',
+    description: 'Technical capability'
+  }]
+}, {
+  key: 'impact',
+  title: 'Impact',
+  guidance: 'Is there a clear connection to broader societal challenges with factual backing?',
+  criteria: [{
+    key: 'social_problem_described',
+    label: 'A clear description of the social or sustainability problem is provided',
+    description: 'Impact definition'
+  }, {
+    key: 'links_societal_challenge',
+    label: 'The problem links to a broader societal challenge (inequality, sustainability, etc.)',
+    description: 'Societal relevance'
+  }, {
+    key: 'factual_information_included',
+    label: 'Problem description includes factual information',
+    description: 'Evidence-based impact'
+  }, {
+    key: 'impact_sources_accurate',
+    label: 'Sources are cited and accurate',
+    description: 'Impact credibility'
+  }]
+}, {
+  key: 'investment',
+  title: 'Investment',
+  guidance: 'Is the investment request clear with well-defined use of funds?',
+  criteria: [{
+    key: 'investment_clearly_stated',
+    label: 'The investment request is clearly stated',
+    description: 'Funding clarity'
+  }, {
+    key: 'use_of_funds_outlined',
+    label: 'Intended use of funds is outlined with defined goals',
+    description: 'Fund allocation'
+  }]
+}];
+const guidedFeedbackOptions = [{
+  id: 1,
+  label: 'Overall storytelling in the pitch deck'
+}, {
+  id: 2,
+  label: 'Level of detail and factual evidence is insufficient'
+}, {
+  id: 3,
+  label: 'Problem does not seem real/significant enough'
+}, {
+  id: 4,
+  label: 'Clarity of the problem–solution fit is weak'
+}, {
+  id: 5,
+  label: 'Market estimates are unclear/incorrect'
+}, {
+  id: 6,
+  label: 'Business model unclear or not scalable'
+}, {
+  id: 7,
+  label: 'Competitive analysis needs more attention'
+}, {
+  id: 8,
+  label: 'Competitive advantage not strong enough'
+}, {
+  id: 9,
+  label: 'Missing relevant team experience'
+}, {
+  id: 10,
+  label: 'Insufficient information on team roles/functions'
+}, {
+  id: 11,
+  label: 'No track record to support forecasts'
+}, {
+  id: 12,
+  label: 'Company stage unclear'
+}, {
+  id: 13,
+  label: '3–5 year plan lacks milestones/evidence'
+}, {
+  id: 14,
+  label: 'Plan appears over-optimistic'
+}, {
+  id: 15,
+  label: 'Plan not ambitious enough given track record'
+}, {
+  id: 16,
+  label: 'Investment thesis unclear'
+}, {
+  id: 17,
+  label: 'Investment ask does not align with company stage'
+}, {
+  id: 18,
+  label: 'Business does not appear VC-investable'
+}];
+export const StartupEvaluationModal = ({
+  startup,
+  open,
+  onClose,
+  onEvaluationUpdate
+}: StartupEvaluationModalProps) => {
+  const {
+    user
+  } = useAuth();
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState<EvaluationForm>({
@@ -222,7 +338,6 @@ export const StartupEvaluationModal = ({ startup, open, onClose, onEvaluationUpd
     recommendation: '',
     investment_amount: null
   });
-
   useEffect(() => {
     if (open && startup.evaluation_id) {
       fetchExistingEvaluation();
@@ -241,26 +356,22 @@ export const StartupEvaluationModal = ({ startup, open, onClose, onEvaluationUpd
       });
     }
   }, [open, startup.evaluation_id]);
-
   const fetchExistingEvaluation = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('evaluations')
-        .select('*')
-        .eq('id', startup.evaluation_id)
-        .single();
-
+      const {
+        data,
+        error
+      } = await supabase.from('evaluations').select('*').eq('id', startup.evaluation_id).single();
       if (error) throw error;
-
       if (data) {
         setFormData({
-          criteria_scores: (data.criteria_scores as Record<string, number>) || {},
-          strengths: (data.strengths as string[]) || ['', '', ''],
+          criteria_scores: data.criteria_scores as Record<string, number> || {},
+          strengths: data.strengths as string[] || ['', '', ''],
           improvement_areas: data.improvement_areas || '',
           pitch_development_aspects: data.pitch_development_aspects || '',
           wants_pitch_session: data.wants_pitch_session || false,
-          guided_feedback: (data.guided_feedback as number[]) || [],
+          guided_feedback: data.guided_feedback as number[] || [],
           overall_notes: data.overall_notes || '',
           recommendation: data.recommendation || '',
           investment_amount: data.investment_amount
@@ -273,70 +384,58 @@ export const StartupEvaluationModal = ({ startup, open, onClose, onEvaluationUpd
       setLoading(false);
     }
   };
-
   const calculateOverallScore = () => {
     const totalCriteria = evaluationSections.reduce((sum, section) => sum + section.criteria.length, 0);
     const totalScore = Object.values(formData.criteria_scores).reduce((sum, score) => sum + score, 0);
     const maxPossibleScore = totalCriteria * 2; // Max 2 points per criterion
-    return maxPossibleScore > 0 ? (totalScore / maxPossibleScore) * 10 : 0;
+    return maxPossibleScore > 0 ? totalScore / maxPossibleScore * 10 : 0;
   };
-
   const validateForm = () => {
-    const allCriteriaCovered = evaluationSections.every(section =>
-      section.criteria.every(criterion => 
-        formData.criteria_scores[criterion.key] !== undefined
-      )
-    );
-
+    const allCriteriaCovered = evaluationSections.every(section => section.criteria.every(criterion => formData.criteria_scores[criterion.key] !== undefined));
     if (!allCriteriaCovered) {
       toast.error('Please score all evaluation criteria');
       return false;
     }
-
     const hasValidStrengths = formData.strengths.some(strength => strength.trim().length > 0);
     if (!hasValidStrengths) {
       toast.error('Please provide at least one strength');
       return false;
     }
-
     if (!formData.improvement_areas.trim()) {
       toast.error('Please identify main areas that need improvement');
       return false;
     }
-
     if (!formData.pitch_development_aspects.trim()) {
       toast.error('Please specify aspects of the pitch that need further development');
       return false;
     }
-
     if (!formData.recommendation || !['invest', 'maybe', 'pass'].includes(formData.recommendation)) {
       toast.error('Please select a valid recommendation');
       return false;
     }
-
     return true;
   };
-
   const handleSave = async (status: 'draft' | 'submitted') => {
     if (status === 'submitted' && !validateForm()) {
       return;
     }
-
     if (!user?.id) {
       toast.error('Authentication required. Please sign in again.');
       return;
     }
-
     try {
       setSaving(true);
-      
+
       // Verify current session
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: {
+          session
+        }
+      } = await supabase.auth.getSession();
       if (!session) {
         toast.error('Session expired. Please sign in again.');
         return;
       }
-
       const overallScore = calculateOverallScore();
 
       // Prepare evaluation data
@@ -363,24 +462,19 @@ export const StartupEvaluationModal = ({ startup, open, onClose, onEvaluationUpd
       if (formData.investment_amount !== null && formData.investment_amount > 0) {
         evaluationData.investment_amount = formData.investment_amount;
       }
-
       if (startup.evaluation_id) {
         // Update existing evaluation
-        const { error } = await supabase
-          .from('evaluations')
-          .update(evaluationData)
-          .eq('id', startup.evaluation_id);
-
+        const {
+          error
+        } = await supabase.from('evaluations').update(evaluationData).eq('id', startup.evaluation_id);
         if (error) throw error;
       } else {
         // Create new evaluation
-        const { error } = await supabase
-          .from('evaluations')
-          .insert([evaluationData]);
-
+        const {
+          error
+        } = await supabase.from('evaluations').insert([evaluationData]);
         if (error) throw error;
       }
-
       toast.success(status === 'submitted' ? 'Evaluation submitted successfully!' : 'Evaluation saved as draft');
       onEvaluationUpdate();
       onClose();
@@ -391,13 +485,11 @@ export const StartupEvaluationModal = ({ startup, open, onClose, onEvaluationUpd
       setSaving(false);
     }
   };
-
   const formatCurrency = (amount: number) => {
     if (amount >= 1000000) return `$${(amount / 1000000).toFixed(1)}M`;
     if (amount >= 1000) return `$${(amount / 1000).toFixed(0)}K`;
     return `$${amount}`;
   };
-
   const updateCriteriaScore = (criterionKey: string, score: number) => {
     setFormData(prev => ({
       ...prev,
@@ -407,25 +499,19 @@ export const StartupEvaluationModal = ({ startup, open, onClose, onEvaluationUpd
       }
     }));
   };
-
   const updateStrength = (index: number, value: string) => {
     setFormData(prev => ({
       ...prev,
       strengths: prev.strengths.map((strength, i) => i === index ? value : strength)
     }));
   };
-
   const toggleGuidedFeedback = (optionId: number) => {
     setFormData(prev => ({
       ...prev,
-      guided_feedback: prev.guided_feedback.includes(optionId)
-        ? prev.guided_feedback.filter(id => id !== optionId)
-        : [...prev.guided_feedback, optionId]
+      guided_feedback: prev.guided_feedback.includes(optionId) ? prev.guided_feedback.filter(id => id !== optionId) : [...prev.guided_feedback, optionId]
     }));
   };
-
-  return (
-    <TooltipProvider>
+  return <TooltipProvider>
       <Dialog open={open} onOpenChange={onClose}>
         <DialogContent className="max-w-5xl max-h-[90vh]">
           <DialogHeader>
@@ -455,7 +541,7 @@ export const StartupEvaluationModal = ({ startup, open, onClose, onEvaluationUpd
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                       <div className="flex items-center gap-2">
                         <Badge variant="secondary">{startup.industry}</Badge>
-                        <span className="text-muted-foreground">Sector</span>
+                        
                       </div>
                       <div className="flex items-center gap-2">
                         <Building2 className="w-4 h-4 text-muted-foreground" />
@@ -487,46 +573,22 @@ export const StartupEvaluationModal = ({ startup, open, onClose, onEvaluationUpd
                     </div>
 
                     <div className="flex gap-2 flex-wrap">
-                      {startup.linkedin_url && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => window.open(startup.linkedin_url, '_blank')}
-                        >
+                      {startup.linkedin_url && <Button variant="outline" size="sm" onClick={() => window.open(startup.linkedin_url, '_blank')}>
                           <Linkedin className="w-4 h-4 mr-1" />
                           LinkedIn
-                        </Button>
-                      )}
-                      {startup.website && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => window.open(startup.website, '_blank')}
-                        >
+                        </Button>}
+                      {startup.website && <Button variant="outline" size="sm" onClick={() => window.open(startup.website, '_blank')}>
                           <Globe className="w-4 h-4 mr-1" />
                           Website
-                        </Button>
-                      )}
-                      {startup.pitch_deck_url && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => window.open(startup.pitch_deck_url, '_blank')}
-                        >
+                        </Button>}
+                      {startup.pitch_deck_url && <Button variant="outline" size="sm" onClick={() => window.open(startup.pitch_deck_url, '_blank')}>
                           <FileText className="w-4 h-4 mr-1" />
                           Pitch Deck
-                        </Button>
-                      )}
-                      {startup.demo_url && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => window.open(startup.demo_url, '_blank')}
-                        >
+                        </Button>}
+                      {startup.demo_url && <Button variant="outline" size="sm" onClick={() => window.open(startup.demo_url, '_blank')}>
                           <Video className="w-4 h-4 mr-1" />
                           Demo
-                        </Button>
-                      )}
+                        </Button>}
                     </div>
                   </div>
                 </CardContent>
@@ -544,8 +606,7 @@ export const StartupEvaluationModal = ({ startup, open, onClose, onEvaluationUpd
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-8">
-                  {evaluationSections.map((section, sectionIndex) => (
-                    <div key={section.key} className="space-y-4">
+                  {evaluationSections.map((section, sectionIndex) => <div key={section.key} className="space-y-4">
                       <div className="flex items-center gap-2">
                         <h3 className="text-lg font-semibold">{sectionIndex + 1}. {section.title}</h3>
                         <Tooltip>
@@ -559,15 +620,11 @@ export const StartupEvaluationModal = ({ startup, open, onClose, onEvaluationUpd
                       </div>
                       
                       <div className="space-y-3 ml-4">
-                        {section.criteria.map((criterion, criterionIndex) => (
-                          <div key={criterion.key} className="space-y-2">
+                        {section.criteria.map((criterion, criterionIndex) => <div key={criterion.key} className="space-y-2">
                             <div className="flex items-center justify-between">
                               <Label className="text-sm flex-1">{criterion.label}</Label>
                               <div className="flex items-center gap-2">
-                                <Select
-                                  value={formData.criteria_scores[criterion.key]?.toString() || ''}
-                                  onValueChange={(value) => updateCriteriaScore(criterion.key, parseInt(value))}
-                                >
+                                <Select value={formData.criteria_scores[criterion.key]?.toString() || ''} onValueChange={value => updateCriteriaScore(criterion.key, parseInt(value))}>
                                   <SelectTrigger className="w-32">
                                     <SelectValue placeholder="Score" />
                                   </SelectTrigger>
@@ -580,13 +637,11 @@ export const StartupEvaluationModal = ({ startup, open, onClose, onEvaluationUpd
                               </div>
                             </div>
                             <p className="text-xs text-muted-foreground ml-2">{criterion.description}</p>
-                          </div>
-                        ))}
+                          </div>)}
                       </div>
                       
                       {sectionIndex < evaluationSections.length - 1 && <Separator />}
-                    </div>
-                  ))}
+                    </div>)}
                 </CardContent>
               </Card>
 
@@ -599,15 +654,7 @@ export const StartupEvaluationModal = ({ startup, open, onClose, onEvaluationUpd
                   <div>
                     <Label className="text-base font-semibold">Highlight up to 3 strengths of the startup</Label>
                     <div className="space-y-2 mt-2">
-                      {formData.strengths.map((strength, index) => (
-                        <Textarea
-                          key={index}
-                          placeholder={`Strength ${index + 1}`}
-                          value={strength}
-                          onChange={(e) => updateStrength(index, e.target.value)}
-                          className="min-h-[60px]"
-                        />
-                      ))}
+                      {formData.strengths.map((strength, index) => <Textarea key={index} placeholder={`Strength ${index + 1}`} value={strength} onChange={e => updateStrength(index, e.target.value)} className="min-h-[60px]" />)}
                     </div>
                   </div>
 
@@ -615,34 +662,27 @@ export const StartupEvaluationModal = ({ startup, open, onClose, onEvaluationUpd
                     <Label htmlFor="improvement-areas" className="text-base font-semibold">
                       Identify the main areas that need improvement
                     </Label>
-                    <Textarea
-                      id="improvement-areas"
-                      placeholder="Describe the key areas where the startup needs to improve..."
-                      value={formData.improvement_areas}
-                      onChange={(e) => setFormData(prev => ({ ...prev, improvement_areas: e.target.value }))}
-                      className="mt-2 min-h-[80px]"
-                    />
+                    <Textarea id="improvement-areas" placeholder="Describe the key areas where the startup needs to improve..." value={formData.improvement_areas} onChange={e => setFormData(prev => ({
+                    ...prev,
+                    improvement_areas: e.target.value
+                  }))} className="mt-2 min-h-[80px]" />
                   </div>
 
                   <div>
                     <Label htmlFor="pitch-development" className="text-base font-semibold">
                       What aspects of the pitch need further development?
                     </Label>
-                    <Textarea
-                      id="pitch-development"
-                      placeholder="Specify which aspects of the pitch require more work or clarity..."
-                      value={formData.pitch_development_aspects}
-                      onChange={(e) => setFormData(prev => ({ ...prev, pitch_development_aspects: e.target.value }))}
-                      className="mt-2 min-h-[80px]"
-                    />
+                    <Textarea id="pitch-development" placeholder="Specify which aspects of the pitch require more work or clarity..." value={formData.pitch_development_aspects} onChange={e => setFormData(prev => ({
+                    ...prev,
+                    pitch_development_aspects: e.target.value
+                  }))} className="mt-2 min-h-[80px]" />
                   </div>
 
                   <div className="flex items-center space-x-3">
-                    <Switch
-                      id="pitch-session"
-                      checked={formData.wants_pitch_session}
-                      onCheckedChange={(checked) => setFormData(prev => ({ ...prev, wants_pitch_session: checked }))}
-                    />
+                    <Switch id="pitch-session" checked={formData.wants_pitch_session} onCheckedChange={checked => setFormData(prev => ({
+                    ...prev,
+                    wants_pitch_session: checked
+                  }))} />
                     <Label htmlFor="pitch-session" className="text-base font-semibold">
                       Would you like to see this project in a pitching session?
                     </Label>
@@ -660,18 +700,12 @@ export const StartupEvaluationModal = ({ startup, open, onClose, onEvaluationUpd
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {guidedFeedbackOptions.map((option) => (
-                      <div key={option.id} className="flex items-center space-x-2">
-                        <Checkbox
-                          id={`guided-${option.id}`}
-                          checked={formData.guided_feedback.includes(option.id)}
-                          onCheckedChange={() => toggleGuidedFeedback(option.id)}
-                        />
+                    {guidedFeedbackOptions.map(option => <div key={option.id} className="flex items-center space-x-2">
+                        <Checkbox id={`guided-${option.id}`} checked={formData.guided_feedback.includes(option.id)} onCheckedChange={() => toggleGuidedFeedback(option.id)} />
                         <Label htmlFor={`guided-${option.id}`} className="text-sm">
                           {option.label}
                         </Label>
-                      </div>
-                    ))}
+                      </div>)}
                   </div>
                 </CardContent>
               </Card>
@@ -684,22 +718,19 @@ export const StartupEvaluationModal = ({ startup, open, onClose, onEvaluationUpd
                 <CardContent className="space-y-4">
                   <div>
                     <Label htmlFor="overall-notes">Overall Notes & Comments</Label>
-                    <Textarea
-                      id="overall-notes"
-                      placeholder="Provide your overall assessment, key observations, and any additional comments..."
-                      value={formData.overall_notes}
-                      onChange={(e) => setFormData(prev => ({ ...prev, overall_notes: e.target.value }))}
-                      className="mt-1 min-h-[100px]"
-                    />
+                    <Textarea id="overall-notes" placeholder="Provide your overall assessment, key observations, and any additional comments..." value={formData.overall_notes} onChange={e => setFormData(prev => ({
+                    ...prev,
+                    overall_notes: e.target.value
+                  }))} className="mt-1 min-h-[100px]" />
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <Label>Investment Recommendation</Label>
-                      <Select
-                        value={formData.recommendation}
-                        onValueChange={(value) => setFormData(prev => ({ ...prev, recommendation: value }))}
-                      >
+                      <Select value={formData.recommendation} onValueChange={value => setFormData(prev => ({
+                      ...prev,
+                      recommendation: value
+                    }))}>
                         <SelectTrigger>
                           <SelectValue placeholder="Select recommendation" />
                         </SelectTrigger>
@@ -715,20 +746,10 @@ export const StartupEvaluationModal = ({ startup, open, onClose, onEvaluationUpd
                       <Label htmlFor="investment-amount">Potential Investment Amount</Label>
                       <div className="flex items-center space-x-2">
                         <span className="text-sm">$</span>
-                        <input
-                          id="investment-amount"
-                          type="number"
-                          value={formData.investment_amount || ''}
-                          onChange={(e) => setFormData(prev => ({
-                            ...prev,
-                            investment_amount: e.target.value ? parseInt(e.target.value) : null
-                          }))}
-                          min="0"
-                          max="10000000"
-                          step="50000"
-                          className="flex-1 px-3 py-2 border border-input bg-background text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 rounded-md"
-                          placeholder="0"
-                        />
+                        <input id="investment-amount" type="number" value={formData.investment_amount || ''} onChange={e => setFormData(prev => ({
+                        ...prev,
+                        investment_amount: e.target.value ? parseInt(e.target.value) : null
+                      }))} min="0" max="10000000" step="50000" className="flex-1 px-3 py-2 border border-input bg-background text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 rounded-md" placeholder="0" />
                         <span className="text-sm font-medium text-muted-foreground">
                           {formatCurrency(formData.investment_amount)}
                         </span>
@@ -747,21 +768,12 @@ export const StartupEvaluationModal = ({ startup, open, onClose, onEvaluationUpd
             </Button>
             
             <div className="flex gap-2">
-              <Button
-                variant="outline"
-                onClick={() => handleSave('draft')}
-                disabled={saving}
-                className="flex items-center gap-2"
-              >
+              <Button variant="outline" onClick={() => handleSave('draft')} disabled={saving} className="flex items-center gap-2">
                 <Save className="w-4 h-4" />
                 Save Draft
               </Button>
               
-              <Button
-                onClick={() => handleSave('submitted')}
-                disabled={saving}
-                className="flex items-center gap-2"
-              >
+              <Button onClick={() => handleSave('submitted')} disabled={saving} className="flex items-center gap-2">
                 <Send className="w-4 h-4" />
                 Submit Evaluation
               </Button>
@@ -769,6 +781,5 @@ export const StartupEvaluationModal = ({ startup, open, onClose, onEvaluationUpd
           </div>
         </DialogContent>
       </Dialog>
-    </TooltipProvider>
-  );
+    </TooltipProvider>;
 };
