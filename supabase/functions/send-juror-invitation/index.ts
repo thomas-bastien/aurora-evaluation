@@ -57,7 +57,9 @@ const handler = async (req: Request): Promise<Response> => {
       })
       .eq('email', jurorEmail);
 
-    const signupUrl = `${Deno.env.get('SUPABASE_URL')?.replace('.supabase.co', '.lovableproject.com')}/signup?token=${jurorData.invitation_token}`;
+    // Use the current domain from the request headers
+    const origin = req.headers.get('origin') || 'https://fadxytngwiporjqchsem.lovableproject.com';
+    const signupUrl = `${origin}/signup?token=${jurorData.invitation_token}`;
 
     // For testing, always send to lucien98@gmail.com
     const testEmail = "lucien98@gmail.com";
