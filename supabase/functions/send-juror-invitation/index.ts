@@ -57,9 +57,9 @@ const handler = async (req: Request): Promise<Response> => {
       })
       .eq('email', jurorEmail);
 
-    // Use the current domain from the request headers
-    const origin = req.headers.get('origin') || 'https://fadxytngwiporjqchsem.lovableproject.com';
-    const signupUrl = `${origin}/signup?token=${jurorData.invitation_token}`;
+    // Use the configured frontend URL from environment or fallback to origin header
+    const frontendUrl = Deno.env.get('FRONTEND_URL') || req.headers.get('origin');
+    const signupUrl = `${frontendUrl}/signup?token=${jurorData.invitation_token}`;
 
     // For testing, always send to lucien98@gmail.com
     const testEmail = "lucien98@gmail.com";
