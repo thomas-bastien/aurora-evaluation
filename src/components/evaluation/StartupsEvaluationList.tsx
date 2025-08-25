@@ -117,16 +117,43 @@ export const StartupsEvaluationList = ({ startups, loading, onEvaluationUpdate }
         {startups.map((startup) => (
           <Card key={startup.id} className="hover:shadow-md transition-shadow">
             <CardHeader>
-              <div className="flex items-start justify-between">
+                <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <CardTitle className="flex items-center gap-3 text-xl">
                     {getStatusIcon(startup.evaluation_status)}
                     {startup.name}
-                    <Badge variant="secondary">{startup.industry}</Badge>
                   </CardTitle>
                   <CardDescription className="mt-2 text-base">
                     {startup.description}
                   </CardDescription>
+                  
+                  {/* Overview Tags */}
+                  <div className="flex flex-wrap gap-2 mt-3">
+                    {startup.industry && (
+                      <Badge variant="secondary">
+                        <Building2 className="w-3 h-3 mr-1" />
+                        {startup.industry}
+                      </Badge>
+                    )}
+                    {startup.stage && (
+                      <Badge variant="outline">
+                        <Star className="w-3 h-3 mr-1" />
+                        {startup.stage}
+                      </Badge>
+                    )}
+                    {startup.region && (
+                      <Badge variant="outline">
+                        <MapPin className="w-3 h-3 mr-1" />
+                        {startup.region}
+                      </Badge>
+                    )}
+                    {startup.country && (
+                      <Badge variant="outline">
+                        <Globe className="w-3 h-3 mr-1" />
+                        {startup.country}
+                      </Badge>
+                    )}
+                  </div>
                 </div>
                 <div className="flex items-center gap-3">
                   {getStatusBadge(startup.evaluation_status)}
@@ -144,72 +171,55 @@ export const StartupsEvaluationList = ({ startups, loading, onEvaluationUpdate }
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {/* Startup Details */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <Building2 className="w-4 h-4" />
-                    <span>{startup.stage}</span>
+                {/* Resources Section */}
+                <div>
+                  <h4 className="text-sm font-medium text-muted-foreground mb-3">Resources & Links</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {startup.linkedin_url && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => window.open(startup.linkedin_url, '_blank')}
+                        className="flex items-center gap-2"
+                      >
+                        <Building2 className="w-4 h-4" />
+                        LinkedIn
+                      </Button>
+                    )}
+                    {startup.website && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => window.open(startup.website, '_blank')}
+                        className="flex items-center gap-2"
+                      >
+                        <Globe className="w-4 h-4" />
+                        Website
+                      </Button>
+                    )}
+                    {startup.pitch_deck_url && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => window.open(startup.pitch_deck_url, '_blank')}
+                        className="flex items-center gap-2"
+                      >
+                        <FileText className="w-4 h-4" />
+                        Pitch Deck
+                      </Button>
+                    )}
+                    {startup.demo_url && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => window.open(startup.demo_url, '_blank')}
+                        className="flex items-center gap-2"
+                      >
+                        <FileText className="w-4 h-4" />
+                        Full Application
+                      </Button>
+                    )}
                   </div>
-                  {startup.region && (
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <MapPin className="w-4 h-4" />
-                      <span>{startup.region}</span>
-                    </div>
-                  )}
-                  {startup.country && (
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <Globe className="w-4 h-4" />
-                      <span>{startup.country}</span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Resources */}
-                <div className="flex flex-wrap gap-2">
-                  {startup.linkedin_url && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => window.open(startup.linkedin_url, '_blank')}
-                      className="flex items-center gap-2"
-                    >
-                      <Building2 className="w-4 h-4" />
-                      LinkedIn
-                    </Button>
-                  )}
-                  {startup.website && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => window.open(startup.website, '_blank')}
-                      className="flex items-center gap-2"
-                    >
-                      <Globe className="w-4 h-4" />
-                      Website
-                    </Button>
-                  )}
-                  {startup.pitch_deck_url && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => window.open(startup.pitch_deck_url, '_blank')}
-                      className="flex items-center gap-2"
-                    >
-                      <FileText className="w-4 h-4" />
-                      Pitch Deck
-                    </Button>
-                  )}
-                  {startup.demo_url && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => window.open(startup.demo_url, '_blank')}
-                      className="flex items-center gap-2"
-                    >
-                      <FileText className="w-4 h-4" />
-                      Full Application
-                    </Button>
-                  )}
                 </div>
 
                 {/* Action Buttons */}
