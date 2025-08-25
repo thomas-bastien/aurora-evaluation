@@ -409,10 +409,6 @@ export const StartupEvaluationModal = ({
       toast.error('Please specify aspects of the pitch that need further development');
       return false;
     }
-    if (!formData.recommendation || !['invest', 'maybe', 'pass'].includes(formData.recommendation)) {
-      toast.error('Please select a valid recommendation');
-      return false;
-    }
     return true;
   };
   const handleSave = async (status: 'draft' | 'submitted') => {
@@ -453,15 +449,6 @@ export const StartupEvaluationModal = ({
         overall_score: overallScore
       };
 
-      // Only include recommendation if it's valid
-      if (formData.recommendation && ['invest', 'maybe', 'pass'].includes(formData.recommendation)) {
-        evaluationData.recommendation = formData.recommendation;
-      }
-
-      // Include investment amount if it's a positive number
-      if (formData.investment_amount !== null && formData.investment_amount > 0) {
-        evaluationData.investment_amount = formData.investment_amount;
-      }
       if (startup.evaluation_id) {
         // Update existing evaluation
         const {
@@ -506,10 +493,23 @@ export const StartupEvaluationModal = ({
     }));
   };
   const toggleGuidedFeedback = (optionId: number) => {
-    setFormData(prev => ({
-      ...prev,
-      guided_feedback: prev.guided_feedback.includes(optionId) ? prev.guided_feedback.filter(id => id !== optionId) : [...prev.guided_feedback, optionId]
-    }));
+    setFormData(prev => {
+      const isSelected = prev.guided_feedback.includes(optionId);
+      if (isSelected) {
+        return {
+          ...prev,
+          guided_feedback: prev.guided_feedback.filter(id => id !== optionId)
+        };
+      } else if (prev.guided_feedback.length < 3) {
+        return {
+          ...prev,
+          guided_feedback: [...prev.guided_feedback, optionId]
+        };
+      } else {
+        toast.error('You can select maximum 3 options');
+        return prev;
+      }
+    });
   };
   return <TooltipProvider>
       <Dialog open={open} onOpenChange={onClose}>
@@ -557,21 +557,6 @@ export const StartupEvaluationModal = ({
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
-                      <div className="flex items-center gap-2">
-                        <Calendar className="w-4 h-4 text-muted-foreground" />
-                        Founded {startup.founded_year}
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Users className="w-4 h-4 text-muted-foreground" />
-                        {startup.team_size} team members
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <DollarSign className="w-4 h-4 text-muted-foreground" />
-                        {formatCurrency(startup.funding_raised)} raised
-                      </div>
-                    </div>
-
                     <div className="flex gap-2 flex-wrap">
                       {startup.linkedin_url && <Button variant="outline" size="sm" onClick={() => window.open(startup.linkedin_url, '_blank')}>
                           <Linkedin className="w-4 h-4 mr-1" />
@@ -585,10 +570,10 @@ export const StartupEvaluationModal = ({
                           <FileText className="w-4 h-4 mr-1" />
                           Pitch Deck
                         </Button>}
-                      {startup.demo_url && <Button variant="outline" size="sm" onClick={() => window.open(startup.demo_url, '_blank')}>
-                          <Video className="w-4 h-4 mr-1" />
-                          Demo
-                        </Button>}
+                      <Button variant="outline" size="sm" onClick={() => window.open(`/startup-application/${startup.id}`, '_blank')}>
+                        <FileText className="w-4 h-4 mr-1" />
+                        Full Application
+                      </Button>
                     </div>
                   </div>
                 </CardContent>
@@ -695,66 +680,37 @@ export const StartupEvaluationModal = ({
                 <CardHeader>
                   <CardTitle>Guided Feedback</CardTitle>
                   <p className="text-sm text-muted-foreground">
-                    Based on the information you have, what are the main areas the team should focus on? (Select multiple options)
+                    Based on the information you have, what are the main areas the team should focus on? (Select maximum 3 options)
                   </p>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     {guidedFeedbackOptions.map(option => <div key={option.id} className="flex items-center space-x-2">
-                        <Checkbox id={`guided-${option.id}`} checked={formData.guided_feedback.includes(option.id)} onCheckedChange={() => toggleGuidedFeedback(option.id)} />
+                        <Checkbox 
+                          id={`guided-${option.id}`} 
+                          checked={formData.guided_feedback.includes(option.id)} 
+                          onCheckedChange={() => toggleGuidedFeedback(option.id)}
+                          disabled={!formData.guided_feedback.includes(option.id) && formData.guided_feedback.length >= 3}
+                        />
                         <Label htmlFor={`guided-${option.id}`} className="text-sm">
                           {option.label}
                         </Label>
                       </div>)}
                   </div>
-                </CardContent>
-              </Card>
 
-              {/* Overall Assessment */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Overall Assessment</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
                   <div>
-                    <Label htmlFor="overall-notes">Overall Notes & Comments</Label>
-                    <Textarea id="overall-notes" placeholder="Provide your overall assessment, key observations, and any additional comments..." value={formData.overall_notes} onChange={e => setFormData(prev => ({
-                    ...prev,
-                    overall_notes: e.target.value
-                  }))} className="mt-1 min-h-[100px]" />
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <Label>Investment Recommendation</Label>
-                      <Select value={formData.recommendation} onValueChange={value => setFormData(prev => ({
-                      ...prev,
-                      recommendation: value
-                    }))}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select recommendation" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="invest">Invest - Recommend</SelectItem>
-                          <SelectItem value="maybe">Maybe - Consider</SelectItem>
-                          <SelectItem value="pass">Pass - Do Not Recommend</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div>
-                      <Label htmlFor="investment-amount">Potential Investment Amount</Label>
-                      <div className="flex items-center space-x-2">
-                        <span className="text-sm">$</span>
-                        <input id="investment-amount" type="number" value={formData.investment_amount || ''} onChange={e => setFormData(prev => ({
+                    <Label htmlFor="overall-notes" className="text-base font-semibold">Overall Notes</Label>
+                    <p className="text-sm text-muted-foreground mt-1">Additional comments and observations</p>
+                    <Textarea 
+                      id="overall-notes" 
+                      placeholder="Provide your overall assessment, key observations, and any additional comments..." 
+                      value={formData.overall_notes} 
+                      onChange={e => setFormData(prev => ({
                         ...prev,
-                        investment_amount: e.target.value ? parseInt(e.target.value) : null
-                      }))} min="0" max="10000000" step="50000" className="flex-1 px-3 py-2 border border-input bg-background text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 rounded-md" placeholder="0" />
-                        <span className="text-sm font-medium text-muted-foreground">
-                          {formatCurrency(formData.investment_amount)}
-                        </span>
-                      </div>
-                    </div>
+                        overall_notes: e.target.value
+                      }))} 
+                      className="mt-2 min-h-[100px]" 
+                    />
                   </div>
                 </CardContent>
               </Card>
