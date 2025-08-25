@@ -111,13 +111,23 @@ export function DraftModal({ open, onOpenChange, draftData, onImportComplete }: 
 
       onImportComplete();
       onOpenChange(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Import error:', error);
-      toast({
-        title: "Import failed",
-        description: "There was an error importing the jurors. Please try again.",
-        variant: "destructive",
-      });
+      
+      // Check if it's a duplicate email constraint violation
+      if (error?.code === '23505' && error?.message?.includes('jurors_email_key')) {
+        toast({
+          title: "Duplicate email found",
+          description: "One or more jurors with these email addresses already exist in the system.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Import failed",
+          description: "There was an error importing the jurors. Please try again.",
+          variant: "destructive",
+        });
+      }
     } finally {
       setIsImporting(false);
     }

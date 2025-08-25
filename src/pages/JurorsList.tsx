@@ -215,13 +215,23 @@ export default function JurorsList() {
       // Refresh the list
       fetchJurors();
       setEditingJuror(null);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving juror:', error);
-      toast({
-        title: "Error",
-        description: "There was an error saving the juror.",
-        variant: "destructive",
-      });
+      
+      // Check if it's a duplicate email constraint violation
+      if (error?.code === '23505' && error?.message?.includes('jurors_email_key')) {
+        toast({
+          title: "Email already exists",
+          description: "A juror with this email address already exists in the system.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: "There was an error saving the juror.",
+          variant: "destructive",
+        });
+      }
     }
   };
 
