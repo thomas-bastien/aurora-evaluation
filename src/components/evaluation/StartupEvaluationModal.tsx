@@ -22,17 +22,14 @@ interface StartupEvaluationModalProps {
     description: string;
     industry: string;
     stage: string;
-    founded_year: number;
-    team_size: number;
-    funding_raised: number;
     contact_email: string;
     website: string;
     pitch_deck_url: string;
     demo_url: string;
     location: string;
-    linkedin_url?: string;
     region?: string;
     country?: string;
+    linkedin_url?: string;
     evaluation_status: 'not_started' | 'draft' | 'completed';
     evaluation_id?: string;
     overall_score?: number;

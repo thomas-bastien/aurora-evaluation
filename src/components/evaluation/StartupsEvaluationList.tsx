@@ -25,14 +25,14 @@ interface AssignedStartup {
   description: string;
   industry: string;
   stage: string;
-  founded_year: number;
-  team_size: number;
-  funding_raised: number;
   contact_email: string;
   website: string;
   pitch_deck_url: string;
   demo_url: string;
   location: string;
+  region: string;
+  country: string;
+  linkedin_url: string;
   evaluation_status: 'not_started' | 'draft' | 'completed';
   evaluation_id?: string;
   overall_score?: number;
@@ -150,29 +150,33 @@ export const StartupsEvaluationList = ({ startups, loading, onEvaluationUpdate }
                     <Building2 className="w-4 h-4" />
                     <span>{startup.stage}</span>
                   </div>
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <Calendar className="w-4 h-4" />
-                    <span>Founded {startup.founded_year}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <Users className="w-4 h-4" />
-                    <span>{startup.team_size} team members</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <DollarSign className="w-4 h-4" />
-                    <span>{formatCurrency(startup.funding_raised)} raised</span>
-                  </div>
+                  {startup.region && (
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <MapPin className="w-4 h-4" />
+                      <span>{startup.region}</span>
+                    </div>
+                  )}
+                  {startup.country && (
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Globe className="w-4 h-4" />
+                      <span>{startup.country}</span>
+                    </div>
+                  )}
                 </div>
-
-                {startup.location && (
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <MapPin className="w-4 h-4" />
-                    <span>{startup.location}</span>
-                  </div>
-                )}
 
                 {/* Resources */}
                 <div className="flex flex-wrap gap-2">
+                  {startup.linkedin_url && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => window.open(startup.linkedin_url, '_blank')}
+                      className="flex items-center gap-2"
+                    >
+                      <Building2 className="w-4 h-4" />
+                      LinkedIn
+                    </Button>
+                  )}
                   {startup.website && (
                     <Button
                       variant="outline"
@@ -202,8 +206,8 @@ export const StartupsEvaluationList = ({ startups, loading, onEvaluationUpdate }
                       onClick={() => window.open(startup.demo_url, '_blank')}
                       className="flex items-center gap-2"
                     >
-                      <Video className="w-4 h-4" />
-                      Demo
+                      <FileText className="w-4 h-4" />
+                      Full Application
                     </Button>
                   )}
                 </div>

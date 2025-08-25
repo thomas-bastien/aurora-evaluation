@@ -18,14 +18,14 @@ interface AssignedStartup {
   description: string;
   industry: string;
   stage: string;
-  founded_year: number;
-  team_size: number;
-  funding_raised: number;
   contact_email: string;
   website: string;
   pitch_deck_url: string;
   demo_url: string;
   location: string;
+  region: string;
+  country: string;
+  linkedin_url: string;
   evaluation_status: 'not_started' | 'draft' | 'completed';
   evaluation_id?: string;
   overall_score?: number;
@@ -77,14 +77,14 @@ const EvaluationDashboard = () => {
             description,
             industry,
             stage,
-            founded_year,
-            team_size,
-            funding_raised,
             contact_email,
             website,
             pitch_deck_url,
             demo_url,
-            location
+            location,
+            region,
+            country,
+            linkedin_url
           )
         `).eq('juror_id', juror.id).eq('status', 'assigned');
       if (assignmentsError) throw assignmentsError;
@@ -111,14 +111,14 @@ const EvaluationDashboard = () => {
           description: startup.description || '',
           industry: startup.industry || '',
           stage: startup.stage || '',
-          founded_year: startup.founded_year || 0,
-          team_size: startup.team_size || 0,
-          funding_raised: startup.funding_raised || 0,
           contact_email: startup.contact_email || '',
           website: startup.website || '',
           pitch_deck_url: startup.pitch_deck_url || '',
           demo_url: startup.demo_url || '',
           location: startup.location || '',
+          region: startup.region || '',
+          country: startup.country || '',
+          linkedin_url: startup.linkedin_url || '',
           evaluation_status,
           evaluation_id: evaluation?.id,
           overall_score: evaluation?.overall_score
