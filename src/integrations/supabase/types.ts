@@ -17,69 +17,57 @@ export type Database = {
       evaluations: {
         Row: {
           created_at: string
+          criteria_scores: Json | null
           evaluator_id: string
-          financials_feedback: string | null
-          financials_score: number | null
+          guided_feedback: number[] | null
           id: string
+          improvement_areas: string | null
           investment_amount: number | null
-          market_feedback: string | null
-          market_score: number | null
           overall_notes: string | null
           overall_score: number | null
-          product_feedback: string | null
-          product_score: number | null
+          pitch_development_aspects: string | null
           recommendation: string | null
           startup_id: string
           status: string | null
-          team_feedback: string | null
-          team_score: number | null
-          traction_feedback: string | null
-          traction_score: number | null
+          strengths: string[] | null
           updated_at: string
+          wants_pitch_session: boolean | null
         }
         Insert: {
           created_at?: string
+          criteria_scores?: Json | null
           evaluator_id: string
-          financials_feedback?: string | null
-          financials_score?: number | null
+          guided_feedback?: number[] | null
           id?: string
+          improvement_areas?: string | null
           investment_amount?: number | null
-          market_feedback?: string | null
-          market_score?: number | null
           overall_notes?: string | null
           overall_score?: number | null
-          product_feedback?: string | null
-          product_score?: number | null
+          pitch_development_aspects?: string | null
           recommendation?: string | null
           startup_id: string
           status?: string | null
-          team_feedback?: string | null
-          team_score?: number | null
-          traction_feedback?: string | null
-          traction_score?: number | null
+          strengths?: string[] | null
           updated_at?: string
+          wants_pitch_session?: boolean | null
         }
         Update: {
           created_at?: string
+          criteria_scores?: Json | null
           evaluator_id?: string
-          financials_feedback?: string | null
-          financials_score?: number | null
+          guided_feedback?: number[] | null
           id?: string
+          improvement_areas?: string | null
           investment_amount?: number | null
-          market_feedback?: string | null
-          market_score?: number | null
           overall_notes?: string | null
           overall_score?: number | null
-          product_feedback?: string | null
-          product_score?: number | null
+          pitch_development_aspects?: string | null
           recommendation?: string | null
           startup_id?: string
           status?: string | null
-          team_feedback?: string | null
-          team_score?: number | null
-          traction_feedback?: string | null
-          traction_score?: number | null
+          strengths?: string[] | null
           updated_at?: string
+          wants_pitch_session?: boolean | null
         }
         Relationships: [
           {
@@ -350,6 +338,7 @@ export type Database = {
         Row: {
           contact_email: string | null
           contact_phone: string | null
+          country: string | null
           created_at: string
           created_by: string | null
           demo_url: string | null
@@ -361,9 +350,11 @@ export type Database = {
           id: string
           industry: string | null
           key_metrics: Json | null
+          linkedin_url: string | null
           location: string | null
           name: string
           pitch_deck_url: string | null
+          region: string | null
           stage: string | null
           status: string | null
           team_size: number | null
@@ -373,6 +364,7 @@ export type Database = {
         Insert: {
           contact_email?: string | null
           contact_phone?: string | null
+          country?: string | null
           created_at?: string
           created_by?: string | null
           demo_url?: string | null
@@ -384,9 +376,11 @@ export type Database = {
           id?: string
           industry?: string | null
           key_metrics?: Json | null
+          linkedin_url?: string | null
           location?: string | null
           name: string
           pitch_deck_url?: string | null
+          region?: string | null
           stage?: string | null
           status?: string | null
           team_size?: number | null
@@ -396,6 +390,7 @@ export type Database = {
         Update: {
           contact_email?: string | null
           contact_phone?: string | null
+          country?: string | null
           created_at?: string
           created_by?: string | null
           demo_url?: string | null
@@ -407,9 +402,11 @@ export type Database = {
           id?: string
           industry?: string | null
           key_metrics?: Json | null
+          linkedin_url?: string | null
           location?: string | null
           name?: string
           pitch_deck_url?: string | null
+          region?: string | null
           stage?: string | null
           status?: string | null
           team_size?: number | null

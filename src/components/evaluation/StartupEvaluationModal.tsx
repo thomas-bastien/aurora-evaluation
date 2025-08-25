@@ -5,25 +5,29 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import { 
   Star, 
   Save, 
   Send, 
-  AlertCircle,
+  Info,
   Building2,
   DollarSign,
   Users,
   Calendar,
   Globe,
   FileText,
-  Video
+  Video,
+  MapPin,
+  Linkedin
 } from "lucide-react";
 
 interface StartupEvaluationModalProps {
@@ -41,6 +45,9 @@ interface StartupEvaluationModalProps {
     pitch_deck_url: string;
     demo_url: string;
     location: string;
+    linkedin_url?: string;
+    region?: string;
+    country?: string;
     evaluation_status: 'not_started' | 'draft' | 'completed';
     evaluation_id?: string;
     overall_score?: number;
@@ -50,58 +57,154 @@ interface StartupEvaluationModalProps {
   onEvaluationUpdate: () => void;
 }
 
+interface EvaluationCriterion {
+  key: string;
+  label: string;
+  description: string;
+}
+
+interface EvaluationSection {
+  key: string;
+  title: string;
+  criteria: EvaluationCriterion[];
+  guidance: string;
+}
+
 interface EvaluationForm {
-  team_score: number | null;
-  product_score: number | null;
-  market_score: number | null;
-  traction_score: number | null;
-  financials_score: number | null;
-  team_feedback: string;
-  product_feedback: string;
-  market_feedback: string;
-  traction_feedback: string;
-  financials_feedback: string;
+  criteria_scores: Record<string, number>; // 0, 1, or 2
+  strengths: string[];
+  improvement_areas: string;
+  pitch_development_aspects: string;
+  wants_pitch_session: boolean;
+  guided_feedback: number[];
   overall_notes: string;
   recommendation: string;
   investment_amount: number | null;
 }
 
-const evaluationCriteria = [
-  { 
-    key: 'team_score', 
-    label: 'Team Strength', 
-    weight: 20,
-    description: 'Evaluate the founding team\'s experience, skills, and track record',
-    feedback_key: 'team_feedback'
+const evaluationSections: EvaluationSection[] = [
+  {
+    key: 'problem_statement',
+    title: 'Problem Statement',
+    guidance: 'Does the startup show a clear, evidence-based problem that is significant to the target customer segment?',
+    criteria: [
+      { key: 'problem_logical', label: 'The problem is presented logically and compellingly', description: 'Clear problem articulation' },
+      { key: 'pain_point_clear', label: 'The pain point is clearly articulated', description: 'Pain point definition' },
+      { key: 'issue_size_explained', label: 'The size/significance of the issue is explained', description: 'Problem magnitude' },
+      { key: 'sources_cited', label: 'Sources for claims are cited', description: 'Evidence backing' },
+      { key: 'sources_accurate', label: 'Sources are accurate and verifiable', description: 'Source reliability' },
+      { key: 'target_segment_defined', label: 'Target client segment is clearly defined', description: 'Customer definition' },
+      { key: 'current_solutions_limitations', label: 'Limitations of current/alternative solutions are included', description: 'Gap analysis' }
+    ]
   },
-  { 
-    key: 'product_score', 
-    label: 'Product/Technology', 
-    weight: 25,
-    description: 'Assess the product innovation, technical feasibility, and differentiation',
-    feedback_key: 'product_feedback'
+  {
+    key: 'solution',
+    title: 'Solution',
+    guidance: 'Does the solution directly address the identified problem with measurable impact?',
+    criteria: [
+      { key: 'solution_addresses_problem', label: 'The solution directly addresses the problem', description: 'Problem-solution fit' },
+      { key: 'impact_measurable', label: 'Impact on clients is measurable with results', description: 'Quantified benefits' },
+      { key: 'solution_clearly_described', label: 'The solution is clearly described', description: 'Solution clarity' },
+      { key: 'use_case_provided', label: 'A use case or product visualization is provided', description: 'Practical examples' },
+      { key: 'website_app_aligns', label: 'A website or app is available and aligns with the description', description: 'Product consistency' }
+    ]
   },
-  { 
-    key: 'market_score', 
-    label: 'Market Opportunity', 
-    weight: 25,
-    description: 'Analyze market size, growth potential, and competitive landscape',
-    feedback_key: 'market_feedback'
+  {
+    key: 'market',
+    title: 'Market',
+    guidance: 'Is the market size substantial and well-researched with realistic assumptions?',
+    criteria: [
+      { key: 'market_size_presented', label: 'Market size is presented', description: 'Market sizing' },
+      { key: 'market_large_enough', label: 'Market is large enough to show venture potential', description: 'Venture scalability' },
+      { key: 'figures_realistic', label: 'Figures and logic are realistic (no exaggeration)', description: 'Data credibility' },
+      { key: 'market_aligns_problem', label: 'Market aligns with the defined problem and client segments', description: 'Market-problem fit' },
+      { key: 'reliable_sources_market', label: 'Reliable sources are cited for market trends', description: 'Market research quality' },
+      { key: 'competitors_listed', label: 'Competitors are listed', description: 'Competitive awareness' }
+    ]
   },
-  { 
-    key: 'traction_score', 
-    label: 'Traction & Growth', 
-    weight: 15,
-    description: 'Review user growth, revenue, partnerships, and key metrics',
-    feedback_key: 'traction_feedback'
+  {
+    key: 'competitive_advantage',
+    title: 'Competitive Advantage',
+    guidance: 'Is there a clear and defensible competitive advantage over existing solutions?',
+    criteria: [
+      { key: 'comparative_analysis', label: 'A comparative analysis of competitors is conducted', description: 'Competition analysis' },
+      { key: 'advantage_clearly_defined', label: 'Competitive advantage is clearly defined', description: 'Differentiation clarity' }
+    ]
   },
-  { 
-    key: 'financials_score', 
-    label: 'Financial Model', 
-    weight: 15,
-    description: 'Evaluate business model, unit economics, and financial projections',
-    feedback_key: 'financials_feedback'
+  {
+    key: 'business_model',
+    title: 'Business Model',
+    guidance: 'Is the monetization model clear, coherent, and supported by positive unit economics?',
+    criteria: [
+      { key: 'monetization_described', label: 'Monetisation model is clearly described', description: 'Revenue model' },
+      { key: 'unit_economics_positive', label: 'Unit economics are provided and positive', description: 'Economic viability' },
+      { key: 'business_model_coherent', label: 'Business model is coherent and data-backed', description: 'Model consistency' }
+    ]
+  },
+  {
+    key: 'traction_scalability',
+    title: 'Traction & Scalability',
+    guidance: 'Does the company demonstrate meaningful traction with a realistic growth plan?',
+    criteria: [
+      { key: 'positive_traction', label: 'Company shows positive traction', description: 'Growth evidence' },
+      { key: 'key_metrics_presented', label: 'Key metrics are presented', description: 'Performance indicators' },
+      { key: 'growth_plan_3_5_years', label: '3–5 year growth plan is included', description: 'Strategic planning' },
+      { key: 'key_milestones_provided', label: 'Key milestones are provided for 3–5 years', description: 'Milestone planning' },
+      { key: 'revenue_targets_align', label: 'Revenue targets align with SOM', description: 'Market alignment' }
+    ]
+  },
+  {
+    key: 'team',
+    title: 'Team',
+    guidance: 'Does the team have relevant experience and expertise to execute the business plan?',
+    criteria: [
+      { key: 'team_members_introduced', label: 'Core team members are introduced with roles', description: 'Team transparency' },
+      { key: 'achievements_highlighted', label: 'Achievements and relevant experience are highlighted', description: 'Track record' },
+      { key: 'relevant_business_experience', label: 'Team has relevant business experience', description: 'Business expertise' },
+      { key: 'relevant_technical_expertise', label: 'Team has relevant technical expertise', description: 'Technical capability' }
+    ]
+  },
+  {
+    key: 'impact',
+    title: 'Impact',
+    guidance: 'Is there a clear connection to broader societal challenges with factual backing?',
+    criteria: [
+      { key: 'social_problem_described', label: 'A clear description of the social or sustainability problem is provided', description: 'Impact definition' },
+      { key: 'links_societal_challenge', label: 'The problem links to a broader societal challenge (inequality, sustainability, etc.)', description: 'Societal relevance' },
+      { key: 'factual_information_included', label: 'Problem description includes factual information', description: 'Evidence-based impact' },
+      { key: 'impact_sources_accurate', label: 'Sources are cited and accurate', description: 'Impact credibility' }
+    ]
+  },
+  {
+    key: 'investment',
+    title: 'Investment',
+    guidance: 'Is the investment request clear with well-defined use of funds?',
+    criteria: [
+      { key: 'investment_clearly_stated', label: 'The investment request is clearly stated', description: 'Funding clarity' },
+      { key: 'use_of_funds_outlined', label: 'Intended use of funds is outlined with defined goals', description: 'Fund allocation' }
+    ]
   }
+];
+
+const guidedFeedbackOptions = [
+  { id: 1, label: 'Overall storytelling in the pitch deck' },
+  { id: 2, label: 'Level of detail and factual evidence is insufficient' },
+  { id: 3, label: 'Problem does not seem real/significant enough' },
+  { id: 4, label: 'Clarity of the problem–solution fit is weak' },
+  { id: 5, label: 'Market estimates are unclear/incorrect' },
+  { id: 6, label: 'Business model unclear or not scalable' },
+  { id: 7, label: 'Competitive analysis needs more attention' },
+  { id: 8, label: 'Competitive advantage not strong enough' },
+  { id: 9, label: 'Missing relevant team experience' },
+  { id: 10, label: 'Insufficient information on team roles/functions' },
+  { id: 11, label: 'No track record to support forecasts' },
+  { id: 12, label: 'Company stage unclear' },
+  { id: 13, label: '3–5 year plan lacks milestones/evidence' },
+  { id: 14, label: 'Plan appears over-optimistic' },
+  { id: 15, label: 'Plan not ambitious enough given track record' },
+  { id: 16, label: 'Investment thesis unclear' },
+  { id: 17, label: 'Investment ask does not align with company stage' },
+  { id: 18, label: 'Business does not appear VC-investable' }
 ];
 
 export const StartupEvaluationModal = ({ startup, open, onClose, onEvaluationUpdate }: StartupEvaluationModalProps) => {
@@ -109,16 +212,12 @@ export const StartupEvaluationModal = ({ startup, open, onClose, onEvaluationUpd
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState<EvaluationForm>({
-    team_score: null,
-    product_score: null,
-    market_score: null,
-    traction_score: null,
-    financials_score: null,
-    team_feedback: '',
-    product_feedback: '',
-    market_feedback: '',
-    traction_feedback: '',
-    financials_feedback: '',
+    criteria_scores: {},
+    strengths: ['', '', ''],
+    improvement_areas: '',
+    pitch_development_aspects: '',
+    wants_pitch_session: false,
+    guided_feedback: [],
     overall_notes: '',
     recommendation: '',
     investment_amount: null
@@ -130,16 +229,12 @@ export const StartupEvaluationModal = ({ startup, open, onClose, onEvaluationUpd
     } else if (open) {
       // Reset form for new evaluation
       setFormData({
-        team_score: null,
-        product_score: null,
-        market_score: null,
-        traction_score: null,
-        financials_score: null,
-        team_feedback: '',
-        product_feedback: '',
-        market_feedback: '',
-        traction_feedback: '',
-        financials_feedback: '',
+        criteria_scores: {},
+        strengths: ['', '', ''],
+        improvement_areas: '',
+        pitch_development_aspects: '',
+        wants_pitch_session: false,
+        guided_feedback: [],
         overall_notes: '',
         recommendation: '',
         investment_amount: null
@@ -160,16 +255,12 @@ export const StartupEvaluationModal = ({ startup, open, onClose, onEvaluationUpd
 
       if (data) {
         setFormData({
-          team_score: data.team_score,
-          product_score: data.product_score,
-          market_score: data.market_score,
-          traction_score: data.traction_score,
-          financials_score: data.financials_score,
-          team_feedback: data.team_feedback || '',
-          product_feedback: data.product_feedback || '',
-          market_feedback: data.market_feedback || '',
-          traction_feedback: data.traction_feedback || '',
-          financials_feedback: data.financials_feedback || '',
+          criteria_scores: (data.criteria_scores as Record<string, number>) || {},
+          strengths: (data.strengths as string[]) || ['', '', ''],
+          improvement_areas: data.improvement_areas || '',
+          pitch_development_aspects: data.pitch_development_aspects || '',
+          wants_pitch_session: data.wants_pitch_session || false,
+          guided_feedback: (data.guided_feedback as number[]) || [],
           overall_notes: data.overall_notes || '',
           recommendation: data.recommendation || '',
           investment_amount: data.investment_amount
@@ -184,36 +275,37 @@ export const StartupEvaluationModal = ({ startup, open, onClose, onEvaluationUpd
   };
 
   const calculateOverallScore = () => {
-    let totalScore = 0;
-    let totalWeight = 0;
-    evaluationCriteria.forEach(criterion => {
-      const score = formData[criterion.key as keyof EvaluationForm] as number | null;
-      if (score !== null && score > 0) {
-        totalScore += score * (criterion.weight / 100);
-        totalWeight += criterion.weight / 100;
-      }
-    });
-    return totalWeight > 0 ? totalScore / totalWeight : 0;
+    const totalCriteria = evaluationSections.reduce((sum, section) => sum + section.criteria.length, 0);
+    const totalScore = Object.values(formData.criteria_scores).reduce((sum, score) => sum + score, 0);
+    const maxPossibleScore = totalCriteria * 2; // Max 2 points per criterion
+    return maxPossibleScore > 0 ? (totalScore / maxPossibleScore) * 10 : 0;
   };
 
   const validateForm = () => {
-    const requiredScores = evaluationCriteria.every(criterion => {
-      const score = formData[criterion.key as keyof EvaluationForm] as number | null;
-      return score !== null && score >= 1 && score <= 10;
-    });
+    const allCriteriaCovered = evaluationSections.every(section =>
+      section.criteria.every(criterion => 
+        formData.criteria_scores[criterion.key] !== undefined
+      )
+    );
 
-    const requiredFeedback = evaluationCriteria.every(criterion => {
-      const feedback = formData[criterion.feedback_key as keyof EvaluationForm] as string;
-      return feedback.trim().length > 0;
-    });
-
-    if (!requiredScores) {
-      toast.error('Please provide scores (1-10) for all evaluation criteria');
+    if (!allCriteriaCovered) {
+      toast.error('Please score all evaluation criteria');
       return false;
     }
 
-    if (!requiredFeedback) {
-      toast.error('Please provide feedback for all evaluation criteria');
+    const hasValidStrengths = formData.strengths.some(strength => strength.trim().length > 0);
+    if (!hasValidStrengths) {
+      toast.error('Please provide at least one strength');
+      return false;
+    }
+
+    if (!formData.improvement_areas.trim()) {
+      toast.error('Please identify main areas that need improvement');
+      return false;
+    }
+
+    if (!formData.pitch_development_aspects.trim()) {
+      toast.error('Please specify aspects of the pitch that need further development');
       return false;
     }
 
@@ -247,37 +339,20 @@ export const StartupEvaluationModal = ({ startup, open, onClose, onEvaluationUpd
 
       const overallScore = calculateOverallScore();
 
-      // Prepare evaluation data, handling null values for drafts
+      // Prepare evaluation data
       const evaluationData: any = {
         startup_id: startup.id,
         evaluator_id: user?.id,
-        status
+        status,
+        criteria_scores: formData.criteria_scores,
+        strengths: formData.strengths.filter(s => s.trim().length > 0),
+        improvement_areas: formData.improvement_areas || null,
+        pitch_development_aspects: formData.pitch_development_aspects || null,
+        wants_pitch_session: formData.wants_pitch_session,
+        guided_feedback: formData.guided_feedback,
+        overall_notes: formData.overall_notes || null,
+        overall_score: overallScore
       };
-
-      // Only include scores if they are valid (1-10)
-      if (formData.team_score !== null && formData.team_score >= 1 && formData.team_score <= 10) {
-        evaluationData.team_score = Math.round(formData.team_score);
-      }
-      if (formData.product_score !== null && formData.product_score >= 1 && formData.product_score <= 10) {
-        evaluationData.product_score = Math.round(formData.product_score);
-      }
-      if (formData.market_score !== null && formData.market_score >= 1 && formData.market_score <= 10) {
-        evaluationData.market_score = Math.round(formData.market_score);
-      }
-      if (formData.traction_score !== null && formData.traction_score >= 1 && formData.traction_score <= 10) {
-        evaluationData.traction_score = Math.round(formData.traction_score);
-      }
-      if (formData.financials_score !== null && formData.financials_score >= 1 && formData.financials_score <= 10) {
-        evaluationData.financials_score = Math.round(formData.financials_score);
-      }
-
-      // Include feedback fields
-      evaluationData.team_feedback = formData.team_feedback || null;
-      evaluationData.product_feedback = formData.product_feedback || null;
-      evaluationData.market_feedback = formData.market_feedback || null;
-      evaluationData.traction_feedback = formData.traction_feedback || null;
-      evaluationData.financials_feedback = formData.financials_feedback || null;
-      evaluationData.overall_notes = formData.overall_notes || null;
 
       // Only include recommendation if it's valid
       if (formData.recommendation && ['invest', 'maybe', 'pass'].includes(formData.recommendation)) {
@@ -287,11 +362,6 @@ export const StartupEvaluationModal = ({ startup, open, onClose, onEvaluationUpd
       // Include investment amount if it's a positive number
       if (formData.investment_amount !== null && formData.investment_amount > 0) {
         evaluationData.investment_amount = formData.investment_amount;
-      }
-
-      // Calculate overall score only if we have valid scores
-      if (overallScore > 0) {
-        evaluationData.overall_score = overallScore;
       }
 
       if (startup.evaluation_id) {
@@ -328,249 +398,377 @@ export const StartupEvaluationModal = ({ startup, open, onClose, onEvaluationUpd
     return `$${amount}`;
   };
 
+  const updateCriteriaScore = (criterionKey: string, score: number) => {
+    setFormData(prev => ({
+      ...prev,
+      criteria_scores: {
+        ...prev.criteria_scores,
+        [criterionKey]: score
+      }
+    }));
+  };
+
+  const updateStrength = (index: number, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      strengths: prev.strengths.map((strength, i) => i === index ? value : strength)
+    }));
+  };
+
+  const toggleGuidedFeedback = (optionId: number) => {
+    setFormData(prev => ({
+      ...prev,
+      guided_feedback: prev.guided_feedback.includes(optionId)
+        ? prev.guided_feedback.filter(id => id !== optionId)
+        : [...prev.guided_feedback, optionId]
+    }));
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh]">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-xl">
-            <Star className="w-5 h-5" />
-            Evaluate {startup.name}
-          </DialogTitle>
-        </DialogHeader>
+    <TooltipProvider>
+      <Dialog open={open} onOpenChange={onClose}>
+        <DialogContent className="max-w-5xl max-h-[90vh]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-xl">
+              <Star className="w-5 h-5" />
+              Phase 1 Evaluation - {startup.name}
+            </DialogTitle>
+          </DialogHeader>
 
-        <ScrollArea className="max-h-[calc(90vh-120px)]">
-          <div className="space-y-6 pr-6">
-            {/* Startup Overview */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Building2 className="w-5 h-5" />
-                  Startup Overview
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div>
-                    <h4 className="font-semibold text-lg">{startup.name}</h4>
-                    <p className="text-muted-foreground">{startup.description}</p>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                    <div className="flex items-center gap-2">
-                      <Badge variant="secondary">{startup.industry}</Badge>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Building2 className="w-4 h-4 text-muted-foreground" />
-                      {startup.stage}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Calendar className="w-4 h-4 text-muted-foreground" />
-                      Founded {startup.founded_year}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Users className="w-4 h-4 text-muted-foreground" />
-                      {startup.team_size} team
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <DollarSign className="w-4 h-4 text-muted-foreground" />
-                    <span>{formatCurrency(startup.funding_raised)} raised</span>
-                  </div>
-
-                  <div className="flex gap-2">
-                    {startup.website && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => window.open(startup.website, '_blank')}
-                      >
-                        <Globe className="w-4 h-4 mr-1" />
-                        Website
-                      </Button>
-                    )}
-                    {startup.pitch_deck_url && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => window.open(startup.pitch_deck_url, '_blank')}
-                      >
-                        <FileText className="w-4 h-4 mr-1" />
-                        Pitch Deck
-                      </Button>
-                    )}
-                    {startup.demo_url && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => window.open(startup.demo_url, '_blank')}
-                      >
-                        <Video className="w-4 h-4 mr-1" />
-                        Demo
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Evaluation Criteria */}
-            <Card>
-              <CardHeader>  
-                <CardTitle>Evaluation Criteria</CardTitle>
-                <div className="flex items-center gap-2 text-lg font-semibold">
-                  <Star className="w-5 h-5 text-primary" />
-                  Overall Score: {calculateOverallScore().toFixed(1)}/10
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {evaluationCriteria.map((criterion, index) => (
-                  <div key={criterion.key} className="space-y-4">
+          <ScrollArea className="max-h-[calc(90vh-120px)]">
+            <div className="space-y-6 pr-6">
+              {/* Enhanced Startup Overview */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Building2 className="w-5 h-5" />
+                    Startup Overview
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
                     <div>
-                      <div className="flex justify-between items-center mb-2">
-                        <Label className="text-base font-semibold">
-                          {criterion.label} ({criterion.weight}%)
+                      <h4 className="font-semibold text-xl">{startup.name}</h4>
+                      <p className="text-muted-foreground mt-1">{startup.description}</p>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="secondary">{startup.industry}</Badge>
+                        <span className="text-muted-foreground">Sector</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Building2 className="w-4 h-4 text-muted-foreground" />
+                        <span>{startup.stage} Stage</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <MapPin className="w-4 h-4 text-muted-foreground" />
+                        <span>{startup.region || 'N/A'} Region</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Globe className="w-4 h-4 text-muted-foreground" />
+                        <span>{startup.country || startup.location}</span>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+                      <div className="flex items-center gap-2">
+                        <Calendar className="w-4 h-4 text-muted-foreground" />
+                        Founded {startup.founded_year}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Users className="w-4 h-4 text-muted-foreground" />
+                        {startup.team_size} team members
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <DollarSign className="w-4 h-4 text-muted-foreground" />
+                        {formatCurrency(startup.funding_raised)} raised
+                      </div>
+                    </div>
+
+                    <div className="flex gap-2 flex-wrap">
+                      {startup.linkedin_url && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => window.open(startup.linkedin_url, '_blank')}
+                        >
+                          <Linkedin className="w-4 h-4 mr-1" />
+                          LinkedIn
+                        </Button>
+                      )}
+                      {startup.website && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => window.open(startup.website, '_blank')}
+                        >
+                          <Globe className="w-4 h-4 mr-1" />
+                          Website
+                        </Button>
+                      )}
+                      {startup.pitch_deck_url && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => window.open(startup.pitch_deck_url, '_blank')}
+                        >
+                          <FileText className="w-4 h-4 mr-1" />
+                          Pitch Deck
+                        </Button>
+                      )}
+                      {startup.demo_url && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => window.open(startup.demo_url, '_blank')}
+                        >
+                          <Video className="w-4 h-4 mr-1" />
+                          Demo
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Evaluation Criteria Sections */}
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle>Evaluation Criteria</CardTitle>
+                    <div className="flex items-center gap-2 text-lg font-semibold">
+                      <Star className="w-5 h-5 text-primary" />
+                      Overall Score: {calculateOverallScore().toFixed(1)}/10
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-8">
+                  {evaluationSections.map((section, sectionIndex) => (
+                    <div key={section.key} className="space-y-4">
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-lg font-semibold">{sectionIndex + 1}. {section.title}</h3>
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <Info className="w-4 h-4 text-muted-foreground" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p className="max-w-xs">{section.guidance}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </div>
+                      
+                      <div className="space-y-3 ml-4">
+                        {section.criteria.map((criterion, criterionIndex) => (
+                          <div key={criterion.key} className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <Label className="text-sm flex-1">{criterion.label}</Label>
+                              <div className="flex items-center gap-2">
+                                <Select
+                                  value={formData.criteria_scores[criterion.key]?.toString() || ''}
+                                  onValueChange={(value) => updateCriteriaScore(criterion.key, parseInt(value))}
+                                >
+                                  <SelectTrigger className="w-32">
+                                    <SelectValue placeholder="Score" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="2">Yes (2 pts)</SelectItem>
+                                    <SelectItem value="1">Not Fully (1 pt)</SelectItem>
+                                    <SelectItem value="0">No (0 pts)</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            </div>
+                            <p className="text-xs text-muted-foreground ml-2">{criterion.description}</p>
+                          </div>
+                        ))}
+                      </div>
+                      
+                      {sectionIndex < evaluationSections.length - 1 && <Separator />}
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+
+              {/* Open Questions */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Open Questions</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div>
+                    <Label className="text-base font-semibold">Highlight up to 3 strengths of the startup</Label>
+                    <div className="space-y-2 mt-2">
+                      {formData.strengths.map((strength, index) => (
+                        <Textarea
+                          key={index}
+                          placeholder={`Strength ${index + 1}`}
+                          value={strength}
+                          onChange={(e) => updateStrength(index, e.target.value)}
+                          className="min-h-[60px]"
+                        />
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="improvement-areas" className="text-base font-semibold">
+                      Identify the main areas that need improvement
+                    </Label>
+                    <Textarea
+                      id="improvement-areas"
+                      placeholder="Describe the key areas where the startup needs to improve..."
+                      value={formData.improvement_areas}
+                      onChange={(e) => setFormData(prev => ({ ...prev, improvement_areas: e.target.value }))}
+                      className="mt-2 min-h-[80px]"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="pitch-development" className="text-base font-semibold">
+                      What aspects of the pitch need further development?
+                    </Label>
+                    <Textarea
+                      id="pitch-development"
+                      placeholder="Specify which aspects of the pitch require more work or clarity..."
+                      value={formData.pitch_development_aspects}
+                      onChange={(e) => setFormData(prev => ({ ...prev, pitch_development_aspects: e.target.value }))}
+                      className="mt-2 min-h-[80px]"
+                    />
+                  </div>
+
+                  <div className="flex items-center space-x-3">
+                    <Switch
+                      id="pitch-session"
+                      checked={formData.wants_pitch_session}
+                      onCheckedChange={(checked) => setFormData(prev => ({ ...prev, wants_pitch_session: checked }))}
+                    />
+                    <Label htmlFor="pitch-session" className="text-base font-semibold">
+                      Would you like to see this project in a pitching session?
+                    </Label>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Multiple Choice Guided Feedback */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Guided Feedback</CardTitle>
+                  <p className="text-sm text-muted-foreground">
+                    Based on the information you have, what are the main areas the team should focus on? (Select multiple options)
+                  </p>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {guidedFeedbackOptions.map((option) => (
+                      <div key={option.id} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`guided-${option.id}`}
+                          checked={formData.guided_feedback.includes(option.id)}
+                          onCheckedChange={() => toggleGuidedFeedback(option.id)}
+                        />
+                        <Label htmlFor={`guided-${option.id}`} className="text-sm">
+                          {option.label}
                         </Label>
-                        <span className="text-sm font-medium text-primary">
-                          {Math.max(1, (formData[criterion.key as keyof EvaluationForm] as number) || 1)}/10
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Overall Assessment */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Overall Assessment</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <Label htmlFor="overall-notes">Overall Notes & Comments</Label>
+                    <Textarea
+                      id="overall-notes"
+                      placeholder="Provide your overall assessment, key observations, and any additional comments..."
+                      value={formData.overall_notes}
+                      onChange={(e) => setFormData(prev => ({ ...prev, overall_notes: e.target.value }))}
+                      className="mt-1 min-h-[100px]"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label>Investment Recommendation</Label>
+                      <Select
+                        value={formData.recommendation}
+                        onValueChange={(value) => setFormData(prev => ({ ...prev, recommendation: value }))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select recommendation" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="invest">Invest - Recommend</SelectItem>
+                          <SelectItem value="maybe">Maybe - Consider</SelectItem>
+                          <SelectItem value="pass">Pass - Do Not Recommend</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="investment-amount">Potential Investment Amount</Label>
+                      <div className="flex items-center space-x-2">
+                        <span className="text-sm">$</span>
+                        <input
+                          id="investment-amount"
+                          type="number"
+                          value={formData.investment_amount || ''}
+                          onChange={(e) => setFormData(prev => ({
+                            ...prev,
+                            investment_amount: e.target.value ? parseInt(e.target.value) : null
+                          }))}
+                          min="0"
+                          max="10000000"
+                          step="50000"
+                          className="flex-1 px-3 py-2 border border-input bg-background text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 rounded-md"
+                          placeholder="0"
+                        />
+                        <span className="text-sm font-medium text-muted-foreground">
+                          {formatCurrency(formData.investment_amount)}
                         </span>
                       </div>
-                      <p className="text-sm text-muted-foreground mb-3">
-                        {criterion.description}
-                      </p>
-                       <Slider
-                        value={[Math.max(1, (formData[criterion.key as keyof EvaluationForm] as number) || 1)]}
-                        onValueChange={(value) => setFormData(prev => ({
-                          ...prev,
-                          [criterion.key]: value[0]
-                        }))}
-                        min={1}
-                        max={10}
-                        step={1}
-                        className="w-full"
-                      />
-                    </div>
-                    
-                    <div>
-                      <Label htmlFor={`${criterion.key}-feedback`} className="text-sm font-medium">
-                        Feedback & Comments
-                      </Label>
-                      <Textarea
-                        id={`${criterion.key}-feedback`}
-                        placeholder={`Provide detailed feedback on ${criterion.label.toLowerCase()}...`}
-                        value={formData[criterion.feedback_key as keyof EvaluationForm] as string}
-                        onChange={(e) => setFormData(prev => ({
-                          ...prev,
-                          [criterion.feedback_key]: e.target.value
-                        }))}
-                        className="mt-1 min-h-[80px]"
-                      />
-                    </div>
-                    
-                    {index < evaluationCriteria.length - 1 && <Separator />}
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-
-            {/* Overall Assessment */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Overall Assessment</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label htmlFor="overall-notes">Overall Notes & Comments</Label>
-                  <Textarea
-                    id="overall-notes"
-                    placeholder="Provide your overall assessment, key strengths, concerns, and final thoughts..."
-                    value={formData.overall_notes}
-                    onChange={(e) => setFormData(prev => ({
-                      ...prev,
-                      overall_notes: e.target.value
-                    }))}
-                    className="min-h-[100px]"
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label>Investment Recommendation</Label>
-                    <Select
-                      value={formData.recommendation}
-                      onValueChange={(value) => setFormData(prev => ({
-                        ...prev,
-                        recommendation: value
-                      }))}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select recommendation" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="invest">Invest - Recommend</SelectItem>
-                        <SelectItem value="maybe">Maybe - Consider</SelectItem>
-                        <SelectItem value="pass">Pass - Do Not Recommend</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div>
-                    <Label htmlFor="investment-amount">Potential Investment Amount</Label>
-                    <div className="flex items-center space-x-2">
-                      <span className="text-sm">$</span>
-                      <input
-                        id="investment-amount"
-                        type="number"
-                        value={formData.investment_amount || ''}
-                        onChange={(e) => setFormData(prev => ({
-                          ...prev,
-                          investment_amount: e.target.value ? parseInt(e.target.value) : null
-                        }))}
-                        min="0"
-                        max="10000000"
-                        step="50000"
-                        className="flex-1 px-3 py-2 border border-input bg-background text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 rounded-md"
-                        placeholder="0"
-                      />
-                      <span className="text-sm font-medium text-muted-foreground">
-                        {formatCurrency(formData.investment_amount)}
-                      </span>
                     </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </ScrollArea>
+                </CardContent>
+              </Card>
+            </div>
+          </ScrollArea>
 
-        {/* Action Buttons */}
-        <div className="flex justify-between pt-4 border-t">
-          <Button variant="outline" onClick={onClose}>
-            Cancel
-          </Button>
-          
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              onClick={() => handleSave('draft')}
-              disabled={saving}
-              className="flex items-center gap-2"
-            >
-              <Save className="w-4 h-4" />
-              Save Draft
+          {/* Action Buttons */}
+          <div className="flex justify-between pt-4 border-t">
+            <Button variant="outline" onClick={onClose}>
+              Cancel
             </Button>
             
-            <Button
-              onClick={() => handleSave('submitted')}
-              disabled={saving}
-              className="flex items-center gap-2"
-            >
-              <Send className="w-4 h-4" />
-              Submit Evaluation
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => handleSave('draft')}
+                disabled={saving}
+                className="flex items-center gap-2"
+              >
+                <Save className="w-4 h-4" />
+                Save Draft
+              </Button>
+              
+              <Button
+                onClick={() => handleSave('submitted')}
+                disabled={saving}
+                className="flex items-center gap-2"
+              >
+                <Send className="w-4 h-4" />
+                Submit Evaluation
+              </Button>
+            </div>
           </div>
-        </div>
-      </DialogContent>
-    </Dialog>
+        </DialogContent>
+      </Dialog>
+    </TooltipProvider>
   );
 };
