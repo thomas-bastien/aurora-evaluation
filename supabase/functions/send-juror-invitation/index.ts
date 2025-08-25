@@ -1,5 +1,11 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { Resend } from "npm:resend@2.0.0";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.53.0';
+
+const supabase = createClient(
+  Deno.env.get('SUPABASE_URL') ?? '',
+  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+);
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
@@ -26,6 +32,32 @@ const handler = async (req: Request): Promise<Response> => {
     const { jurorName, jurorEmail, company, jobTitle }: JurorInvitationRequest = await req.json();
 
     console.log(`Sending invitation to juror: ${jurorName} (${jurorEmail})`);
+
+    // Get or create the juror record and generate invitation token
+    const { data: jurorData, error: jurorError } = await supabase
+      .from('jurors')
+      .select('invitation_token')
+      .eq('email', jurorEmail)
+      .single();
+
+    if (jurorError) {
+      console.error("Error fetching juror:", jurorError);
+      throw new Error("Failed to process invitation");
+    }
+
+    // Update invitation timestamps
+    const expirationDate = new Date();
+    expirationDate.setDate(expirationDate.getDate() + 7); // 7 days expiration
+
+    await supabase
+      .from('jurors')
+      .update({
+        invitation_sent_at: new Date().toISOString(),
+        invitation_expires_at: expirationDate.toISOString()
+      })
+      .eq('email', jurorEmail);
+
+    const signupUrl = `${Deno.env.get('SUPABASE_URL')?.replace('.supabase.co', '.lovableproject.com')}/signup?token=${jurorData.invitation_token}`;
 
     // For testing, always send to lucien98@gmail.com
     const testEmail = "lucien98@gmail.com";
@@ -59,11 +91,21 @@ const handler = async (req: Request): Promise<Response> => {
             <div style="background: #e3f2fd; padding: 20px; border-radius: 8px; margin: 20px 0;">
               <h3 style="color: #1976d2; margin-top: 0;">What's Next?</h3>
               <ul style="color: #666; line-height: 1.6;">
-                <li>You will receive your login credentials separately</li>
+                <li>Click the signup link below to create your account</li>
+                <li>Set your password and complete your profile</li>
                 <li>Access the evaluation platform to review assigned startups</li>
                 <li>Complete evaluations using our structured scoring system</li>
                 <li>Participate in pitch sessions with selected startups</li>
               </ul>
+            </div>
+            
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${signupUrl}" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; padding: 15px 30px; border-radius: 8px; display: inline-block; font-weight: bold; font-size: 16px;">
+                Complete Your Registration
+              </a>
+              <p style="color: #999; font-size: 12px; margin-top: 10px;">
+                This link expires in 7 days
+              </p>
             </div>
             
             <p style="color: #666; line-height: 1.6; margin-bottom: 30px;">
