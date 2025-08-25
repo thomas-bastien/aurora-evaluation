@@ -131,7 +131,7 @@ const Auth = () => {
                   <span>vc@test.com / password123</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Admin Account:</span>
+                  <span>Community Manager Account:</span>
                   <span>admin@test.com / password123</span>
                 </div>
               </div>
