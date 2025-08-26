@@ -33,23 +33,56 @@ const JurorSignup = () => {
 
     const validateToken = async () => {
       try {
-        const { data, error } = await supabase
+        console.log("Validating token:", token);
+        
+        // First check if token exists at all
+        const { data: allData, error: checkError } = await supabase
           .from('jurors')
           .select('*')
           .eq('invitation_token', token)
-          .gt('invitation_expires_at', new Date().toISOString())
-          .is('user_id', null)
           .maybeSingle();
 
-        if (error || !data) {
-          console.error("Token validation error:", error);
-          setError("Invalid or expired invitation link.");
-        } else {
-          setJurorData(data);
+        console.log("Token check result:", { allData, checkError });
+
+        if (checkError) {
+          console.error("Database error during token validation:", checkError);
+          setError("Database error. Please try again or contact support.");
+          setValidatingToken(false);
+          return;
         }
+
+        if (!allData) {
+          console.log("No juror found with this token");
+          setError("Invalid invitation token. Please check your email for the correct link or request a new invitation.");
+          setValidatingToken(false);
+          return;
+        }
+
+        // Check if already used
+        if (allData.user_id) {
+          console.log("Token already used for user:", allData.user_id);
+          setError("This invitation has already been used. If you need to reset your password, please use the sign-in page.");
+          setValidatingToken(false);
+          return;
+        }
+
+        // Check if expired
+        const now = new Date();
+        const expiryDate = new Date(allData.invitation_expires_at);
+        console.log("Expiry check:", { now: now.toISOString(), expiry: allData.invitation_expires_at, expired: now > expiryDate });
+
+        if (now > expiryDate) {
+          console.log("Token has expired");
+          setError("This invitation has expired. Please contact Aurora to request a new invitation.");
+          setValidatingToken(false);
+          return;
+        }
+
+        console.log("Token validation successful");
+        setJurorData(allData);
       } catch (err) {
         console.error("Token validation failed:", err);
-        setError("Failed to validate invitation.");
+        setError("Failed to validate invitation. Please try again or contact support.");
       } finally {
         setValidatingToken(false);
       }
@@ -103,7 +136,19 @@ const JurorSignup = () => {
       // Redirect to auth page for fresh login
       navigate('/auth');
     } catch (err: any) {
-      setError(err.message || 'Failed to create account. Please try again.');
+      console.error("Signup error:", err);
+      const errorMessage = err.message || 'Failed to create account. Please try again.';
+      
+      // Provide more specific error messages based on the error
+      if (errorMessage.includes("Invalid invitation token")) {
+        setError("The invitation token is invalid. Please check your email for the correct link.");
+      } else if (errorMessage.includes("expired")) {
+        setError("This invitation has expired. Please contact Aurora for a new invitation.");
+      } else if (errorMessage.includes("already been used")) {
+        setError("This invitation has already been used. Try signing in instead.");
+      } else {
+        setError(errorMessage);
+      }
     } finally {
       setLoading(false);
     }
