@@ -17,6 +17,10 @@ import {
   FileText,
   Settings
 } from "lucide-react";
+import { JurorProgressMonitoring } from "@/components/cm/JurorProgressMonitoring";
+import { EvaluationProgressView } from "@/components/cm/EvaluationProgressView";
+import { Top30Selection } from "@/components/cm/Top30Selection";
+import { ResultsCommunication } from "@/components/cm/ResultsCommunication";
 
 const AdminDashboard = () => {
   const [overallStats, setOverallStats] = useState({
@@ -175,14 +179,31 @@ const AdminDashboard = () => {
           </Card>
         </div>
 
-        <Tabs defaultValue="progress" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5">
-            <TabsTrigger value="progress">VC Progress</TabsTrigger>
+        <Tabs defaultValue="juror-progress" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-6">
+            <TabsTrigger value="juror-progress">Juror Progress</TabsTrigger>
+            <TabsTrigger value="evaluation-progress">Evaluation Progress</TabsTrigger>
+            <TabsTrigger value="top-30">Top 30 Selection</TabsTrigger>
+            <TabsTrigger value="communications">Communications</TabsTrigger>
             <TabsTrigger value="sessions">Sessions</TabsTrigger>
-            <TabsTrigger value="startups">Top Startups</TabsTrigger>
-            <TabsTrigger value="matchmaking">Matchmaking</TabsTrigger>
             <TabsTrigger value="reports">Reports</TabsTrigger>
           </TabsList>
+
+          <TabsContent value="juror-progress" className="space-y-6">
+            <JurorProgressMonitoring />
+          </TabsContent>
+
+          <TabsContent value="evaluation-progress" className="space-y-6">
+            <EvaluationProgressView />  
+          </TabsContent>
+
+          <TabsContent value="top-30" className="space-y-6">
+            <Top30Selection />
+          </TabsContent>
+
+          <TabsContent value="communications" className="space-y-6">
+            <ResultsCommunication />
+          </TabsContent>
 
           <TabsContent value="progress" className="space-y-6">
             <Card>
