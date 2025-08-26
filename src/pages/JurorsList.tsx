@@ -25,6 +25,10 @@ interface Juror {
   job_title: string | null;
   company: string | null;
   created_at: string;
+  user_id: string | null;
+  invitation_token: string | null;
+  invitation_sent_at: string | null;
+  invitation_expires_at: string | null;
 }
 
 export default function JurorsList() {
@@ -78,6 +82,23 @@ export default function JurorsList() {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const getJurorStatus = (juror: Juror) => {
+    if (juror.user_id) {
+      return { text: 'Active', variant: 'default' as const, color: 'bg-green-100 text-green-800' };
+    } else if (juror.invitation_sent_at) {
+      const now = new Date();
+      const expiresAt = juror.invitation_expires_at ? new Date(juror.invitation_expires_at) : null;
+      
+      if (expiresAt && now > expiresAt) {
+        return { text: 'Invitation Expired', variant: 'destructive' as const, color: 'bg-red-100 text-red-800' };
+      } else {
+        return { text: 'Invitation Sent', variant: 'secondary' as const, color: 'bg-yellow-100 text-yellow-800' };
+      }
+    } else {
+      return { text: 'Not Invited', variant: 'outline' as const, color: 'bg-gray-100 text-gray-800' };
     }
   };
 
@@ -461,10 +482,15 @@ export default function JurorsList() {
                       )}
                     </TableCell>
                     <TableCell>
-                      <Badge variant="secondary" className="bg-green-100 text-green-800">
-                        <UserCheck className="h-3 w-3 mr-1" />
-                        Active
-                      </Badge>
+                      {(() => {
+                        const status = getJurorStatus(juror);
+                        return (
+                          <Badge variant={status.variant} className={status.color}>
+                            <UserCheck className="h-3 w-3 mr-1" />
+                            {status.text}
+                          </Badge>
+                        );
+                      })()}
                     </TableCell>
                     <TableCell className="text-muted-foreground">
                       {new Date(juror.created_at).toLocaleDateString()}
