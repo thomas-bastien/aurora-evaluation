@@ -75,11 +75,15 @@ const JurorSignup = () => {
     setError("");
 
     try {
+      // Clear any existing session first
+      await supabase.auth.signOut();
+      
       // Create auth user
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: jurorData.email,
         password: password,
         options: {
+          emailRedirectTo: `${window.location.origin}/auth`,
           data: {
             full_name: jurorData.name,
             role: 'vc'
@@ -116,10 +120,11 @@ const JurorSignup = () => {
 
         toast({
           title: "Account created successfully!",
-          description: "Welcome to Aurora Evaluation Platform."
+          description: "Please check your email to confirm your account, then sign in."
         });
 
-        navigate('/dashboard');
+        // Redirect to auth page for fresh login
+        navigate('/auth');
       }
     } catch (err: any) {
       setError(err.message || 'Failed to create account. Please try again.');
