@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { Card } from "@/components/ui/card";
@@ -21,22 +21,38 @@ const Selection = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [currentPhase, setCurrentPhase] = useState<'screeningPhase' | 'pitchingPhase'>('screeningPhase');
 
-  // Initialize phase from URL parameters
+  // Initialize phase from URL parameters - only run once on mount
   useEffect(() => {
     const phaseParam = searchParams.get('phase');
-    if (phaseParam === 'pitching') {
+    console.log('Selection: useEffect triggered, phaseParam:', phaseParam, 'currentPhase:', currentPhase);
+    
+    if (phaseParam === 'pitching' && currentPhase !== 'pitchingPhase') {
+      console.log('Selection: Setting phase to pitchingPhase');
       setCurrentPhase('pitchingPhase');
-    } else if (phaseParam === 'screening') {
+    } else if (phaseParam === 'screening' && currentPhase !== 'screeningPhase') {
+      console.log('Selection: Setting phase to screeningPhase');
       setCurrentPhase('screeningPhase');
+    } else if (!phaseParam) {
+      // No phase parameter, default to screening and update URL once
+      console.log('Selection: No phase param, defaulting to screening');
+      setSearchParams({ phase: 'screening' }, { replace: true });
     }
-  }, [searchParams]);
+  }, [searchParams.get('phase')]); // Only depend on the actual phase value, not the entire searchParams object
 
-  // Update URL when phase changes
-  const handlePhaseChange = (newPhase: 'screeningPhase' | 'pitchingPhase') => {
-    setCurrentPhase(newPhase);
+  // Update URL when phase changes (called by Select component)
+  const handlePhaseChange = useCallback((newPhase: 'screeningPhase' | 'pitchingPhase') => {
+    console.log('Selection: handlePhaseChange called with:', newPhase);
+    
     const phaseParam = newPhase === 'pitchingPhase' ? 'pitching' : 'screening';
-    setSearchParams({ phase: phaseParam });
-  };
+    const currentPhaseParam = searchParams.get('phase');
+    
+    // Only update if the phase is actually different
+    if (currentPhaseParam !== phaseParam) {
+      console.log('Selection: Updating URL to phase:', phaseParam);
+      setCurrentPhase(newPhase);
+      setSearchParams({ phase: phaseParam }, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   return (
     <div className="min-h-screen bg-background">

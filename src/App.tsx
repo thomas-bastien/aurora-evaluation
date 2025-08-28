@@ -3,6 +3,8 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
@@ -15,7 +17,6 @@ import StartupsList from "./pages/StartupsList";
 import VCProfile from "./pages/VCProfile";
 import VCsList from "./pages/VCsList";
 import JurorsList from "./pages/JurorsList";
-
 import Selection from "./pages/Selection";
 import SessionManagement from "./pages/SessionManagement";
 import EvaluationDashboard from "./pages/EvaluationDashboard";
@@ -23,6 +24,29 @@ import Matchmaking from "./pages/Matchmaking";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
+
+// Component to properly redirect from /admin to /selection
+const AdminRedirect = () => {
+  const navigate = useNavigate();
+  
+  useEffect(() => {
+    console.log('AdminRedirect: Redirecting to /selection?phase=screening');
+    navigate('/selection?phase=screening', { replace: true });
+  }, [navigate]);
+  
+  return (
+    <div style={{ 
+      display: 'flex', 
+      justifyContent: 'center', 
+      alignItems: 'center', 
+      height: '100vh', 
+      flexDirection: 'column' 
+    }}>
+      <h2>Redirecting...</h2>
+      <p>The Admin page has been moved to Selection.</p>
+    </div>
+  );
+};
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -73,20 +97,7 @@ const App = () => (
             } />
             <Route path="/admin" element={
               <ProtectedRoute>
-                <div style={{ 
-                  display: 'flex', 
-                  justifyContent: 'center', 
-                  alignItems: 'center', 
-                  height: '100vh', 
-                  flexDirection: 'column' 
-                }}>
-                  <h2>Redirecting...</h2>
-                  <p>The Admin page has been moved to Selection.</p>
-                  {(() => {
-                    window.location.replace('/selection?phase=screening');
-                    return null;
-                  })()}
-                </div>
+                <AdminRedirect />
               </ProtectedRoute>
             } />
             <Route path="/selection" element={
