@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -17,7 +18,25 @@ import { ResultsCommunication } from "@/components/cm/ResultsCommunication";
 import { ReportingDocumentation } from "@/components/cm/ReportingDocumentation";
 
 const Selection = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [currentPhase, setCurrentPhase] = useState<'screeningPhase' | 'pitchingPhase'>('screeningPhase');
+
+  // Initialize phase from URL parameters
+  useEffect(() => {
+    const phaseParam = searchParams.get('phase');
+    if (phaseParam === 'pitching') {
+      setCurrentPhase('pitchingPhase');
+    } else if (phaseParam === 'screening') {
+      setCurrentPhase('screeningPhase');
+    }
+  }, [searchParams]);
+
+  // Update URL when phase changes
+  const handlePhaseChange = (newPhase: 'screeningPhase' | 'pitchingPhase') => {
+    setCurrentPhase(newPhase);
+    const phaseParam = newPhase === 'pitchingPhase' ? 'pitching' : 'screening';
+    setSearchParams({ phase: phaseParam });
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -40,7 +59,7 @@ const Selection = () => {
                 <Label htmlFor="global-phase-selector" className="text-sm font-medium">
                   Current Phase:
                 </Label>
-                <Select value={currentPhase} onValueChange={(value: 'screeningPhase' | 'pitchingPhase') => setCurrentPhase(value)}>
+                <Select value={currentPhase} onValueChange={(value: 'screeningPhase' | 'pitchingPhase') => handlePhaseChange(value)}>
                   <SelectTrigger className="w-48">
                     <SelectValue />
                   </SelectTrigger>
@@ -50,7 +69,7 @@ const Selection = () => {
                   </SelectContent>
                 </Select>
                 <Badge variant={currentPhase === 'screeningPhase' ? 'secondary' : 'default'}>
-                  {currentPhase === 'screeningPhase' ? 'Evaluations' : 'Pitches'}
+                  {currentPhase === 'screeningPhase' ? 'Screening' : 'Pitching'}
                 </Badge>
               </div>
             </Card>

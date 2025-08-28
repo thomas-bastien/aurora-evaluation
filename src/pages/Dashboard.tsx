@@ -14,8 +14,7 @@ import {
   TrendingUp, 
   Users, 
   Calendar,
-  BarChart3,
-  Shield
+  BarChart3
 } from "lucide-react";
 
 const Dashboard = () => {
@@ -175,16 +174,6 @@ const Dashboard = () => {
                 Manage your startup evaluation pipeline with comprehensive insights and streamlined workflows.
               </p>
             </div>
-            {profile?.role === 'admin' && (
-              <Button 
-                variant="outline" 
-                onClick={() => window.location.href = '/admin'}
-                className="flex items-center space-x-2"
-              >
-                <Shield className="w-4 h-4" />
-                <span>Admin View</span>
-              </Button>
-            )}
           </div>
         </div>
 
@@ -197,27 +186,6 @@ const Dashboard = () => {
           ))}
         </div>
         
-        {/* Admin Dashboard Access */}
-        {profile?.role === 'admin' && (
-          <div className="mb-8">
-            <Card>
-              <CardHeader>
-                <CardTitle>Community Manager Tools</CardTitle>
-                <CardDescription>Access advanced management and selection workflows</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex gap-4">
-                  <Button onClick={() => navigate('/admin')} variant="outline">
-                    Admin Dashboard
-                  </Button>
-                  <Button onClick={() => navigate('/selection')} variant="default">
-                    Selection Workflow
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
 
         {/* Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -272,7 +240,7 @@ const Dashboard = () => {
               </button>
               
               <button 
-                onClick={() => window.location.href = profile?.role === 'admin' ? '/admin' : '/startups'}
+                onClick={() => window.location.href = profile?.role === 'admin' ? '/selection' : '/startups'}
                 className="p-4 bg-card border border-border rounded-lg hover:bg-muted transition-smooth text-left"
               >
                 <div className="flex items-center space-x-3">
@@ -281,10 +249,10 @@ const Dashboard = () => {
                   </div>
                   <div>
                     <h4 className="font-medium text-foreground">
-                      {profile?.role === 'admin' ? 'Admin Dashboard' : 'View Startups'}
+                      {profile?.role === 'admin' ? 'Selection Workflow' : 'View Startups'}
                     </h4>
                     <p className="text-sm text-muted-foreground">
-                      {profile?.role === 'admin' ? 'Manage system and reports' : 'Browse startup profiles'}
+                      {profile?.role === 'admin' ? 'Manage selection process' : 'Browse startup profiles'}
                     </p>
                   </div>
                 </div>

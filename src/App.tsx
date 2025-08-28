@@ -15,7 +15,7 @@ import StartupsList from "./pages/StartupsList";
 import VCProfile from "./pages/VCProfile";
 import VCsList from "./pages/VCsList";
 import JurorsList from "./pages/JurorsList";
-import AdminDashboard from "./pages/AdminDashboard";
+
 import Selection from "./pages/Selection";
 import SessionManagement from "./pages/SessionManagement";
 import EvaluationDashboard from "./pages/EvaluationDashboard";
@@ -73,7 +73,20 @@ const App = () => (
             } />
             <Route path="/admin" element={
               <ProtectedRoute>
-                <AdminDashboard />
+                <div style={{ 
+                  display: 'flex', 
+                  justifyContent: 'center', 
+                  alignItems: 'center', 
+                  height: '100vh', 
+                  flexDirection: 'column' 
+                }}>
+                  <h2>Redirecting...</h2>
+                  <p>The Admin page has been moved to Selection.</p>
+                  {(() => {
+                    window.location.replace('/selection?phase=screening');
+                    return null;
+                  })()}
+                </div>
               </ProtectedRoute>
             } />
             <Route path="/selection" element={
