@@ -15,7 +15,7 @@ import {
 import { toast } from "sonner";
 
 interface ReportingDocumentationProps {
-  currentPhase: 'phase1' | 'phase2';
+  currentPhase: 'screeningPhase' | 'pitchingPhase';
 }
 
 export const ReportingDocumentation = ({ currentPhase }: ReportingDocumentationProps) => {
@@ -58,14 +58,14 @@ export const ReportingDocumentation = ({ currentPhase }: ReportingDocumentationP
     },
     {
       id: 'phase-summary',
-      title: `${currentPhase === 'phase1' ? 'Phase 1' : 'Phase 2'} Summary`,
-      description: `Complete ${currentPhase === 'phase1' ? 'evaluation' : 'pitch'} phase documentation`,
+      title: `${currentPhase === 'screeningPhase' ? 'Screening Phase' : 'Pitching Phase'} Summary`,
+      description: `Complete ${currentPhase === 'screeningPhase' ? 'evaluation' : 'pitch'} phase documentation`,
       icon: FileText,
       type: 'primary'
     }
   ];
 
-  if (currentPhase === 'phase2') {
+  if (currentPhase === 'pitchingPhase') {
     reports.push(
       {
         id: 'pitch-analytics',
@@ -91,7 +91,7 @@ export const ReportingDocumentation = ({ currentPhase }: ReportingDocumentationP
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <FileText className="w-5 h-5" />
-            Reporting & Documentation - {currentPhase === 'phase1' ? 'Phase 1' : 'Phase 2'}
+            Reporting & Documentation - {currentPhase === 'screeningPhase' ? 'Screening Phase' : 'Pitching Phase'}
           </CardTitle>
           <CardDescription>
             Generate comprehensive reports and export data for stakeholders
@@ -101,23 +101,23 @@ export const ReportingDocumentation = ({ currentPhase }: ReportingDocumentationP
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
             <div className="text-center p-4 bg-primary/10 rounded-lg">
               <div className="text-2xl font-bold text-primary">
-                {currentPhase === 'phase1' ? '156' : '30'}
+                {currentPhase === 'screeningPhase' ? '156' : '30'}
               </div>
               <div className="text-sm text-muted-foreground">
-                {currentPhase === 'phase1' ? 'Startups Evaluated' : 'Startups in Phase 2'}
+                {currentPhase === 'screeningPhase' ? 'Startups Evaluated' : 'Startups in Pitching Phase'}
               </div>
             </div>
             <div className="text-center p-4 bg-success/10 rounded-lg">
               <div className="text-2xl font-bold text-success">
-                {currentPhase === 'phase1' ? '98%' : '85%'}
+                {currentPhase === 'screeningPhase' ? '98%' : '85%'}
               </div>
               <div className="text-sm text-muted-foreground">
-                {currentPhase === 'phase1' ? 'Evaluations Complete' : 'Pitches Completed'}
+                {currentPhase === 'screeningPhase' ? 'Evaluations Complete' : 'Pitches Completed'}
               </div>
             </div>
             <div className="text-center p-4 bg-warning/10 rounded-lg">
               <div className="text-2xl font-bold text-warning">
-                {currentPhase === 'phase1' ? '7.3' : '8.1'}
+                {currentPhase === 'screeningPhase' ? '7.3' : '8.1'}
               </div>
               <div className="text-sm text-muted-foreground">Average Score</div>
             </div>
@@ -182,7 +182,7 @@ export const ReportingDocumentation = ({ currentPhase }: ReportingDocumentationP
               Email Report to Stakeholders
             </Button>
             <Button variant="outline" size="sm">
-              Archive {currentPhase === 'phase1' ? 'Phase 1' : 'Phase 2'} Data
+              Archive {currentPhase === 'screeningPhase' ? 'Screening Phase' : 'Pitching Phase'} Data
             </Button>
             <Button variant="outline" size="sm">
               Generate Executive Summary

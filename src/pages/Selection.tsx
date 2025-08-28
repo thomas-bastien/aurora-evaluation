@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { Card } from "@/components/ui/card";
-import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -17,14 +17,14 @@ import { ResultsCommunication } from "@/components/cm/ResultsCommunication";
 import { ReportingDocumentation } from "@/components/cm/ReportingDocumentation";
 
 const Selection = () => {
-  const [currentPhase, setCurrentPhase] = useState<'phase1' | 'phase2'>('phase1');
+  const [currentPhase, setCurrentPhase] = useState<'screeningPhase' | 'pitchingPhase'>('screeningPhase');
 
   return (
     <div className="min-h-screen bg-background">
       <DashboardHeader />
       
       <main className="max-w-7xl mx-auto px-6 py-8">
-        {/* Header with Global Phase Toggle */}
+        {/* Header with Global Phase Selector */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-6">
             <div>
@@ -34,27 +34,23 @@ const Selection = () => {
               </p>
             </div>
             
-            {/* Global Phase Toggle */}
+            {/* Global Phase Selector */}
             <Card className="p-4">
               <div className="flex items-center space-x-4">
-                <Label htmlFor="global-phase-toggle" className="text-sm font-medium">
+                <Label htmlFor="global-phase-selector" className="text-sm font-medium">
                   Current Phase:
                 </Label>
-                <div className="flex items-center space-x-2">
-                  <span className={`text-sm ${currentPhase === 'phase1' ? 'font-semibold text-primary' : 'text-muted-foreground'}`}>
-                    Phase 1
-                  </span>
-                  <Switch
-                    id="global-phase-toggle"
-                    checked={currentPhase === 'phase2'}
-                    onCheckedChange={(checked) => setCurrentPhase(checked ? 'phase2' : 'phase1')}
-                  />
-                  <span className={`text-sm ${currentPhase === 'phase2' ? 'font-semibold text-primary' : 'text-muted-foreground'}`}>
-                    Phase 2
-                  </span>
-                </div>
-                <Badge variant={currentPhase === 'phase1' ? 'secondary' : 'default'}>
-                  {currentPhase === 'phase1' ? 'Evaluations' : 'Pitches'}
+                <Select value={currentPhase} onValueChange={(value: 'screeningPhase' | 'pitchingPhase') => setCurrentPhase(value)}>
+                  <SelectTrigger className="w-48">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="screeningPhase">Screening Phase</SelectItem>
+                    <SelectItem value="pitchingPhase">Pitching Phase</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Badge variant={currentPhase === 'screeningPhase' ? 'secondary' : 'default'}>
+                  {currentPhase === 'screeningPhase' ? 'Evaluations' : 'Pitches'}
                 </Badge>
               </div>
             </Card>

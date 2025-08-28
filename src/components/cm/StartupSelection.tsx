@@ -13,7 +13,7 @@ import { EvaluationProgressView } from "./EvaluationProgressView";
 import { Top30Selection } from "./Top30Selection";
 
 interface StartupSelectionProps {
-  currentPhase: 'phase1' | 'phase2';
+  currentPhase: 'screeningPhase' | 'pitchingPhase';
 }
 
 export const StartupSelection = ({ currentPhase }: StartupSelectionProps) => {
@@ -24,17 +24,17 @@ export const StartupSelection = ({ currentPhase }: StartupSelectionProps) => {
           <div>
             <CardTitle className="flex items-center gap-2">
               <Star className="w-5 h-5" />
-              Startup Selection - {currentPhase === 'phase1' ? 'Phase 1' : 'Phase 2'}
+              Startup Selection - {currentPhase === 'screeningPhase' ? 'Screening Phase' : 'Pitching Phase'}
             </CardTitle>
             <CardDescription>
-              {currentPhase === 'phase1' 
-                ? 'Review evaluation results and select the top 30 startups for Phase 2'
+              {currentPhase === 'screeningPhase' 
+                ? 'Review evaluation results and select the top 30 startups for Pitching Phase'
                 : 'Review pitch results and make final selections'
               }
             </CardDescription>
           </div>
-          <Badge variant={currentPhase === 'phase1' ? 'secondary' : 'default'}>
-            {currentPhase === 'phase1' ? 'Evaluation Results' : 'Pitch Results'}
+          <Badge variant={currentPhase === 'screeningPhase' ? 'secondary' : 'default'}>
+            {currentPhase === 'screeningPhase' ? 'Evaluation Results' : 'Pitch Results'}
           </Badge>
         </div>
       </CardHeader>
@@ -48,7 +48,7 @@ export const StartupSelection = ({ currentPhase }: StartupSelectionProps) => {
             </TabsTrigger>
             <TabsTrigger value="top-30-selection" className="flex items-center gap-2">
               <Trophy className="w-4 h-4" />
-              {currentPhase === 'phase1' ? 'Top 30 Selection' : 'Final Selection'}
+              {currentPhase === 'screeningPhase' ? 'Top 30 Selection' : 'Final Selection'}
             </TabsTrigger>
           </TabsList>
 

@@ -161,7 +161,7 @@ export const Top30Selection = () => {
         if (nonSelectedError) throw nonSelectedError;
       }
 
-      toast.success(`Successfully selected ${selectedStartups.length} startups for Phase 2`);
+      toast.success(`Successfully selected ${selectedStartups.length} startups for Pitching Phase`);
       setShowConfirmDialog(false);
       
       // Refresh data
@@ -226,7 +226,7 @@ export const Top30Selection = () => {
               Top 30 Startup Selection
             </CardTitle>
             <CardDescription>
-              Select the top performing startups to advance to Phase 2
+              Select the top performing startups to advance to Pitching Phase
             </CardDescription>
           </div>
           <div className="flex gap-2">
@@ -286,7 +286,7 @@ export const Top30Selection = () => {
               <DialogHeader>
                 <DialogTitle>Confirm Top 30 Selection</DialogTitle>
                 <DialogDescription>
-                  Are you sure you want to finalize the selection of {selectionCount} startups for Phase 2? 
+                  Are you sure you want to finalize the selection of {selectionCount} startups for Pitching Phase? 
                   This action will update their status and cannot be easily undone.
                 </DialogDescription>
               </DialogHeader>

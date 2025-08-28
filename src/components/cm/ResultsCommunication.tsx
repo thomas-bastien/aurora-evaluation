@@ -39,7 +39,7 @@ interface CommunicationTemplate {
 }
 
 interface ResultsCommunicationProps {
-  currentPhase: 'phase1' | 'phase2';
+  currentPhase: 'screeningPhase' | 'pitchingPhase';
 }
 
 export const ResultsCommunication = ({ currentPhase }: ResultsCommunicationProps) => {
@@ -149,8 +149,8 @@ The Aurora Evaluation Team`;
       {
         id: '1',
         type: 'selected',
-        subject: '🎉 Congratulations! You\'ve been selected for Phase 2',
-        content: `Congratulations! Your startup has been selected to advance to Phase 2 of our evaluation process.
+        subject: '🎉 Congratulations! You\'ve been selected for Pitching Phase',
+        content: `Congratulations! Your startup has been selected to advance to the Pitching Phase of our evaluation process.
 
 **Next Steps:**
 • You will receive a calendar invite for your pitch session
@@ -179,12 +179,12 @@ The Aurora Team`
       {
         id: '3',
         type: 'juror-report',
-        subject: 'Phase 1 Evaluation Results - Summary Report',
-        content: `Thank you for your participation as an evaluator in Phase 1 of our startup evaluation process.
+        subject: 'Screening Phase Evaluation Results - Summary Report',
+        content: `Thank you for your participation as an evaluator in the Screening Phase of our startup evaluation process.
 
 **Summary:**
 • Total startups evaluated: [TOTAL_STARTUPS]
-• Top 30 selected for Phase 2
+• Top 30 selected for Pitching Phase
 • Average evaluation score: [AVERAGE_SCORE]
 
 Please find the detailed results and your contribution report attached.
@@ -301,10 +301,10 @@ The Aurora Team`
           <div>
             <CardTitle className="flex items-center gap-2">
               <Mail className="w-5 h-5" />
-              Results Communication - {currentPhase === 'phase1' ? 'Phase 1' : 'Phase 2'}
+              Results Communication - {currentPhase === 'screeningPhase' ? 'Screening Phase' : 'Pitching Phase'}
             </CardTitle>
             <CardDescription>
-              Review feedback summaries and send {currentPhase === 'phase1' ? 'evaluation' : 'pitch'} results to startups and jurors
+              Review feedback summaries and send {currentPhase === 'screeningPhase' ? 'evaluation' : 'pitch'} results to startups and jurors
             </CardDescription>
           </div>
           <Dialog open={showSendDialog} onOpenChange={setShowSendDialog}>

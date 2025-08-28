@@ -40,11 +40,24 @@ export const DashboardHeader = () => {
                 Dashboard
               </a>
               
-              {/* Show Selection for Admin/CM users */}
+              {/* Show Selection Dropdown for Admin/CM users */}
               {profile?.role === 'admin' && (
-                <a href="/selection" className={`hover:text-primary transition-smooth ${isActive('/selection') ? 'text-primary' : 'text-muted-foreground'}`}>
-                  Selection
-                </a>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className={`flex items-center gap-1 hover:text-primary transition-smooth ${isActive('/selection') ? 'text-primary' : 'text-muted-foreground'}`}>
+                      Selection
+                      <ChevronDown className="w-4 h-4" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="bg-card border border-border shadow-elegant">
+                    <DropdownMenuItem onClick={() => navigate('/selection?phase=screening')} className="cursor-pointer">
+                      Screening Phase
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate('/selection?phase=pitching')} className="cursor-pointer">
+                      Pitching Phase
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               )}
               
               {/* Show Evaluate for VC users (jurors) */}

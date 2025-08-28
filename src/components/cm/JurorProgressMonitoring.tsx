@@ -32,7 +32,7 @@ interface JurorProgress {
 }
 
 interface JurorProgressMonitoringProps {
-  currentPhase: 'phase1' | 'phase2';
+  currentPhase: 'screeningPhase' | 'pitchingPhase';
 }
 
 export const JurorProgressMonitoring = ({ currentPhase }: JurorProgressMonitoringProps) => {
@@ -195,10 +195,10 @@ export const JurorProgressMonitoring = ({ currentPhase }: JurorProgressMonitorin
           <div>
             <CardTitle className="flex items-center gap-2">
               <CheckCircle className="w-5 h-5" />
-              Juror Progress Monitoring - {currentPhase === 'phase1' ? 'Phase 1' : 'Phase 2'}
+              Juror Progress Monitoring - {currentPhase === 'screeningPhase' ? 'Screening Phase' : 'Pitching Phase'}
             </CardTitle>
             <CardDescription>
-              Track {currentPhase === 'phase1' ? 'evaluation' : 'pitch'} submission status by juror and send reminders
+              Track {currentPhase === 'screeningPhase' ? 'evaluation' : 'pitch'} submission status by juror and send reminders
             </CardDescription>
           </div>
           <div className="flex gap-2">

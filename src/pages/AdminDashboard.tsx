@@ -156,19 +156,19 @@ const AdminDashboard = () => {
           </TabsList>
 
           <TabsContent value="juror-progress" className="space-y-6">
-            <JurorProgressMonitoring currentPhase="phase1" />
+            <JurorProgressMonitoring currentPhase="screeningPhase" />
           </TabsContent>
 
           <TabsContent value="startup-selection" className="space-y-6">
-            <StartupSelection currentPhase="phase1" />
+            <StartupSelection currentPhase="screeningPhase" />
           </TabsContent>
 
           <TabsContent value="communications" className="space-y-6">
-            <ResultsCommunication currentPhase="phase1" />
+            <ResultsCommunication currentPhase="screeningPhase" />
           </TabsContent>
 
           <TabsContent value="reports" className="space-y-6">
-            <ReportingDocumentation currentPhase="phase1" />
+            <ReportingDocumentation currentPhase="screeningPhase" />
           </TabsContent>
 
         </Tabs>
