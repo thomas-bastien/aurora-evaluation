@@ -2,24 +2,12 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Progress } from "@/components/ui/progress";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
 import { 
   Users, 
   Building2, 
-  Calendar, 
   BarChart3, 
-  Clock, 
-  CheckCircle,
-  AlertCircle,
-  FileText,
-  Settings,
-  ToggleLeft,
-  ToggleRight
+  CheckCircle
 } from "lucide-react";
 import { JurorProgressMonitoring } from "@/components/cm/JurorProgressMonitoring";
 import { StartupSelection } from "@/components/cm/StartupSelection";
@@ -27,7 +15,6 @@ import { ResultsCommunication } from "@/components/cm/ResultsCommunication";
 import { ReportingDocumentation } from "@/components/cm/ReportingDocumentation";
 
 const AdminDashboard = () => {
-  const [currentPhase, setCurrentPhase] = useState<'phase1' | 'phase2'>('phase1');
   const [overallStats, setOverallStats] = useState({
     totalStartups: 0,
     totalVCs: 0,
@@ -95,7 +82,7 @@ const AdminDashboard = () => {
       <DashboardHeader />
       
       <main className="max-w-7xl mx-auto px-6 py-8">
-        {/* Header with Phase Toggle */}
+        {/* Header */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
             <div>
@@ -104,31 +91,6 @@ const AdminDashboard = () => {
                 Complete oversight of the evaluation process and progress tracking
               </p>
             </div>
-            
-            {/* Global Phase Toggle */}
-            <Card className="p-4">
-              <div className="flex items-center space-x-4">
-                <Label htmlFor="phase-toggle" className="text-sm font-medium">
-                  Current Phase:
-                </Label>
-                <div className="flex items-center space-x-2">
-                  <span className={`text-sm ${currentPhase === 'phase1' ? 'font-semibold text-primary' : 'text-muted-foreground'}`}>
-                    Phase 1
-                  </span>
-                  <Switch
-                    id="phase-toggle"
-                    checked={currentPhase === 'phase2'}
-                    onCheckedChange={(checked) => setCurrentPhase(checked ? 'phase2' : 'phase1')}
-                  />
-                  <span className={`text-sm ${currentPhase === 'phase2' ? 'font-semibold text-primary' : 'text-muted-foreground'}`}>
-                    Phase 2
-                  </span>
-                </div>
-                <Badge variant={currentPhase === 'phase1' ? 'secondary' : 'default'}>
-                  {currentPhase === 'phase1' ? 'Evaluations' : 'Pitches'}
-                </Badge>
-              </div>
-            </Card>
           </div>
         </div>
 
@@ -194,19 +156,19 @@ const AdminDashboard = () => {
           </TabsList>
 
           <TabsContent value="juror-progress" className="space-y-6">
-            <JurorProgressMonitoring currentPhase={currentPhase} />
+            <JurorProgressMonitoring currentPhase="phase1" />
           </TabsContent>
 
           <TabsContent value="startup-selection" className="space-y-6">
-            <StartupSelection currentPhase={currentPhase} />
+            <StartupSelection currentPhase="phase1" />
           </TabsContent>
 
           <TabsContent value="communications" className="space-y-6">
-            <ResultsCommunication currentPhase={currentPhase} />
+            <ResultsCommunication currentPhase="phase1" />
           </TabsContent>
 
           <TabsContent value="reports" className="space-y-6">
-            <ReportingDocumentation currentPhase={currentPhase} />
+            <ReportingDocumentation currentPhase="phase1" />
           </TabsContent>
 
         </Tabs>

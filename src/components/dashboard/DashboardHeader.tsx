@@ -39,12 +39,20 @@ export const DashboardHeader = () => {
               <a href="/dashboard" className={`font-medium hover:text-primary transition-smooth ${isActive('/dashboard') ? 'text-primary' : 'text-muted-foreground'}`}>
                 Dashboard
               </a>
-              <a href="/evaluate" className={`hover:text-primary transition-smooth ${isActive('/evaluate') ? 'text-primary' : 'text-muted-foreground'}`}>
-                Evaluate
-              </a>
-              <a href="/sessions" className={`hover:text-primary transition-smooth ${isActive('/sessions') ? 'text-primary' : 'text-muted-foreground'}`}>
-                Sessions
-              </a>
+              
+              {/* Show Selection for Admin/CM users */}
+              {profile?.role === 'admin' && (
+                <a href="/selection" className={`hover:text-primary transition-smooth ${isActive('/selection') ? 'text-primary' : 'text-muted-foreground'}`}>
+                  Selection
+                </a>
+              )}
+              
+              {/* Show Evaluate for VC users (jurors) */}
+              {profile?.role === 'vc' && (
+                <a href="/evaluate" className={`hover:text-primary transition-smooth ${isActive('/evaluate') ? 'text-primary' : 'text-muted-foreground'}`}>
+                  Evaluate
+                </a>
+              )}
               
               {/* Ecosystem Dropdown */}
               <DropdownMenu>

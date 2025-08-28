@@ -5,7 +5,9 @@ import { StatsCard } from "@/components/dashboard/StatsCard";
 import { EvaluationProgress } from "@/components/dashboard/EvaluationProgress";
 import { StartupList } from "@/components/dashboard/StartupList";
 import { useUserProfile } from "@/hooks/useUserProfile";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { 
   Building2, 
   Star, 
@@ -18,6 +20,7 @@ import {
 
 const Dashboard = () => {
   const { profile } = useUserProfile();
+  const navigate = useNavigate();
   const [stats, setStats] = useState([
     {
       title: "Total Startups",
@@ -193,6 +196,28 @@ const Dashboard = () => {
             </div>
           ))}
         </div>
+        
+        {/* Admin Dashboard Access */}
+        {profile?.role === 'admin' && (
+          <div className="mb-8">
+            <Card>
+              <CardHeader>
+                <CardTitle>Community Manager Tools</CardTitle>
+                <CardDescription>Access advanced management and selection workflows</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex gap-4">
+                  <Button onClick={() => navigate('/admin')} variant="outline">
+                    Admin Dashboard
+                  </Button>
+                  <Button onClick={() => navigate('/selection')} variant="default">
+                    Selection Workflow
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
         {/* Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

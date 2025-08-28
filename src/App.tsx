@@ -16,6 +16,7 @@ import VCProfile from "./pages/VCProfile";
 import VCsList from "./pages/VCsList";
 import JurorsList from "./pages/JurorsList";
 import AdminDashboard from "./pages/AdminDashboard";
+import Selection from "./pages/Selection";
 import SessionManagement from "./pages/SessionManagement";
 import EvaluationDashboard from "./pages/EvaluationDashboard";
 import Matchmaking from "./pages/Matchmaking";
@@ -75,9 +76,9 @@ const App = () => (
                 <AdminDashboard />
               </ProtectedRoute>
             } />
-            <Route path="/sessions" element={
+            <Route path="/selection" element={
               <ProtectedRoute>
-                <SessionManagement />
+                <Selection />
               </ProtectedRoute>
             } />
             <Route path="/evaluate" element={
