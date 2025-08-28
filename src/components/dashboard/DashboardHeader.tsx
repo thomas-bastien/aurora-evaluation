@@ -84,10 +84,13 @@ export const DashboardHeader = () => {
                     <Users className="w-4 h-4 mr-2" />
                     Jury
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => navigate('/matchmaking')} className="cursor-pointer">
-                    <Network className="w-4 h-4 mr-2" />
-                    Matchmaking
-                  </DropdownMenuItem>
+                  {/* Hide Matchmaking from jurors (vc role) */}
+                  {profile?.role === 'admin' && (
+                    <DropdownMenuItem onClick={() => navigate('/matchmaking')} className="cursor-pointer">
+                      <Network className="w-4 h-4 mr-2" />
+                      Matchmaking
+                    </DropdownMenuItem>
+                  )}
                 </DropdownMenuContent>
               </DropdownMenu>
               

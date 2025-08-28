@@ -7,6 +7,7 @@ import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import RoleGuard from "@/components/RoleGuard";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import TestSignup from "./pages/TestSignup";
@@ -112,7 +113,9 @@ const App = () => (
             } />
             <Route path="/matchmaking" element={
               <ProtectedRoute>
-                <Matchmaking />
+                <RoleGuard allowedRoles={['admin']}>
+                  <Matchmaking />
+                </RoleGuard>
               </ProtectedRoute>
             } />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

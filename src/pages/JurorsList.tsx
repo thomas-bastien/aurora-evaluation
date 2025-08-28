@@ -13,6 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { UserCheck, Building, Users, Plus, Search, Filter, Upload, Download, Edit, Trash2, Mail } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
+import { useUserProfile } from '@/hooks/useUserProfile';
 import { CSVUploadModal } from '@/components/jurors/CSVUploadModal';
 import { DraftModal } from '@/components/jurors/DraftModal';
 import { JurorFormModal } from '@/components/jurors/JurorFormModal';
@@ -47,6 +48,10 @@ export default function JurorsList() {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [sendingInvitation, setSendingInvitation] = useState<string | null>(null);
   const { toast } = useToast();
+  const { profile } = useUserProfile();
+  
+  // Check if user has admin permissions
+  const isAdmin = profile?.role === 'admin';
 
   useEffect(() => {
     fetchJurors();
@@ -374,20 +379,22 @@ export default function JurorsList() {
               <h1 className="text-3xl font-bold text-foreground">Jury</h1>
               <p className="text-muted-foreground mt-2">Manage evaluation panel members</p>
             </div>
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={downloadJurorsCSVTemplate}>
-                <Download className="h-4 w-4 mr-2" />
-                Download Template
-              </Button>
-              <Button variant="outline" onClick={() => setCsvModalOpen(true)}>
-                <Upload className="h-4 w-4 mr-2" />
-                Upload CSV
-              </Button>
-              <Button onClick={() => setFormModalOpen(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Add Juror
-              </Button>
-            </div>
+            {isAdmin && (
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={downloadJurorsCSVTemplate}>
+                  <Download className="h-4 w-4 mr-2" />
+                  Download Template
+                </Button>
+                <Button variant="outline" onClick={() => setCsvModalOpen(true)}>
+                  <Upload className="h-4 w-4 mr-2" />
+                  Upload CSV
+                </Button>
+                <Button onClick={() => setFormModalOpen(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Juror
+                </Button>
+              </div>
+            )}
           </div>
         </div>
 
@@ -462,7 +469,7 @@ export default function JurorsList() {
                   <TableHead>Company</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Member Since</TableHead>
-                  <TableHead className="w-[140px]">Actions</TableHead>
+                  {isAdmin && <TableHead className="w-[140px]">Actions</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -496,36 +503,38 @@ export default function JurorsList() {
                       {new Date(juror.created_at).toLocaleDateString()}
                     </TableCell>
                     <TableCell>
-                      <div className="flex gap-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleSendInvitation(juror)}
-                          disabled={sendingInvitation === juror.id}
-                          className="h-8 w-8 p-0"
-                          title="Send Invitation"
-                        >
-                          <Mail className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleEdit(juror)}
-                          className="h-8 w-8 p-0"
-                          title="Edit Juror"
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDelete(juror)}
-                          className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                          title="Delete Juror"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
+                      {isAdmin && (
+                        <div className="flex gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleSendInvitation(juror)}
+                            disabled={sendingInvitation === juror.id}
+                            className="h-8 w-8 p-0"
+                            title="Send Invitation"
+                          >
+                            <Mail className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEdit(juror)}
+                            className="h-8 w-8 p-0"
+                            title="Edit Juror"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDelete(juror)}
+                            className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                            title="Delete Juror"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}
