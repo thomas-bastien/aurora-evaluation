@@ -38,7 +38,11 @@ interface CommunicationTemplate {
   content: string;
 }
 
-export const ResultsCommunication = () => {
+interface ResultsCommunicationProps {
+  currentPhase: 'phase1' | 'phase2';
+}
+
+export const ResultsCommunication = ({ currentPhase }: ResultsCommunicationProps) => {
   const [startupResults, setStartupResults] = useState<StartupResult[]>([]);
   const [templates, setTemplates] = useState<CommunicationTemplate[]>([]);
   const [loading, setLoading] = useState(true);
@@ -297,10 +301,10 @@ The Aurora Team`
           <div>
             <CardTitle className="flex items-center gap-2">
               <Mail className="w-5 h-5" />
-              Results Communication
+              Results Communication - {currentPhase === 'phase1' ? 'Phase 1' : 'Phase 2'}
             </CardTitle>
             <CardDescription>
-              Review feedback summaries and send results to startups and jurors
+              Review feedback summaries and send {currentPhase === 'phase1' ? 'evaluation' : 'pitch'} results to startups and jurors
             </CardDescription>
           </div>
           <Dialog open={showSendDialog} onOpenChange={setShowSendDialog}>

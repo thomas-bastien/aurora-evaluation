@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { 
   Users, 
   Building2, 
@@ -15,14 +17,17 @@ import {
   CheckCircle,
   AlertCircle,
   FileText,
-  Settings
+  Settings,
+  ToggleLeft,
+  ToggleRight
 } from "lucide-react";
 import { JurorProgressMonitoring } from "@/components/cm/JurorProgressMonitoring";
-import { EvaluationProgressView } from "@/components/cm/EvaluationProgressView";
-import { Top30Selection } from "@/components/cm/Top30Selection";
+import { StartupSelection } from "@/components/cm/StartupSelection";
 import { ResultsCommunication } from "@/components/cm/ResultsCommunication";
+import { ReportingDocumentation } from "@/components/cm/ReportingDocumentation";
 
 const AdminDashboard = () => {
+  const [currentPhase, setCurrentPhase] = useState<'phase1' | 'phase2'>('phase1');
   const [overallStats, setOverallStats] = useState({
     totalStartups: 0,
     totalVCs: 0,
@@ -32,9 +37,6 @@ const AdminDashboard = () => {
     sessionsCompleted: 0,
     totalSessions: 0
   });
-  const [sessions, setSessions] = useState<any[]>([]);
-  const [vcProfiles, setVcProfiles] = useState<any[]>([]);
-  const [topStartups, setTopStartups] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -56,40 +58,15 @@ const AdminDashboard = () => {
           .from('evaluations')
           .select('*', { count: 'exact', head: true });
 
-        // Fetch sessions
-        const { data: sessionsData } = await supabase
-          .from('sessions')
-          .select('*')
-          .order('scheduled_date', { ascending: true });
-
-        // Fetch VC profiles with evaluation counts
-        const { data: vcData } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('role', 'vc');
-
-        // Fetch top startups with scores
-        const { data: startupsData } = await supabase
-          .from('startups')
-          .select(`
-            *,
-            evaluations!inner(overall_score)
-          `)
-          .limit(5);
-
         setOverallStats({
           totalStartups: startupsCount || 0,
           totalVCs: vcsCount || 0,
           completedEvaluations: evaluationsCount || 0,
           totalEvaluations: (startupsCount || 0) * (vcsCount || 0),
           avgScore: 7.8,
-          sessionsCompleted: sessionsData?.filter(s => s.status === 'completed').length || 0,
-          totalSessions: sessionsData?.length || 0
+          sessionsCompleted: 0,
+          totalSessions: 0
         });
-
-        setSessions(sessionsData || []);
-        setVcProfiles(vcData || []);
-        setTopStartups(startupsData || []);
       } catch (error) {
         console.error('Error fetching admin data:', error);
       } finally {
@@ -118,12 +95,41 @@ const AdminDashboard = () => {
       <DashboardHeader />
       
       <main className="max-w-7xl mx-auto px-6 py-8">
-        {/* Header */}
+        {/* Header with Phase Toggle */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground mb-2">Admin Dashboard</h1>
-          <p className="text-lg text-muted-foreground">
-            Complete oversight of the evaluation process and progress tracking
-          </p>
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h1 className="text-3xl font-bold text-foreground mb-2">Admin Dashboard</h1>
+              <p className="text-lg text-muted-foreground">
+                Complete oversight of the evaluation process and progress tracking
+              </p>
+            </div>
+            
+            {/* Global Phase Toggle */}
+            <Card className="p-4">
+              <div className="flex items-center space-x-4">
+                <Label htmlFor="phase-toggle" className="text-sm font-medium">
+                  Current Phase:
+                </Label>
+                <div className="flex items-center space-x-2">
+                  <span className={`text-sm ${currentPhase === 'phase1' ? 'font-semibold text-primary' : 'text-muted-foreground'}`}>
+                    Phase 1
+                  </span>
+                  <Switch
+                    id="phase-toggle"
+                    checked={currentPhase === 'phase2'}
+                    onCheckedChange={(checked) => setCurrentPhase(checked ? 'phase2' : 'phase1')}
+                  />
+                  <span className={`text-sm ${currentPhase === 'phase2' ? 'font-semibold text-primary' : 'text-muted-foreground'}`}>
+                    Phase 2
+                  </span>
+                </div>
+                <Badge variant={currentPhase === 'phase1' ? 'secondary' : 'default'}>
+                  {currentPhase === 'phase1' ? 'Evaluations' : 'Pitches'}
+                </Badge>
+              </div>
+            </Card>
+          </div>
         </div>
 
         {/* Overall Stats */}
@@ -180,197 +186,29 @@ const AdminDashboard = () => {
         </div>
 
         <Tabs defaultValue="juror-progress" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-6">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="juror-progress">Juror Progress</TabsTrigger>
-            <TabsTrigger value="evaluation-progress">Evaluation Progress</TabsTrigger>
-            <TabsTrigger value="top-30">Top 30 Selection</TabsTrigger>
+            <TabsTrigger value="startup-selection">Startup Selection</TabsTrigger>
             <TabsTrigger value="communications">Communications</TabsTrigger>
-            <TabsTrigger value="sessions">Sessions</TabsTrigger>
-            <TabsTrigger value="reports">Reports</TabsTrigger>
+            <TabsTrigger value="reports">Reporting & Documentation</TabsTrigger>
           </TabsList>
 
           <TabsContent value="juror-progress" className="space-y-6">
-            <JurorProgressMonitoring />
+            <JurorProgressMonitoring currentPhase={currentPhase} />
           </TabsContent>
 
-          <TabsContent value="evaluation-progress" className="space-y-6">
-            <EvaluationProgressView />  
-          </TabsContent>
-
-          <TabsContent value="top-30" className="space-y-6">
-            <Top30Selection />
+          <TabsContent value="startup-selection" className="space-y-6">
+            <StartupSelection currentPhase={currentPhase} />
           </TabsContent>
 
           <TabsContent value="communications" className="space-y-6">
-            <ResultsCommunication />
-          </TabsContent>
-
-          <TabsContent value="progress" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>VC Evaluation Progress</CardTitle>
-                <CardDescription>Track individual VC partner progress and performance</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {vcProfiles.map((vc, index) => (
-                    <div key={index} className="border border-border rounded-lg p-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <div>
-                          <h4 className="font-semibold text-foreground">{vc.full_name || 'Unknown VC'}</h4>
-                          <p className="text-sm text-muted-foreground">{vc.organization || 'No organization'}</p>
-                        </div>
-                        <div className="flex items-center gap-4">
-                          <div className="text-right">
-                            <p className="text-sm font-medium">Avg Score: N/A</p>
-                          </div>
-                          <Badge variant="secondary">Active</Badge>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2 mb-2">
-                        <Progress value={75} className="flex-1" />
-                        <span className="text-sm font-medium">-/-</span>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button size="sm" variant="outline">View Details</Button>
-                        <Button size="sm" variant="outline">Send Reminder</Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="sessions" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Session Management</CardTitle>
-                <CardDescription>Monitor and manage evaluation sessions</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {sessions.map((session, index) => (
-                    <div key={index} className="border border-border rounded-lg p-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <div>
-                          <h4 className="font-semibold text-foreground">{session.name}</h4>
-                          <p className="text-sm text-muted-foreground">{session.category}</p>
-                        </div>
-                        <Badge variant={getStatusColor(session.status)}>{session.status}</Badge>
-                      </div>
-                      <div className="flex items-center gap-2 mb-2">
-                        <Progress value={session.completion_rate || 0} className="flex-1" />
-                        <span className="text-sm font-medium">{session.vc_participants} VCs</span>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button size="sm" variant="outline">Manage Session</Button>
-                        <Button size="sm" variant="outline">View Results</Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="startups" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Top Performing Startups</CardTitle>
-                <CardDescription>Highest scoring startups in the evaluation process</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {topStartups.map((startup, index) => (
-                    <div key={index} className="border border-border rounded-lg p-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <div>
-                          <h4 className="font-semibold text-foreground">{startup.name}</h4>
-                          <p className="text-sm text-muted-foreground">{startup.industry}</p>
-                        </div>
-                        <div className="flex items-center gap-4">
-                          <div className="text-right">
-                            <p className="text-lg font-bold text-primary">N/A</p>
-                            <p className="text-xs text-muted-foreground">0 evaluations</p>
-                          </div>
-                          <Badge variant={getStatusColor(startup.status)}>{startup.status}</Badge>
-                        </div>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button size="sm" variant="outline">View Profile</Button>
-                        <Button size="sm" variant="outline">Schedule Pitch</Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="matchmaking" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Matchmaking</CardTitle>
-                <CardDescription>Assign jurors to startups for evaluation</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-8">
-                  <Users className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">Startup-Juror Assignment</h3>
-                  <p className="text-muted-foreground mb-4">
-                    Manage the assignment of jurors to startups for evaluation.
-                  </p>
-                  <Button onClick={() => window.location.href = '/matchmaking'}>
-                    Go to Matchmaking
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+            <ResultsCommunication currentPhase={currentPhase} />
           </TabsContent>
 
           <TabsContent value="reports" className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <FileText className="w-5 h-5" />
-                    Evaluation Summary
-                  </CardTitle>
-                  <CardDescription>Complete evaluation results and analysis</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Button className="w-full">Generate Report</Button>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <BarChart3 className="w-5 h-5" />
-                    VC Performance
-                  </CardTitle>
-                  <CardDescription>Individual VC scoring patterns and insights</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Button className="w-full" variant="outline">Export Data</Button>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Calendar className="w-5 h-5" />
-                    Session Reports
-                  </CardTitle>
-                  <CardDescription>Detailed session-by-session breakdown</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Button className="w-full" variant="outline">View Sessions</Button>
-                </CardContent>
-              </Card>
-            </div>
+            <ReportingDocumentation currentPhase={currentPhase} />
           </TabsContent>
+
         </Tabs>
       </main>
     </div>
