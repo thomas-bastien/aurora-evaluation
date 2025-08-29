@@ -393,11 +393,21 @@ export const StartupEvaluationModal = ({
       toast.error('Please score all evaluation criteria');
       return false;
     }
-    const hasValidStrengths = formData.strengths.some(strength => strength.trim().length > 0);
+    
+    // Debug logging for strengths validation
+    console.log('Validating strengths:', formData.strengths);
+    console.log('Strengths after filtering:', formData.strengths.filter(s => s && s.trim().length > 0));
+    
+    const hasValidStrengths = formData.strengths && 
+      Array.isArray(formData.strengths) && 
+      formData.strengths.some(strength => strength && typeof strength === 'string' && strength.trim().length > 0);
+    
     if (!hasValidStrengths) {
+      console.error('Strength validation failed. Current strengths:', formData.strengths);
       toast.error('Please provide at least one strength');
       return false;
     }
+    
     if (!formData.improvement_areas.trim()) {
       toast.error('Please identify main areas that need improvement');
       return false;
