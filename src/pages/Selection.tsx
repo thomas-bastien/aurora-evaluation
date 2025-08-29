@@ -80,8 +80,8 @@ const Selection = () => {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="screeningPhase">Screening Phase</SelectItem>
-                    <SelectItem value="pitchingPhase">Pitching Phase</SelectItem>
+                    <SelectItem value="screeningPhase">Screening</SelectItem>
+                    <SelectItem value="pitchingPhase">Pitching</SelectItem>
                   </SelectContent>
                 </Select>
                 <Badge variant={currentPhase === 'screeningPhase' ? 'secondary' : 'default'}>

@@ -149,8 +149,8 @@ The Aurora Evaluation Team`;
       {
         id: '1',
         type: 'selected',
-        subject: '🎉 Congratulations! You\'ve been selected for Pitching Phase',
-        content: `Congratulations! Your startup has been selected to advance to the Pitching Phase of our evaluation process.
+        subject: '🎉 Congratulations! You\'ve been selected for Pitching',
+        content: `Congratulations! Your startup has been selected to advance to the Pitching stage of our evaluation process.
 
 **Next Steps:**
 • You will receive a calendar invite for your pitch session
@@ -301,7 +301,7 @@ The Aurora Team`
           <div>
             <CardTitle className="flex items-center gap-2">
               <Mail className="w-5 h-5" />
-              Results Communication - {currentPhase === 'screeningPhase' ? 'Screening Phase' : 'Pitching Phase'}
+              Results Communication - {currentPhase === 'screeningPhase' ? 'Screening' : 'Pitching'}
             </CardTitle>
             <CardDescription>
               Review feedback summaries and send {currentPhase === 'screeningPhase' ? 'evaluation' : 'pitch'} results to startups and jurors

@@ -58,7 +58,7 @@ export const ReportingDocumentation = ({ currentPhase }: ReportingDocumentationP
     },
     {
       id: 'phase-summary',
-      title: `${currentPhase === 'screeningPhase' ? 'Screening Phase' : 'Pitching Phase'} Summary`,
+      title: `${currentPhase === 'screeningPhase' ? 'Screening' : 'Pitching'} Summary`,
       description: `Complete ${currentPhase === 'screeningPhase' ? 'evaluation' : 'pitch'} phase documentation`,
       icon: FileText,
       type: 'primary'
@@ -91,7 +91,7 @@ export const ReportingDocumentation = ({ currentPhase }: ReportingDocumentationP
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <FileText className="w-5 h-5" />
-            Reporting & Documentation - {currentPhase === 'screeningPhase' ? 'Screening Phase' : 'Pitching Phase'}
+            Reporting & Documentation - {currentPhase === 'screeningPhase' ? 'Screening' : 'Pitching'}
           </CardTitle>
           <CardDescription>
             Generate comprehensive reports and export data for stakeholders
@@ -104,7 +104,7 @@ export const ReportingDocumentation = ({ currentPhase }: ReportingDocumentationP
                 {currentPhase === 'screeningPhase' ? '156' : '30'}
               </div>
               <div className="text-sm text-muted-foreground">
-                {currentPhase === 'screeningPhase' ? 'Startups Evaluated' : 'Startups in Pitching Phase'}
+                {currentPhase === 'screeningPhase' ? 'Startups Evaluated' : 'Startups in Pitching'}
               </div>
             </div>
             <div className="text-center p-4 bg-success/10 rounded-lg">
@@ -182,7 +182,7 @@ export const ReportingDocumentation = ({ currentPhase }: ReportingDocumentationP
               Email Report to Stakeholders
             </Button>
             <Button variant="outline" size="sm">
-              Archive {currentPhase === 'screeningPhase' ? 'Screening Phase' : 'Pitching Phase'} Data
+              Archive {currentPhase === 'screeningPhase' ? 'Screening' : 'Pitching'} Data
             </Button>
             <Button variant="outline" size="sm">
               Generate Executive Summary

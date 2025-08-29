@@ -195,7 +195,7 @@ export const JurorProgressMonitoring = ({ currentPhase }: JurorProgressMonitorin
           <div>
             <CardTitle className="flex items-center gap-2">
               <CheckCircle className="w-5 h-5" />
-              Juror Progress Monitoring - {currentPhase === 'screeningPhase' ? 'Screening Phase' : 'Pitching Phase'}
+              Juror Progress Monitoring - {currentPhase === 'screeningPhase' ? 'Screening' : 'Pitching'}
             </CardTitle>
             <CardDescription>
               Track {currentPhase === 'screeningPhase' ? 'evaluation' : 'pitch'} submission status by juror and send reminders

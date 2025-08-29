@@ -24,11 +24,11 @@ export const StartupSelection = ({ currentPhase }: StartupSelectionProps) => {
           <div>
             <CardTitle className="flex items-center gap-2">
               <Star className="w-5 h-5" />
-              Startup Selection - {currentPhase === 'screeningPhase' ? 'Screening Phase' : 'Pitching Phase'}
+              Startup Selection - {currentPhase === 'screeningPhase' ? 'Screening' : 'Pitching'}
             </CardTitle>
             <CardDescription>
               {currentPhase === 'screeningPhase' 
-                ? 'Review evaluation results and select the top 30 startups for Pitching Phase'
+                ? 'Review evaluation results and select the top 30 startups for Pitching'
                 : 'Review pitch results and make final selections'
               }
             </CardDescription>

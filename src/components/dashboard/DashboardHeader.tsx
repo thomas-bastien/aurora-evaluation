@@ -51,10 +51,10 @@ export const DashboardHeader = () => {
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="start" className="bg-card border border-border shadow-elegant">
                     <DropdownMenuItem onClick={() => navigate('/selection?phase=screening')} className="cursor-pointer">
-                      Screening Phase
+                      Screening
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => navigate('/selection?phase=pitching')} className="cursor-pointer">
-                      Pitching Phase
+                      Pitching
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
