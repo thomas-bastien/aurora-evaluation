@@ -6,17 +6,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { 
-  Users, 
-  Star, 
-  MessageSquare, 
-  FileText
-} from "lucide-react";
+import { Users, Star, MessageSquare, FileText } from "lucide-react";
 import { JurorProgressMonitoring } from "@/components/cm/JurorProgressMonitoring";
 import { StartupSelection } from "@/components/cm/StartupSelection";
 import { ResultsCommunication } from "@/components/cm/ResultsCommunication";
 import { ReportingDocumentation } from "@/components/cm/ReportingDocumentation";
-
 const Selection = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [currentPhase, setCurrentPhase] = useState<'screeningPhase' | 'pitchingPhase'>('screeningPhase');
@@ -25,7 +19,6 @@ const Selection = () => {
   useEffect(() => {
     const phaseParam = searchParams.get('phase');
     console.log('Selection: useEffect triggered, phaseParam:', phaseParam, 'currentPhase:', currentPhase);
-    
     if (phaseParam === 'pitching' && currentPhase !== 'pitchingPhase') {
       console.log('Selection: Setting phase to pitchingPhase');
       setCurrentPhase('pitchingPhase');
@@ -35,27 +28,32 @@ const Selection = () => {
     } else if (!phaseParam) {
       // No phase parameter, default to screening and update URL once
       console.log('Selection: No phase param, defaulting to screening');
-      setSearchParams({ phase: 'screening' }, { replace: true });
+      setSearchParams({
+        phase: 'screening'
+      }, {
+        replace: true
+      });
     }
   }, [searchParams.get('phase')]); // Only depend on the actual phase value, not the entire searchParams object
 
   // Update URL when phase changes (called by Select component)
   const handlePhaseChange = useCallback((newPhase: 'screeningPhase' | 'pitchingPhase') => {
     console.log('Selection: handlePhaseChange called with:', newPhase);
-    
     const phaseParam = newPhase === 'pitchingPhase' ? 'pitching' : 'screening';
     const currentPhaseParam = searchParams.get('phase');
-    
+
     // Only update if the phase is actually different
     if (currentPhaseParam !== phaseParam) {
       console.log('Selection: Updating URL to phase:', phaseParam);
       setCurrentPhase(newPhase);
-      setSearchParams({ phase: phaseParam }, { replace: true });
+      setSearchParams({
+        phase: phaseParam
+      }, {
+        replace: true
+      });
     }
   }, [searchParams, setSearchParams]);
-
-  return (
-    <div className="min-h-screen bg-background">
+  return <div className="min-h-screen bg-background">
       <DashboardHeader />
       
       <main className="max-w-7xl mx-auto px-6 py-8">
@@ -63,7 +61,7 @@ const Selection = () => {
         <div className="mb-8">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h1 className="text-3xl font-bold text-foreground mb-2">Selection</h1>
+              <h1 className="text-3xl font-bold text-foreground mb-2">Startup Selection</h1>
               <p className="text-lg text-muted-foreground">
                 Manage the complete evaluation workflow and startup selection process
               </p>
@@ -130,8 +128,6 @@ const Selection = () => {
           </TabsContent>
         </Tabs>
       </main>
-    </div>
-  );
+    </div>;
 };
-
 export default Selection;
