@@ -174,7 +174,7 @@ const Dashboard = () => {
           <div className="mb-6 animate-pulse-gentle">
             <Card className="bg-gradient-warning border-warning/20">
               <CardHeader className="pb-4">
-                <CardTitle className="text-warning-foreground flex items-center gap-2">
+                <CardTitle className="text-foreground flex items-center gap-2">
                   <Users className="w-5 h-5" />
                   Complete Your Profile
                 </CardTitle>
