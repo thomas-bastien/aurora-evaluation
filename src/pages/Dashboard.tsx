@@ -11,7 +11,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Building2, Star, TrendingUp, Users, Calendar, BarChart3 } from "lucide-react";
 const Dashboard = () => {
   const {
-    profile
+    profile,
+    refreshProfile
   } = useUserProfile();
   const navigate = useNavigate();
   const [stats, setStats] = useState([{
@@ -144,6 +145,18 @@ const Dashboard = () => {
     };
     fetchDashboardStats();
   }, []);
+
+  // Refresh profile when user returns to dashboard (e.g., after profile completion)
+  useEffect(() => {
+    const handleFocus = () => {
+      if (profile?.role === 'vc') {
+        refreshProfile();
+      }
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [profile?.role, refreshProfile]);
   return <div className="min-h-screen bg-background">
       <DashboardHeader />
       

@@ -20,37 +20,42 @@ export const useUserProfile = () => {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchProfile = async () => {
-      if (!user) {
-        setProfile(null);
-        setLoading(false);
-        return;
-      }
+  const fetchProfile = async () => {
+    if (!user) {
+      setProfile(null);
+      setLoading(false);
+      return;
+    }
 
-      try {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('user_id', user.id)
-          .maybeSingle();
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', user.id)
+        .maybeSingle();
 
-        if (error) {
-          console.error('Error fetching profile:', error);
-          setProfile(null);
-        } else {
-          setProfile(data);
-        }
-      } catch (error) {
+      if (error) {
         console.error('Error fetching profile:', error);
         setProfile(null);
-      } finally {
-        setLoading(false);
+      } else {
+        setProfile(data);
       }
-    };
+    } catch (error) {
+      console.error('Error fetching profile:', error);
+      setProfile(null);
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  const refreshProfile = async () => {
+    setLoading(true);
+    await fetchProfile();
+  };
+
+  useEffect(() => {
     fetchProfile();
   }, [user]);
 
-  return { profile, loading };
+  return { profile, loading, refreshProfile };
 };
