@@ -13,7 +13,7 @@ const handler = async (req: Request): Promise<Response> => {
 
   try {
     const url = new URL(req.url);
-    const token = url.searchParams.get('token');
+    let token = url.searchParams.get('token');
     
     if (!token) {
       return new Response(
@@ -22,7 +22,20 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    console.log("Processing magic link authentication with token:", token);
+    // Clean up URL encoding artifacts - remove any leading "3D" (URL-encoded "=")
+    token = token.replace(/^3D/i, '');
+    
+    // Validate UUID format
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(token)) {
+      console.error("Invalid token format:", token);
+      return new Response(
+        `<html><body><h1>Invalid invitation link</h1><p>Token format is invalid.</p></body></html>`,
+        { status: 400, headers: { "Content-Type": "text/html", ...corsHeaders } }
+      );
+    }
+
+    console.log("Processing magic link authentication with cleaned token:", token);
 
     // Create admin client
     const supabaseAdmin = createClient(
