@@ -11,7 +11,7 @@ import RoleGuard from "@/components/RoleGuard";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import TestSignup from "./pages/TestSignup";
-import JurorSignup from "./pages/JurorSignup";
+import JurorOnboarding from "./pages/JurorOnboarding";
 import Dashboard from "./pages/Dashboard";
 import StartupProfile from "./pages/StartupProfile";
 import StartupsList from "./pages/StartupsList";
@@ -59,7 +59,11 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
-            <Route path="/signup" element={<JurorSignup />} />
+            <Route path="/juror-onboarding" element={
+              <ProtectedRoute>
+                <JurorOnboarding />
+              </ProtectedRoute>
+            } />
             <Route path="/test-signup" element={<TestSignup />} />
             <Route path="/dashboard" element={
               <ProtectedRoute>
