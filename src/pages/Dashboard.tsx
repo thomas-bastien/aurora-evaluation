@@ -162,7 +162,7 @@ const Dashboard = () => {
       
       <main className="max-w-7xl mx-auto px-6 py-8">
         {/* Profile Completion Banner */}
-        {profile?.role === 'vc' && (!profile.calendly_link || !profile.expertise || profile.expertise.length === 0 || !profile.investment_stages || profile.investment_stages.length === 0) && <div className="mb-6 animate-pulse-gentle">
+        {profile?.role === 'vc' && (!profile.expertise || profile.expertise.length === 0 || !profile.investment_stages || profile.investment_stages.length === 0) && <div className="mb-6 animate-pulse-gentle">
             <Card className="bg-gradient-warning border-warning/20">
               <CardHeader className="pb-4">
                 <CardTitle className="text-foreground flex items-center gap-2">
