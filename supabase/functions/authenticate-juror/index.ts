@@ -201,12 +201,39 @@ const handler = async (req: Request): Promise<Response> => {
       console.log("New user created and linked to juror record");
     }
 
+    // Determine redirect URL based on user profile completion status
+    let redirectPath = '/dashboard';
+    
+    if (isNewUser) {
+      // New users always go to onboarding
+      redirectPath = '/juror-onboarding?onboarding=true';
+    } else {
+      // Check if existing user needs onboarding
+      const { data: profileData } = await supabaseAdmin
+        .from('profiles')
+        .select('calendly_link, expertise, investment_stages')
+        .eq('user_id', userId)
+        .maybeSingle();
+        
+      const needsOnboarding = profileData && (
+        !profileData.calendly_link || 
+        !profileData.expertise || 
+        profileData.expertise.length === 0 ||
+        !profileData.investment_stages ||
+        profileData.investment_stages.length === 0
+      );
+      
+      if (needsOnboarding) {
+        redirectPath = '/juror-onboarding?onboarding=true';
+      }
+    }
+
     // Create a temporary session for the user
     const { data: sessionData, error: sessionError } = await supabaseAdmin.auth.admin.generateLink({
       type: 'magiclink',
       email: jurorData.email,
       options: {
-        redirectTo: `${Deno.env.get('FRONTEND_URL') || req.headers.get('origin')}/dashboard${isNewUser ? '?onboarding=true' : ''}`
+        redirectTo: `${Deno.env.get('FRONTEND_URL') || req.headers.get('origin')}${redirectPath}`
       }
     });
 

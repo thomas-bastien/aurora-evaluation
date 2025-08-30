@@ -8,7 +8,6 @@ import { useNavigate } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import RoleGuard from "@/components/RoleGuard";
-import OnboardingRedirect from "@/components/OnboardingRedirect";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import TestSignup from "./pages/TestSignup";
@@ -57,8 +56,7 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
-          <OnboardingRedirect>
-            <Routes>
+          <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/juror-onboarding" element={
@@ -127,7 +125,6 @@ const App = () => (
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
-          </OnboardingRedirect>
         </BrowserRouter>
       </TooltipProvider>
     </AuthProvider>
