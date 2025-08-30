@@ -152,7 +152,7 @@ const Dashboard = () => {
         {profile?.role === 'vc' && (!profile.calendly_link || !profile.expertise || profile.expertise.length === 0 || !profile.investment_stages || profile.investment_stages.length === 0) && <div className="mb-6 animate-pulse-gentle">
             <Card className="bg-gradient-warning border-warning/20">
               <CardHeader className="pb-4">
-                <CardTitle className="text-warning-foreground flex items-center gap-2">
+                <CardTitle className="text-foreground flex items-center gap-2">
                   <Users className="w-5 h-5" />
                   Complete Your Profile
                 </CardTitle>
