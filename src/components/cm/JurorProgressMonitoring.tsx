@@ -458,7 +458,7 @@ export const JurorProgressMonitoring = ({ currentPhase }: JurorProgressMonitorin
 
       {/* Juror Details Modal */}
       <Dialog open={!!selectedJurorForDetails} onOpenChange={() => setSelectedJurorForDetails(null)}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-5xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               Juror Evaluation Details - {jurors.find(j => j.id === selectedJurorForDetails)?.name}
