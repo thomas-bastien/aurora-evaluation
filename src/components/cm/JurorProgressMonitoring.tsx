@@ -5,7 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { FilterPanel } from "@/components/common/FilterPanel";
+import { StartupEvaluationModal } from "@/components/evaluation/StartupEvaluationModal";
 import { 
   Search, 
   Mail, 
@@ -13,7 +15,8 @@ import {
   AlertCircle, 
   Clock,
   Filter,
-  RotateCcw
+  RotateCcw,
+  Eye
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -42,6 +45,8 @@ export const JurorProgressMonitoring = ({ currentPhase }: JurorProgressMonitorin
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [showFilters, setShowFilters] = useState(false);
+  const [selectedJurorForDetails, setSelectedJurorForDetails] = useState<string | null>(null);
+  const [jurorAssignments, setJurorAssignments] = useState<any[]>([]);
 
   useEffect(() => {
     fetchJurorProgress();
@@ -123,7 +128,7 @@ export const JurorProgressMonitoring = ({ currentPhase }: JurorProgressMonitorin
 
   const sendReminder = async (jurorId: string, email: string) => {
     try {
-      const { error } = await supabase.functions.invoke('send-juror-reminder', {
+      const { data, error } = await supabase.functions.invoke('send-juror-reminder', {
         body: { jurorId, email }
       });
 
@@ -133,6 +138,36 @@ export const JurorProgressMonitoring = ({ currentPhase }: JurorProgressMonitorin
     } catch (error) {
       console.error('Error sending reminder:', error);
       toast.error('Failed to send reminder');
+    }
+  };
+
+  const viewJurorDetails = async (jurorId: string) => {
+    try {
+      // Fetch juror's startup assignments for the details view
+      const { data: assignments, error } = await supabase
+        .from('startup_assignments')
+        .select(`
+          *,
+          startups (
+            id,
+            name,
+            description,
+            industry,
+            stage,
+            location,
+            founder_names,
+            pitch_deck_url
+          )
+        `)
+        .eq('juror_id', jurorId);
+
+      if (error) throw error;
+
+      setJurorAssignments(assignments || []);
+      setSelectedJurorForDetails(jurorId);
+    } catch (error) {
+      console.error('Error fetching juror assignments:', error);
+      toast.error('Failed to load juror details');
     }
   };
 
@@ -331,7 +366,12 @@ export const JurorProgressMonitoring = ({ currentPhase }: JurorProgressMonitorin
                     <Mail className="w-4 h-4 mr-2" />
                     Send Reminder
                   </Button>
-                  <Button size="sm" variant="outline">
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    onClick={() => viewJurorDetails(juror.id)}
+                  >
+                    <Eye className="w-4 h-4 mr-2" />
                     View Details
                   </Button>
                 </div>
@@ -340,6 +380,83 @@ export const JurorProgressMonitoring = ({ currentPhase }: JurorProgressMonitorin
           )}
         </div>
       </CardContent>
+
+      {/* Juror Details Modal */}
+      <Dialog open={!!selectedJurorForDetails} onOpenChange={() => setSelectedJurorForDetails(null)}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              Juror Evaluation Details - {jurors.find(j => j.id === selectedJurorForDetails)?.name}
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            {jurorAssignments.length === 0 ? (
+              <div className="text-center py-8">
+                <AlertCircle className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-semibold mb-2">No Assignments Found</h3>
+                <p className="text-muted-foreground">This juror has no startup assignments yet.</p>
+              </div>
+            ) : (
+              <div className="grid gap-4">
+                {jurorAssignments.map((assignment) => (
+                  <Card key={assignment.id} className="border-l-4 border-l-primary">
+                    <CardHeader className="pb-3">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-lg">{assignment.startups?.name || 'Unknown Startup'}</CardTitle>
+                        <Badge variant={assignment.status === 'completed' ? 'default' : 'outline'}>
+                          {assignment.status || 'Pending'}
+                        </Badge>
+                      </div>
+                      <CardDescription>
+                        {assignment.startups?.industry} • {assignment.startups?.stage} • {assignment.startups?.location}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-muted-foreground mb-3">
+                        {assignment.startups?.description || 'No description available'}
+                      </p>
+                      
+                      {assignment.startups?.founder_names && (
+                        <div className="mb-3">
+                          <p className="text-sm font-medium">Founders:</p>
+                          <p className="text-sm text-muted-foreground">
+                            {Array.isArray(assignment.startups.founder_names) 
+                              ? assignment.startups.founder_names.join(', ')
+                              : assignment.startups.founder_names}
+                          </p>
+                        </div>
+                      )}
+                      
+                      <div className="flex gap-2 mt-4">
+                        {assignment.startups?.pitch_deck_url && (
+                          <Button size="sm" variant="outline" asChild>
+                            <a href={assignment.startups.pitch_deck_url} target="_blank" rel="noopener noreferrer">
+                              View Pitch Deck
+                            </a>
+                          </Button>
+                        )}
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => {
+                            // We'll handle showing the evaluation in the details modal itself
+                            // For now, just show a placeholder
+                            toast.info('Evaluation view functionality coming soon');
+                          }}
+                        >
+                          <Eye className="w-4 h-4 mr-2" />
+                          View Evaluation
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 };
