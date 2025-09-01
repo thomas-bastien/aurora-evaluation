@@ -343,7 +343,7 @@ export const StartupEvaluationModal = ({
     if (open && startup.evaluation_id) {
       fetchExistingEvaluation();
     } else if (open) {
-      // Reset state for new evaluation
+      // Reset state for new evaluation - always start in edit mode for new evaluations
       setEvaluationStatus('not_started');
       setIsEditing(true);
       setFormData({
@@ -362,7 +362,7 @@ export const StartupEvaluationModal = ({
       setIsEditing(false);
       setEvaluationStatus('not_started');
     }
-  }, [open, startup.evaluation_id]);
+  }, [open, startup.evaluation_id, mode]); // Add mode to dependencies
   const fetchExistingEvaluation = async () => {
     try {
       setLoading(true);
@@ -407,16 +407,6 @@ export const StartupEvaluationModal = ({
 
   const handleEditEvaluation = () => {
     setIsEditing(true);
-    // Change status back to draft when editing
-    setEvaluationStatus('draft');
-  };
-
-  const handleCancelEdit = () => {
-    setIsEditing(false);
-    // Reset to submitted status if it was originally submitted
-    if (startup.evaluation_status === 'completed') {
-      setEvaluationStatus('submitted');
-    }
   };
   const calculateOverallScore = () => {
     const totalCriteria = evaluationSections.reduce((sum, section) => sum + section.criteria.length, 0);
@@ -888,15 +878,10 @@ export const StartupEvaluationModal = ({
               )}
               
               {evaluationStatus === 'submitted' && isEditing && (
-                <>
-                  <Button variant="outline" onClick={handleCancelEdit} disabled={saving} className="flex items-center gap-2">
-                    Cancel Edit
-                  </Button>
-                  <Button onClick={() => handleSave('submitted')} disabled={saving} className="flex items-center gap-2">
-                    <Send className="w-4 h-4" />
-                    Update Evaluation
-                  </Button>
-                </>
+                <Button onClick={() => handleSave('submitted')} disabled={saving} className="flex items-center gap-2">
+                  <Send className="w-4 h-4" />
+                  Update Evaluation
+                </Button>
               )}
             </div>
           </div>
