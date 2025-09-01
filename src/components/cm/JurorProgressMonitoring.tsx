@@ -218,13 +218,17 @@ export const JurorProgressMonitoring = ({ currentPhase }: JurorProgressMonitorin
 
       if (error) throw error;
 
-      // Fetch evaluations for this juror to get real status
-      const { data: evaluations, error: evalError } = await supabase
-        .from('evaluations')
-        .select('startup_id, status, id')
-        .eq('evaluator_id', jurorData.user_id);
+      // Fetch evaluations for this juror to get real status (only if they have a user_id)
+      let evaluations: any[] = [];
+      if (jurorData.user_id) {
+        const { data: evalData, error: evalError } = await supabase
+          .from('evaluations')
+          .select('startup_id, status, id')
+          .eq('evaluator_id', jurorData.user_id);
 
-      if (evalError) throw evalError;
+        if (evalError) throw evalError;
+        evaluations = evalData || [];
+      }
 
       // Enrich assignments with evaluation data
       const enrichedAssignments = assignments?.map(assignment => {
