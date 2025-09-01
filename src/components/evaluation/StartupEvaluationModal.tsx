@@ -895,10 +895,16 @@ export const StartupEvaluationModal = ({
                 )}
                 
                 {evaluationStatus === 'submitted' && isEditing && (
-                  <Button onClick={() => handleSave('submitted')} disabled={saving} className="flex items-center gap-2">
-                    <Send className="w-4 h-4" />
-                    Update Evaluation
-                  </Button>
+                  <>
+                    <Button variant="outline" onClick={() => handleSave('draft')} disabled={saving} className="flex items-center gap-2">
+                      <Edit className="w-4 h-4" />
+                      Revert to Draft
+                    </Button>
+                    <Button onClick={() => handleSave('submitted')} disabled={saving} className="flex items-center gap-2">
+                      <Send className="w-4 h-4" />
+                      Update Evaluation
+                    </Button>
+                  </>
                 )}
               </div>
             )}
