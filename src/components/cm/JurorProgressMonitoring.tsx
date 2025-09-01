@@ -482,7 +482,7 @@ export const JurorProgressMonitoring = ({ currentPhase }: JurorProgressMonitorin
                         <Tooltip>
                           <TooltipTrigger>
                             <Badge variant={assignment.evaluation_status === 'submitted' ? 'default' : assignment.evaluation_status === 'draft' ? 'secondary' : 'outline'}>
-                              {assignment.evaluation_status === 'submitted' ? 'completed' : assignment.evaluation_status || 'assigned'}
+                              {assignment.evaluation_status === 'submitted' ? 'Evaluation Complete' : assignment.evaluation_status === 'draft' ? 'In Progress' : 'Not Started'}
                             </Badge>
                           </TooltipTrigger>
                           <TooltipContent>
