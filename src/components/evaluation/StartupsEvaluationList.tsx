@@ -46,6 +46,12 @@ interface StartupsEvaluationListProps {
 
 export const StartupsEvaluationList = ({ startups, loading, onEvaluationUpdate }: StartupsEvaluationListProps) => {
   const [selectedStartup, setSelectedStartup] = useState<AssignedStartup | null>(null);
+  const [modalMode, setModalMode] = useState<'view' | 'edit'>('edit');
+
+  const handleOpenModal = (startup: AssignedStartup, mode: 'view' | 'edit') => {
+    setSelectedStartup(startup);
+    setModalMode(mode);
+  };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -225,7 +231,7 @@ export const StartupsEvaluationList = ({ startups, loading, onEvaluationUpdate }
                 {/* Action Buttons */}
                 <div className="flex gap-3 pt-4 border-t">
                   <Button
-                    onClick={() => setSelectedStartup(startup)}
+                    onClick={() => handleOpenModal(startup, startup.evaluation_status === 'completed' ? 'view' : 'edit')}
                     className="flex items-center gap-2"
                   >
                     <Star className="w-4 h-4" />
@@ -237,7 +243,7 @@ export const StartupsEvaluationList = ({ startups, loading, onEvaluationUpdate }
                   {startup.evaluation_status === 'completed' && (
                     <Button
                       variant="outline"
-                      onClick={() => setSelectedStartup(startup)}
+                      onClick={() => handleOpenModal(startup, 'edit')}
                     >
                       Edit Evaluation
                     </Button>
@@ -256,6 +262,7 @@ export const StartupsEvaluationList = ({ startups, loading, onEvaluationUpdate }
           open={!!selectedStartup}
           onClose={() => setSelectedStartup(null)}
           onEvaluationUpdate={onEvaluationUpdate}
+          mode={modalMode}
         />
       )}
     </>

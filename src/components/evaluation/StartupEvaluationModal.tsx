@@ -37,6 +37,7 @@ interface StartupEvaluationModalProps {
   open: boolean;
   onClose: () => void;
   onEvaluationUpdate: () => void;
+  mode?: 'view' | 'edit'; // Add mode prop to distinguish between view and edit
 }
 interface EvaluationCriterion {
   key: string;
@@ -317,7 +318,8 @@ export const StartupEvaluationModal = ({
   startup,
   open,
   onClose,
-  onEvaluationUpdate
+  onEvaluationUpdate,
+  mode = 'edit' // Default to edit mode for backward compatibility
 }: StartupEvaluationModalProps) => {
   const {
     user
@@ -373,9 +375,15 @@ export const StartupEvaluationModal = ({
       if (error) throw error;
       
       if (data) {
-        // Set evaluation status and editing mode
+        // Set evaluation status based on database
         setEvaluationStatus(data.status === 'submitted' ? 'submitted' : 'draft');
-        setIsEditing(data.status !== 'submitted'); // Only allow editing if not submitted
+        
+        // Set editing mode based on the mode prop, not database status
+        if (mode === 'view') {
+          setIsEditing(false); // Always start in view mode if explicitly requested
+        } else if (mode === 'edit') {
+          setIsEditing(true); // Always start in edit mode if explicitly requested
+        }
         
         setFormData({
           criteria_scores: data.criteria_scores as Record<string, number> || {},
