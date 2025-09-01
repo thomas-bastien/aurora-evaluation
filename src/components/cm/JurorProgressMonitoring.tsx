@@ -74,21 +74,29 @@ export const JurorProgressMonitoring = ({ currentPhase }: JurorProgressMonitorin
 
       if (error) throw error;
 
-      // Fetch all evaluations for these jurors
-      const jurorIds = jurorsData?.map(j => j.id) || [];
-      const { data: evaluationsData, error: evalError } = await supabase
-        .from('evaluations')
-        .select('evaluator_id, status, last_modified_at')
-        .in('evaluator_id', jurorIds);
+      // Fetch all evaluations for these jurors (only those with user_id)
+      const jurorUserIds = jurorsData?.filter(j => j.user_id).map(j => j.user_id) || [];
+      let evaluationsData: any[] = [];
+      
+      if (jurorUserIds.length > 0) {
+        const { data: evals, error: evalError } = await supabase
+          .from('evaluations')
+          .select('evaluator_id, status, last_modified_at')
+          .in('evaluator_id', jurorUserIds);
+          
+        if (evalError) throw evalError;
+        evaluationsData = evals || [];
+      }
 
-      if (evalError) throw evalError;
 
       const jurorProgress: JurorProgress[] = jurorsData?.map(juror => {
         const assignments = juror.startup_assignments || [];
         const assignedCount = assignments.length;
         
-        // Get real evaluations for this juror
-        const jurorEvaluations = evaluationsData?.filter(evaluation => evaluation.evaluator_id === juror.user_id) || [];
+        // Get real evaluations for this juror (only if they have a user_id)
+        const jurorEvaluations = juror.user_id 
+          ? evaluationsData.filter(evaluation => evaluation.evaluator_id === juror.user_id)
+          : [];
         const completedCount = jurorEvaluations.filter(evaluation => evaluation.status === 'submitted').length;
         const draftCount = jurorEvaluations.filter(evaluation => evaluation.status === 'draft').length;
         const pendingCount = assignedCount - completedCount - draftCount;
