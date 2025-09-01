@@ -364,7 +364,7 @@ export const StartupEvaluationModal = ({
       if (data) {
         setFormData({
           criteria_scores: data.criteria_scores as Record<string, number> || {},
-          strengths: data.strengths as string[] || ['', '', ''],
+          strengths: (data.strengths as string[] && (data.strengths as string[]).length > 0) ? data.strengths as string[] : ['', '', ''],
           improvement_areas: data.improvement_areas || '',
           pitch_development_aspects: data.pitch_development_aspects || '',
           wants_pitch_session: data.wants_pitch_session || false,
