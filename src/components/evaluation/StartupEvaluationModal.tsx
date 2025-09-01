@@ -343,9 +343,16 @@ export const StartupEvaluationModal = ({
     if (open && startup.evaluation_id) {
       fetchExistingEvaluation();
     } else if (open) {
-      // Reset state for new evaluation - always start in edit mode for new evaluations
+      // Reset state for new evaluation
       setEvaluationStatus('not_started');
-      setIsEditing(true);
+      
+      // Set editing mode based on the mode prop
+      if (mode === 'view') {
+        setIsEditing(false); // Read-only view
+      } else {
+        setIsEditing(true); // Edit mode for new evaluations
+      }
+      
       setFormData({
         criteria_scores: {},
         strengths: [],
@@ -570,22 +577,31 @@ export const StartupEvaluationModal = ({
                 <Star className="w-5 h-5" />
                 Phase 1 Evaluation - {startup.name}
               </DialogTitle>
-              {evaluationStatus !== 'not_started' && (
-                <div className="flex items-center gap-2">
-                  {evaluationStatus === 'submitted' && (
-                    <Badge variant="default" className="flex items-center gap-1">
-                      <CheckCircle className="w-3 h-3" />
-                      Submitted
-                    </Badge>
-                  )}
-                  {evaluationStatus === 'draft' && (
-                    <Badge variant="secondary" className="flex items-center gap-1">
-                      <Edit className="w-3 h-3" />
-                      Draft
-                    </Badge>
-                  )}
-                </div>
-              )}
+              <div className="flex items-center gap-2">
+                {mode === 'view' && (
+                  <Badge variant="outline" className="text-xs">
+                    Read Only
+                  </Badge>
+                )}
+                {evaluationStatus === 'not_started' && (
+                  <Badge variant="destructive" className="flex items-center gap-1">
+                    <Info className="w-3 h-3" />
+                    Not Completed Yet
+                  </Badge>
+                )}
+                {evaluationStatus === 'submitted' && (
+                  <Badge variant="default" className="flex items-center gap-1">
+                    <CheckCircle className="w-3 h-3" />
+                    Submitted
+                  </Badge>
+                )}
+                {evaluationStatus === 'draft' && (
+                  <Badge variant="secondary" className="flex items-center gap-1">
+                    <Edit className="w-3 h-3" />
+                    Draft
+                  </Badge>
+                )}
+              </div>
             </div>
           </DialogHeader>
 
@@ -839,51 +855,53 @@ export const StartupEvaluationModal = ({
           {/* Action Buttons */}
           <div className="flex justify-between pt-4 border-t">
             <Button variant="outline" onClick={onClose}>
-              Cancel
+              {mode === 'view' ? 'Close' : 'Cancel'}
             </Button>
             
-            <div className="flex gap-2">
-              {/* Show different buttons based on status and editing mode */}
-              {evaluationStatus === 'not_started' && (
-                <>
-                  <Button variant="outline" onClick={() => handleSave('draft')} disabled={saving} className="flex items-center gap-2">
-                    <Save className="w-4 h-4" />
-                    Save Draft
+            {mode !== 'view' && (
+              <div className="flex gap-2">
+                {/* Show different buttons based on status and editing mode */}
+                {evaluationStatus === 'not_started' && (
+                  <>
+                    <Button variant="outline" onClick={() => handleSave('draft')} disabled={saving} className="flex items-center gap-2">
+                      <Save className="w-4 h-4" />
+                      Save Draft
+                    </Button>
+                    <Button onClick={() => handleSave('submitted')} disabled={saving} className="flex items-center gap-2">
+                      <Send className="w-4 h-4" />
+                      Submit Evaluation
+                    </Button>
+                  </>
+                )}
+                
+                {evaluationStatus === 'draft' && isEditing && (
+                  <>
+                    <Button variant="outline" onClick={() => handleSave('draft')} disabled={saving} className="flex items-center gap-2">
+                      <Save className="w-4 h-4" />
+                      Save Draft
+                    </Button>
+                    <Button onClick={() => handleSave('submitted')} disabled={saving} className="flex items-center gap-2">
+                      <Send className="w-4 h-4" />
+                      Submit Evaluation
+                    </Button>
+                  </>
+                )}
+                
+                {evaluationStatus === 'submitted' && !isEditing && (
+                  <Button variant="outline" onClick={handleEditEvaluation} className="flex items-center gap-2">
+                    <Edit className="w-4 h-4" />
+                    Edit Evaluation
                   </Button>
+                )}
+                
+                {evaluationStatus === 'submitted' && isEditing && (
                   <Button onClick={() => handleSave('submitted')} disabled={saving} className="flex items-center gap-2">
                     <Send className="w-4 h-4" />
-                    Submit Evaluation
+                    Update Evaluation
                   </Button>
-                </>
-              )}
-              
-              {evaluationStatus === 'draft' && isEditing && (
-                <>
-                  <Button variant="outline" onClick={() => handleSave('draft')} disabled={saving} className="flex items-center gap-2">
-                    <Save className="w-4 h-4" />
-                    Save Draft
-                  </Button>
-                  <Button onClick={() => handleSave('submitted')} disabled={saving} className="flex items-center gap-2">
-                    <Send className="w-4 h-4" />
-                    Submit Evaluation
-                  </Button>
-                </>
-              )}
-              
-              {evaluationStatus === 'submitted' && !isEditing && (
-                <Button variant="outline" onClick={handleEditEvaluation} className="flex items-center gap-2">
-                  <Edit className="w-4 h-4" />
-                  Edit Evaluation
-                </Button>
-              )}
-              
-              {evaluationStatus === 'submitted' && isEditing && (
-                <Button onClick={() => handleSave('submitted')} disabled={saving} className="flex items-center gap-2">
-                  <Send className="w-4 h-4" />
-                  Update Evaluation
-                </Button>
-              )}
-            </div>
+                )}
+              </div>
+            )}
           </div>
         </DialogContent>
       </Dialog>
