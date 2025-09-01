@@ -18,6 +18,7 @@ import {
   RotateCcw,
   Eye
 } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 
 interface JurorProgress {
@@ -225,8 +226,9 @@ export const JurorProgressMonitoring = ({ currentPhase }: JurorProgressMonitorin
   }
 
   return (
-    <Card>
-      <CardHeader>
+    <TooltipProvider>
+      <Card>
+        <CardHeader>
         <div className="flex items-center justify-between">
           <div>
             <CardTitle className="flex items-center gap-2">
@@ -381,6 +383,7 @@ export const JurorProgressMonitoring = ({ currentPhase }: JurorProgressMonitorin
           )}
         </div>
       </CardContent>
+    </Card>
 
       {/* Juror Details Modal */}
       <Dialog open={!!selectedJurorForDetails} onOpenChange={() => setSelectedJurorForDetails(null)}>
@@ -405,9 +408,22 @@ export const JurorProgressMonitoring = ({ currentPhase }: JurorProgressMonitorin
                     <CardHeader className="pb-3">
                       <div className="flex items-center justify-between">
                         <CardTitle className="text-lg">{assignment.startups?.name || 'Unknown Startup'}</CardTitle>
-                        <Badge variant={assignment.status === 'completed' ? 'default' : 'outline'}>
-                          {assignment.status || 'Pending'}
-                        </Badge>
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <Badge variant={assignment.status === 'completed' ? 'default' : 'outline'}>
+                              {assignment.status || 'assigned'}
+                            </Badge>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>
+                              {assignment.status === 'completed' 
+                                ? 'Evaluation has been completed and submitted by the juror' 
+                                : assignment.status === 'draft'
+                                ? 'Evaluation is in progress but not yet submitted'
+                                : 'Startup has been assigned to juror but evaluation not started'}
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
                       </div>
                       <CardDescription>
                         {assignment.startups?.industry} • {assignment.startups?.stage} • {assignment.startups?.location}
@@ -458,13 +474,16 @@ export const JurorProgressMonitoring = ({ currentPhase }: JurorProgressMonitorin
       {/* Startup Evaluation Modal */}
       {selectedStartupForEvaluation && (
         <StartupEvaluationModal
-          startup={selectedStartupForEvaluation}
+          startup={{
+            ...selectedStartupForEvaluation,
+            evaluation_status: 'not_started' // This will show proper indicators for incomplete evaluations
+          }}
           open={!!selectedStartupForEvaluation}
           onClose={() => setSelectedStartupForEvaluation(null)}
           onEvaluationUpdate={() => {}} 
           mode="view"
         />
       )}
-    </Card>
+    </TooltipProvider>
   );
 };

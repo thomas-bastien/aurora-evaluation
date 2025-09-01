@@ -86,7 +86,7 @@ const handler = async (req: Request): Promise<Response> => {
             </p>
             
             <div style="text-align: center; margin: 30px 0;">
-              <a href="https://fadxytngwiporjqchsem.supabase.co" 
+              <a href="${Deno.env.get('FRONTEND_URL') || 'https://fadxytngwiporjqchsem.supabase.co'}" 
                  style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block; font-size: 16px;">
                 Complete Evaluations Now
               </a>
