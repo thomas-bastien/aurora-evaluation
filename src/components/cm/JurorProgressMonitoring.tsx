@@ -47,6 +47,7 @@ export const JurorProgressMonitoring = ({ currentPhase }: JurorProgressMonitorin
   const [showFilters, setShowFilters] = useState(false);
   const [selectedJurorForDetails, setSelectedJurorForDetails] = useState<string | null>(null);
   const [jurorAssignments, setJurorAssignments] = useState<any[]>([]);
+  const [selectedStartupForEvaluation, setSelectedStartupForEvaluation] = useState<any>(null);
 
   useEffect(() => {
     fetchJurorProgress();
@@ -439,11 +440,7 @@ export const JurorProgressMonitoring = ({ currentPhase }: JurorProgressMonitorin
                         <Button 
                           size="sm" 
                           variant="outline"
-                          onClick={() => {
-                            // We'll handle showing the evaluation in the details modal itself
-                            // For now, just show a placeholder
-                            toast.info('Evaluation view functionality coming soon');
-                          }}
+                          onClick={() => setSelectedStartupForEvaluation(assignment.startups)}
                         >
                           <Eye className="w-4 h-4 mr-2" />
                           View Evaluation
@@ -457,6 +454,17 @@ export const JurorProgressMonitoring = ({ currentPhase }: JurorProgressMonitorin
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Startup Evaluation Modal */}
+      {selectedStartupForEvaluation && (
+        <StartupEvaluationModal
+          startup={selectedStartupForEvaluation}
+          open={!!selectedStartupForEvaluation}
+          onClose={() => setSelectedStartupForEvaluation(null)}
+          onEvaluationUpdate={() => {}} 
+          mode="view"
+        />
+      )}
     </Card>
   );
 };
