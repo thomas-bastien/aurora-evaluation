@@ -326,7 +326,7 @@ export const StartupEvaluationModal = ({
   const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState<EvaluationForm>({
     criteria_scores: {},
-    strengths: ['', '', ''],
+    strengths: [],
     improvement_areas: '',
     pitch_development_aspects: '',
     wants_pitch_session: false,
@@ -342,7 +342,7 @@ export const StartupEvaluationModal = ({
       // Reset form for new evaluation
       setFormData({
         criteria_scores: {},
-        strengths: ['', '', ''],
+        strengths: [],
         improvement_areas: '',
         pitch_development_aspects: '',
         wants_pitch_session: false,
@@ -364,7 +364,7 @@ export const StartupEvaluationModal = ({
       if (data) {
         setFormData({
           criteria_scores: data.criteria_scores as Record<string, number> || {},
-          strengths: (data.strengths as string[] && (data.strengths as string[]).length > 0) ? data.strengths as string[] : ['', '', ''],
+          strengths: (data.strengths as string[] && Array.isArray(data.strengths)) ? data.strengths.filter(s => s && s.trim()) : [],
           improvement_areas: data.improvement_areas || '',
           pitch_development_aspects: data.pitch_development_aspects || '',
           wants_pitch_session: data.wants_pitch_session || false,
@@ -497,6 +497,22 @@ export const StartupEvaluationModal = ({
     setFormData(prev => ({
       ...prev,
       strengths: prev.strengths.map((strength, i) => i === index ? value : strength)
+    }));
+  };
+
+  const addStrength = () => {
+    if (formData.strengths.length < 3) {
+      setFormData(prev => ({
+        ...prev,
+        strengths: [...prev.strengths, '']
+      }));
+    }
+  };
+
+  const removeStrength = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      strengths: prev.strengths.filter((_, i) => i !== index)
     }));
   };
   const toggleGuidedFeedback = (optionId: number) => {
@@ -644,9 +660,45 @@ export const StartupEvaluationModal = ({
                 </CardHeader>
                 <CardContent className="space-y-6">
                   <div>
-                    <Label className="text-base font-semibold">Highlight up to 3 strengths of the startup</Label>
-                    <div className="space-y-2 mt-2">
-                      {formData.strengths.map((strength, index) => <Textarea key={index} placeholder={`Strength ${index + 1}`} value={strength} onChange={e => updateStrength(index, e.target.value)} className="min-h-[60px]" />)}
+                    <div className="flex items-center justify-between mb-2">
+                      <Label className="text-base font-semibold">Highlight strengths of the startup</Label>
+                      {formData.strengths.length < 3 && (
+                        <Button 
+                          type="button"
+                          variant="outline" 
+                          size="sm" 
+                          onClick={addStrength}
+                          className="text-xs"
+                        >
+                          Add Strength
+                        </Button>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      {formData.strengths.length === 0 && (
+                        <div className="text-sm text-muted-foreground p-4 border border-dashed rounded-md text-center">
+                          Click "Add Strength" to add startup strengths (maximum 3)
+                        </div>
+                      )}
+                      {formData.strengths.map((strength, index) => (
+                        <div key={index} className="flex gap-2">
+                          <Textarea 
+                            placeholder={`Strength ${index + 1}`} 
+                            value={strength} 
+                            onChange={e => updateStrength(index, e.target.value)} 
+                            className="min-h-[60px] flex-1" 
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => removeStrength(index)}
+                            className="px-2 h-auto self-start mt-1"
+                          >
+                            ×
+                          </Button>
+                        </div>
+                      ))}
                     </div>
                   </div>
 
