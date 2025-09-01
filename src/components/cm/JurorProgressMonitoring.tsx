@@ -60,31 +60,50 @@ export const JurorProgressMonitoring = ({ currentPhase }: JurorProgressMonitorin
 
   const fetchJurorProgress = async () => {
     try {
-      // Fetch jurors with their evaluation progress
+      // Fetch jurors with their assignments and evaluations
       const { data: jurorsData, error } = await supabase
         .from('jurors')
         .select(`
           *,
           startup_assignments(
             id,
+            startup_id,
             status
           )
         `);
 
       if (error) throw error;
 
+      // Fetch all evaluations for these jurors
+      const jurorIds = jurorsData?.map(j => j.id) || [];
+      const { data: evaluationsData, error: evalError } = await supabase
+        .from('evaluations')
+        .select('evaluator_id, status, last_modified_at')
+        .in('evaluator_id', jurorIds);
+
+      if (evalError) throw evalError;
+
       const jurorProgress: JurorProgress[] = jurorsData?.map(juror => {
         const assignments = juror.startup_assignments || [];
         const assignedCount = assignments.length;
-        const completedCount = Math.floor(assignedCount * 0.7); // Mock completion
-        const pendingCount = assignedCount - completedCount;
+        
+        // Get real evaluations for this juror
+        const jurorEvaluations = evaluationsData?.filter(evaluation => evaluation.evaluator_id === juror.user_id) || [];
+        const completedCount = jurorEvaluations.filter(evaluation => evaluation.status === 'submitted').length;
+        const draftCount = jurorEvaluations.filter(evaluation => evaluation.status === 'draft').length;
+        const pendingCount = assignedCount - completedCount - draftCount;
         const completionRate = assignedCount > 0 ? (completedCount / assignedCount) * 100 : 0;
+        
+        // Get last activity from evaluations
+        const lastModified = jurorEvaluations
+          .filter(evaluation => evaluation.last_modified_at)
+          .sort((a, b) => new Date(b.last_modified_at!).getTime() - new Date(a.last_modified_at!).getTime())[0];
         
         // Determine status
         let status: 'completed' | 'active' | 'behind' | 'inactive' = 'inactive';
         if (completionRate === 100) status = 'completed';
         else if (completionRate >= 50) status = 'active';
-        else if (completionRate > 0) status = 'behind';
+        else if (completionRate > 0 || draftCount > 0) status = 'behind';
         
         return {
           id: juror.id,
@@ -96,7 +115,7 @@ export const JurorProgressMonitoring = ({ currentPhase }: JurorProgressMonitorin
           completedCount,
           pendingCount,
           completionRate,
-          lastActivity: 'Never',
+          lastActivity: lastModified?.last_modified_at || 'Never',
           status
         };
       }) || [];
@@ -145,7 +164,16 @@ export const JurorProgressMonitoring = ({ currentPhase }: JurorProgressMonitorin
 
   const viewJurorDetails = async (jurorId: string) => {
     try {
-      // Fetch juror's startup assignments for the details view
+      // Get the juror's user_id first
+      const { data: jurorData, error: jurorError } = await supabase
+        .from('jurors')
+        .select('user_id')
+        .eq('id', jurorId)
+        .single();
+
+      if (jurorError) throw jurorError;
+
+      // Fetch juror's startup assignments with evaluation status
       const { data: assignments, error } = await supabase
         .from('startup_assignments')
         .select(`
@@ -165,7 +193,25 @@ export const JurorProgressMonitoring = ({ currentPhase }: JurorProgressMonitorin
 
       if (error) throw error;
 
-      setJurorAssignments(assignments || []);
+      // Fetch evaluations for this juror to get real status
+      const { data: evaluations, error: evalError } = await supabase
+        .from('evaluations')
+        .select('startup_id, status, id')
+        .eq('evaluator_id', jurorData.user_id);
+
+      if (evalError) throw evalError;
+
+      // Enrich assignments with evaluation data
+      const enrichedAssignments = assignments?.map(assignment => {
+        const evaluation = evaluations?.find(evaluation => evaluation.startup_id === assignment.startup_id);
+        return {
+          ...assignment,
+          evaluation_id: evaluation?.id,
+          evaluation_status: evaluation?.status || 'not_started'
+        };
+      }) || [];
+
+      setJurorAssignments(enrichedAssignments);
       setSelectedJurorForDetails(jurorId);
     } catch (error) {
       console.error('Error fetching juror assignments:', error);
@@ -410,15 +456,15 @@ export const JurorProgressMonitoring = ({ currentPhase }: JurorProgressMonitorin
                         <CardTitle className="text-lg">{assignment.startups?.name || 'Unknown Startup'}</CardTitle>
                         <Tooltip>
                           <TooltipTrigger>
-                            <Badge variant={assignment.status === 'completed' ? 'default' : 'outline'}>
-                              {assignment.status || 'assigned'}
+                            <Badge variant={assignment.evaluation_status === 'submitted' ? 'default' : assignment.evaluation_status === 'draft' ? 'secondary' : 'outline'}>
+                              {assignment.evaluation_status === 'submitted' ? 'completed' : assignment.evaluation_status || 'assigned'}
                             </Badge>
                           </TooltipTrigger>
                           <TooltipContent>
                             <p>
-                              {assignment.status === 'completed' 
+                              {assignment.evaluation_status === 'submitted' 
                                 ? 'Evaluation has been completed and submitted by the juror' 
-                                : assignment.status === 'draft'
+                                : assignment.evaluation_status === 'draft'
                                 ? 'Evaluation is in progress but not yet submitted'
                                 : 'Startup has been assigned to juror but evaluation not started'}
                             </p>
@@ -456,7 +502,11 @@ export const JurorProgressMonitoring = ({ currentPhase }: JurorProgressMonitorin
                         <Button 
                           size="sm" 
                           variant="outline"
-                          onClick={() => setSelectedStartupForEvaluation(assignment.startups)}
+                          onClick={() => setSelectedStartupForEvaluation({
+                            ...assignment.startups,
+                            evaluation_id: assignment.evaluation_id,
+                            evaluation_status: assignment.evaluation_status || 'not_started'
+                          })}
                         >
                           <Eye className="w-4 h-4 mr-2" />
                           View Evaluation
@@ -476,7 +526,8 @@ export const JurorProgressMonitoring = ({ currentPhase }: JurorProgressMonitorin
         <StartupEvaluationModal
           startup={{
             ...selectedStartupForEvaluation,
-            evaluation_status: 'not_started' // This will show proper indicators for incomplete evaluations
+            evaluation_id: selectedStartupForEvaluation.evaluation_id,
+            evaluation_status: selectedStartupForEvaluation.evaluation_status
           }}
           open={!!selectedStartupForEvaluation}
           onClose={() => setSelectedStartupForEvaluation(null)}

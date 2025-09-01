@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -18,8 +19,103 @@ interface ReportingDocumentationProps {
   currentPhase: 'screeningPhase' | 'pitchingPhase';
 }
 
+interface PhaseStats {
+  totalStartups: number;
+  completionRate: number;
+  averageScore: number;
+}
+
 export const ReportingDocumentation = ({ currentPhase }: ReportingDocumentationProps) => {
   const [generating, setGenerating] = useState<string | null>(null);
+  const [stats, setStats] = useState<PhaseStats>({
+    totalStartups: 0,
+    completionRate: 0,
+    averageScore: 0
+  });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchPhaseStats();
+  }, [currentPhase]);
+
+  const fetchPhaseStats = async () => {
+    try {
+      setLoading(true);
+      
+      if (currentPhase === 'screeningPhase') {
+        // Get startups under review count
+        const { data: startups, error: startupsError } = await supabase
+          .from('startups')
+          .select('id, status');
+        
+        if (startupsError) throw startupsError;
+
+        // Get evaluation stats
+        const { data: evaluations, error: evaluationsError } = await supabase
+          .from('evaluations')
+          .select('status, overall_score');
+        
+        if (evaluationsError) throw evaluationsError;
+
+        // Get assignment count for completion rate calculation
+        const { data: assignments, error: assignmentsError } = await supabase
+          .from('startup_assignments')
+          .select('id');
+        
+        if (assignmentsError) throw assignmentsError;
+
+        const totalStartups = startups?.filter(s => ['under-review', 'shortlisted'].includes(s.status)).length || 0;
+        const submittedEvaluations = evaluations?.filter(e => e.status === 'submitted').length || 0;
+        const totalAssignments = assignments?.length || 0;
+        const completionRate = totalAssignments > 0 ? (submittedEvaluations / totalAssignments) * 100 : 0;
+        
+        // Calculate average score
+        const scores = evaluations?.filter(e => e.status === 'submitted' && e.overall_score).map(e => e.overall_score) || [];
+        const averageScore = scores.length > 0 ? scores.reduce((sum, score) => sum + score, 0) / scores.length : 0;
+
+        setStats({
+          totalStartups,
+          completionRate,
+          averageScore
+        });
+      } else {
+        // Pitching phase stats
+        const { data: pitchRequests, error: pitchError } = await supabase
+          .from('pitch_requests')
+          .select('status, startup_id');
+        
+        if (pitchError) throw pitchError;
+
+        // Get unique startups in pitching
+        const uniqueStartups = new Set(pitchRequests?.map(pr => pr.startup_id)).size;
+        const completedPitches = pitchRequests?.filter(pr => pr.status === 'completed').length || 0;
+        const totalPitches = pitchRequests?.length || 0;
+        const completionRate = totalPitches > 0 ? (completedPitches / totalPitches) * 100 : 0;
+
+        // For pitching phase, we might want post-pitch evaluation scores
+        const { data: evaluations, error: evalError } = await supabase
+          .from('evaluations')
+          .select('overall_score')
+          .eq('status', 'submitted');
+        
+        if (evalError) throw evalError;
+
+        const scores = evaluations?.filter(e => e.overall_score).map(e => e.overall_score) || [];
+        const averageScore = scores.length > 0 ? scores.reduce((sum, score) => sum + score, 0) / scores.length : 0;
+
+        setStats({
+          totalStartups: uniqueStartups,
+          completionRate,
+          averageScore
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching phase stats:', error);
+      toast.error('Failed to load statistics');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleGenerateReport = async (reportType: string) => {
     setGenerating(reportType);
@@ -98,30 +194,41 @@ export const ReportingDocumentation = ({ currentPhase }: ReportingDocumentationP
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-            <div className="text-center p-4 bg-primary/10 rounded-lg">
-              <div className="text-2xl font-bold text-primary">
-                {currentPhase === 'screeningPhase' ? '156' : '30'}
+          {loading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+              {[...Array(3)].map((_, i) => (
+                <div key={i} className="text-center p-4 bg-muted rounded-lg">
+                  <div className="h-8 w-16 bg-muted-foreground/20 rounded mx-auto mb-2 animate-pulse"></div>
+                  <div className="h-4 w-24 bg-muted-foreground/20 rounded mx-auto animate-pulse"></div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+              <div className="text-center p-4 bg-primary/10 rounded-lg">
+                <div className="text-2xl font-bold text-primary">
+                  {stats.totalStartups}
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  {currentPhase === 'screeningPhase' ? 'Startups Evaluated' : 'Startups in Pitching'}
+                </div>
               </div>
-              <div className="text-sm text-muted-foreground">
-                {currentPhase === 'screeningPhase' ? 'Startups Evaluated' : 'Startups in Pitching'}
+              <div className="text-center p-4 bg-success/10 rounded-lg">
+                <div className="text-2xl font-bold text-success">
+                  {stats.completionRate.toFixed(0)}%
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  {currentPhase === 'screeningPhase' ? 'Evaluations Complete' : 'Pitches Completed'}
+                </div>
+              </div>
+              <div className="text-center p-4 bg-warning/10 rounded-lg">
+                <div className="text-2xl font-bold text-warning">
+                  {stats.averageScore.toFixed(1)}
+                </div>
+                <div className="text-sm text-muted-foreground">Average Score</div>
               </div>
             </div>
-            <div className="text-center p-4 bg-success/10 rounded-lg">
-              <div className="text-2xl font-bold text-success">
-                {currentPhase === 'screeningPhase' ? '98%' : '85%'}
-              </div>
-              <div className="text-sm text-muted-foreground">
-                {currentPhase === 'screeningPhase' ? 'Evaluations Complete' : 'Pitches Completed'}
-              </div>
-            </div>
-            <div className="text-center p-4 bg-warning/10 rounded-lg">
-              <div className="text-2xl font-bold text-warning">
-                {currentPhase === 'screeningPhase' ? '7.3' : '8.1'}
-              </div>
-              <div className="text-sm text-muted-foreground">Average Score</div>
-            </div>
-          </div>
+          )}
         </CardContent>
       </Card>
 
