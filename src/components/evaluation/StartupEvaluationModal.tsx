@@ -14,7 +14,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
-import { Star, Save, Send, Info, Building2, DollarSign, Users, Calendar, Globe, FileText, Video, MapPin, Linkedin } from "lucide-react";
+import { Star, Save, Send, Info, Building2, DollarSign, Users, Calendar, Globe, FileText, Video, MapPin, Linkedin, Plus, X } from "lucide-react";
 interface StartupEvaluationModalProps {
   startup: {
     id: string;
@@ -660,24 +660,11 @@ export const StartupEvaluationModal = ({
                 </CardHeader>
                 <CardContent className="space-y-6">
                   <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <Label className="text-base font-semibold">Highlight strengths of the startup</Label>
-                      {formData.strengths.length < 3 && (
-                        <Button 
-                          type="button"
-                          variant="outline" 
-                          size="sm" 
-                          onClick={addStrength}
-                          className="text-xs"
-                        >
-                          Add Strength
-                        </Button>
-                      )}
-                    </div>
-                    <div className="space-y-2">
+                    <Label className="text-base font-semibold">Highlight strengths of the startup</Label>
+                    <div className="space-y-2 mt-2">
                       {formData.strengths.length === 0 && (
                         <div className="text-sm text-muted-foreground p-4 border border-dashed rounded-md text-center">
-                          Click "Add Strength" to add startup strengths (maximum 3)
+                          Click the + button below to add startup strengths (maximum 3)
                         </div>
                       )}
                       {formData.strengths.map((strength, index) => (
@@ -695,10 +682,23 @@ export const StartupEvaluationModal = ({
                             onClick={() => removeStrength(index)}
                             className="px-2 h-auto self-start mt-1"
                           >
-                            ×
+                            <X className="w-4 h-4" />
                           </Button>
                         </div>
                       ))}
+                      {formData.strengths.length < 3 && (
+                        <div className="flex justify-center pt-2">
+                          <Button 
+                            type="button"
+                            variant="outline" 
+                            size="sm" 
+                            onClick={addStrength}
+                            className="w-8 h-8 rounded-full p-0"
+                          >
+                            <Plus className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   </div>
 
