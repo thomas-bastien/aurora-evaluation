@@ -102,16 +102,33 @@ export const JurorProgressMonitoring = ({ currentPhase }: JurorProgressMonitorin
         const pendingCount = assignedCount - completedCount - draftCount;
         const completionRate = assignedCount > 0 ? (completedCount / assignedCount) * 100 : 0;
         
+        // Debug logging
+        console.log(`Juror ${juror.name}:`, {
+          assignedCount,
+          completedCount,
+          draftCount,
+          pendingCount,
+          completionRate,
+          hasUserId: !!juror.user_id,
+          evaluationsFound: jurorEvaluations.length
+        });
+        
         // Get last activity from evaluations
         const lastModified = jurorEvaluations
           .filter(evaluation => evaluation.last_modified_at)
           .sort((a, b) => new Date(b.last_modified_at!).getTime() - new Date(a.last_modified_at!).getTime())[0];
         
-        // Determine status
+        // Determine status based on actual completion
         let status: 'completed' | 'active' | 'behind' | 'inactive' = 'inactive';
-        if (completionRate === 100) status = 'completed';
-        else if (completionRate >= 50) status = 'active';
-        else if (completionRate > 0 || draftCount > 0) status = 'behind';
+        if (assignedCount === 0) {
+          status = 'inactive';
+        } else if (completedCount === assignedCount) {
+          status = 'completed';
+        } else if (completedCount > 0 || draftCount > 0) {
+          status = completedCount >= assignedCount * 0.5 ? 'active' : 'behind';
+        } else {
+          status = 'inactive';
+        }
         
         return {
           id: juror.id,
