@@ -23,6 +23,7 @@ export type Database = {
           id: string
           improvement_areas: string | null
           investment_amount: number | null
+          last_modified_at: string | null
           overall_notes: string | null
           overall_score: number | null
           pitch_development_aspects: string | null
@@ -41,6 +42,7 @@ export type Database = {
           id?: string
           improvement_areas?: string | null
           investment_amount?: number | null
+          last_modified_at?: string | null
           overall_notes?: string | null
           overall_score?: number | null
           pitch_development_aspects?: string | null
@@ -59,6 +61,7 @@ export type Database = {
           id?: string
           improvement_areas?: string | null
           investment_amount?: number | null
+          last_modified_at?: string | null
           overall_notes?: string | null
           overall_score?: number | null
           pitch_development_aspects?: string | null

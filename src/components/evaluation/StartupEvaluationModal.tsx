@@ -14,7 +14,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
-import { Star, Save, Send, Info, Building2, DollarSign, Users, Calendar, Globe, FileText, Video, MapPin, Linkedin, Plus, X } from "lucide-react";
+import { Star, Save, Send, Info, Building2, DollarSign, Users, Calendar, Globe, FileText, Video, MapPin, Linkedin, Plus, X, Edit, CheckCircle } from "lucide-react";
 interface StartupEvaluationModalProps {
   startup: {
     id: string;
@@ -324,6 +324,8 @@ export const StartupEvaluationModal = ({
   } = useAuth();
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [evaluationStatus, setEvaluationStatus] = useState<'not_started' | 'draft' | 'submitted'>('not_started');
   const [formData, setFormData] = useState<EvaluationForm>({
     criteria_scores: {},
     strengths: [],
@@ -339,7 +341,9 @@ export const StartupEvaluationModal = ({
     if (open && startup.evaluation_id) {
       fetchExistingEvaluation();
     } else if (open) {
-      // Reset form for new evaluation
+      // Reset state for new evaluation
+      setEvaluationStatus('not_started');
+      setIsEditing(true);
       setFormData({
         criteria_scores: {},
         strengths: [],
@@ -351,17 +355,28 @@ export const StartupEvaluationModal = ({
         recommendation: '',
         investment_amount: null
       });
+    } else {
+      // Reset states when modal closes
+      setIsEditing(false);
+      setEvaluationStatus('not_started');
     }
   }, [open, startup.evaluation_id]);
   const fetchExistingEvaluation = async () => {
     try {
       setLoading(true);
-      const {
-        data,
-        error
-      } = await supabase.from('evaluations').select('*').eq('id', startup.evaluation_id).single();
+      const { data, error } = await supabase
+        .from('evaluations')
+        .select('*')
+        .eq('id', startup.evaluation_id)
+        .single();
+      
       if (error) throw error;
+      
       if (data) {
+        // Set evaluation status and editing mode
+        setEvaluationStatus(data.status === 'submitted' ? 'submitted' : 'draft');
+        setIsEditing(data.status !== 'submitted'); // Only allow editing if not submitted
+        
         setFormData({
           criteria_scores: data.criteria_scores as Record<string, number> || {},
           strengths: (data.strengths as string[] && Array.isArray(data.strengths)) ? data.strengths.filter(s => s && s.trim()) : [],
@@ -379,6 +394,20 @@ export const StartupEvaluationModal = ({
       toast.error('Failed to load existing evaluation');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleEditEvaluation = () => {
+    setIsEditing(true);
+    // Change status back to draft when editing
+    setEvaluationStatus('draft');
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditing(false);
+    // Reset to submitted status if it was originally submitted
+    if (startup.evaluation_status === 'completed') {
+      setEvaluationStatus('submitted');
     }
   };
   const calculateOverallScore = () => {
@@ -538,10 +567,28 @@ export const StartupEvaluationModal = ({
       <Dialog open={open} onOpenChange={onClose}>
         <DialogContent className="max-w-5xl max-h-[90vh]">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-xl">
-              <Star className="w-5 h-5" />
-              Phase 1 Evaluation - {startup.name}
-            </DialogTitle>
+            <div className="flex items-center justify-between">
+              <DialogTitle className="flex items-center gap-2 text-xl">
+                <Star className="w-5 h-5" />
+                Phase 1 Evaluation - {startup.name}
+              </DialogTitle>
+              {evaluationStatus !== 'not_started' && (
+                <div className="flex items-center gap-2">
+                  {evaluationStatus === 'submitted' && (
+                    <Badge variant="default" className="flex items-center gap-1">
+                      <CheckCircle className="w-3 h-3" />
+                      Submitted
+                    </Badge>
+                  )}
+                  {evaluationStatus === 'draft' && (
+                    <Badge variant="secondary" className="flex items-center gap-1">
+                      <Edit className="w-3 h-3" />
+                      Draft
+                    </Badge>
+                  )}
+                </div>
+              )}
+            </div>
           </DialogHeader>
 
           <ScrollArea className="max-h-[calc(90vh-120px)]">
@@ -632,7 +679,11 @@ export const StartupEvaluationModal = ({
                             <div className="flex items-center justify-between">
                               <Label className="text-sm flex-1">{criterion.label}</Label>
                               <div className="flex items-center gap-2">
-                                <Select value={formData.criteria_scores[criterion.key]?.toString() || ''} onValueChange={value => updateCriteriaScore(criterion.key, parseInt(value))}>
+                                 <Select 
+                                   value={formData.criteria_scores[criterion.key]?.toString() || ''} 
+                                   onValueChange={value => updateCriteriaScore(criterion.key, parseInt(value))}
+                                   disabled={!isEditing}
+                                 >
                                   <SelectTrigger className="w-32">
                                     <SelectValue placeholder="Score" />
                                   </SelectTrigger>
@@ -669,19 +720,21 @@ export const StartupEvaluationModal = ({
                       )}
                       {formData.strengths.map((strength, index) => (
                         <div key={index} className="flex gap-2">
-                          <Textarea 
-                            placeholder={`Strength ${index + 1}`} 
-                            value={strength} 
-                            onChange={e => updateStrength(index, e.target.value)} 
-                            className="min-h-[60px] flex-1" 
-                          />
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => removeStrength(index)}
-                            className="px-2 h-auto self-start mt-1"
-                          >
+                           <Textarea 
+                             placeholder={`Strength ${index + 1}`} 
+                             value={strength} 
+                             onChange={e => updateStrength(index, e.target.value)} 
+                             className="min-h-[60px] flex-1" 
+                             disabled={!isEditing}
+                           />
+                           <Button
+                             type="button"
+                             variant="outline"
+                             size="sm"
+                             onClick={() => removeStrength(index)}
+                             className="px-2 h-auto self-start mt-1"
+                             disabled={!isEditing}
+                           >
                             <X className="w-4 h-4" />
                           </Button>
                         </div>
@@ -694,6 +747,7 @@ export const StartupEvaluationModal = ({
                             size="sm" 
                             onClick={addStrength}
                             className="w-8 h-8 rounded-full p-0"
+                            disabled={!isEditing}
                           >
                             <Plus className="w-4 h-4" />
                           </Button>
@@ -706,10 +760,17 @@ export const StartupEvaluationModal = ({
                     <Label htmlFor="improvement-areas" className="text-base font-semibold">
                       Identify the main areas that need improvement
                     </Label>
-                    <Textarea id="improvement-areas" placeholder="Describe the key areas where the startup needs to improve..." value={formData.improvement_areas} onChange={e => setFormData(prev => ({
-                    ...prev,
-                    improvement_areas: e.target.value
-                  }))} className="mt-2 min-h-[80px]" />
+                    <Textarea 
+                      id="improvement-areas" 
+                      placeholder="Describe the key areas where the startup needs to improve..." 
+                      value={formData.improvement_areas} 
+                      onChange={e => setFormData(prev => ({
+                        ...prev,
+                        improvement_areas: e.target.value
+                      }))} 
+                      className="mt-2 min-h-[80px]" 
+                      disabled={!isEditing}
+                    />
                   </div>
 
                   <div>
@@ -717,16 +778,16 @@ export const StartupEvaluationModal = ({
                       What aspects of the pitch need further development?
                     </Label>
                     <Textarea id="pitch-development" placeholder="Specify which aspects of the pitch require more work or clarity..." value={formData.pitch_development_aspects} onChange={e => setFormData(prev => ({
-                    ...prev,
-                    pitch_development_aspects: e.target.value
-                  }))} className="mt-2 min-h-[80px]" />
+                      ...prev,
+                      pitch_development_aspects: e.target.value
+                    }))} className="mt-2 min-h-[80px]" disabled={!isEditing} />
                   </div>
 
                   <div className="flex items-center space-x-3">
                     <Switch id="pitch-session" checked={formData.wants_pitch_session} onCheckedChange={checked => setFormData(prev => ({
-                    ...prev,
-                    wants_pitch_session: checked
-                  }))} />
+                      ...prev,
+                      wants_pitch_session: checked
+                    }))} disabled={!isEditing} />
                     <Label htmlFor="pitch-session" className="text-base font-semibold">
                       Would you like to see this project in a pitching session?
                     </Label>
@@ -749,7 +810,7 @@ export const StartupEvaluationModal = ({
                           id={`guided-${option.id}`} 
                           checked={formData.guided_feedback.includes(option.id)} 
                           onCheckedChange={() => toggleGuidedFeedback(option.id)}
-                          disabled={!formData.guided_feedback.includes(option.id) && formData.guided_feedback.length >= 3}
+                          disabled={!isEditing || (!formData.guided_feedback.includes(option.id) && formData.guided_feedback.length >= 3)}
                         />
                         <Label htmlFor={`guided-${option.id}`} className="text-sm">
                           {option.label}
@@ -769,6 +830,7 @@ export const StartupEvaluationModal = ({
                         overall_notes: e.target.value
                       }))} 
                       className="mt-2 min-h-[100px]" 
+                      disabled={!isEditing}
                     />
                   </div>
                 </CardContent>
@@ -783,15 +845,51 @@ export const StartupEvaluationModal = ({
             </Button>
             
             <div className="flex gap-2">
-              <Button variant="outline" onClick={() => handleSave('draft')} disabled={saving} className="flex items-center gap-2">
-                <Save className="w-4 h-4" />
-                Save Draft
-              </Button>
+              {/* Show different buttons based on status and editing mode */}
+              {evaluationStatus === 'not_started' && (
+                <>
+                  <Button variant="outline" onClick={() => handleSave('draft')} disabled={saving} className="flex items-center gap-2">
+                    <Save className="w-4 h-4" />
+                    Save Draft
+                  </Button>
+                  <Button onClick={() => handleSave('submitted')} disabled={saving} className="flex items-center gap-2">
+                    <Send className="w-4 h-4" />
+                    Submit Evaluation
+                  </Button>
+                </>
+              )}
               
-              <Button onClick={() => handleSave('submitted')} disabled={saving} className="flex items-center gap-2">
-                <Send className="w-4 h-4" />
-                Submit Evaluation
-              </Button>
+              {evaluationStatus === 'draft' && isEditing && (
+                <>
+                  <Button variant="outline" onClick={() => handleSave('draft')} disabled={saving} className="flex items-center gap-2">
+                    <Save className="w-4 h-4" />
+                    Save Draft
+                  </Button>
+                  <Button onClick={() => handleSave('submitted')} disabled={saving} className="flex items-center gap-2">
+                    <Send className="w-4 h-4" />
+                    Submit Evaluation
+                  </Button>
+                </>
+              )}
+              
+              {evaluationStatus === 'submitted' && !isEditing && (
+                <Button variant="outline" onClick={handleEditEvaluation} className="flex items-center gap-2">
+                  <Edit className="w-4 h-4" />
+                  Edit Evaluation
+                </Button>
+              )}
+              
+              {evaluationStatus === 'submitted' && isEditing && (
+                <>
+                  <Button variant="outline" onClick={handleCancelEdit} disabled={saving} className="flex items-center gap-2">
+                    Cancel Edit
+                  </Button>
+                  <Button onClick={() => handleSave('submitted')} disabled={saving} className="flex items-center gap-2">
+                    <Send className="w-4 h-4" />
+                    Update Evaluation
+                  </Button>
+                </>
+              )}
             </div>
           </div>
         </DialogContent>
