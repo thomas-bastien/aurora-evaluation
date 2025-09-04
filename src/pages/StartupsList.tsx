@@ -17,6 +17,7 @@ import { downloadCSVTemplate } from '@/utils/csvTemplate';
 import { useToast } from '@/hooks/use-toast';
 import { getStageColor } from '@/utils/stageUtils';
 import { FilterPanel } from '@/components/common/FilterPanel';
+import { useUserProfile } from '@/hooks/useUserProfile';
 
 interface Startup {
   id: string;
@@ -50,8 +51,12 @@ export default function StartupsList() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [startupToDelete, setStartupToDelete] = useState<Startup | null>(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
-  
+
   const { toast } = useToast();
+  const { profile } = useUserProfile();
+  
+  // Check if user has admin permissions
+  const isAdmin = profile?.role === 'admin';
 
   useEffect(() => {
     const fetchStartups = async () => {
@@ -296,22 +301,26 @@ export default function StartupsList() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold text-foreground">Startups</h1>
-              <p className="text-muted-foreground mt-2">Manage and review startup applications</p>
+              <p className="text-muted-foreground mt-2">
+                {isAdmin ? 'Manage and review startup applications' : 'Browse startup profiles'}
+              </p>
             </div>
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={downloadCSVTemplate}>
-                <Download className="h-4 w-4 mr-2" />
-                Download Template
-              </Button>
-              <Button variant="outline" onClick={() => setCsvModalOpen(true)}>
-                <Upload className="h-4 w-4 mr-2" />
-                Upload CSV
-              </Button>
-              <Button onClick={() => setFormModalOpen(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Add Startup
-              </Button>
-            </div>
+            {isAdmin && (
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={downloadCSVTemplate}>
+                  <Download className="h-4 w-4 mr-2" />
+                  Download Template
+                </Button>
+                <Button variant="outline" onClick={() => setCsvModalOpen(true)}>
+                  <Upload className="h-4 w-4 mr-2" />
+                  Upload CSV
+                </Button>
+                <Button onClick={() => setFormModalOpen(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Startup
+                </Button>
+              </div>
+            )}
           </div>
         </div>
 
@@ -426,24 +435,26 @@ export default function StartupsList() {
                       <Badge className={getStatusColor(startup.status)}>
                         {startup.status?.replace('-', ' ') || 'pending'}
                       </Badge>
-                      <div className="flex gap-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleEdit(startup)}
-                          className="h-8 w-8 p-0"
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDelete(startup)}
-                          className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
+                      {isAdmin && (
+                        <div className="flex gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEdit(startup)}
+                            className="h-8 w-8 p-0"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDelete(startup)}
+                            className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   </div>
                   <CardDescription className="line-clamp-2">
@@ -510,45 +521,49 @@ export default function StartupsList() {
         )}
       </main>
 
-      {/* Modals */}
-      <CSVUploadModal
-        open={csvModalOpen}
-        onOpenChange={setCsvModalOpen}
-        onDataParsed={handleCSVParsed}
-      />
-      
-      <StartupFormModal
-        open={formModalOpen}
-        onOpenChange={setFormModalOpen}
-        onSubmit={handleFormSubmit}
-        initialData={editingStartup || undefined}
-        mode={editingStartup ? 'edit' : 'create'}
-      />
-      
-      <DraftModal
-        open={draftModalOpen}
-        onOpenChange={setDraftModalOpen}
-        draftData={draftData}
-        onImportComplete={handleImportComplete}
-      />
+      {/* Admin-only modals */}
+      {isAdmin && (
+        <>
+          <CSVUploadModal
+            open={csvModalOpen}
+            onOpenChange={setCsvModalOpen}
+            onDataParsed={handleCSVParsed}
+          />
+          
+          <StartupFormModal
+            open={formModalOpen}
+            onOpenChange={setFormModalOpen}
+            onSubmit={handleFormSubmit}
+            initialData={editingStartup || undefined}
+            mode={editingStartup ? 'edit' : 'create'}
+          />
+          
+          <DraftModal
+            open={draftModalOpen}
+            onOpenChange={setDraftModalOpen}
+            draftData={draftData}
+            onImportComplete={handleImportComplete}
+          />
 
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Startup</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete "{startupToDelete?.name}"? This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+          {/* Delete Confirmation Dialog */}
+          <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete Startup</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Are you sure you want to delete "{startupToDelete?.name}"? This action cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                  Delete
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </>
+      )}
     </div>
   );
 }
