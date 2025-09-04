@@ -36,10 +36,10 @@ interface Assignment {
 }
 
 interface MatchmakingWorkflowProps {
-  currentRound: 'screeningRound' | 'pitchingRound';
+  currentPhase: 'screeningPhase' | 'pitchingPhase';
 }
 
-export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) => {
+export const MatchmakingWorkflow = ({ currentPhase }: MatchmakingWorkflowProps) => {
   const [startups, setStartups] = useState<Startup[]>([]);
   const [jurors, setJurors] = useState<Juror[]>([]);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
@@ -51,19 +51,19 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
 
   useEffect(() => {
     fetchData();
-  }, [currentRound]);
+  }, [currentPhase]);
 
   const fetchData = async () => {
     try {
       setLoading(true);
 
-      // Fetch startups based on current round
+      // Fetch startups based on current phase
       let startupStatusFilter;
-      if (currentRound === 'pitchingRound') {
-        // In pitching round, only show selected/shortlisted startups (semi-finalists)
+      if (currentPhase === 'pitchingPhase') {
+        // In pitching phase, only show selected/shortlisted startups (top 30)
         startupStatusFilter = 'shortlisted';
       } else {
-        // In screening round, show all startups under review
+        // In screening phase, show all startups under review
         startupStatusFilter = 'under-review';
       }
 
@@ -103,7 +103,7 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
         juror_name: (assignment.jurors as any).name,
       })) || [];
 
-      console.log(`Loaded ${startupsData?.length || 0} startups for ${currentRound}`);
+      console.log(`Loaded ${startupsData?.length || 0} startups for ${currentPhase}`);
       console.log(`Loaded ${jurorsData?.length || 0} jurors`);
       console.log(`Loaded ${mappedAssignments.length} existing assignments`);
 
@@ -164,8 +164,8 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
       setIsConfirmed(true);
       toast.success('All assignments have been confirmed successfully!');
       
-      // If this is pitching round, send scheduling emails to selected startups
-      if (currentRound === 'pitchingRound') {
+      // If this is pitching phase, send scheduling emails to selected startups
+      if (currentPhase === 'pitchingPhase') {
         await sendPitchSchedulingEmails();
       }
 
@@ -269,10 +269,10 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
   }
 
   const hasCompleteData = startups.length > 0 && jurors.length > 0;
-  const roundTitle = currentRound === 'screeningRound' ? 'Screening Round' : 'Pitching Round';
-  const roundDescription = currentRound === 'screeningRound' 
+  const phaseTitle = currentPhase === 'screeningPhase' ? 'Screening Phase' : 'Pitching Phase';
+  const phaseDescription = currentPhase === 'screeningPhase' 
     ? 'Assign 3 jurors to each startup for initial evaluation'
-    : 'Assign 2-3 jurors to the semi-finalists for pitch calls';
+    : 'Assign 2-3 jurors to the Top 30 finalists for pitch calls';
 
   return (
     <div className="space-y-6">
@@ -280,10 +280,10 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Users className="w-5 h-5" />
-            Matchmaking - {roundTitle}
+            Matchmaking - {phaseTitle}
           </CardTitle>
           <CardDescription>
-            {roundDescription}
+            {phaseDescription}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -294,7 +294,7 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
                 <span className="font-medium text-warning">Incomplete Data Warning</span>
               </div>
               <p className="text-sm text-muted-foreground">
-                {startups.length === 0 && "No startups found for this round. "}
+                {startups.length === 0 && "No startups found for this phase. "}
                 {jurors.length === 0 && "No jurors available for assignment. "}
                 Please ensure all required data is loaded before proceeding with assignments.
               </p>
@@ -309,7 +309,7 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
                 <div>
                   <p className="text-2xl font-bold">{startups.length}</p>
                   <p className="text-sm text-muted-foreground">
-                    {currentRound === 'pitchingRound' ? 'Semi-finalists' : 'Startups'}
+                    {currentPhase === 'pitchingPhase' ? 'Top 30 Finalists' : 'Startups'}
                   </p>
                 </div>
               </div>
@@ -331,7 +331,7 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
                 <div>
                   <p className="text-2xl font-bold">
                     {startups.filter(startup => {
-                      const requiredAssignments = currentRound === 'pitchingRound' ? 2 : 3;
+                      const requiredAssignments = currentPhase === 'pitchingPhase' ? 2 : 3;
                       return getStartupAssignmentCount(startup.id) >= requiredAssignments;
                     }).length}
                   </p>
@@ -346,7 +346,7 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
                 <div>
                   <p className="text-2xl font-bold">
                     {startups.filter(startup => {
-                      const requiredAssignments = currentRound === 'pitchingRound' ? 2 : 3;
+                      const requiredAssignments = currentPhase === 'pitchingPhase' ? 2 : 3;
                       return getStartupAssignmentCount(startup.id) < requiredAssignments;
                     }).length}
                   </p>
@@ -376,7 +376,7 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
               <Check className="w-4 h-4" />
               {isConfirmed 
                 ? "Assignments Confirmed" 
-                : currentRound === 'pitchingRound' 
+                : currentPhase === 'pitchingPhase' 
                   ? 'Confirm Assignments & Send Scheduling Emails'
                   : 'Confirm All Assignments'
               }
@@ -386,11 +386,11 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
           {/* Startups List */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold">
-              {currentRound === 'pitchingRound' ? 'Semi-finalists' : 'Startups'} Requiring Assignment
+              {currentPhase === 'pitchingPhase' ? 'Top 30 Finalists' : 'Startups'} Requiring Assignment
             </h3>
             {startups.map((startup) => {
               const assignmentCount = getStartupAssignmentCount(startup.id);
-              const requiredAssignments = currentRound === 'pitchingRound' ? 2 : 3;
+              const requiredAssignments = currentPhase === 'pitchingPhase' ? 2 : 3;
               const isFullyAssigned = assignmentCount >= requiredAssignments;
 
               return (
@@ -437,7 +437,7 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
           {startups.length === 0 && (
             <div className="text-center py-8">
               <p className="text-muted-foreground">
-                No startups available for {currentRound === 'screeningRound' ? 'screening' : 'pitching'} round.
+                No startups available for {currentPhase === 'screeningPhase' ? 'screening' : 'pitching'} phase.
               </p>
             </div>
           )}

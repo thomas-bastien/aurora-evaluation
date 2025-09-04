@@ -13,10 +13,10 @@ import { EvaluationProgressView } from "./EvaluationProgressView";
 import { Top30Selection } from "./Top30Selection";
 
 interface StartupSelectionProps {
-  currentRound: 'screeningRound' | 'pitchingRound';
+  currentPhase: 'screeningPhase' | 'pitchingPhase';
 }
 
-export const StartupSelection = ({ currentRound }: StartupSelectionProps) => {
+export const StartupSelection = ({ currentPhase }: StartupSelectionProps) => {
   return (
     <Card>
       <CardHeader>
@@ -24,17 +24,17 @@ export const StartupSelection = ({ currentRound }: StartupSelectionProps) => {
           <div>
             <CardTitle className="flex items-center gap-2">
               <Star className="w-5 h-5" />
-              Startup Selection - {currentRound === 'screeningRound' ? 'Screening' : 'Pitching'}
+              Startup Selection - {currentPhase === 'screeningPhase' ? 'Screening' : 'Pitching'}
             </CardTitle>
             <CardDescription>
-              {currentRound === 'screeningRound' 
-                ? 'Review evaluation results and select the semi-finalists for Pitching'
+              {currentPhase === 'screeningPhase' 
+                ? 'Review evaluation results and select the top 30 startups for Pitching'
                 : 'Review pitch results and make final selections'
               }
             </CardDescription>
           </div>
-          <Badge variant={currentRound === 'screeningRound' ? 'secondary' : 'default'}>
-            {currentRound === 'screeningRound' ? 'Evaluation Results' : 'Pitch Results'}
+          <Badge variant={currentPhase === 'screeningPhase' ? 'secondary' : 'default'}>
+            {currentPhase === 'screeningPhase' ? 'Evaluation Results' : 'Pitch Results'}
           </Badge>
         </div>
       </CardHeader>
@@ -48,7 +48,7 @@ export const StartupSelection = ({ currentRound }: StartupSelectionProps) => {
             </TabsTrigger>
             <TabsTrigger value="top-30-selection" className="flex items-center gap-2">
               <Trophy className="w-4 h-4" />
-              {currentRound === 'screeningRound' ? 'Semi-finalist Selection' : 'Final Selection'}
+              {currentPhase === 'screeningPhase' ? 'Top 30 Selection' : 'Final Selection'}
             </TabsTrigger>
           </TabsList>
 

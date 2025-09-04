@@ -16,7 +16,7 @@ import {
 import { toast } from "sonner";
 
 interface ReportingDocumentationProps {
-  currentRound: 'screeningRound' | 'pitchingRound';
+  currentPhase: 'screeningPhase' | 'pitchingPhase';
 }
 
 interface PhaseStats {
@@ -25,7 +25,7 @@ interface PhaseStats {
   averageScore: number;
 }
 
-export const ReportingDocumentation = ({ currentRound }: ReportingDocumentationProps) => {
+export const ReportingDocumentation = ({ currentPhase }: ReportingDocumentationProps) => {
   const [generating, setGenerating] = useState<string | null>(null);
   const [stats, setStats] = useState<PhaseStats>({
     totalStartups: 0,
@@ -35,14 +35,14 @@ export const ReportingDocumentation = ({ currentRound }: ReportingDocumentationP
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchRoundStats();
-  }, [currentRound]);
+    fetchPhaseStats();
+  }, [currentPhase]);
 
-  const fetchRoundStats = async () => {
+  const fetchPhaseStats = async () => {
     try {
       setLoading(true);
       
-      if (currentRound === 'screeningRound') {
+      if (currentPhase === 'screeningPhase') {
         // Get startups under review count
         const { data: startups, error: startupsError } = await supabase
           .from('startups')
@@ -79,7 +79,7 @@ export const ReportingDocumentation = ({ currentRound }: ReportingDocumentationP
           averageScore
         });
       } else {
-        // Pitching round stats
+        // Pitching phase stats
         const { data: pitchRequests, error: pitchError } = await supabase
           .from('pitch_requests')
           .select('status, startup_id');
@@ -153,15 +153,15 @@ export const ReportingDocumentation = ({ currentRound }: ReportingDocumentationP
       type: 'secondary'
     },
     {
-      id: 'round-summary',
-      title: `${currentRound === 'screeningRound' ? 'Screening' : 'Pitching'} Summary`,
-      description: `Complete ${currentRound === 'screeningRound' ? 'evaluation' : 'pitch'} round documentation`,
+      id: 'phase-summary',
+      title: `${currentPhase === 'screeningPhase' ? 'Screening' : 'Pitching'} Summary`,
+      description: `Complete ${currentPhase === 'screeningPhase' ? 'evaluation' : 'pitch'} phase documentation`,
       icon: FileText,
       type: 'primary'
     }
   ];
 
-  if (currentRound === 'pitchingRound') {
+  if (currentPhase === 'pitchingPhase') {
     reports.push(
       {
         id: 'pitch-analytics',
@@ -187,7 +187,7 @@ export const ReportingDocumentation = ({ currentRound }: ReportingDocumentationP
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <FileText className="w-5 h-5" />
-            Reporting & Documentation - {currentRound === 'screeningRound' ? 'Screening' : 'Pitching'}
+            Reporting & Documentation - {currentPhase === 'screeningPhase' ? 'Screening' : 'Pitching'}
           </CardTitle>
           <CardDescription>
             Generate comprehensive reports and export data for stakeholders
@@ -210,7 +210,7 @@ export const ReportingDocumentation = ({ currentRound }: ReportingDocumentationP
                   {stats.totalStartups}
                 </div>
                 <div className="text-sm text-muted-foreground">
-                  {currentRound === 'screeningRound' ? 'Startups Evaluated' : 'Startups in Pitching'}
+                  {currentPhase === 'screeningPhase' ? 'Startups Evaluated' : 'Startups in Pitching'}
                 </div>
               </div>
               <div className="text-center p-4 bg-success/10 rounded-lg">
@@ -218,7 +218,7 @@ export const ReportingDocumentation = ({ currentRound }: ReportingDocumentationP
                   {stats.completionRate.toFixed(0)}%
                 </div>
                 <div className="text-sm text-muted-foreground">
-                  {currentRound === 'screeningRound' ? 'Evaluations Complete' : 'Pitches Completed'}
+                  {currentPhase === 'screeningPhase' ? 'Evaluations Complete' : 'Pitches Completed'}
                 </div>
               </div>
               <div className="text-center p-4 bg-warning/10 rounded-lg">
@@ -289,7 +289,7 @@ export const ReportingDocumentation = ({ currentRound }: ReportingDocumentationP
               Email Report to Stakeholders
             </Button>
             <Button variant="outline" size="sm">
-              Archive {currentRound === 'screeningRound' ? 'Screening' : 'Pitching'} Data
+              Archive {currentPhase === 'screeningPhase' ? 'Screening' : 'Pitching'} Data
             </Button>
             <Button variant="outline" size="sm">
               Generate Executive Summary
