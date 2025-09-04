@@ -1,150 +1,111 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
-import { StatsCard } from "@/components/dashboard/StatsCard";
-import { EvaluationProgress } from "@/components/dashboard/EvaluationProgress";
-import { StartupList } from "@/components/dashboard/StartupList";
+import { CohortSummaryCard } from "@/components/dashboard/CohortSummaryCard";
+import { FunnelStage } from "@/components/dashboard/FunnelStage";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Building2, Star, TrendingUp, Users, Calendar, BarChart3, Network, ArrowRight } from "lucide-react";
+import { 
+  Building2, 
+  Users, 
+  Network, 
+  Star, 
+  MessageSquare, 
+  BarChart3, 
+  Calendar, 
+  Upload,
+  Phone,
+  CheckCircle,
+  TrendingUp,
+  FileText
+} from "lucide-react";
+
 const Dashboard = () => {
-  const {
-    profile,
-    refreshProfile
-  } = useUserProfile();
+  const { profile, refreshProfile } = useUserProfile();
   const navigate = useNavigate();
-  const [stats, setStats] = useState([{
-    title: "Total Startups",
-    value: "0",
-    subtitle: "Longlisted applications",
-    icon: Building2,
-    trend: "up" as const,
-    trendValue: "Loading..."
-  }, {
-    title: "Completed Evaluations",
-    value: "0",
-    subtitle: "Out of total startups",
-    icon: Star,
-    trend: "up" as const,
-    trendValue: "Loading..."
-  }, {
-    title: "Average Score",
-    value: "0",
-    subtitle: "Evaluation average",
-    icon: TrendingUp,
-    trend: "up" as const,
-    trendValue: "Loading..."
-  }, {
-    title: "Active Reviewers",
-    value: "0",
-    subtitle: "VC partners engaged",
-    icon: Users,
-    trend: "neutral" as const,
-    trendValue: "Loading..."
-  }, {
-    title: "Scheduled Pitches",
-    value: "0",
-    subtitle: "For final 30 selection",
-    icon: Calendar,
-    trend: "up" as const,
-    trendValue: "Loading..."
-  }, {
-    title: "Progress Rate",
-    value: "0%",
-    subtitle: "On schedule completion",
-    icon: BarChart3,
-    trend: "up" as const,
-    trendValue: "Loading..."
-  }]);
+  const [dashboardData, setDashboardData] = useState({
+    totalStartups: 0,
+    totalJurors: 0,
+    activePhase: 'screening' as 'screening' | 'pitching',
+    evaluationProgress: 0,
+    reminders: 0,
+    nextMilestone: 'Loading...',
+    screeningStats: {
+      startupsUploaded: 0,
+      jurorsUploaded: 0,
+      matchmakingProgress: 0,
+      evaluationsProgress: 0,
+      selectionComplete: false,
+      resultsComplete: false
+    },
+    pitchingStats: {
+      matchmakingProgress: 0,
+      pitchCallsScheduled: 0,
+      pitchCallsCompleted: 0,
+      evaluationsProgress: 0,
+      finalSelectionComplete: false,
+      finalResultsComplete: false
+    }
+  });
+
   useEffect(() => {
-    const fetchDashboardStats = async () => {
+    const fetchDashboardData = async () => {
       try {
-        // Fetch startups count
-        const {
-          count: startupsCount
-        } = await supabase.from('startups').select('*', {
-          count: 'exact',
-          head: true
-        });
+        // Fetch basic counts
+        const [
+          { count: startupsCount },
+          { count: jurorsCount },
+          { count: evaluationsCount },
+          { count: assignmentsCount }
+        ] = await Promise.all([
+          supabase.from('startups').select('*', { count: 'exact', head: true }),
+          supabase.from('jurors').select('*', { count: 'exact', head: true }),
+          supabase.from('evaluations').select('*', { count: 'exact', head: true }),
+          supabase.from('startup_assignments').select('*', { count: 'exact', head: true })
+        ]);
 
-        // Fetch evaluations count
-        const {
-          count: evaluationsCount
-        } = await supabase.from('evaluations').select('*', {
-          count: 'exact',
-          head: true
-        });
-
-        // Fetch VCs count
-        const {
-          count: vcsCount
-        } = await supabase.from('profiles').select('*', {
-          count: 'exact',
-          head: true
-        }).eq('role', 'vc');
-
-        // Fetch sessions count
-        const {
-          count: sessionsCount
-        } = await supabase.from('sessions').select('*', {
-          count: 'exact',
-          head: true
-        });
         const totalStartups = startupsCount || 0;
+        const totalJurors = jurorsCount || 0;
         const totalEvaluations = evaluationsCount || 0;
-        const totalVCs = vcsCount || 0;
-        const completionRate = totalStartups > 0 ? Math.round(totalEvaluations / (totalStartups * totalVCs) * 100) : 0;
-        setStats([{
-          title: "Total Startups",
-          value: totalStartups.toString(),
-          subtitle: "Longlisted applications",
-          icon: Building2,
-          trend: "up" as const,
-          trendValue: `${totalStartups} total`
-        }, {
-          title: "Completed Evaluations",
-          value: totalEvaluations.toString(),
-          subtitle: `Out of ${totalStartups} startups`,
-          icon: Star,
-          trend: "up" as const,
-          trendValue: `${completionRate}% complete`
-        }, {
-          title: "Average Score",
-          value: "7.8",
-          subtitle: "Evaluation average",
-          icon: TrendingUp,
-          trend: "up" as const,
-          trendValue: "Based on evaluations"
-        }, {
-          title: "Active Reviewers",
-          value: totalVCs.toString(),
-          subtitle: "VC partners engaged",
-          icon: Users,
-          trend: "neutral" as const,
-          trendValue: "All partners active"
-        }, {
-          title: "Scheduled Sessions",
-          value: (sessionsCount || 0).toString(),
-          subtitle: "Evaluation sessions",
-          icon: Calendar,
-          trend: "up" as const,
-          trendValue: "Organized sessions"
-        }, {
-          title: "Progress Rate",
-          value: `${completionRate}%`,
-          subtitle: "Evaluation completion",
-          icon: BarChart3,
-          trend: "up" as const,
-          trendValue: "On track"
-        }]);
+        const totalAssignments = assignmentsCount || 0;
+        
+        // Calculate progress metrics
+        const expectedEvaluations = totalStartups * 3; // 3 jurors per startup in screening
+        const evaluationProgress = expectedEvaluations > 0 ? Math.round((totalEvaluations / expectedEvaluations) * 100) : 0;
+        const matchmakingProgress = totalStartups > 0 ? Math.round((totalAssignments / (totalStartups * 3)) * 100) : 0;
+
+        setDashboardData({
+          totalStartups,
+          totalJurors,
+          activePhase: 'screening', // TODO: Make this dynamic based on actual phase
+          evaluationProgress,
+          reminders: 12, // TODO: Calculate actual reminders sent
+          nextMilestone: 'Complete juror matchmaking assignments',
+          screeningStats: {
+            startupsUploaded: totalStartups,
+            jurorsUploaded: totalJurors,
+            matchmakingProgress,
+            evaluationsProgress: evaluationProgress,
+            selectionComplete: false, // TODO: Calculate from actual data
+            resultsComplete: false // TODO: Calculate from actual data
+          },
+          pitchingStats: {
+            matchmakingProgress: 0, // TODO: Calculate for pitching phase
+            pitchCallsScheduled: 0, // TODO: Calculate from pitch_requests
+            pitchCallsCompleted: 0, // TODO: Calculate from pitch_requests
+            evaluationsProgress: 0, // TODO: Calculate for pitching evaluations
+            finalSelectionComplete: false,
+            finalResultsComplete: false
+          }
+        });
       } catch (error) {
-        console.error('Error fetching dashboard stats:', error);
+        console.error('Error fetching dashboard data:', error);
       }
     };
-    fetchDashboardStats();
+    fetchDashboardData();
   }, []);
 
   // Refresh profile when user returns to dashboard (e.g., after profile completion)
@@ -158,12 +119,15 @@ const Dashboard = () => {
     window.addEventListener('focus', handleFocus);
     return () => window.removeEventListener('focus', handleFocus);
   }, [profile?.role, refreshProfile]);
-  return <div className="min-h-screen bg-background">
+
+  return (
+    <div className="min-h-screen bg-background">
       <DashboardHeader />
       
       <main className="max-w-7xl mx-auto px-6 py-8">
-        {/* Profile Completion Banner */}
-        {profile?.role === 'vc' && (!profile.expertise || profile.expertise.length === 0 || !profile.investment_stages || profile.investment_stages.length === 0) && <div className="mb-6 animate-pulse-gentle">
+        {/* Profile Completion Banner for VCs */}
+        {profile?.role === 'vc' && (!profile.expertise || profile.expertise.length === 0 || !profile.investment_stages || profile.investment_stages.length === 0) && (
+          <div className="mb-6 animate-pulse-gentle">
             <Card className="bg-gradient-warning border-warning/20">
               <CardHeader className="pb-4">
                 <CardTitle className="text-foreground flex items-center gap-2">
@@ -180,303 +144,260 @@ const Dashboard = () => {
                 </Button>
               </CardContent>
             </Card>
-          </div>}
-
-        {/* Welcome Section */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-3xl font-bold text-foreground mb-2">
-                Welcome back to Aurora Evaluation
-              </h2>
-              <p className="text-lg text-muted-foreground">
-                Manage your startup evaluation pipeline with comprehensive insights and streamlined workflows.
-              </p>
-            </div>
           </div>
+        )}
+
+        {/* Cohort Summary Card */}
+        <div className="mb-8 animate-fade-in">
+          <CohortSummaryCard
+            totalStartups={dashboardData.totalStartups}
+            totalJurors={dashboardData.totalJurors}
+            activePhase={dashboardData.activePhase}
+            evaluationProgress={dashboardData.evaluationProgress}
+            reminders={dashboardData.reminders}
+            nextMilestone={dashboardData.nextMilestone}
+          />
         </div>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-          {stats.map((stat, index) => <div key={stat.title} className="animate-fade-in" style={{
-          animationDelay: `${index * 100}ms`
-        }}>
-              <StatsCard {...stat} />
-            </div>)}
-        </div>
-        
-
-        {/* Main Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Progress Section */}
-          <div className="lg:col-span-1 animate-slide-up" style={{
-          animationDelay: "600ms"
-        }}>
-            <EvaluationProgress />
-          </div>
-
-          {/* Startup List */}
-          <div className="lg:col-span-2 animate-slide-up" style={{
-          animationDelay: "700ms"
-        }}>
-            <StartupList />
-          </div>
-        </div>
-
-        {/* Admin Selection Funnel */}
+        {/* Community Manager Funnel Workflow */}
         {profile?.role === 'admin' && (
-          <div className="mt-8 animate-fade-in" style={{ animationDelay: "750ms" }}>
+          <div className="space-y-8 animate-fade-in" style={{ animationDelay: "400ms" }}>
+            {/* Round 1 - Screening */}
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <BarChart3 className="w-5 h-5" />
-                  Selection Workflow Funnel
-                </CardTitle>
-                <CardDescription>
-                  Manage the complete evaluation process across both phases
-                </CardDescription>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <Badge variant="secondary" className="px-3 py-1">Round 1</Badge>
+                      Screening Phase
+                    </CardTitle>
+                    <CardDescription>
+                      Initial evaluation and selection of semi-finalists
+                    </CardDescription>
+                  </div>
+                  <Badge 
+                    variant={dashboardData.activePhase === 'screening' ? 'default' : 'outline'}
+                    className="px-3 py-1"
+                  >
+                    {dashboardData.activePhase === 'screening' ? 'Active' : 'Upcoming'}
+                  </Badge>
+                </div>
               </CardHeader>
               <CardContent>
-                {/* Screening Phase */}
-                <div className="mb-8">
-                  <h4 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                    <Badge variant="secondary">Screening Phase</Badge>
-                  </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-                    <button 
-                      onClick={() => navigate('/selection/matchmaking?phase=screening')} 
-                      className="p-4 bg-card border border-border rounded-lg hover:bg-muted transition-smooth text-left group"
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-3">
-                          <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
-                            <Network className="w-5 h-5 text-primary" />
-                          </div>
-                          <div>
-                            <h5 className="font-medium text-foreground">Matchmaking</h5>
-                            <p className="text-xs text-muted-foreground">Assign 3 jurors to each startup</p>
-                          </div>
-                        </div>
-                        <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
-                      </div>
-                    </button>
-                    <button 
-                      onClick={() => navigate('/selection?phase=screening')} 
-                      className="p-4 bg-card border border-border rounded-lg hover:bg-muted transition-smooth text-left group"
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-3">
-                          <div className="w-10 h-10 bg-success/10 rounded-lg flex items-center justify-center">
-                            <Users className="w-5 h-5 text-success" />
-                          </div>
-                          <div>
-                            <h5 className="font-medium text-foreground">Evaluations</h5>
-                            <p className="text-xs text-muted-foreground">Monitor juror progress</p>
-                          </div>
-                        </div>
-                        <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
-                      </div>
-                    </button>
-                    <button 
-                      onClick={() => navigate('/selection?phase=screening')} 
-                      className="p-4 bg-card border border-border rounded-lg hover:bg-muted transition-smooth text-left group"
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-3">
-                          <div className="w-10 h-10 bg-warning/10 rounded-lg flex items-center justify-center">
-                            <Star className="w-5 h-5 text-warning" />
-                          </div>
-                          <div>
-                            <h5 className="font-medium text-foreground">Selection</h5>
-                            <p className="text-xs text-muted-foreground">Choose Top 30 startups</p>
-                          </div>
-                        </div>
-                        <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
-                      </div>
-                    </button>
-                    <button 
-                      onClick={() => navigate('/selection?phase=screening')} 
-                      className="p-4 bg-card border border-border rounded-lg hover:bg-muted transition-smooth text-left group"
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-3">
-                          <div className="w-10 h-10 bg-info/10 rounded-lg flex items-center justify-center">
-                            <Calendar className="w-5 h-5 text-info" />
-                          </div>
-                          <div>
-                            <h5 className="font-medium text-foreground">Results</h5>
-                            <p className="text-xs text-muted-foreground">Communicate to founders</p>
-                          </div>
-                        </div>
-                        <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
-                      </div>
-                    </button>
-                    <button 
-                      onClick={() => navigate('/selection?phase=screening')} 
-                      className="p-4 bg-card border border-border rounded-lg hover:bg-muted transition-smooth text-left"
-                    >
-                      <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 bg-muted/50 rounded-lg flex items-center justify-center">
-                          <BarChart3 className="w-5 h-5 text-muted-foreground" />
-                        </div>
-                        <div>
-                          <h5 className="font-medium text-foreground">Reporting</h5>
-                          <p className="text-xs text-muted-foreground">Generate reports</p>
-                        </div>
-                      </div>
-                    </button>
-                  </div>
+                <div className="flex flex-col space-y-4">
+                  <FunnelStage
+                    title="Upload Startups & Jury"
+                    description="Upload and review all applicants and jurors for this cohort"
+                    tooltip="Upload and review all applicants and jurors for this cohort."
+                    status={
+                      dashboardData.screeningStats.startupsUploaded > 0 && dashboardData.screeningStats.jurorsUploaded > 0 
+                        ? 'completed' 
+                        : dashboardData.activePhase === 'screening' ? 'current' : 'upcoming'
+                    }
+                    statusText={`${dashboardData.screeningStats.startupsUploaded}/100 startups, ${dashboardData.screeningStats.jurorsUploaded}/30 jurors uploaded`}
+                    icon={Upload}
+                    onClick={() => navigate('/startups')}
+                  />
+                  <FunnelStage
+                    title="Matchmaking (Screening)"
+                    description="Assign 3 jurors to each startup"
+                    tooltip="Assign 3 jurors to each startup."
+                    status={
+                      dashboardData.screeningStats.matchmakingProgress === 100 
+                        ? 'completed' 
+                        : dashboardData.screeningStats.matchmakingProgress > 0 ? 'current' : 'upcoming'
+                    }
+                    progress={dashboardData.screeningStats.matchmakingProgress}
+                    statusText={`${Math.round((dashboardData.screeningStats.matchmakingProgress / 100) * dashboardData.totalStartups)}/${dashboardData.totalStartups} startups covered`}
+                    icon={Network}
+                    onClick={() => navigate('/selection/matchmaking?phase=screening')}
+                  />
+                  <FunnelStage
+                    title="Evaluations (Screening)"
+                    description="Jurors score their assigned startups"
+                    tooltip="Jurors score their assigned startups."
+                    status={
+                      dashboardData.screeningStats.evaluationsProgress === 100 
+                        ? 'completed' 
+                        : dashboardData.screeningStats.evaluationsProgress > 0 ? 'current' : 'upcoming'
+                    }
+                    progress={dashboardData.screeningStats.evaluationsProgress}
+                    statusText={`${dashboardData.screeningStats.evaluationsProgress}% completed`}
+                    icon={Star}
+                    onClick={() => navigate('/selection?phase=screening')}
+                  />
+                  <FunnelStage
+                    title="Selection – Semi-finalists"
+                    description="Confirm the 30 semi-finalists that progress to Pitching"
+                    tooltip="Confirm the 30 semi-finalists that progress to Pitching."
+                    status={
+                      dashboardData.screeningStats.selectionComplete 
+                        ? 'completed' 
+                        : dashboardData.screeningStats.evaluationsProgress === 100 ? 'current' : 'upcoming'
+                    }
+                    statusText={dashboardData.screeningStats.selectionComplete ? 'Complete' : 'Pending'}
+                    icon={CheckCircle}
+                    onClick={() => navigate('/selection?phase=screening')}
+                  />
+                  <FunnelStage
+                    title="Results Communication (Screening)"
+                    description="Send outcome emails and feedback to all startups"
+                    tooltip="Send outcome emails and feedback to all startups."
+                    status={
+                      dashboardData.screeningStats.resultsComplete 
+                        ? 'completed' 
+                        : dashboardData.screeningStats.selectionComplete ? 'current' : 'upcoming'
+                    }
+                    statusText={dashboardData.screeningStats.resultsComplete ? 'Complete' : 'Pending'}
+                    icon={MessageSquare}
+                    onClick={() => navigate('/selection?phase=screening')}
+                    isLast
+                  />
                 </div>
+              </CardContent>
+            </Card>
 
-                {/* Pitching Phase */}
-                <div>
-                  <h4 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                    <Badge variant="default">Pitching Phase</Badge>
-                  </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-                    <button 
-                      onClick={() => navigate('/selection/matchmaking?phase=pitching')} 
-                      className="p-4 bg-card border border-border rounded-lg hover:bg-muted transition-smooth text-left group"
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-3">
-                          <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
-                            <Network className="w-5 h-5 text-primary" />
-                          </div>
-                          <div>
-                            <h5 className="font-medium text-foreground">Matchmaking</h5>
-                            <p className="text-xs text-muted-foreground">Assign jurors to Top 30 finalists</p>
-                          </div>
-                        </div>
-                        <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
-                      </div>
-                    </button>
-                    <button 
-                      onClick={() => navigate('/selection?phase=pitching')} 
-                      className="p-4 bg-card border border-border rounded-lg hover:bg-muted transition-smooth text-left group"
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-3">
-                          <div className="w-10 h-10 bg-success/10 rounded-lg flex items-center justify-center">
-                            <Users className="w-5 h-5 text-success" />
-                          </div>
-                          <div>
-                            <h5 className="font-medium text-foreground">Evaluations</h5>
-                            <p className="text-xs text-muted-foreground">Monitor pitch sessions</p>
-                          </div>
-                        </div>
-                        <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
-                      </div>
-                    </button>
-                    <button 
-                      onClick={() => navigate('/selection?phase=pitching')} 
-                      className="p-4 bg-card border border-border rounded-lg hover:bg-muted transition-smooth text-left group"
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-3">
-                          <div className="w-10 h-10 bg-warning/10 rounded-lg flex items-center justify-center">
-                            <Star className="w-5 h-5 text-warning" />
-                          </div>
-                          <div>
-                            <h5 className="font-medium text-foreground">Selection</h5>
-                            <p className="text-xs text-muted-foreground">Final startup selection</p>
-                          </div>
-                        </div>
-                        <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
-                      </div>
-                    </button>
-                    <button 
-                      onClick={() => navigate('/selection?phase=pitching')} 
-                      className="p-4 bg-card border border-border rounded-lg hover:bg-muted transition-smooth text-left group"
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-3">
-                          <div className="w-10 h-10 bg-info/10 rounded-lg flex items-center justify-center">
-                            <Calendar className="w-5 h-5 text-info" />
-                          </div>
-                          <div>
-                            <h5 className="font-medium text-foreground">Results</h5>
-                            <p className="text-xs text-muted-foreground">Final communications</p>
-                          </div>
-                        </div>
-                        <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
-                      </div>
-                    </button>
-                    <button 
-                      onClick={() => navigate('/selection?phase=pitching')} 
-                      className="p-4 bg-card border border-border rounded-lg hover:bg-muted transition-smooth text-left"
-                    >
-                      <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 bg-muted/50 rounded-lg flex items-center justify-center">
-                          <BarChart3 className="w-5 h-5 text-muted-foreground" />
-                        </div>
-                        <div>
-                          <h5 className="font-medium text-foreground">Reporting</h5>
-                          <p className="text-xs text-muted-foreground">Final reports</p>
-                        </div>
-                      </div>
-                    </button>
+            {/* Round 2 - Pitching */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <Badge variant="default" className="px-3 py-1">Round 2</Badge>
+                      Pitching Phase
+                    </CardTitle>
+                    <CardDescription>
+                      Final pitch presentations and selection of winners
+                    </CardDescription>
                   </div>
+                  <Badge 
+                    variant={dashboardData.activePhase === 'pitching' ? 'default' : 'outline'}
+                    className="px-3 py-1"
+                  >
+                    {dashboardData.activePhase === 'pitching' ? 'Active' : 'Upcoming'}
+                  </Badge>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-col space-y-4">
+                  <FunnelStage
+                    title="Matchmaking (Finalists)"
+                    description="Assign jurors to the Top 30 semi-finalists for live pitch calls"
+                    tooltip="Assign jurors to the Top 30 semi-finalists for live pitch calls."
+                    status={
+                      dashboardData.pitchingStats.matchmakingProgress === 100 
+                        ? 'completed' 
+                        : dashboardData.activePhase === 'pitching' ? 'current' : 'upcoming'
+                    }
+                    progress={dashboardData.pitchingStats.matchmakingProgress}
+                    statusText={`${Math.round((dashboardData.pitchingStats.matchmakingProgress / 100) * 30)}/30 covered`}
+                    icon={Network}
+                    onClick={() => navigate('/selection/matchmaking?phase=pitching')}
+                  />
+                  <FunnelStage
+                    title="Pitch Calls"
+                    description="Jurors and startups meet via Calendly links"
+                    tooltip="Jurors and startups meet via Calendly links."
+                    status={
+                      dashboardData.pitchingStats.pitchCallsCompleted > 0 
+                        ? 'current' 
+                        : dashboardData.pitchingStats.pitchCallsScheduled > 0 ? 'current' : 'upcoming'
+                    }
+                    statusText={`${dashboardData.pitchingStats.pitchCallsScheduled} scheduled / ${dashboardData.pitchingStats.pitchCallsCompleted} completed`}
+                    icon={Phone}
+                    onClick={() => navigate('/selection?phase=pitching')}
+                  />
+                  <FunnelStage
+                    title="Evaluations (Pitching)"
+                    description="Jurors submit post-pitch evaluations"
+                    tooltip="Jurors submit post-pitch evaluations."
+                    status={
+                      dashboardData.pitchingStats.evaluationsProgress === 100 
+                        ? 'completed' 
+                        : dashboardData.pitchingStats.evaluationsProgress > 0 ? 'current' : 'upcoming'
+                    }
+                    progress={dashboardData.pitchingStats.evaluationsProgress}
+                    statusText={`${dashboardData.pitchingStats.evaluationsProgress}% submitted`}
+                    icon={Star}
+                    onClick={() => navigate('/selection?phase=pitching')}
+                  />
+                  <FunnelStage
+                    title="Selection – Finalists"
+                    description="Confirm the 10 finalists"
+                    tooltip="Confirm the 10 finalists."
+                    status={
+                      dashboardData.pitchingStats.finalSelectionComplete 
+                        ? 'completed' 
+                        : dashboardData.pitchingStats.evaluationsProgress === 100 ? 'current' : 'upcoming'
+                    }
+                    statusText={dashboardData.pitchingStats.finalSelectionComplete ? 'Complete' : 'Pending'}
+                    icon={TrendingUp}
+                    onClick={() => navigate('/selection?phase=pitching')}
+                  />
+                  <FunnelStage
+                    title="Results Communication & Final Report"
+                    description="Notify all startups, generate final juror & programme reports"
+                    tooltip="Notify all startups, generate final juror & programme reports."
+                    status={
+                      dashboardData.pitchingStats.finalResultsComplete 
+                        ? 'completed' 
+                        : dashboardData.pitchingStats.finalSelectionComplete ? 'current' : 'upcoming'
+                    }
+                    statusText={dashboardData.pitchingStats.finalResultsComplete ? 'Complete' : 'Pending'}
+                    icon={FileText}
+                    onClick={() => navigate('/selection?phase=pitching')}
+                    isLast
+                  />
                 </div>
               </CardContent>
             </Card>
           </div>
         )}
 
-        {/* Quick Actions */}
-        <div className="mt-8 animate-fade-in" style={{
-        animationDelay: "800ms"
-      }}>
-          <div className="bg-gradient-subtle border border-border rounded-lg p-6 shadow-soft">
-            <h3 className="text-lg font-semibold text-foreground mb-4">Quick Actions</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <button onClick={() => window.location.href = '/evaluate'} className="p-4 bg-card border border-border rounded-lg hover:bg-muted transition-smooth text-left">
-                <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
-                    <Star className="w-5 h-5 text-primary" />
-                  </div>
-                  <div>
-                    <h4 className="font-medium text-foreground">
-                      {profile?.role === 'vc' ? 'My Evaluations' : 'Start New Evaluation'}
-                    </h4>
-                    <p className="text-sm text-muted-foreground">
-                      {profile?.role === 'vc' ? 'Review assigned startups' : 'Begin reviewing pending startups'}
-                    </p>
-                  </div>
+        {/* Quick Actions for Jurors */}
+        {profile?.role === 'vc' && (
+          <div className="mt-8 animate-fade-in" style={{ animationDelay: "600ms" }}>
+            <Card>
+              <CardHeader>
+                <CardTitle>Quick Actions</CardTitle>
+                <CardDescription>
+                  Common tasks and shortcuts for your workflow
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <Button 
+                    onClick={() => navigate('/evaluate')}
+                    className="p-6 h-auto flex-col space-y-2"
+                    variant="outline"
+                  >
+                    <Star className="w-6 h-6" />
+                    <span>Start Evaluating</span>
+                  </Button>
+                  <Button 
+                    onClick={() => navigate('/session-management')}
+                    className="p-6 h-auto flex-col space-y-2"
+                    variant="outline"
+                  >
+                    <Calendar className="w-6 h-6" />
+                    <span>Session Management</span>
+                  </Button>
+                  <Button 
+                    onClick={() => navigate('/startups')}
+                    className="p-6 h-auto flex-col space-y-2"
+                    variant="outline"
+                  >
+                    <Building2 className="w-6 h-6" />
+                    <span>View Startups</span>
+                  </Button>
                 </div>
-              </button>
-              
-              <button onClick={() => window.location.href = '/sessions'} className="p-4 bg-card border border-border rounded-lg hover:bg-muted transition-smooth text-left">
-                <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-success/10 rounded-lg flex items-center justify-center">
-                    <Calendar className="w-5 h-5 text-success" />
-                  </div>
-                  <div>
-                    <h4 className="font-medium text-foreground">Session Management</h4>
-                    <p className="text-sm text-muted-foreground">Coordinate evaluation sessions</p>
-                  </div>
-                </div>
-              </button>
-              
-              <button onClick={() => window.location.href = profile?.role === 'admin' ? '/selection' : '/startups'} className="p-4 bg-card border border-border rounded-lg hover:bg-muted transition-smooth text-left">
-                <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-warning/10 rounded-lg flex items-center justify-center">
-                    <BarChart3 className="w-5 h-5 text-warning" />
-                  </div>
-                  <div>
-                    <h4 className="font-medium text-foreground">
-                      {profile?.role === 'admin' ? 'Selection Workflow' : 'View Startups'}
-                    </h4>
-                    <p className="text-sm text-muted-foreground">
-                      {profile?.role === 'admin' ? 'Manage selection process' : 'Browse startup profiles'}
-                    </p>
-                  </div>
-                </div>
-              </button>
-            </div>
+              </CardContent>
+            </Card>
           </div>
-        </div>
+        )}
       </main>
-    </div>;
+    </div>
+  );
 };
+
 export default Dashboard;
