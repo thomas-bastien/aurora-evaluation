@@ -1,133 +1,152 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { supabase } from "@/integrations/supabase/client";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
-import { CohortSummaryCard } from "@/components/dashboard/CohortSummaryCard";
-import { FunnelStage } from "@/components/dashboard/FunnelStage";
 import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { 
-  FileText, 
-  CheckCircle, 
-  Calendar,
-  MessageSquare,
-  Users,
-  AlertCircle,
-  Link2
-} from "lucide-react";
-interface DashboardStats {
-  totalStartups: number;
-  totalJurors: number;
-  currentPhase: 'screening' | 'pitching';
-  screeningAssigned: number;
-  screeningEvaluated: number;
-  pitchingAssigned: number;
-  schedulingLinkUploaded: boolean;
-  pitchCalls: {
-    scheduled: number;
-    completed: number;
-  };
-  pitchingEvaluated: number;
+import { StartupsEvaluationList } from "@/components/evaluation/StartupsEvaluationList";
+import { EvaluationStats } from "@/components/evaluation/EvaluationStats";
+import { Search, Filter, CheckCircle, Clock, AlertCircle } from "lucide-react";
+interface AssignedStartup {
+  id: string;
+  name: string;
+  description: string;
+  industry: string;
+  stage: string;
+  contact_email: string;
+  website: string;
+  pitch_deck_url: string;
+  demo_url: string;
+  location: string;
+  region: string;
+  country: string;
+  linkedin_url: string;
+  evaluation_status: 'not_started' | 'draft' | 'completed';
+  evaluation_id?: string;
+  overall_score?: number;
 }
 const EvaluationDashboard = () => {
-  const { user } = useAuth();
-  const { profile } = useUserProfile();
-  const navigate = useNavigate();
+  const {
+    user
+  } = useAuth();
+  const {
+    profile
+  } = useUserProfile();
+  const [assignedStartups, setAssignedStartups] = useState<AssignedStartup[]>([]);
   const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState<DashboardStats>({
-    totalStartups: 0,
-    totalJurors: 0,
-    currentPhase: 'screening',
-    screeningAssigned: 0,
-    screeningEvaluated: 0,
-    pitchingAssigned: 0,
-    schedulingLinkUploaded: false,
-    pitchCalls: { scheduled: 0, completed: 0 },
-    pitchingEvaluated: 0
-  });
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterStatus, setFilterStatus] = useState<'all' | 'not_started' | 'draft' | 'completed'>('all');
   useEffect(() => {
     if (user && profile?.role === 'vc') {
-      fetchDashboardStats();
+      fetchAssignedStartups();
     }
   }, [user, profile]);
-  const fetchDashboardStats = async () => {
+  const fetchAssignedStartups = async () => {
     try {
       setLoading(true);
 
-      // Get total startups count
-      const { count: totalStartups } = await supabase
-        .from('startups')
-        .select('*', { count: 'exact', head: true });
-
-      // Get total jurors count
-      const { count: totalJurors } = await supabase
-        .from('jurors')
-        .select('*', { count: 'exact', head: true });
-
-      // Find current juror record
-      const { data: juror } = await supabase
+      // First, find the juror record for this authenticated user
+      const { data: juror, error: jurorError } = await supabase
         .from('jurors')
         .select('id')
         .eq('user_id', user?.id)
         .maybeSingle();
 
+      if (jurorError) throw jurorError;
+      
       if (!juror) {
         console.warn('No juror record found for this user');
+        setAssignedStartups([]);
         return;
       }
 
-      // Get screening assignments
-      const { count: screeningAssigned } = await supabase
-        .from('startup_assignments')
-        .select('*', { count: 'exact', head: true })
-        .eq('juror_id', juror.id)
-        .eq('status', 'assigned');
+      // Fetch startups assigned to this juror
+      const {
+        data: assignments,
+        error: assignmentsError
+      } = await supabase.from('startup_assignments').select(`
+          startup_id,
+          startups (
+            id,
+            name,
+            description,
+            industry,
+            stage,
+            contact_email,
+            website,
+            pitch_deck_url,
+            demo_url,
+            location,
+            region,
+            country,
+            linkedin_url
+          )
+        `).eq('juror_id', juror.id).eq('status', 'assigned');
+      if (assignmentsError) throw assignmentsError;
 
-      // Get screening evaluations completed
-      const { count: screeningEvaluated } = await supabase
-        .from('evaluations')
-        .select('*', { count: 'exact', head: true })
-        .eq('evaluator_id', user?.id)
-        .eq('status', 'submitted');
+      // Fetch existing evaluations for these startups
+      const startupIds = assignments?.map(a => a.startup_id) || [];
+      const {
+        data: evaluations,
+        error: evaluationsError
+      } = await supabase.from('evaluations').select('*').eq('evaluator_id', user?.id).in('startup_id', startupIds);
+      if (evaluationsError) throw evaluationsError;
 
-      // Check if scheduling link is uploaded
-      const schedulingLinkUploaded = profile?.calendly_link ? true : false;
-
-      // For now, set static values for pitching phase (can be enhanced later)
-      const pitchingAssigned = 0; // Will be populated when pitching phase is active
-      const pitchingEvaluated = 0; // Will be populated when pitching evaluations start
-
-      setStats({
-        totalStartups: totalStartups || 0,
-        totalJurors: totalJurors || 0,
-        currentPhase: 'screening', // TODO: Get from global settings
-        screeningAssigned: screeningAssigned || 0,
-        screeningEvaluated: screeningEvaluated || 0,
-        pitchingAssigned,
-        schedulingLinkUploaded,
-        pitchCalls: { scheduled: 0, completed: 0 }, // TODO: Implement when pitch requests are available
-        pitchingEvaluated
-      });
+      // Combine data
+      const startupsWithEvaluations: AssignedStartup[] = assignments?.map(assignment => {
+        const startup = assignment.startups;
+        const evaluation = evaluations?.find(e => e.startup_id === startup.id);
+        let evaluation_status: 'not_started' | 'draft' | 'completed' = 'not_started';
+        if (evaluation) {
+          evaluation_status = evaluation.status === 'submitted' ? 'completed' : 'draft';
+        }
+        return {
+          id: startup.id,
+          name: startup.name,
+          description: startup.description || '',
+          industry: startup.industry || '',
+          stage: startup.stage || '',
+          contact_email: startup.contact_email || '',
+          website: startup.website || '',
+          pitch_deck_url: startup.pitch_deck_url || '',
+          demo_url: startup.demo_url || '',
+          location: startup.location || '',
+          region: startup.region || '',
+          country: startup.country || '',
+          linkedin_url: startup.linkedin_url || '',
+          evaluation_status,
+          evaluation_id: evaluation?.id,
+          overall_score: evaluation?.overall_score
+        };
+      }) || [];
+      setAssignedStartups(startupsWithEvaluations);
     } catch (error) {
-      console.error('Error fetching dashboard stats:', error);
-      toast.error('Failed to load dashboard data');
+      console.error('Error fetching assigned startups:', error);
+      toast.error('Failed to load assigned startups');
     } finally {
       setLoading(false);
     }
   };
-  // Calculate progress percentages
-  const screeningProgress = stats.screeningAssigned > 0 
-    ? Math.round((stats.screeningEvaluated / stats.screeningAssigned) * 100) 
-    : 0;
-  
-  const pitchingProgress = stats.pitchingAssigned > 0 
-    ? Math.round((stats.pitchingEvaluated / stats.pitchingAssigned) * 100) 
-    : 0;
+  const filteredStartups = assignedStartups.filter(startup => {
+    const matchesSearch = startup.name.toLowerCase().includes(searchTerm.toLowerCase()) || startup.industry.toLowerCase().includes(searchTerm.toLowerCase()) || startup.description.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesFilter = filterStatus === 'all' || startup.evaluation_status === filterStatus;
+    return matchesSearch && matchesFilter;
+  });
+  const stats = {
+    total: assignedStartups.length,
+    completed: assignedStartups.filter(s => s.evaluation_status === 'completed').length,
+    draft: assignedStartups.filter(s => s.evaluation_status === 'draft').length,
+    notStarted: assignedStartups.filter(s => s.evaluation_status === 'not_started').length,
+    averageScore: assignedStartups.filter(s => s.overall_score).reduce((sum, s) => sum + (s.overall_score || 0), 0) / assignedStartups.filter(s => s.overall_score).length || 0
+  };
+  const completionRate = stats.total > 0 ? stats.completed / stats.total * 100 : 0;
   if (profile?.role !== 'vc') {
-    return (
-      <div className="min-h-screen bg-background">
+    return <div className="min-h-screen bg-background">
         <DashboardHeader />
         <main className="max-w-7xl mx-auto px-6 py-8">
           <Card>
@@ -140,118 +159,77 @@ const EvaluationDashboard = () => {
             </CardContent>
           </Card>
         </main>
-      </div>
-    );
+      </div>;
   }
-  return (
-    <div className="min-h-screen bg-background">
+  return <div className="min-h-screen bg-background">
       <DashboardHeader />
       
       <main className="max-w-7xl mx-auto px-6 py-8">
-        {/* Cohort Summary Card */}
+        {/* Header */}
         <div className="mb-8">
-          <CohortSummaryCard
-            totalStartups={stats.totalStartups}
-            totalJurors={stats.totalJurors}
-            activePhase={stats.currentPhase}
-            evaluationProgress={screeningProgress}
-            reminders={0}
-            nextMilestone="Screening evaluations due soon"
-          />
-        </div>
-
-        {/* Juror Context */}
-        <div className="mb-8 text-center">
-          <p className="text-lg text-muted-foreground">
-            You are 1 of {stats.totalJurors} jurors helping evaluate this year's cohort of {stats.totalStartups} startups.
+          <h1 className="text-3xl font-bold text-foreground mb-2">Your Evaluations</h1>
+          <p className="text-lg text-muted-foreground mb-6">
+            Review and evaluate the startups assigned to you
           </p>
+          
+          {/* Progress Overview */}
+          <Card className="mb-6">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="text-lg font-semibold">Evaluation Progress</h3>
+                  <p className="text-sm text-muted-foreground">
+                    {stats.completed} of {stats.total} evaluations completed
+                  </p>
+                </div>
+                <div className="text-right">
+                  <div className="text-2xl font-bold text-primary">{completionRate.toFixed(0)}%</div>
+                  <div className="text-xs text-muted-foreground">Complete</div>
+                </div>
+              </div>
+              <Progress value={completionRate} className="h-2" />
+            </CardContent>
+          </Card>
         </div>
 
-        {/* Round 1 - Screening */}
-        <div className="mb-12">
-          <h2 className="text-2xl font-bold mb-6 flex items-center gap-3">
-            <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center text-primary font-bold">1</div>
-            Round 1 – Screening
-          </h2>
-          
-          <div className="grid gap-4 md:grid-cols-2">
-            <FunnelStage
-              title="Assigned Startups"
-              description="Your startups for Screening"
-              tooltip="Startups allocated to you for the Screening round. You can draft and edit your evaluations until the phase closes."
-              status={stats.screeningAssigned > 0 ? 'current' : 'upcoming'}
-              statusText={`${stats.screeningAssigned} assigned`}
-              icon={Users}
-              onClick={() => navigate('/evaluate')}
-            />
-            
-            <FunnelStage
-              title="Evaluate (Screening)"
-              description="Complete evaluation forms"
-              tooltip="Provide scores and detailed feedback (min. 30 characters per open field). Required for all assigned startups."
-              status={stats.screeningAssigned > 0 ? 'current' : 'upcoming'}
-              progress={screeningProgress}
-              statusText={`${stats.screeningEvaluated}/${stats.screeningAssigned} submitted`}
-              icon={FileText}
-              onClick={() => navigate('/evaluate')}
-              isLast
-            />
-          </div>
-        </div>
+        {/* Stats Cards */}
+        <EvaluationStats stats={stats} />
 
-        {/* Round 2 - Pitching */}
-        <div className="mb-8">
-          <h2 className="text-2xl font-bold mb-6 flex items-center gap-3">
-            <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center text-primary font-bold">2</div>
-            Round 2 – Pitching
-          </h2>
-          
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <FunnelStage
-              title="Assigned Startups"
-              description="Your finalists for Pitching"
-              tooltip="Your Pitching startups, selected from the Top 30 semi-finalists."
-              status={stats.pitchingAssigned > 0 ? 'current' : 'upcoming'}
-              statusText={`${stats.pitchingAssigned} assigned`}
-              icon={Users}
-              onClick={() => navigate('/evaluate?phase=pitching')}
-            />
-            
-            <FunnelStage
-              title="Upload Scheduling Link"
-              description="Add your Calendly link"
-              tooltip="Add your Calendly (or other scheduling) link so startups can book slots with you. You only need to do this once per cohort."
-              status={stats.schedulingLinkUploaded ? 'completed' : 'current'}
-              statusText={stats.schedulingLinkUploaded ? 'Link on file' : 'Missing'}
-              icon={Link2}
-              onClick={() => navigate('/profile')}
-            />
-            
-            <FunnelStage
-              title="Pitch Calls"
-              description="Join scheduled calls"
-              tooltip="Startups choose slots from your scheduling link. You just need to join the calls when booked. Status updates will track scheduled and completed calls."
-              status={stats.pitchCalls.scheduled > 0 ? 'current' : 'upcoming'}
-              statusText={`${stats.pitchCalls.completed}/${stats.pitchCalls.scheduled} completed`}
-              icon={Calendar}
-              onClick={() => navigate('/evaluate?phase=pitching&view=calls')}
-            />
-            
-            <FunnelStage
-              title="Evaluate (Pitching)"
-              description="Post-pitch evaluations"
-              tooltip="Submit your evaluation after each pitch call. Editable until the CM closes the phase."
-              status={stats.pitchingEvaluated > 0 ? 'current' : 'upcoming'}
-              progress={pitchingProgress}
-              statusText={`${stats.pitchingEvaluated}/${stats.pitchingAssigned} submitted`}
-              icon={MessageSquare}
-              onClick={() => navigate('/evaluate?phase=pitching&view=evaluations')}
-              isLast
-            />
-          </div>
-        </div>
+        {/* Filters and Search */}
+        <Card className="mb-6">
+          <CardContent className="pt-6">
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="flex-1">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input placeholder="Search startups by name, industry, or description..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10" />
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Button variant={filterStatus === 'all' ? 'default' : 'outline'} size="sm" onClick={() => setFilterStatus('all')} className="flex items-center gap-2">
+                  <Filter className="w-4 h-4" />
+                  All ({stats.total})
+                </Button>
+                <Button variant={filterStatus === 'not_started' ? 'default' : 'outline'} size="sm" onClick={() => setFilterStatus('not_started')} className="flex items-center gap-2">
+                  <Clock className="w-4 h-4" />
+                  Not Started ({stats.notStarted})
+                </Button>
+                <Button variant={filterStatus === 'draft' ? 'default' : 'outline'} size="sm" onClick={() => setFilterStatus('draft')} className="flex items-center gap-2">
+                  <Badge variant="secondary" className="w-4 h-4" />
+                  Draft ({stats.draft})
+                </Button>
+                <Button variant={filterStatus === 'completed' ? 'default' : 'outline'} size="sm" onClick={() => setFilterStatus('completed')} className="flex items-center gap-2">
+                  <CheckCircle className="w-4 h-4" />
+                  Completed ({stats.completed})
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Startups List */}
+        <StartupsEvaluationList startups={filteredStartups} loading={loading} onEvaluationUpdate={fetchAssignedStartups} />
       </main>
-    </div>
-  );
+    </div>;
 };
 export default EvaluationDashboard;
