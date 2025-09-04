@@ -51,6 +51,13 @@ export default function Evaluate() {
     
     try {
       setLoading(true);
+
+      // Check auth session first
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !session) {
+        console.error('Auth session error:', sessionError);
+        return;
+      }
       
       // Get startups assigned to this juror
       const { data: assignments, error: assignmentsError } = await supabase
