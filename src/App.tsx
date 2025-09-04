@@ -21,7 +21,7 @@ import JurorsList from "./pages/JurorsList";
 import Selection from "./pages/Selection";
 import SelectionMatchmaking from "./pages/SelectionMatchmaking";
 import SessionManagement from "./pages/SessionManagement";
-import EvaluationDashboard from "./pages/EvaluationDashboard";
+import Evaluate from "./pages/Evaluate";
 import Matchmaking from "./pages/Matchmaking";
 import NotFound from "./pages/NotFound";
 
@@ -122,7 +122,7 @@ const App = () => (
             } />
             <Route path="/evaluate" element={
               <ProtectedRoute>
-                <EvaluationDashboard />
+                <Evaluate />
               </ProtectedRoute>
             } />
             <Route path="/matchmaking" element={
