@@ -59,8 +59,26 @@ export default function Evaluate() {
         console.error('Auth session error:', sessionError);
         return;
       }
+
+      // First, get the juror record for this user
+      const { data: jurorData, error: jurorError } = await supabase
+        .from('jurors')
+        .select('id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (jurorError) {
+        console.error('Error fetching juror:', jurorError);
+        return;
+      }
+
+      if (!jurorData) {
+        console.error('No juror record found for user');
+        setAssignedStartups([]);
+        return;
+      }
       
-      // Get startups assigned to this juror
+      // Get startups assigned to this juror using the juror ID
       const { data: assignments, error: assignmentsError } = await supabase
         .from('startup_assignments')
         .select(`
@@ -81,7 +99,7 @@ export default function Evaluate() {
             linkedin_url
           )
         `)
-        .eq('juror_id', user.id)
+        .eq('juror_id', jurorData.id)
         .eq('status', 'active');
 
       if (assignmentsError) throw assignmentsError;
