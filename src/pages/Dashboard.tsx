@@ -197,7 +197,7 @@ const Dashboard = () => {
               </div>
             </CardHeader>
             <CardContent>
-              <div className={`${profile?.role === 'admin' ? 'flex flex-col space-y-4' : 'grid gap-4 md:grid-cols-2'}`}>
+              <div className="flex flex-col space-y-4">
                 {profile?.role === 'admin' ? (
                   <>
                     <FunnelStage
@@ -322,7 +322,7 @@ const Dashboard = () => {
               </div>
             </CardHeader>
             <CardContent>
-              <div className={`${profile?.role === 'admin' ? 'flex flex-col space-y-4' : 'grid gap-4 md:grid-cols-2 lg:grid-cols-4'}`}>
+              <div className="flex flex-col space-y-4">
                 {profile?.role === 'admin' ? (
                   <>
                     <FunnelStage
