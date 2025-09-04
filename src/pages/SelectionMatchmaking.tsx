@@ -5,7 +5,6 @@ import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { MatchmakingWorkflow } from "@/components/cm/MatchmakingWorkflow";
 
 const SelectionMatchmaking = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -82,8 +81,18 @@ const SelectionMatchmaking = () => {
           </div>
         </div>
 
-        {/* Matchmaking Workflow */}
-        <MatchmakingWorkflow currentPhase={currentPhase} />
+        {/* Placeholder for Matchmaking Workflow */}
+        <Card>
+          <div className="p-8 text-center">
+            <h2 className="text-2xl font-semibold mb-4">Matchmaking Workflow</h2>
+            <p className="text-muted-foreground">
+              Current Phase: {currentPhase === 'screeningPhase' ? 'Screening' : 'Pitching'}
+            </p>
+            <p className="text-sm text-muted-foreground mt-2">
+              This will contain the matchmaking functionality for the selected phase.
+            </p>
+          </div>
+        </Card>
       </main>
     </div>
   );
