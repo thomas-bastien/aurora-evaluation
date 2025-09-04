@@ -354,128 +354,42 @@ const Dashboard = () => {
           </div>
         )}
 
-        {/* Juror Dashboard - Two-Round Funnel */}
+        {/* Quick Actions for Jurors */}
         {profile?.role === 'vc' && (
-          <div className="space-y-8 animate-fade-in" style={{ animationDelay: "400ms" }}>
-            {/* Juror Context */}
-            <div className="text-center">
-              <p className="text-lg text-muted-foreground">
-                You are 1 of {dashboardData.totalJurors} jurors helping evaluate this year's cohort of {dashboardData.totalStartups} startups.
-              </p>
-            </div>
-
-            {/* Round 1 - Screening */}
+          <div className="mt-8 animate-fade-in" style={{ animationDelay: "600ms" }}>
             <Card>
               <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="flex items-center gap-2">
-                      <Badge variant="secondary" className="px-3 py-1">Round 1</Badge>
-                      Screening
-                    </CardTitle>
-                    <CardDescription>
-                      Evaluate assigned startups for semi-finalist selection
-                    </CardDescription>
-                  </div>
-                  <Badge 
-                    variant={dashboardData.activePhase === 'screening' ? 'default' : 'outline'}
-                    className="px-3 py-1"
-                  >
-                    {dashboardData.activePhase === 'screening' ? 'Active' : 'Completed'}
-                  </Badge>
-                </div>
+                <CardTitle>Quick Actions</CardTitle>
+                <CardDescription>
+                  Common tasks and shortcuts for your workflow
+                </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid gap-4 md:grid-cols-2">
-                  <FunnelStage
-                    title="Assigned Startups"
-                    description="Your startups for Screening"
-                    tooltip="Startups allocated to you for the Screening round. You can draft and edit your evaluations until the phase closes."
-                    status={dashboardData.screeningStats.startupsUploaded > 0 ? 'current' : 'upcoming'}
-                    statusText={`${Math.round(dashboardData.totalStartups / 10)} assigned`}
-                    icon={Users}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <Button 
                     onClick={() => navigate('/evaluate')}
-                  />
-                  
-                  <FunnelStage
-                    title="Evaluate (Screening)"
-                    description="Complete evaluation forms"
-                    tooltip="Provide scores and detailed feedback (min. 30 characters per open field). Required for all assigned startups."
-                    status={dashboardData.screeningStats.evaluationsProgress > 0 ? 'current' : 'upcoming'}
-                    progress={dashboardData.screeningStats.evaluationsProgress}
-                    statusText={`${dashboardData.screeningStats.evaluationsProgress}% completed`}
-                    icon={FileText}
-                    onClick={() => navigate('/evaluate')}
-                    isLast
-                  />
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Round 2 - Pitching */}
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="flex items-center gap-2">
-                      <Badge variant="default" className="px-3 py-1">Round 2</Badge>
-                      Pitching
-                    </CardTitle>
-                    <CardDescription>
-                      Pitch calls and final evaluations for finalist selection
-                    </CardDescription>
-                  </div>
-                  <Badge 
-                    variant={dashboardData.activePhase === 'pitching' ? 'default' : 'outline'}
-                    className="px-3 py-1"
+                    className="p-6 h-auto flex-col space-y-2"
+                    variant="outline"
                   >
-                    {dashboardData.activePhase === 'pitching' ? 'Active' : 'Upcoming'}
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                  <FunnelStage
-                    title="Assigned Startups"
-                    description="Your finalists for Pitching"
-                    tooltip="Your Pitching startups, selected from the Top 30 semi-finalists."
-                    status={dashboardData.activePhase === 'pitching' ? 'current' : 'upcoming'}
-                    statusText={`${dashboardData.activePhase === 'pitching' ? '2-3' : '0'} assigned`}
-                    icon={Users}
-                    onClick={() => navigate('/evaluate?phase=pitching')}
-                  />
-                  
-                  <FunnelStage
-                    title="Upload Scheduling Link"
-                    description="Add your Calendly link"
-                    tooltip="Add your Calendly (or other scheduling) link so startups can book slots with you. You only need to do this once per cohort."
-                    status={profile?.calendly_link ? 'completed' : 'current'}
-                    statusText={profile?.calendly_link ? 'Link on file' : 'Missing'}
-                    icon={Calendar}
-                    onClick={() => navigate('/profile')}
-                  />
-                  
-                  <FunnelStage
-                    title="Pitch Calls"
-                    description="Join scheduled calls"
-                    tooltip="Startups choose slots from your scheduling link. You just need to join the calls when booked. Status updates will track scheduled and completed calls."
-                    status={dashboardData.pitchingStats.pitchCallsScheduled > 0 ? 'current' : 'upcoming'}
-                    statusText={`${dashboardData.pitchingStats.pitchCallsCompleted}/${dashboardData.pitchingStats.pitchCallsScheduled} completed`}
-                    icon={Phone}
-                    onClick={() => navigate('/evaluate?phase=pitching&view=calls')}
-                  />
-                  
-                  <FunnelStage
-                    title="Evaluate (Pitching)"
-                    description="Post-pitch evaluations"
-                    tooltip="Submit your evaluation after each pitch call. Editable until the CM closes the phase."
-                    status={dashboardData.pitchingStats.evaluationsProgress > 0 ? 'current' : 'upcoming'}
-                    progress={dashboardData.pitchingStats.evaluationsProgress}
-                    statusText={`${dashboardData.pitchingStats.evaluationsProgress}% submitted`}
-                    icon={MessageSquare}
-                    onClick={() => navigate('/evaluate?phase=pitching&view=evaluations')}
-                    isLast
-                  />
+                    <Star className="w-6 h-6" />
+                    <span>Start Evaluating</span>
+                  </Button>
+                  <Button 
+                    onClick={() => navigate('/session-management')}
+                    className="p-6 h-auto flex-col space-y-2"
+                    variant="outline"
+                  >
+                    <Calendar className="w-6 h-6" />
+                    <span>Session Management</span>
+                  </Button>
+                  <Button 
+                    onClick={() => navigate('/startups')}
+                    className="p-6 h-auto flex-col space-y-2"
+                    variant="outline"
+                  >
+                    <Building2 className="w-6 h-6" />
+                    <span>View Startups</span>
+                  </Button>
                 </div>
               </CardContent>
             </Card>
