@@ -39,10 +39,10 @@ interface CommunicationTemplate {
 }
 
 interface ResultsCommunicationProps {
-  currentPhase: 'screeningPhase' | 'pitchingPhase';
+  currentRound: 'screeningRound' | 'pitchingRound';
 }
 
-export const ResultsCommunication = ({ currentPhase }: ResultsCommunicationProps) => {
+export const ResultsCommunication = ({ currentRound }: ResultsCommunicationProps) => {
   const [startupResults, setStartupResults] = useState<StartupResult[]>([]);
   const [templates, setTemplates] = useState<CommunicationTemplate[]>([]);
   const [loading, setLoading] = useState(true);
@@ -166,7 +166,7 @@ The Aurora Team`
         id: '2',
         type: 'not-selected',
         subject: 'Thank you for participating in our evaluation process',
-        content: `Thank you for participating in our startup evaluation process. While your startup was not selected for the next phase, we were impressed by your dedication and innovation.
+        content: `Thank you for participating in our startup evaluation process. While your startup was not selected for the next round, we were impressed by your dedication and innovation.
 
 **Your Feedback:**
 [FEEDBACK_SUMMARY]
@@ -179,12 +179,12 @@ The Aurora Team`
       {
         id: '3',
         type: 'juror-report',
-        subject: 'Screening Phase Evaluation Results - Summary Report',
-        content: `Thank you for your participation as an evaluator in the Screening Phase of our startup evaluation process.
+        subject: 'Screening Round Evaluation Results - Summary Report',
+        content: `Thank you for your participation as an evaluator in the Screening Round of our startup evaluation process.
 
 **Summary:**
 • Total startups evaluated: [TOTAL_STARTUPS]
-• Top 30 selected for Pitching Phase
+• Semi-finalists selected for Pitching Round
 • Average evaluation score: [AVERAGE_SCORE]
 
 Please find the detailed results and your contribution report attached.
@@ -274,9 +274,9 @@ The Aurora Team`
       if (successCount > 0) {
         toast.success(`Successfully sent ${successCount} emails`);
         
-        // If screening results were sent, trigger phase transition workflow
-        if (currentPhase === 'screeningPhase') {
-          await initiatePhaseTransition();
+        // If screening results were sent, trigger round transition workflow
+        if (currentRound === 'screeningRound') {
+          await initiatepRoundTransition();
         }
       }
       
@@ -289,8 +289,8 @@ The Aurora Team`
     }
   };
 
-  // New function to handle phase transition workflow
-  const initiatePhaseTransition = async () => {
+  // New function to handle round transition workflow
+  const initiatepRoundTransition = async () => {
     try {
       // Notify all jurors about screening completion
       const { data: jurors, error: jurorError } = await supabase
@@ -330,7 +330,7 @@ The Aurora Team`
 
       // Show transition success message
       toast.success(
-        "Screening phase completed! You can now switch to Pitching phase to assign jurors to the top 30 finalists.",
+        "Screening round completed! You can now switch to Pitching round to assign jurors to the semi-finalists.",
         { duration: 10000 }
       );
 
@@ -382,10 +382,10 @@ The Aurora Team`
           <div>
             <CardTitle className="flex items-center gap-2">
               <Mail className="w-5 h-5" />
-              Results Communication - {currentPhase === 'screeningPhase' ? 'Screening' : 'Pitching'}
+              Results Communication - {currentRound === 'screeningRound' ? 'Screening' : 'Pitching'}
             </CardTitle>
             <CardDescription>
-              Review feedback summaries and send {currentPhase === 'screeningPhase' ? 'evaluation' : 'pitch'} results to startups and jurors
+              Review feedback summaries and send {currentRound === 'screeningRound' ? 'evaluation' : 'pitch'} results to startups and jurors
             </CardDescription>
           </div>
           <Dialog open={showSendDialog} onOpenChange={setShowSendDialog}>
@@ -427,11 +427,11 @@ The Aurora Team`
                   {sendingEmails ? 'Sending...' : `Send to All Startups (${startupResults.length})`}
                 </Button>
                 
-                {currentPhase === 'screeningPhase' && (
+                {currentRound === 'screeningRound' && (
                   <div className="pt-4 mt-4 border-t border-border">
                     <div className="text-sm text-muted-foreground mb-2">
                       <AlertCircle className="w-4 h-4 inline mr-1" />
-                      Sending results will notify jurors that screening is complete and initiate the transition to Pitching phase.
+                      Sending results will notify jurors that screening is complete and initiate the transition to Pitching round.
                     </div>
                   </div>
                 )}

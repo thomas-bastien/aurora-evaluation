@@ -14,41 +14,41 @@ import { ResultsCommunication } from "@/components/cm/ResultsCommunication";
 import { ReportingDocumentation } from "@/components/cm/ReportingDocumentation";
 const Selection = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [currentPhase, setCurrentPhase] = useState<'screeningPhase' | 'pitchingPhase'>('screeningPhase');
+  const [currentRound, setCurrentRound] = useState<'screeningRound' | 'pitchingRound'>('screeningRound');
 
-  // Initialize phase from URL parameters - only run once on mount
+  // Initialize round from URL parameters - only run once on mount
   useEffect(() => {
-    const phaseParam = searchParams.get('phase');
-    console.log('Selection: useEffect triggered, phaseParam:', phaseParam, 'currentPhase:', currentPhase);
-    if (phaseParam === 'pitching' && currentPhase !== 'pitchingPhase') {
-      console.log('Selection: Setting phase to pitchingPhase');
-      setCurrentPhase('pitchingPhase');
-    } else if (phaseParam === 'screening' && currentPhase !== 'screeningPhase') {
-      console.log('Selection: Setting phase to screeningPhase');
-      setCurrentPhase('screeningPhase');
-    } else if (!phaseParam) {
-      // No phase parameter, default to screening and update URL once
-      console.log('Selection: No phase param, defaulting to screening');
+    const roundParam = searchParams.get('round');
+    console.log('Selection: useEffect triggered, roundParam:', roundParam, 'currentRound:', currentRound);
+    if (roundParam === 'pitching' && currentRound !== 'pitchingRound') {
+      console.log('Selection: Setting round to pitchingRound');
+      setCurrentRound('pitchingRound');
+    } else if (roundParam === 'screening' && currentRound !== 'screeningRound') {
+      console.log('Selection: Setting round to screeningRound');
+      setCurrentRound('screeningRound');
+    } else if (!roundParam) {
+      // No round parameter, default to screening and update URL once
+      console.log('Selection: No round param, defaulting to screening');
       setSearchParams({
-        phase: 'screening'
+        round: 'screening'
       }, {
         replace: true
       });
     }
-  }, [searchParams.get('phase')]); // Only depend on the actual phase value, not the entire searchParams object
+  }, [searchParams.get('round')]); // Only depend on the actual round value, not the entire searchParams object
 
-  // Update URL when phase changes (called by Select component)
-  const handlePhaseChange = useCallback((newPhase: 'screeningPhase' | 'pitchingPhase') => {
-    console.log('Selection: handlePhaseChange called with:', newPhase);
-    const phaseParam = newPhase === 'pitchingPhase' ? 'pitching' : 'screening';
-    const currentPhaseParam = searchParams.get('phase');
+  // Update URL when round changes (called by Select component)
+  const handleRoundChange = useCallback((newRound: 'screeningRound' | 'pitchingRound') => {
+    console.log('Selection: handleRoundChange called with:', newRound);
+    const roundParam = newRound === 'pitchingRound' ? 'pitching' : 'screening';
+    const currentRoundParam = searchParams.get('round');
 
-    // Only update if the phase is actually different
-    if (currentPhaseParam !== phaseParam) {
-      console.log('Selection: Updating URL to phase:', phaseParam);
-      setCurrentPhase(newPhase);
+    // Only update if the round is actually different
+    if (currentRoundParam !== roundParam) {
+      console.log('Selection: Updating URL to round:', roundParam);
+      setCurrentRound(newRound);
       setSearchParams({
-        phase: phaseParam
+        round: roundParam
       }, {
         replace: true
       });
@@ -68,23 +68,23 @@ const Selection = () => {
               </p>
             </div>
             
-            {/* Global Phase Selector */}
+            {/* Global Round Selector */}
             <Card className="p-4">
               <div className="flex items-center space-x-4">
-                <Label htmlFor="global-phase-selector" className="text-sm font-medium">
-                  Current Phase:
+                <Label htmlFor="global-round-selector" className="text-sm font-medium">
+                  Current Round:
                 </Label>
-                <Select value={currentPhase} onValueChange={(value: 'screeningPhase' | 'pitchingPhase') => handlePhaseChange(value)}>
+                <Select value={currentRound} onValueChange={(value: 'screeningRound' | 'pitchingRound') => handleRoundChange(value)}>
                   <SelectTrigger className="w-48">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="screeningPhase">Screening</SelectItem>
-                    <SelectItem value="pitchingPhase">Pitching</SelectItem>
+                    <SelectItem value="screeningRound">Screening</SelectItem>
+                    <SelectItem value="pitchingRound">Pitching</SelectItem>
                   </SelectContent>
                 </Select>
-                <Badge variant={currentPhase === 'screeningPhase' ? 'secondary' : 'default'}>
-                  {currentPhase === 'screeningPhase' ? 'Screening' : 'Pitching'}
+                <Badge variant={currentRound === 'screeningRound' ? 'secondary' : 'default'}>
+                  {currentRound === 'screeningRound' ? 'Screening' : 'Pitching'}
                 </Badge>
               </div>
             </Card>
@@ -117,23 +117,23 @@ const Selection = () => {
           </TabsList>
 
           <TabsContent value="matchmaking" className="space-y-6">
-            <MatchmakingWorkflow currentPhase={currentPhase} />
+            <MatchmakingWorkflow currentRound={currentRound} />
           </TabsContent>
 
           <TabsContent value="juror-progress" className="space-y-6">
-            <JurorProgressMonitoring currentPhase={currentPhase} />
+            <JurorProgressMonitoring currentRound={currentRound} />
           </TabsContent>
 
           <TabsContent value="startup-selection" className="space-y-6">
-            <StartupSelection currentPhase={currentPhase} />
+            <StartupSelection currentRound={currentRound} />
           </TabsContent>
 
           <TabsContent value="communications" className="space-y-6">
-            <ResultsCommunication currentPhase={currentPhase} />
+            <ResultsCommunication currentRound={currentRound} />
           </TabsContent>
 
           <TabsContent value="reports" className="space-y-6">
-            <ReportingDocumentation currentPhase={currentPhase} />
+            <ReportingDocumentation currentRound={currentRound} />
           </TabsContent>
         </Tabs>
       </main>
