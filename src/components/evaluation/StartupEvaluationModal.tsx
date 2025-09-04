@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -571,7 +571,7 @@ export const StartupEvaluationModal = ({
   return <TooltipProvider>
       <Dialog open={open} onOpenChange={onClose}>
         <DialogContent className="max-w-5xl max-h-[90vh]">
-           <DialogHeader>
+          <DialogHeader>
             <div className="flex items-center justify-between">
               <DialogTitle className="flex items-center gap-2 text-xl">
                 <Star className="w-5 h-5" />
@@ -603,9 +603,6 @@ export const StartupEvaluationModal = ({
                 )}
               </div>
             </div>
-            <DialogDescription className="sr-only">
-              Evaluate startup {startup.name} using comprehensive criteria across problem statement, solution, market, competitive advantage, business model, traction, team, impact, and investment.
-            </DialogDescription>
           </DialogHeader>
 
           <ScrollArea className="max-h-[calc(90vh-120px)]">

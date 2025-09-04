@@ -3,12 +3,10 @@ import { useAuth } from "@/hooks/useAuth";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { supabase } from "@/integrations/supabase/client";
 import { StartupsEvaluationList } from "@/components/evaluation/StartupsEvaluationList";
-import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AlertCircle, Users, Building2 } from "lucide-react";
-import { Navigate } from "react-router-dom";
+import { useSearchParams, Navigate } from "react-router-dom";
 
 interface AssignedStartup {
   id: string;
@@ -32,9 +30,11 @@ interface AssignedStartup {
 export default function Evaluate() {
   const { user } = useAuth();
   const { profile } = useUserProfile();
+  const [searchParams] = useSearchParams();
   const [assignedStartups, setAssignedStartups] = useState<AssignedStartup[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeRound, setActiveRound] = useState<'screening' | 'pitching'>('screening');
+
+  const round = searchParams.get('round') || 'screening';
 
   // Redirect non-VC users
   if (profile && profile.role !== 'vc') {
@@ -45,40 +45,15 @@ export default function Evaluate() {
     if (user && profile?.role === 'vc') {
       fetchAssignedStartups();
     }
-  }, [user, profile, activeRound]);
+  }, [user, profile, round]);
 
   const fetchAssignedStartups = async () => {
     if (!user?.id) return;
     
     try {
       setLoading(true);
-
-      // Check auth session first
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      if (sessionError || !session) {
-        console.error('Auth session error:', sessionError);
-        return;
-      }
-
-      // First, get the juror record for this user
-      const { data: jurorData, error: jurorError } = await supabase
-        .from('jurors')
-        .select('id')
-        .eq('user_id', user.id)
-        .maybeSingle();
-
-      if (jurorError) {
-        console.error('Error fetching juror:', jurorError);
-        return;
-      }
-
-      if (!jurorData) {
-        console.error('No juror record found for user');
-        setAssignedStartups([]);
-        return;
-      }
       
-      // Get startups assigned to this juror using the juror ID
+      // Get startups assigned to this juror
       const { data: assignments, error: assignmentsError } = await supabase
         .from('startup_assignments')
         .select(`
@@ -99,7 +74,7 @@ export default function Evaluate() {
             linkedin_url
           )
         `)
-        .eq('juror_id', jurorData.id)
+        .eq('juror_id', user.id)
         .eq('status', 'active');
 
       if (assignmentsError) throw assignmentsError;
@@ -153,112 +128,84 @@ export default function Evaluate() {
   const notStarted = assignedStartups.filter(s => s.evaluation_status === 'not_started').length;
 
   const getRoundTitle = () => {
-    return activeRound === 'pitching' ? 'Pitching Round' : 'Screening Round';
+    return round === 'pitching' ? 'Pitching Round' : 'Screening Round';
   };
 
   const getRoundDescription = () => {
-    return activeRound === 'pitching' 
+    return round === 'pitching' 
       ? 'Evaluate semi-finalist startups after pitch sessions'
       : 'Evaluate assigned startups for semi-finalist selection';
   };
 
   return (
-    <>
-      <DashboardHeader />
-      <div className="container mx-auto px-4 py-8 space-y-8">
-        {/* Header */}
-        <div className="space-y-4">
-          <div>
-            <h1 className="text-3xl font-bold">Evaluate Startups</h1>
-            <p className="text-muted-foreground mt-2">
-              Review and evaluate your assigned startups for each round
-            </p>
-          </div>
-
-          {/* Round Tabs */}
-          <Tabs value={activeRound} onValueChange={(value) => setActiveRound(value as 'screening' | 'pitching')}>
-            <TabsList className="grid w-full max-w-md grid-cols-2">
-              <TabsTrigger value="screening">Screening Round</TabsTrigger>
-              <TabsTrigger value="pitching">Pitching Round</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value={activeRound} className="mt-6">
-              <div className="space-y-6">
-                {/* Round Header */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Users className="w-5 h-5" />
-                      {getRoundTitle()}
-                    </CardTitle>
-                    <p className="text-muted-foreground">
-                      {getRoundDescription()}
-                    </p>
-                  </CardHeader>
-                </Card>
-
-                {/* Progress Summary */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Users className="w-5 h-5" />
-                      Evaluation Progress
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex flex-wrap gap-4">
-                      <div className="flex items-center gap-2">
-                        <Building2 className="w-4 h-4 text-muted-foreground" />
-                        <span className="font-medium">{totalAssigned}</span>
-                        <span className="text-muted-foreground">Assigned</span>
-                      </div>
-                      
-                      <Badge variant="default" className="bg-green-100 text-green-800 hover:bg-green-100">
-                        {completedEvaluations} Completed
-                      </Badge>
-                      
-                      {draftEvaluations > 0 && (
-                        <Badge variant="secondary">
-                          {draftEvaluations} Draft{draftEvaluations !== 1 ? 's' : ''}
-                        </Badge>
-                      )}
-                      
-                      {notStarted > 0 && (
-                        <Badge variant="outline">
-                          <AlertCircle className="w-3 h-3 mr-1" />
-                          {notStarted} Not Started
-                        </Badge>
-                      )}
-                    </div>
-
-                    {totalAssigned > 0 && (
-                      <div className="mt-4">
-                        <div className="flex justify-between text-sm text-muted-foreground mb-1">
-                          <span>Overall Progress</span>
-                          <span>{completedEvaluations}/{totalAssigned} ({Math.round((completedEvaluations / totalAssigned) * 100)}%)</span>
-                        </div>
-                        <div className="w-full bg-secondary rounded-full h-2">
-                          <div 
-                            className="bg-primary h-2 rounded-full transition-all" 
-                            style={{ width: `${(completedEvaluations / totalAssigned) * 100}%` }}
-                          />
-                        </div>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-
-                {/* Startups List */}
-                <StartupsEvaluationList 
-                  startups={assignedStartups}
-                  loading={loading}
-                  onEvaluationUpdate={handleEvaluationUpdate}
-                />
-              </div>
-            </TabsContent>
-          </Tabs>
+    <div className="container mx-auto px-4 py-8 space-y-8">
+      {/* Header */}
+      <div className="space-y-4">
+        <div>
+          <h1 className="text-3xl font-bold">{getRoundTitle()} - Evaluate</h1>
+          <p className="text-muted-foreground mt-2">
+            {getRoundDescription()}
+          </p>
         </div>
+
+        {/* Progress Summary */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="w-5 h-5" />
+              Evaluation Progress
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-wrap gap-4">
+              <div className="flex items-center gap-2">
+                <Building2 className="w-4 h-4 text-muted-foreground" />
+                <span className="font-medium">{totalAssigned}</span>
+                <span className="text-muted-foreground">Assigned</span>
+              </div>
+              
+              <Badge variant="default" className="bg-green-100 text-green-800 hover:bg-green-100">
+                {completedEvaluations} Completed
+              </Badge>
+              
+              {draftEvaluations > 0 && (
+                <Badge variant="secondary">
+                  {draftEvaluations} Draft{draftEvaluations !== 1 ? 's' : ''}
+                </Badge>
+              )}
+              
+              {notStarted > 0 && (
+                <Badge variant="outline">
+                  <AlertCircle className="w-3 h-3 mr-1" />
+                  {notStarted} Not Started
+                </Badge>
+              )}
+            </div>
+
+            {totalAssigned > 0 && (
+              <div className="mt-4">
+                <div className="flex justify-between text-sm text-muted-foreground mb-1">
+                  <span>Overall Progress</span>
+                  <span>{completedEvaluations}/{totalAssigned} ({Math.round((completedEvaluations / totalAssigned) * 100)}%)</span>
+                </div>
+                <div className="w-full bg-secondary rounded-full h-2">
+                  <div 
+                    className="bg-primary h-2 rounded-full transition-all" 
+                    style={{ width: `${(completedEvaluations / totalAssigned) * 100}%` }}
+                  />
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
-    </>
+
+      {/* Startups List */}
+      <StartupsEvaluationList 
+        startups={assignedStartups}
+        loading={loading}
+        onEvaluationUpdate={handleEvaluationUpdate}
+      />
+    </div>
   );
 }
