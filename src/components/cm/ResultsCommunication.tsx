@@ -236,26 +236,107 @@ The Aurora Team`
         targetResults = startupResults.filter(r => !r.isSelected);
       }
 
-      // In a real implementation, this would call the email service
+      // Send screening results via edge function
+      let successCount = 0;
       for (const result of targetResults) {
-        // Simulate email sending
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        // Update status
-        setStartupResults(prev => prev.map(r =>
-          r.id === result.id
-            ? { ...r, feedbackStatus: 'sent', communicationSent: true }
-            : r
-        ));
+        try {
+          const { data, error } = await supabase.functions.invoke('send-screening-results', {
+            body: {
+              startupId: result.id,
+              name: result.name,
+              email: result.email,
+              isSelected: result.isSelected,
+              feedbackSummary: result.feedbackSummary
+            }
+          });
+
+          if (error) {
+            console.error(`Failed to send email to ${result.name}:`, error);
+            toast.error(`Failed to send email to ${result.name}`);
+            continue;
+          }
+
+          console.log(`Email sent successfully to ${result.name}:`, data);
+          successCount++;
+          
+          // Update status
+          setStartupResults(prev => prev.map(r =>
+            r.id === result.id
+              ? { ...r, feedbackStatus: 'sent', communicationSent: true }
+              : r
+          ));
+        } catch (emailError) {
+          console.error(`Error sending email to ${result.name}:`, emailError);
+          toast.error(`Error sending email to ${result.name}`);
+        }
       }
 
-      toast.success(`Successfully sent ${targetResults.length} emails`);
+      if (successCount > 0) {
+        toast.success(`Successfully sent ${successCount} emails`);
+        
+        // If screening results were sent, trigger phase transition workflow
+        if (currentPhase === 'screeningPhase') {
+          await initiatePhaseTransition();
+        }
+      }
+      
       setShowSendDialog(false);
     } catch (error) {
       console.error('Error sending communications:', error);
       toast.error('Failed to send communications');
     } finally {
       setSendingEmails(false);
+    }
+  };
+
+  // New function to handle phase transition workflow
+  const initiatePhaseTransition = async () => {
+    try {
+      // Notify all jurors about screening completion
+      const { data: jurors, error: jurorError } = await supabase
+        .from('jurors')
+        .select('*')
+        .not('user_id', 'is', null);
+
+      if (jurorError) {
+        console.error('Error fetching jurors for transition:', jurorError);
+        return;
+      }
+
+      // Get evaluation count per juror
+      const jurorNotifications = await Promise.allSettled(
+        jurors.map(async (juror) => {
+          const { count } = await supabase
+            .from('evaluations')
+            .select('*', { count: 'exact', head: true })
+            .eq('evaluator_id', juror.user_id)
+            .eq('status', 'submitted');
+
+          return supabase.functions.invoke('send-juror-phase-transition', {
+            body: {
+              jurorId: juror.id,
+              name: juror.name,
+              email: juror.email,
+              fromPhase: 'screening',
+              toPhase: 'pitching',
+              evaluationCount: count || 0
+            }
+          });
+        })
+      );
+
+      const successfulNotifications = jurorNotifications.filter(result => result.status === 'fulfilled').length;
+      toast.success(`Sent transition notifications to ${successfulNotifications} jurors`);
+
+      // Show transition success message
+      toast.success(
+        "Screening phase completed! You can now switch to Pitching phase to assign jurors to the top 30 finalists.",
+        { duration: 10000 }
+      );
+
+    } catch (error) {
+      console.error('Error in phase transition:', error);
+      toast.error('Phase transition notifications failed');
     }
   };
 
@@ -327,7 +408,7 @@ The Aurora Team`
                   onClick={() => sendCommunications('selected')}
                   disabled={sendingEmails}
                 >
-                  Send to Selected Startups ({selectedStartups.length})
+                  {sendingEmails ? 'Sending...' : `Send to Selected Startups (${selectedStartups.length})`}
                 </Button>
                 <Button 
                   className="w-full" 
@@ -335,7 +416,7 @@ The Aurora Team`
                   onClick={() => sendCommunications('not-selected')}
                   disabled={sendingEmails}
                 >
-                  Send to Non-Selected Startups ({notSelectedStartups.length})
+                  {sendingEmails ? 'Sending...' : `Send to Non-Selected Startups (${notSelectedStartups.length})`}
                 </Button>
                 <Button 
                   className="w-full" 
@@ -343,8 +424,17 @@ The Aurora Team`
                   onClick={() => sendCommunications('all')}
                   disabled={sendingEmails}
                 >
-                  Send to All Startups ({startupResults.length})
+                  {sendingEmails ? 'Sending...' : `Send to All Startups (${startupResults.length})`}
                 </Button>
+                
+                {currentPhase === 'screeningPhase' && (
+                  <div className="pt-4 mt-4 border-t border-border">
+                    <div className="text-sm text-muted-foreground mb-2">
+                      <AlertCircle className="w-4 h-4 inline mr-1" />
+                      Sending results will notify jurors that screening is complete and initiate the transition to Pitching phase.
+                    </div>
+                  </div>
+                )}
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setShowSendDialog(false)}>

@@ -3,8 +3,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle, Building2, Users, CheckCircle2 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { AlertCircle, Building2, Users, CheckCircle2, Eye, Check } from "lucide-react";
+import { toast } from "sonner";
 import { StartupAssignmentModal } from "@/components/matchmaking/StartupAssignmentModal";
 import { AssignmentSummary } from "@/components/matchmaking/AssignmentSummary";
 
@@ -16,6 +16,7 @@ interface Startup {
   description: string;
   location: string;
   founder_names: string[];
+  contact_email?: string;
 }
 
 interface Juror {
@@ -24,6 +25,7 @@ interface Juror {
   email: string;
   company: string;
   job_title: string;
+  calendly_link?: string;
 }
 
 interface Assignment {
@@ -46,7 +48,6 @@ export const MatchmakingWorkflow = ({ currentPhase }: MatchmakingWorkflowProps) 
   const [showSummary, setShowSummary] = useState(false);
   const [isConfirmed, setIsConfirmed] = useState(false);
   const [loading, setLoading] = useState(true);
-  const { toast } = useToast();
 
   useEffect(() => {
     fetchData();
@@ -56,11 +57,20 @@ export const MatchmakingWorkflow = ({ currentPhase }: MatchmakingWorkflowProps) 
     try {
       setLoading(true);
 
-      // Fetch startups
+      // Fetch startups based on current phase
+      let startupStatusFilter;
+      if (currentPhase === 'pitchingPhase') {
+        // In pitching phase, only show selected/shortlisted startups (top 30)
+        startupStatusFilter = 'shortlisted';
+      } else {
+        // In screening phase, show all startups under review
+        startupStatusFilter = 'under-review';
+      }
+
       const { data: startupsData, error: startupsError } = await supabase
         .from('startups')
         .select('*')
-        .eq('status', currentPhase === 'screeningPhase' ? 'under-review' : 'shortlisted')
+        .eq('status', startupStatusFilter)
         .order('name');
 
       if (startupsError) throw startupsError;
@@ -93,16 +103,16 @@ export const MatchmakingWorkflow = ({ currentPhase }: MatchmakingWorkflowProps) 
         juror_name: (assignment.jurors as any).name,
       })) || [];
 
+      console.log(`Loaded ${startupsData?.length || 0} startups for ${currentPhase}`);
+      console.log(`Loaded ${jurorsData?.length || 0} jurors`);
+      console.log(`Loaded ${mappedAssignments.length} existing assignments`);
+
       setStartups(startupsData || []);
       setJurors(jurorsData || []);
       setAssignments(mappedAssignments);
     } catch (error) {
       console.error('Error fetching matchmaking data:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load matchmaking data",
-        variant: "destructive"
-      });
+      toast.error('Failed to load matchmaking data');
     } finally {
       setLoading(false);
     }
@@ -127,11 +137,12 @@ export const MatchmakingWorkflow = ({ currentPhase }: MatchmakingWorkflowProps) 
 
   const handleConfirmAssignments = async () => {
     try {
-      // Delete all existing assignments
+      // Delete all existing assignments for current startups
+      const startupIds = startups.map(s => s.id);
       const { error: deleteError } = await supabase
         .from('startup_assignments')
         .delete()
-        .neq('id', '00000000-0000-0000-0000-000000000000');
+        .in('startup_id', startupIds);
 
       if (deleteError) throw deleteError;
 
@@ -151,18 +162,94 @@ export const MatchmakingWorkflow = ({ currentPhase }: MatchmakingWorkflowProps) 
       }
 
       setIsConfirmed(true);
-      toast({
-        title: "Success",
-        description: "Assignments have been confirmed and saved",
-        variant: "default"
-      });
+      toast.success('All assignments have been confirmed successfully!');
+      
+      // If this is pitching phase, send scheduling emails to selected startups
+      if (currentPhase === 'pitchingPhase') {
+        await sendPitchSchedulingEmails();
+      }
+
     } catch (error) {
       console.error('Error saving assignments:', error);
-      toast({
-        title: "Error",
-        description: "Failed to save assignments",
-        variant: "destructive"
+      toast.error('Failed to save assignments');
+    }
+  };
+
+  // New function to send pitch scheduling emails after pitching assignments are confirmed
+  const sendPitchSchedulingEmails = async () => {
+    try {
+      console.log('Sending pitch scheduling emails...');
+      
+      // Group assignments by startup
+      const startupAssignments = new Map<string, Assignment[]>();
+      assignments.forEach(assignment => {
+        if (!startupAssignments.has(assignment.startup_id)) {
+          startupAssignments.set(assignment.startup_id, []);
+        }
+        startupAssignments.get(assignment.startup_id)!.push(assignment);
       });
+
+      let successCount = 0;
+      
+      for (const [startupId, startupAssignmentList] of startupAssignments) {
+        try {
+          const startup = startups.find(s => s.id === startupId);
+          if (!startup || !startup.contact_email) {
+            console.log(`Skipping startup ${startupId} - no email found`);
+            continue;
+          }
+
+          // Get assigned jurors with their details
+          const assignedJurors = startupAssignmentList
+            .map(assignment => {
+              const juror = jurors.find(j => j.id === assignment.juror_id);
+              return juror ? {
+                id: juror.id,
+                name: juror.name,
+                email: juror.email,
+                company: juror.company || 'Investment Firm',
+                calendlyLink: juror.calendly_link || '#'
+              } : null;
+            })
+            .filter(juror => juror !== null);
+
+          if (assignedJurors.length === 0) {
+            console.log(`No valid jurors found for startup ${startup.name}`);
+            continue;
+          }
+
+          // Send pitch scheduling email
+          const { data, error } = await supabase.functions.invoke('send-pitch-scheduling', {
+            body: {
+              startupId: startup.id,
+              startupName: startup.name,
+              startupEmail: startup.contact_email,
+              assignedJurors: assignedJurors
+            }
+          });
+
+          if (error) {
+            console.error(`Failed to send scheduling email to ${startup.name}:`, error);
+            continue;
+          }
+
+          console.log(`Scheduling email sent successfully to ${startup.name}:`, data);
+          successCount++;
+
+        } catch (emailError) {
+          console.error(`Error sending scheduling email for startup ${startupId}:`, emailError);
+        }
+      }
+
+      if (successCount > 0) {
+        toast.success(`Sent pitch scheduling emails to ${successCount} startups with investor calendar links!`);
+      } else {
+        toast.error('No scheduling emails were sent successfully');
+      }
+
+    } catch (error) {
+      console.error('Error in sendPitchSchedulingEmails:', error);
+      toast.error('Failed to send pitch scheduling emails');
     }
   };
 
@@ -185,7 +272,7 @@ export const MatchmakingWorkflow = ({ currentPhase }: MatchmakingWorkflowProps) 
   const phaseTitle = currentPhase === 'screeningPhase' ? 'Screening Phase' : 'Pitching Phase';
   const phaseDescription = currentPhase === 'screeningPhase' 
     ? 'Assign 3 jurors to each startup for initial evaluation'
-    : 'Assign jurors to the Top 30 finalists for pitch calls';
+    : 'Assign 2-3 jurors to the Top 30 finalists for pitch calls';
 
   return (
     <div className="space-y-6">
@@ -221,7 +308,9 @@ export const MatchmakingWorkflow = ({ currentPhase }: MatchmakingWorkflowProps) 
                 <Building2 className="w-5 h-5 text-primary" />
                 <div>
                   <p className="text-2xl font-bold">{startups.length}</p>
-                  <p className="text-sm text-muted-foreground">Startups</p>
+                  <p className="text-sm text-muted-foreground">
+                    {currentPhase === 'pitchingPhase' ? 'Top 30 Finalists' : 'Startups'}
+                  </p>
                 </div>
               </div>
             </div>
@@ -241,7 +330,10 @@ export const MatchmakingWorkflow = ({ currentPhase }: MatchmakingWorkflowProps) 
                 <CheckCircle2 className="w-5 h-5 text-success" />
                 <div>
                   <p className="text-2xl font-bold">
-                    {startups.filter(startup => getStartupAssignmentCount(startup.id) >= 3).length}
+                    {startups.filter(startup => {
+                      const requiredAssignments = currentPhase === 'pitchingPhase' ? 2 : 3;
+                      return getStartupAssignmentCount(startup.id) >= requiredAssignments;
+                    }).length}
                   </p>
                   <p className="text-sm text-muted-foreground">Fully Assigned</p>
                 </div>
@@ -253,7 +345,10 @@ export const MatchmakingWorkflow = ({ currentPhase }: MatchmakingWorkflowProps) 
                 <AlertCircle className="w-5 h-5 text-warning" />
                 <div>
                   <p className="text-2xl font-bold">
-                    {startups.filter(startup => getStartupAssignmentCount(startup.id) < 3).length}
+                    {startups.filter(startup => {
+                      const requiredAssignments = currentPhase === 'pitchingPhase' ? 2 : 3;
+                      return getStartupAssignmentCount(startup.id) < requiredAssignments;
+                    }).length}
                   </p>
                   <p className="text-sm text-muted-foreground">Need Assignment</p>
                 </div>
@@ -267,24 +362,36 @@ export const MatchmakingWorkflow = ({ currentPhase }: MatchmakingWorkflowProps) 
               onClick={handleViewSummary}
               variant="outline"
               disabled={assignments.length === 0}
+              className="flex items-center gap-2"
             >
+              <Eye className="w-4 h-4" />
               View Assignment Summary
             </Button>
             <Button 
               onClick={handleConfirmAssignments}
               disabled={assignments.length === 0 || isConfirmed}
               variant={isConfirmed ? "secondary" : "default"}
+              className="flex items-center gap-2"
             >
-              {isConfirmed ? "Assignments Confirmed" : "Confirm All Assignments"}
+              <Check className="w-4 h-4" />
+              {isConfirmed 
+                ? "Assignments Confirmed" 
+                : currentPhase === 'pitchingPhase' 
+                  ? 'Confirm Assignments & Send Scheduling Emails'
+                  : 'Confirm All Assignments'
+              }
             </Button>
           </div>
 
           {/* Startups List */}
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Startups Requiring Assignment</h3>
+            <h3 className="text-lg font-semibold">
+              {currentPhase === 'pitchingPhase' ? 'Top 30 Finalists' : 'Startups'} Requiring Assignment
+            </h3>
             {startups.map((startup) => {
               const assignmentCount = getStartupAssignmentCount(startup.id);
-              const isFullyAssigned = assignmentCount >= 3;
+              const requiredAssignments = currentPhase === 'pitchingPhase' ? 2 : 3;
+              const isFullyAssigned = assignmentCount >= requiredAssignments;
 
               return (
                 <Card key={startup.id} className={`transition-all ${isFullyAssigned ? 'bg-success/5 border-success/20' : ''}`}>
@@ -300,7 +407,7 @@ export const MatchmakingWorkflow = ({ currentPhase }: MatchmakingWorkflowProps) 
                             {startup.stage || "No Stage"}
                           </Badge>
                           <Badge variant={isFullyAssigned ? "default" : "destructive"}>
-                            {assignmentCount}/3 Jurors Assigned
+                            {assignmentCount}/{requiredAssignments} Jurors Assigned
                           </Badge>
                         </div>
 
