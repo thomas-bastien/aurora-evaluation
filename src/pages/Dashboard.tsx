@@ -8,7 +8,8 @@ import { useUserProfile } from "@/hooks/useUserProfile";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Building2, Star, TrendingUp, Users, Calendar, BarChart3 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Building2, Star, TrendingUp, Users, Calendar, BarChart3, Network, ArrowRight } from "lucide-react";
 const Dashboard = () => {
   const {
     profile,
@@ -221,6 +222,206 @@ const Dashboard = () => {
             <StartupList />
           </div>
         </div>
+
+        {/* Admin Selection Funnel */}
+        {profile?.role === 'admin' && (
+          <div className="mt-8 animate-fade-in" style={{ animationDelay: "750ms" }}>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <BarChart3 className="w-5 h-5" />
+                  Selection Workflow Funnel
+                </CardTitle>
+                <CardDescription>
+                  Manage the complete evaluation process across both phases
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {/* Screening Phase */}
+                <div className="mb-8">
+                  <h4 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                    <Badge variant="secondary">Screening Phase</Badge>
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                    <button 
+                      onClick={() => navigate('/selection/matchmaking?phase=screening')} 
+                      className="p-4 bg-card border border-border rounded-lg hover:bg-muted transition-smooth text-left group"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-3">
+                          <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
+                            <Network className="w-5 h-5 text-primary" />
+                          </div>
+                          <div>
+                            <h5 className="font-medium text-foreground">Matchmaking</h5>
+                            <p className="text-xs text-muted-foreground">Assign 3 jurors to each startup</p>
+                          </div>
+                        </div>
+                        <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                      </div>
+                    </button>
+                    <button 
+                      onClick={() => navigate('/selection?phase=screening')} 
+                      className="p-4 bg-card border border-border rounded-lg hover:bg-muted transition-smooth text-left group"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-3">
+                          <div className="w-10 h-10 bg-success/10 rounded-lg flex items-center justify-center">
+                            <Users className="w-5 h-5 text-success" />
+                          </div>
+                          <div>
+                            <h5 className="font-medium text-foreground">Evaluations</h5>
+                            <p className="text-xs text-muted-foreground">Monitor juror progress</p>
+                          </div>
+                        </div>
+                        <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                      </div>
+                    </button>
+                    <button 
+                      onClick={() => navigate('/selection?phase=screening')} 
+                      className="p-4 bg-card border border-border rounded-lg hover:bg-muted transition-smooth text-left group"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-3">
+                          <div className="w-10 h-10 bg-warning/10 rounded-lg flex items-center justify-center">
+                            <Star className="w-5 h-5 text-warning" />
+                          </div>
+                          <div>
+                            <h5 className="font-medium text-foreground">Selection</h5>
+                            <p className="text-xs text-muted-foreground">Choose Top 30 startups</p>
+                          </div>
+                        </div>
+                        <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                      </div>
+                    </button>
+                    <button 
+                      onClick={() => navigate('/selection?phase=screening')} 
+                      className="p-4 bg-card border border-border rounded-lg hover:bg-muted transition-smooth text-left group"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-3">
+                          <div className="w-10 h-10 bg-info/10 rounded-lg flex items-center justify-center">
+                            <Calendar className="w-5 h-5 text-info" />
+                          </div>
+                          <div>
+                            <h5 className="font-medium text-foreground">Results</h5>
+                            <p className="text-xs text-muted-foreground">Communicate to founders</p>
+                          </div>
+                        </div>
+                        <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                      </div>
+                    </button>
+                    <button 
+                      onClick={() => navigate('/selection?phase=screening')} 
+                      className="p-4 bg-card border border-border rounded-lg hover:bg-muted transition-smooth text-left"
+                    >
+                      <div className="flex items-center space-x-3">
+                        <div className="w-10 h-10 bg-muted/50 rounded-lg flex items-center justify-center">
+                          <BarChart3 className="w-5 h-5 text-muted-foreground" />
+                        </div>
+                        <div>
+                          <h5 className="font-medium text-foreground">Reporting</h5>
+                          <p className="text-xs text-muted-foreground">Generate reports</p>
+                        </div>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Pitching Phase */}
+                <div>
+                  <h4 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                    <Badge variant="default">Pitching Phase</Badge>
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                    <button 
+                      onClick={() => navigate('/selection/matchmaking?phase=pitching')} 
+                      className="p-4 bg-card border border-border rounded-lg hover:bg-muted transition-smooth text-left group"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-3">
+                          <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
+                            <Network className="w-5 h-5 text-primary" />
+                          </div>
+                          <div>
+                            <h5 className="font-medium text-foreground">Matchmaking</h5>
+                            <p className="text-xs text-muted-foreground">Assign jurors to Top 30 finalists</p>
+                          </div>
+                        </div>
+                        <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                      </div>
+                    </button>
+                    <button 
+                      onClick={() => navigate('/selection?phase=pitching')} 
+                      className="p-4 bg-card border border-border rounded-lg hover:bg-muted transition-smooth text-left group"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-3">
+                          <div className="w-10 h-10 bg-success/10 rounded-lg flex items-center justify-center">
+                            <Users className="w-5 h-5 text-success" />
+                          </div>
+                          <div>
+                            <h5 className="font-medium text-foreground">Evaluations</h5>
+                            <p className="text-xs text-muted-foreground">Monitor pitch sessions</p>
+                          </div>
+                        </div>
+                        <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                      </div>
+                    </button>
+                    <button 
+                      onClick={() => navigate('/selection?phase=pitching')} 
+                      className="p-4 bg-card border border-border rounded-lg hover:bg-muted transition-smooth text-left group"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-3">
+                          <div className="w-10 h-10 bg-warning/10 rounded-lg flex items-center justify-center">
+                            <Star className="w-5 h-5 text-warning" />
+                          </div>
+                          <div>
+                            <h5 className="font-medium text-foreground">Selection</h5>
+                            <p className="text-xs text-muted-foreground">Final startup selection</p>
+                          </div>
+                        </div>
+                        <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                      </div>
+                    </button>
+                    <button 
+                      onClick={() => navigate('/selection?phase=pitching')} 
+                      className="p-4 bg-card border border-border rounded-lg hover:bg-muted transition-smooth text-left group"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-3">
+                          <div className="w-10 h-10 bg-info/10 rounded-lg flex items-center justify-center">
+                            <Calendar className="w-5 h-5 text-info" />
+                          </div>
+                          <div>
+                            <h5 className="font-medium text-foreground">Results</h5>
+                            <p className="text-xs text-muted-foreground">Final communications</p>
+                          </div>
+                        </div>
+                        <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                      </div>
+                    </button>
+                    <button 
+                      onClick={() => navigate('/selection?phase=pitching')} 
+                      className="p-4 bg-card border border-border rounded-lg hover:bg-muted transition-smooth text-left"
+                    >
+                      <div className="flex items-center space-x-3">
+                        <div className="w-10 h-10 bg-muted/50 rounded-lg flex items-center justify-center">
+                          <BarChart3 className="w-5 h-5 text-muted-foreground" />
+                        </div>
+                        <div>
+                          <h5 className="font-medium text-foreground">Reporting</h5>
+                          <p className="text-xs text-muted-foreground">Final reports</p>
+                        </div>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
         {/* Quick Actions */}
         <div className="mt-8 animate-fade-in" style={{

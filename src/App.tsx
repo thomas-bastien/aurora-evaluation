@@ -19,6 +19,7 @@ import VCProfile from "./pages/VCProfile";
 import VCsList from "./pages/VCsList";
 import JurorsList from "./pages/JurorsList";
 import Selection from "./pages/Selection";
+import SelectionMatchmaking from "./pages/SelectionMatchmaking";
 import SessionManagement from "./pages/SessionManagement";
 import EvaluationDashboard from "./pages/EvaluationDashboard";
 import Matchmaking from "./pages/Matchmaking";
@@ -107,7 +108,16 @@ const App = () => (
             } />
             <Route path="/selection" element={
               <ProtectedRoute>
-                <Selection />
+                <RoleGuard allowedRoles={['admin']}>
+                  <Selection />
+                </RoleGuard>
+              </ProtectedRoute>
+            } />
+            <Route path="/selection/matchmaking" element={
+              <ProtectedRoute>
+                <RoleGuard allowedRoles={['admin']} fallbackRoute="/dashboard">
+                  <SelectionMatchmaking />
+                </RoleGuard>
               </ProtectedRoute>
             } />
             <Route path="/evaluate" element={

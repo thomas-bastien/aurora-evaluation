@@ -71,7 +71,7 @@ export const DashboardHeader = () => {
               {/* Ecosystem Dropdown */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <button className={`flex items-center gap-1 hover:text-primary transition-smooth ${isActive('/startup') || isActive('/vc') || isActive('/juror') || isActive('/matchmaking') ? 'text-primary' : 'text-muted-foreground'}`}>
+                  <button className={`flex items-center gap-1 hover:text-primary transition-smooth ${isActive('/startup') || isActive('/vc') || isActive('/juror') ? 'text-primary' : 'text-muted-foreground'}`}>
                     Ecosystem
                     <ChevronDown className="w-4 h-4" />
                   </button>
@@ -85,13 +85,6 @@ export const DashboardHeader = () => {
                     <Users className="w-4 h-4 mr-2" />
                     Jury
                   </DropdownMenuItem>
-                  {/* Hide Matchmaking from jurors (vc role) */}
-                  {profile?.role === 'admin' && (
-                    <DropdownMenuItem onClick={() => navigate('/matchmaking')} className="cursor-pointer">
-                      <Network className="w-4 h-4 mr-2" />
-                      Matchmaking
-                    </DropdownMenuItem>
-                  )}
                 </DropdownMenuContent>
               </DropdownMenu>
               
