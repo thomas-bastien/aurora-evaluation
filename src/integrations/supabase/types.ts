@@ -220,13 +220,6 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "fk_pitching_evaluations_evaluator"
-            columns: ["evaluator_id"]
-            isOneToOne: false
-            referencedRelation: "jurors"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "fk_pitching_evaluations_startup"
             columns: ["startup_id"]
             isOneToOne: false
@@ -408,13 +401,6 @@ export type Database = {
           wants_pitch_session?: boolean | null
         }
         Relationships: [
-          {
-            foreignKeyName: "fk_screening_evaluations_evaluator"
-            columns: ["evaluator_id"]
-            isOneToOne: false
-            referencedRelation: "jurors"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "fk_screening_evaluations_startup"
             columns: ["startup_id"]
