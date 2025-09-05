@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { getDashboardCounts } from '@/utils/countsUtils';
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { CohortSummaryCard } from "@/components/dashboard/CohortSummaryCard";
 import { FunnelStage } from "@/components/dashboard/FunnelStage";
@@ -27,6 +28,8 @@ const Dashboard = () => {
   const { profile, refreshProfile } = useUserProfile();
   const navigate = useNavigate();
   const [dashboardData, setDashboardData] = useState({
+    activeStartups: 0,
+    activeJurors: 0,
     totalStartups: 0,
     totalJurors: 0,
     activePhase: 'screening' as 'screening' | 'pitching',
@@ -54,21 +57,18 @@ const Dashboard = () => {
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        // Fetch basic counts
+        // Fetch consistent counts using utilities
+        const counts = await getDashboardCounts();
+        
         const [
-          { count: startupsCount },
-          { count: jurorsCount },
           { count: evaluationsCount },
           { count: assignmentsCount }
         ] = await Promise.all([
-          supabase.from('startups').select('*', { count: 'exact', head: true }),
-          supabase.from('jurors').select('*', { count: 'exact', head: true }),
           supabase.from('evaluations').select('*', { count: 'exact', head: true }),
           supabase.from('startup_assignments').select('*', { count: 'exact', head: true })
         ]);
 
-        const totalStartups = startupsCount || 0;
-        const totalJurors = jurorsCount || 0;
+        const { activeStartups, activeJurors, totalStartups, totalJurors } = counts;
         const totalEvaluations = evaluationsCount || 0;
         const totalAssignments = assignmentsCount || 0;
         
@@ -104,27 +104,29 @@ const Dashboard = () => {
           }
         } else {
           // For admins, calculate overall progress
-          const expectedEvaluations = totalStartups * 3; // 3 jurors per startup in screening
+          const expectedEvaluations = activeStartups * 3; // 3 jurors per startup in screening
           evaluationProgress = expectedEvaluations > 0 ? Math.round((totalEvaluations / expectedEvaluations) * 100) : 0;
         }
         
-        const matchmakingProgress = totalStartups > 0 ? Math.round((totalAssignments / (totalStartups * 3)) * 100) : 0;
+        const matchmakingProgress = activeStartups > 0 ? Math.round((totalAssignments / (activeStartups * 3)) * 100) : 0;
 
         setDashboardData({
+          activeStartups,
+          activeJurors,
           totalStartups,
           totalJurors,
           activePhase: 'screening', // TODO: Make this dynamic based on actual phase
           evaluationProgress,
           reminders: 12, // TODO: Calculate actual reminders sent
           nextMilestone: profile?.role === 'vc' ? 'Complete your startup evaluations' : 'Complete juror matchmaking assignments',
-          screeningStats: {
-            startupsUploaded: totalStartups,
-            jurorsUploaded: totalJurors,
-            matchmakingProgress,
-            evaluationsProgress: evaluationProgress,
-            selectionComplete: false, // TODO: Calculate from actual data
-            resultsComplete: false // TODO: Calculate from actual data
-          },
+            screeningStats: {
+              startupsUploaded: activeStartups,
+              jurorsUploaded: activeJurors,
+              matchmakingProgress,
+              evaluationsProgress: evaluationProgress,
+              selectionComplete: false, // TODO: Calculate from actual data
+              resultsComplete: false // TODO: Calculate from actual data
+            },
           pitchingStats: {
             matchmakingProgress: 0, // TODO: Calculate for pitching phase
             pitchCallsScheduled: 0, // TODO: Calculate from pitch_requests
@@ -186,8 +188,8 @@ const Dashboard = () => {
         {/* Cohort Summary Card */}
         <div className="mb-8 animate-fade-in">
           <CohortSummaryCard
-            totalStartups={dashboardData.totalStartups}
-            totalJurors={dashboardData.totalJurors}
+            activeStartups={dashboardData.activeStartups}
+            activeJurors={dashboardData.activeJurors}
             activePhase={dashboardData.activePhase}
             evaluationProgress={dashboardData.evaluationProgress}
             reminders={dashboardData.reminders}
@@ -230,7 +232,7 @@ const Dashboard = () => {
                         ? 'completed' 
                         : dashboardData.activePhase === 'screening' ? 'current' : 'upcoming'
                     }
-                    statusText={`${dashboardData.screeningStats.startupsUploaded}/100 startups, ${dashboardData.screeningStats.jurorsUploaded}/30 jurors uploaded`}
+                    statusText={`${dashboardData.screeningStats.startupsUploaded} active startups, ${dashboardData.screeningStats.jurorsUploaded} active jurors uploaded`}
                     icon={Upload}
                     onClick={() => navigate('/startups')}
                   />
@@ -244,7 +246,7 @@ const Dashboard = () => {
                         : dashboardData.screeningStats.matchmakingProgress > 0 ? 'current' : 'upcoming'
                     }
                     progress={dashboardData.screeningStats.matchmakingProgress}
-                    statusText={`${Math.round((dashboardData.screeningStats.matchmakingProgress / 100) * dashboardData.totalStartups)}/${dashboardData.totalStartups} startups covered`}
+                    statusText={`${Math.round((dashboardData.screeningStats.matchmakingProgress / 100) * dashboardData.activeStartups)}/${dashboardData.activeStartups} startups covered`}
                     icon={Network}
                     onClick={() => navigate('/selection/matchmaking?phase=screening')}
                   />

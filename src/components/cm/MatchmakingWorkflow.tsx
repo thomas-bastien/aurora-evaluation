@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { getMatchmakingCounts } from '@/utils/countsUtils';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -56,6 +57,9 @@ export const MatchmakingWorkflow = ({ currentPhase }: MatchmakingWorkflowProps) 
   const fetchData = async () => {
     try {
       setLoading(true);
+
+      // Use consistent counting utilities for validation
+      const counts = await getMatchmakingCounts(currentPhase === 'screeningPhase' ? 'screening' : 'pitching');
 
       // Fetch startups based on current phase
       let startupStatusFilter;

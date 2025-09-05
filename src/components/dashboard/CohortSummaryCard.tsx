@@ -3,8 +3,8 @@ import { Badge } from "@/components/ui/badge";
 import { Trophy, Users, Building2, TrendingUp } from "lucide-react";
 
 interface CohortSummaryCardProps {
-  totalStartups: number;
-  totalJurors: number;
+  activeStartups: number;
+  activeJurors: number;
   activePhase: 'screening' | 'pitching';
   evaluationProgress: number;
   reminders: number;
@@ -12,8 +12,8 @@ interface CohortSummaryCardProps {
 }
 
 export const CohortSummaryCard = ({
-  totalStartups,
-  totalJurors,
+  activeStartups,
+  activeJurors,
   activePhase,
   evaluationProgress,
   reminders,
@@ -50,19 +50,19 @@ export const CohortSummaryCard = ({
             <div className="flex items-center justify-center gap-2 mb-1">
               <Building2 className="w-4 h-4 text-primary-foreground/80" />
               <span className="text-2xl font-bold text-primary-foreground">
-                {totalStartups}
+                {activeStartups}
               </span>
             </div>
-            <p className="text-xs text-primary-foreground/70">Total Startups</p>
+            <p className="text-xs text-primary-foreground/70">Active Startups</p>
           </div>
           <div className="text-center">
             <div className="flex items-center justify-center gap-2 mb-1">
               <Users className="w-4 h-4 text-primary-foreground/80" />
               <span className="text-2xl font-bold text-primary-foreground">
-                {totalJurors}
+                {activeJurors}
               </span>
             </div>
-            <p className="text-xs text-primary-foreground/70">Total Jurors</p>
+            <p className="text-xs text-primary-foreground/70">Active Jurors</p>
           </div>
           <div className="text-center">
             <div className="flex items-center justify-center gap-2 mb-1">
