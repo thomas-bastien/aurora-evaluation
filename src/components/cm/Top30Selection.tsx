@@ -30,7 +30,12 @@ interface StartupSelection {
   isAutoSelected: boolean;
 }
 
-export const Top30Selection = () => {
+interface Top30SelectionProps {
+  currentRound?: string;
+  isReadOnly?: boolean;
+}
+
+export const Top30Selection = ({ currentRound = 'screening', isReadOnly = false }: Top30SelectionProps) => {
   const [startups, setStartups] = useState<StartupSelection[]>([]);
   const [loading, setLoading] = useState(true);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
@@ -46,12 +51,15 @@ export const Top30Selection = () => {
 
   const fetchStartupsForSelection = async () => {
     try {
+      // Determine which evaluation table to use based on current round
+      const evaluationTable = currentRound === 'screening' ? 'screening_evaluations' : 'pitching_evaluations';
+      
       // Fetch startups with their evaluation scores
       const { data: startupsData, error } = await supabase
         .from('startups')
         .select(`
           *,
-          evaluations(
+          ${evaluationTable}!startup_id(
             overall_score,
             status
           )
@@ -60,8 +68,9 @@ export const Top30Selection = () => {
       if (error) throw error;
 
       const selectionData: StartupSelection[] = startupsData?.map(startup => {
-        const evaluations = startup.evaluations || [];
-        const submittedEvaluations = evaluations.filter(e => e.status === 'submitted');
+        const evaluationKey = currentRound === 'screening' ? 'screening_evaluations' : 'pitching_evaluations';
+        const evaluations = startup[evaluationKey] || [];
+        const submittedEvaluations = evaluations.filter((e: any) => e.status === 'submitted');
         const scores = submittedEvaluations
           .map(e => e.overall_score)
           .filter(score => score !== null) as number[];
@@ -263,18 +272,18 @@ export const Top30Selection = () => {
 
         {/* Action Buttons */}
         <div className="flex gap-2 mb-6">
-          <Button onClick={handleBulkSelectTop30}>
+          <Button onClick={handleBulkSelectTop30} disabled={isReadOnly}>
             <Star className="w-4 h-4 mr-2" />
             Auto-Select Top 30
           </Button>
-          <Button variant="outline" onClick={handleClearSelections}>
+          <Button variant="outline" onClick={handleClearSelections} disabled={isReadOnly}>
             Clear All
           </Button>
           <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
             <DialogTrigger asChild>
               <Button 
                 className="ml-auto"
-                disabled={selectionCount === 0}
+                disabled={selectionCount === 0 || isReadOnly}
               >
                 <CheckCircle className="w-4 h-4 mr-2" />
                 Confirm Selection ({selectionCount})
@@ -326,6 +335,7 @@ export const Top30Selection = () => {
                     <Checkbox
                       checked={startup.isSelected}
                       onCheckedChange={() => handleToggleSelection(startup.id)}
+                      disabled={isReadOnly}
                     />
                   </div>
                   <div className="col-span-1">

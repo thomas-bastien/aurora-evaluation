@@ -6,46 +6,44 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Network, Users, Star, MessageSquare, FileText } from "lucide-react";
+import { Network, Users, Star, MessageSquare, FileText, Lock, CheckCircle } from "lucide-react";
 import { MatchmakingWorkflow } from "@/components/cm/MatchmakingWorkflow";
 import { JurorProgressMonitoring } from "@/components/cm/JurorProgressMonitoring";
 import { StartupSelection } from "@/components/cm/StartupSelection";
 import { ResultsCommunication } from "@/components/cm/ResultsCommunication";
 import { ReportingDocumentation } from "@/components/cm/ReportingDocumentation";
+import { useRounds } from "@/hooks/useRounds";
 const Selection = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [currentRound, setCurrentRound] = useState<'screeningRound' | 'pitchingRound'>('screeningRound');
+  const { rounds, activeRound, loading: roundsLoading, canModifyRound } = useRounds();
 
   // Initialize round from URL parameters - only run once on mount
   useEffect(() => {
     const roundParam = searchParams.get('round');
-    console.log('Selection: useEffect triggered, roundParam:', roundParam, 'currentRound:', currentRound);
     if (roundParam === 'pitching' && currentRound !== 'pitchingRound') {
-      console.log('Selection: Setting round to pitchingRound');
       setCurrentRound('pitchingRound');
     } else if (roundParam === 'screening' && currentRound !== 'screeningRound') {
-      console.log('Selection: Setting round to screeningRound');
       setCurrentRound('screeningRound');
-    } else if (!roundParam) {
-      // No round parameter, default to screening and update URL once
-      console.log('Selection: No round param, defaulting to screening');
+    } else if (!roundParam && activeRound) {
+      // Default to active round if no param specified
+      const activeRoundValue = activeRound.name === 'screening' ? 'screeningRound' : 'pitchingRound';
+      setCurrentRound(activeRoundValue);
       setSearchParams({
-        round: 'screening'
+        round: activeRound.name
       }, {
         replace: true
       });
     }
-  }, [searchParams.get('round')]); // Only depend on the actual round value, not the entire searchParams object
+  }, [searchParams.get('round'), activeRound]);
 
   // Update URL when round changes (called by Select component)
   const handleRoundChange = useCallback((newRound: 'screeningRound' | 'pitchingRound') => {
-    console.log('Selection: handleRoundChange called with:', newRound);
     const roundParam = newRound === 'pitchingRound' ? 'pitching' : 'screening';
     const currentRoundParam = searchParams.get('round');
 
     // Only update if the round is actually different
     if (currentRoundParam !== roundParam) {
-      console.log('Selection: Updating URL to round:', roundParam);
       setCurrentRound(newRound);
       setSearchParams({
         round: roundParam
@@ -54,6 +52,11 @@ const Selection = () => {
       });
     }
   }, [searchParams, setSearchParams]);
+
+  // Get current round info
+  const currentRoundName = currentRound === 'screeningRound' ? 'screening' : 'pitching';
+  const currentRoundInfo = rounds.find(r => r.name === currentRoundName);
+  const isReadOnly = !canModifyRound(currentRoundName);
   return <div className="min-h-screen bg-background">
       <DashboardHeader />
       
@@ -72,20 +75,44 @@ const Selection = () => {
             <Card className="p-4">
               <div className="flex items-center space-x-4">
                 <Label htmlFor="global-round-selector" className="text-sm font-medium">
-                  Current Round:
+                  Round Navigation:
                 </Label>
                 <Select value={currentRound} onValueChange={(value: 'screeningRound' | 'pitchingRound') => handleRoundChange(value)}>
                   <SelectTrigger className="w-48">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="screeningRound">Screening Round</SelectItem>
-                    <SelectItem value="pitchingRound">Pitching Round</SelectItem>
+                    {rounds.map(round => (
+                      <SelectItem 
+                        key={round.name} 
+                        value={round.name === 'screening' ? 'screeningRound' : 'pitchingRound'}
+                        disabled={round.status === 'pending'}
+                      >
+                        <div className="flex items-center gap-2">
+                          {round.status === 'completed' && <CheckCircle className="w-4 h-4 text-success" />}
+                          {round.status === 'pending' && <Lock className="w-4 h-4 text-muted-foreground" />}
+                          {round.name === 'screening' ? 'Screening Round' : 'Pitching Round'}
+                        </div>
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
-                <Badge variant={currentRound === 'screeningRound' ? 'secondary' : 'default'}>
-                  {currentRound === 'screeningRound' ? 'Screening Round' : 'Pitching Round'}
-                </Badge>
+                <div className="flex items-center gap-2">
+                  <Badge variant={
+                    currentRoundInfo?.status === 'active' ? 'default' : 
+                    currentRoundInfo?.status === 'completed' ? 'secondary' : 'outline'
+                  }>
+                    {currentRoundInfo?.status === 'active' && 'Active'}
+                    {currentRoundInfo?.status === 'completed' && 'Completed'}
+                    {currentRoundInfo?.status === 'pending' && 'Pending'}
+                  </Badge>
+                  {isReadOnly && (
+                    <Badge variant="outline" className="text-muted-foreground">
+                      <Lock className="w-3 h-3 mr-1" />
+                      Read Only
+                    </Badge>
+                  )}
+                </div>
               </div>
             </Card>
           </div>
@@ -125,7 +152,11 @@ const Selection = () => {
           </TabsContent>
 
           <TabsContent value="startup-selection" className="space-y-6">
-            <StartupSelection currentRound={currentRound} />
+            <StartupSelection 
+              currentRound={currentRound} 
+              roundInfo={currentRoundInfo}
+              isReadOnly={isReadOnly}
+            />
           </TabsContent>
 
           <TabsContent value="communications" className="space-y-6">

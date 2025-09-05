@@ -38,7 +38,11 @@ interface StartupEvaluation {
 type SortField = 'rank' | 'name' | 'averageScore' | 'evaluationsReceived' | 'stage' | 'region';
 type SortDirection = 'asc' | 'desc';
 
-export const EvaluationProgressView = () => {
+interface EvaluationProgressViewProps {
+  currentRound?: string;
+}
+
+export const EvaluationProgressView = ({ currentRound = 'screening' }: EvaluationProgressViewProps) => {
   const [startups, setStartups] = useState<StartupEvaluation[]>([]);
   const [filteredStartups, setFilteredStartups] = useState<StartupEvaluation[]>([]);
   const [loading, setLoading] = useState(true);
@@ -65,13 +69,17 @@ export const EvaluationProgressView = () => {
 
   const fetchEvaluationProgress = async () => {
     try {
+      // Determine which tables to use based on current round
+      const assignmentTable = currentRound === 'screening' ? 'screening_assignments' : 'pitching_assignments';
+      const evaluationTable = currentRound === 'screening' ? 'screening_evaluations' : 'pitching_evaluations';
+
       // Fetch startups with their evaluations and assignments
       const { data: startupsData, error } = await supabase
         .from('startups')
         .select(`
           *,
-          startup_assignments(id, status),
-          evaluations(
+          ${assignmentTable}!startup_id(id, status),
+          ${evaluationTable}!startup_id(
             id,
             overall_score,
             status,
@@ -87,16 +95,19 @@ export const EvaluationProgressView = () => {
       let validScoreCount = 0;
 
       const evaluationData: StartupEvaluation[] = startupsData?.map(startup => {
-        const assignments = startup.startup_assignments || [];
-        const evaluations = startup.evaluations || [];
-        const submittedEvaluations = evaluations.filter(e => e.status === 'submitted');
+        const assignmentKey = currentRound === 'screening' ? 'screening_assignments' : 'pitching_assignments';
+        const evaluationKey = currentRound === 'screening' ? 'screening_evaluations' : 'pitching_evaluations';
+        
+        const assignments = startup[assignmentKey] || [];
+        const evaluations = startup[evaluationKey] || [];
+        const submittedEvaluations = evaluations.filter((e: any) => e.status === 'submitted');
         
         totalEvaluations += assignments.length;
         completedEvaluations += submittedEvaluations.length;
         
         const scores = submittedEvaluations
-          .map(e => e.overall_score)
-          .filter(score => score !== null) as number[];
+          .map((e: any) => e.overall_score)
+          .filter((score: any) => score !== null) as number[];
         
         const averageScore = scores.length > 0 
           ? scores.reduce((sum, score) => sum + score, 0) / scores.length 
@@ -118,7 +129,7 @@ export const EvaluationProgressView = () => {
         }
         
         const lastUpdated = evaluations
-          .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())[0]?.updated_at || startup.updated_at;
+          .sort((a: any, b: any) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())[0]?.updated_at || startup.updated_at;
         
         return {
           id: startup.id,
