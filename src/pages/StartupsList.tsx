@@ -577,40 +577,47 @@ export default function StartupsList() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredStartups.map((startup) => (
-              <Card key={startup.id} className="h-full hover:shadow-lg transition-shadow">
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <Link to={`/startup/${startup.id}`} className="flex-1">
-                      <CardTitle className="text-lg font-semibold hover:text-primary cursor-pointer">
+              <Link key={startup.id} to={`/startup/${startup.id}`}>
+                <Card className="h-full hover:shadow-lg transition-shadow cursor-pointer hover:bg-muted/50">
+                  <CardHeader>
+                    <div className="flex items-start justify-between">
+                      <CardTitle className="text-lg font-semibold flex-1">
                         {startup.name}
                       </CardTitle>
-                    </Link>
-                    <div className="flex items-center gap-2">
-                      <Badge className={getStatusColor(startup.status)}>
-                        {startup.status?.replace('-', ' ') || 'pending'}
-                      </Badge>
-                      {isAdmin && (
-                        <div className="flex gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleEdit(startup)}
-                            className="h-8 w-8 p-0"
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDelete(startup)}
-                            className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      )}
+                      <div className="flex items-center gap-2">
+                        <Badge className={getStatusColor(startup.status)}>
+                          {startup.status?.replace('-', ' ') || 'pending'}
+                        </Badge>
+                        {isAdmin && (
+                          <div className="flex gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                handleEdit(startup);
+                              }}
+                              className="h-8 w-8 p-0"
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                handleDelete(startup);
+                              }}
+                              className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
                   <CardDescription className="line-clamp-2">
                     {startup.description || 'No description available'}
                   </CardDescription>
@@ -699,7 +706,12 @@ export default function StartupsList() {
                         asChild
                         className="h-8 w-8 p-0"
                       >
-                        <a href={startup.linkedin_url} target="_blank" rel="noopener noreferrer">
+                        <a 
+                          href={startup.linkedin_url} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                        >
                           <Linkedin className="h-4 w-4" />
                         </a>
                       </Button>
@@ -707,6 +719,7 @@ export default function StartupsList() {
                   </div>
                 </CardContent>
               </Card>
+              </Link>
             ))}
           </div>
         )}
