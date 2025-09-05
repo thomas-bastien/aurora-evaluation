@@ -37,10 +37,10 @@ interface Assignment {
 }
 
 interface MatchmakingWorkflowProps {
-  currentPhase: 'screeningPhase' | 'pitchingPhase';
+  currentRound: 'screeningRound' | 'pitchingRound';
 }
 
-export const MatchmakingWorkflow = ({ currentPhase }: MatchmakingWorkflowProps) => {
+export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) => {
   const [startups, setStartups] = useState<Startup[]>([]);
   const [jurors, setJurors] = useState<Juror[]>([]);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
@@ -52,22 +52,22 @@ export const MatchmakingWorkflow = ({ currentPhase }: MatchmakingWorkflowProps) 
 
   useEffect(() => {
     fetchData();
-  }, [currentPhase]);
+  }, [currentRound]);
 
   const fetchData = async () => {
     try {
       setLoading(true);
 
       // Use consistent counting utilities for validation
-      const counts = await getMatchmakingCounts(currentPhase === 'screeningPhase' ? 'screening' : 'pitching');
+      const counts = await getMatchmakingCounts(currentRound === 'screeningRound' ? 'screening' : 'pitching');
 
-      // Fetch startups based on current phase
+      // Fetch startups based on current round
       let startupStatusFilter;
-      if (currentPhase === 'pitchingPhase') {
-        // In pitching phase, only show selected/shortlisted startups (top 30)
+      if (currentRound === 'pitchingRound') {
+        // In pitching round, only show selected/shortlisted startups (top 30)
         startupStatusFilter = 'shortlisted';
       } else {
-        // In screening phase, show all startups under review
+        // In screening round, show all startups under review
         startupStatusFilter = 'under-review';
       }
 
@@ -108,7 +108,7 @@ export const MatchmakingWorkflow = ({ currentPhase }: MatchmakingWorkflowProps) 
         juror_name: (assignment.jurors as any).name,
       })) || [];
 
-      console.log(`Loaded ${startupsData?.length || 0} startups for ${currentPhase}`);
+      console.log(`Loaded ${startupsData?.length || 0} startups for ${currentRound}`);
       console.log(`Loaded ${jurorsData?.length || 0} jurors`);
       console.log(`Loaded ${mappedAssignments.length} existing assignments`);
 
@@ -169,8 +169,8 @@ export const MatchmakingWorkflow = ({ currentPhase }: MatchmakingWorkflowProps) 
       setIsConfirmed(true);
       toast.success('All assignments have been confirmed successfully!');
       
-      // If this is pitching phase, send scheduling emails to selected startups
-      if (currentPhase === 'pitchingPhase') {
+      // If this is pitching round, send scheduling emails to selected startups
+      if (currentRound === 'pitchingRound') {
         await sendPitchSchedulingEmails();
       }
 
@@ -274,8 +274,8 @@ export const MatchmakingWorkflow = ({ currentPhase }: MatchmakingWorkflowProps) 
   }
 
   const hasCompleteData = startups.length > 0 && jurors.length > 0;
-  const phaseTitle = currentPhase === 'screeningPhase' ? 'Screening Phase' : 'Pitching Phase';
-  const phaseDescription = currentPhase === 'screeningPhase' 
+  const roundTitle = currentRound === 'screeningRound' ? 'Screening Round' : 'Pitching Round';
+  const roundDescription = currentRound === 'screeningRound' 
     ? 'Assign 3 jurors to each startup for initial evaluation'
     : 'Assign 2-3 jurors to the Top 30 finalists for pitch calls';
 
@@ -285,10 +285,10 @@ export const MatchmakingWorkflow = ({ currentPhase }: MatchmakingWorkflowProps) 
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Users className="w-5 h-5" />
-            Matchmaking - {phaseTitle}
+            Matchmaking - {roundTitle}
           </CardTitle>
           <CardDescription>
-            {phaseDescription}
+            {roundDescription}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -314,7 +314,7 @@ export const MatchmakingWorkflow = ({ currentPhase }: MatchmakingWorkflowProps) 
                 <div>
                   <p className="text-2xl font-bold">{startups.length}</p>
                   <p className="text-sm text-muted-foreground">
-                    {currentPhase === 'pitchingPhase' ? 'Top 30 Finalists' : 'Startups'}
+                    {currentRound === 'pitchingRound' ? 'Top 30 Finalists' : 'Startups'}
                   </p>
                 </div>
               </div>
@@ -336,7 +336,7 @@ export const MatchmakingWorkflow = ({ currentPhase }: MatchmakingWorkflowProps) 
                 <div>
                   <p className="text-2xl font-bold">
                     {startups.filter(startup => {
-                      const requiredAssignments = currentPhase === 'pitchingPhase' ? 2 : 3;
+                      const requiredAssignments = currentRound === 'pitchingRound' ? 2 : 3;
                       return getStartupAssignmentCount(startup.id) >= requiredAssignments;
                     }).length}
                   </p>
@@ -351,7 +351,7 @@ export const MatchmakingWorkflow = ({ currentPhase }: MatchmakingWorkflowProps) 
                 <div>
                   <p className="text-2xl font-bold">
                     {startups.filter(startup => {
-                      const requiredAssignments = currentPhase === 'pitchingPhase' ? 2 : 3;
+                      const requiredAssignments = currentRound === 'pitchingRound' ? 2 : 3;
                       return getStartupAssignmentCount(startup.id) < requiredAssignments;
                     }).length}
                   </p>
@@ -381,7 +381,7 @@ export const MatchmakingWorkflow = ({ currentPhase }: MatchmakingWorkflowProps) 
               <Check className="w-4 h-4" />
               {isConfirmed 
                 ? "Assignments Confirmed" 
-                : currentPhase === 'pitchingPhase' 
+                : currentRound === 'pitchingRound' 
                   ? 'Confirm Assignments & Send Scheduling Emails'
                   : 'Confirm All Assignments'
               }
@@ -391,11 +391,11 @@ export const MatchmakingWorkflow = ({ currentPhase }: MatchmakingWorkflowProps) 
           {/* Startups List */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold">
-              {currentPhase === 'pitchingPhase' ? 'Top 30 Finalists' : 'Startups'} Requiring Assignment
+              {currentRound === 'pitchingRound' ? 'Top 30 Finalists' : 'Startups'} Requiring Assignment
             </h3>
             {startups.map((startup) => {
               const assignmentCount = getStartupAssignmentCount(startup.id);
-              const requiredAssignments = currentPhase === 'pitchingPhase' ? 2 : 3;
+              const requiredAssignments = currentRound === 'pitchingRound' ? 2 : 3;
               const isFullyAssigned = assignmentCount >= requiredAssignments;
 
               return (
@@ -442,7 +442,7 @@ export const MatchmakingWorkflow = ({ currentPhase }: MatchmakingWorkflowProps) 
           {startups.length === 0 && (
             <div className="text-center py-8">
               <p className="text-muted-foreground">
-                No startups available for {currentPhase === 'screeningPhase' ? 'screening' : 'pitching'} phase.
+                No startups available for {currentRound === 'screeningRound' ? 'screening' : 'pitching'} round.
               </p>
             </div>
           )}

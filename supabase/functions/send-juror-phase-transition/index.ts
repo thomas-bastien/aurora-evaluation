@@ -13,8 +13,8 @@ interface JurorTransitionRequest {
   jurorId: string;
   name: string;
   email: string;
-  fromPhase: 'screening' | 'pitching';
-  toPhase: 'screening' | 'pitching';
+  fromRound: 'screening' | 'pitching';
+  toRound: 'screening' | 'pitching';
   evaluationCount?: number;
 }
 
@@ -27,9 +27,9 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { jurorId, name, email, fromPhase, toPhase, evaluationCount }: JurorTransitionRequest = await req.json();
+    const { jurorId, name, email, fromRound, toRound, evaluationCount }: JurorTransitionRequest = await req.json();
     
-    console.log(`Sending phase transition notification to: ${name} (${email}), from ${fromPhase} to ${toPhase}`);
+    console.log(`Sending round transition notification to: ${name} (${email}), from ${fromRound} to ${toRound}`);
 
     // Initialize Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -39,28 +39,28 @@ const handler = async (req: Request): Promise<Response> => {
     let subject: string;
     let htmlContent: string;
 
-    if (fromPhase === 'screening' && toPhase === 'pitching') {
+    if (fromRound === 'screening' && toRound === 'pitching') {
       // Screening complete, transitioning to pitching
-      subject = "Screening Complete - Pitching Phase Assignments Coming Soon";
+      subject = "Screening Complete - Pitching Round Assignments Coming Soon";
       htmlContent = `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h1 style="color: #2563eb;">Screening Phase Complete!</h1>
+          <h1 style="color: #2563eb;">Screening Round Complete!</h1>
           
           <p>Dear ${name},</p>
           
-          <p>Thank you for your valuable participation as an evaluator in the <strong>Screening Phase</strong> of our startup evaluation process.</p>
+          <p>Thank you for your valuable participation as an evaluator in the <strong>Screening Round</strong> of our startup evaluation process.</p>
           
           <div style="background-color: #f0f9ff; padding: 20px; border-left: 4px solid #2563eb; margin: 20px 0;">
             <h3 style="margin-top: 0; color: #1e40af;">Your Contribution:</h3>
             <ul>
               <li>You completed evaluations for <strong>${evaluationCount || 'multiple'}</strong> startups</li>
               <li>Your insights helped us identify the top 30 finalists</li>
-              <li>The Pitching phase is now beginning</li>
+              <li>The Pitching Round is now beginning</li>
             </ul>
           </div>
           
           <div style="background-color: #fef3c7; padding: 20px; border-left: 4px solid #f59e0b; margin: 20px 0;">
-            <h3 style="margin-top: 0; color: #92400e;">What's Next - Pitching Phase:</h3>
+            <h3 style="margin-top: 0; color: #92400e;">What's Next - Pitching Round:</h3>
             <ul>
               <li><strong>You will be assigned 2–3 finalists</strong> for pitch calls in the coming days</li>
               <li>Once assignments are ready, you'll receive full instructions and startup details</li>
@@ -79,16 +79,16 @@ const handler = async (req: Request): Promise<Response> => {
       `;
     } else {
       // Generic transition message
-      subject = `Phase Transition: ${fromPhase} → ${toPhase}`;
+      subject = `Round Transition: ${fromRound} → ${toRound}`;
       htmlContent = `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h1 style="color: #2563eb;">Phase Transition Update</h1>
+          <h1 style="color: #2563eb;">Round Transition Update</h1>
           
           <p>Dear ${name},</p>
           
-          <p>The evaluation process is transitioning from <strong>${fromPhase}</strong> to <strong>${toPhase}</strong> phase.</p>
+          <p>The evaluation process is transitioning from <strong>${fromRound}</strong> to <strong>${toRound}</strong> round.</p>
           
-          <p>You will receive detailed instructions for the next phase shortly.</p>
+          <p>You will receive detailed instructions for the next round shortly.</p>
           
           <p>Best regards,<br>
           <strong>The Aurora Evaluation Team</strong></p>
@@ -114,7 +114,7 @@ const handler = async (req: Request): Promise<Response> => {
     return new Response(JSON.stringify({
       success: true,
       emailId: emailResponse.data?.id,
-      message: `Phase transition notification sent to ${name}`
+      message: `Round transition notification sent to ${name}`
     }), {
       status: 200,
       headers: {

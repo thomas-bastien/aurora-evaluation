@@ -65,7 +65,7 @@ const handler = async (req: Request): Promise<Response> => {
         
         <p>Dear ${startupName} team,</p>
         
-        <p>Congratulations again on making it to the <strong>Pitching Phase</strong>! It's time to schedule your pitch sessions with our investor panel.</p>
+        <p>Congratulations again on making it to the <strong>Pitching Round</strong>! It's time to schedule your pitch sessions with our investor panel.</p>
         
         <div style="background-color: #f0f9ff; padding: 20px; border-left: 4px solid #2563eb; margin: 20px 0;">
           <h3 style="margin-top: 0; color: #1e40af;">Your Assigned Investors:</h3>

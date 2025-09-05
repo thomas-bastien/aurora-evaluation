@@ -8,35 +8,35 @@ import { Badge } from "@/components/ui/badge";
 
 const SelectionMatchmaking = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [currentPhase, setCurrentPhase] = useState<'screeningPhase' | 'pitchingPhase'>('screeningPhase');
+  const [currentRound, setCurrentRound] = useState<'screeningRound' | 'pitchingRound'>('screeningRound');
 
-  // Initialize phase from URL parameters - only run once on mount
+  // Initialize round from URL parameters - only run once on mount
   useEffect(() => {
-    const phaseParam = searchParams.get('phase');
-    if (phaseParam === 'pitching' && currentPhase !== 'pitchingPhase') {
-      setCurrentPhase('pitchingPhase');
-    } else if (phaseParam === 'screening' && currentPhase !== 'screeningPhase') {
-      setCurrentPhase('screeningPhase');
-    } else if (!phaseParam) {
-      // No phase parameter, default to screening and update URL once
+    const roundParam = searchParams.get('round');
+    if (roundParam === 'pitching' && currentRound !== 'pitchingRound') {
+      setCurrentRound('pitchingRound');
+    } else if (roundParam === 'screening' && currentRound !== 'screeningRound') {
+      setCurrentRound('screeningRound');
+    } else if (!roundParam) {
+      // No round parameter, default to screening and update URL once
       setSearchParams({
-        phase: 'screening'
+        round: 'screening'
       }, {
         replace: true
       });
     }
-  }, [searchParams.get('phase')]);
+  }, [searchParams.get('round')]);
 
-  // Update URL when phase changes (called by Select component)
-  const handlePhaseChange = useCallback((newPhase: 'screeningPhase' | 'pitchingPhase') => {
-    const phaseParam = newPhase === 'pitchingPhase' ? 'pitching' : 'screening';
-    const currentPhaseParam = searchParams.get('phase');
+  // Update URL when round changes (called by Select component)
+  const handleRoundChange = useCallback((newRound: 'screeningRound' | 'pitchingRound') => {
+    const roundParam = newRound === 'pitchingRound' ? 'pitching' : 'screening';
+    const currentRoundParam = searchParams.get('round');
 
-    // Only update if the phase is actually different
-    if (currentPhaseParam !== phaseParam) {
-      setCurrentPhase(newPhase);
+    // Only update if the round is actually different
+    if (currentRoundParam !== roundParam) {
+      setCurrentRound(newRound);
       setSearchParams({
-        phase: phaseParam
+        round: roundParam
       }, {
         replace: true
       });
@@ -54,27 +54,27 @@ const SelectionMatchmaking = () => {
             <div>
               <h1 className="text-3xl font-bold text-foreground mb-2">Matchmaking</h1>
               <p className="text-lg text-muted-foreground">
-                Assign jurors to startups for {currentPhase === 'screeningPhase' ? 'screening evaluation' : 'pitch sessions'}
+                Assign jurors to startups for {currentRound === 'screeningRound' ? 'screening evaluation' : 'pitch sessions'}
               </p>
             </div>
             
-            {/* Global Phase Selector */}
+            {/* Global Round Selector */}
             <Card className="p-4">
               <div className="flex items-center space-x-4">
-                <Label htmlFor="global-phase-selector" className="text-sm font-medium">
-                  Current Phase:
+                <Label htmlFor="global-round-selector" className="text-sm font-medium">
+                  Current Round:
                 </Label>
-                <Select value={currentPhase} onValueChange={(value: 'screeningPhase' | 'pitchingPhase') => handlePhaseChange(value)}>
+                <Select value={currentRound} onValueChange={(value: 'screeningRound' | 'pitchingRound') => handleRoundChange(value)}>
                   <SelectTrigger className="w-48">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="screeningPhase">Screening</SelectItem>
-                    <SelectItem value="pitchingPhase">Pitching</SelectItem>
+                    <SelectItem value="screeningRound">Screening Round</SelectItem>
+                    <SelectItem value="pitchingRound">Pitching Round</SelectItem>
                   </SelectContent>
                 </Select>
-                <Badge variant={currentPhase === 'screeningPhase' ? 'secondary' : 'default'}>
-                  {currentPhase === 'screeningPhase' ? 'Screening' : 'Pitching'}
+                <Badge variant={currentRound === 'screeningRound' ? 'secondary' : 'default'}>
+                  {currentRound === 'screeningRound' ? 'Screening Round' : 'Pitching Round'}
                 </Badge>
               </div>
             </Card>
@@ -86,10 +86,10 @@ const SelectionMatchmaking = () => {
           <div className="p-8 text-center">
             <h2 className="text-2xl font-semibold mb-4">Matchmaking Workflow</h2>
             <p className="text-muted-foreground">
-              Current Phase: {currentPhase === 'screeningPhase' ? 'Screening' : 'Pitching'}
+              Current Round: {currentRound === 'screeningRound' ? 'Screening Round' : 'Pitching Round'}
             </p>
             <p className="text-sm text-muted-foreground mt-2">
-              This will contain the matchmaking functionality for the selected phase.
+              This will contain the matchmaking functionality for the selected round.
             </p>
           </div>
         </Card>

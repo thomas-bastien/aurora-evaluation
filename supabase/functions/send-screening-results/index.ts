@@ -46,7 +46,7 @@ const handler = async (req: Request): Promise<Response> => {
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <h1 style="color: #2563eb;">Congratulations, ${name}!</h1>
           
-          <p>We're thrilled to inform you that your startup has been selected as a <strong>finalist</strong> for the Pitching round of our evaluation process.</p>
+          <p>We're thrilled to inform you that your startup has been selected as a <strong>finalist</strong> for the Pitching Round of our evaluation process.</p>
           
           <div style="background-color: #f0f9ff; padding: 20px; border-left: 4px solid #2563eb; margin: 20px 0;">
             <h3 style="margin-top: 0; color: #1e40af;">What happens next?</h3>
@@ -77,7 +77,7 @@ const handler = async (req: Request): Promise<Response> => {
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <h1 style="color: #374151;">Thank you for your participation</h1>
           
-          <p>Thank you for participating in the Screening phase of our startup evaluation process. While your startup was not selected to advance to the Pitching round, we were impressed by your dedication and innovation.</p>
+          <p>Thank you for participating in the Screening Round of our startup evaluation process. While your startup was not selected to advance to the Pitching Round, we were impressed by your dedication and innovation.</p>
           
           <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
             <h3 style="margin-top: 0; color: #374151;">Your Detailed Feedback:</h3>

@@ -50,10 +50,10 @@ export const getTotalJurorsCount = async (): Promise<number> => {
 };
 
 /**
- * Get count of startups for a specific phase
+ * Get count of startups for a specific round
  */
-export const getPhaseStartupsCount = async (phase: 'screening' | 'pitching'): Promise<number> => {
-  if (phase === 'screening') {
+export const getRoundStartupsCount = async (round: 'screening' | 'pitching'): Promise<number> => {
+  if (round === 'screening') {
     // For screening, count active startups
     return getActiveStartupsCount();
   } else {
@@ -66,6 +66,9 @@ export const getPhaseStartupsCount = async (phase: 'screening' | 'pitching'): Pr
     return count || 0;
   }
 };
+
+// Keep the old function name for backward compatibility
+export const getPhaseStartupsCount = getRoundStartupsCount;
 
 /**
  * Get count of startups assigned to a specific juror
@@ -107,13 +110,13 @@ export const getDashboardCounts = async () => {
 /**
  * Get counts specific to matchmaking workflow
  */
-export const getMatchmakingCounts = async (phase: 'screening' | 'pitching') => {
+export const getMatchmakingCounts = async (round: 'screening' | 'pitching') => {
   const [
-    phaseStartups,
+    roundStartups,
     activeJurors,
     totalAssignments
   ] = await Promise.all([
-    getPhaseStartupsCount(phase),
+    getRoundStartupsCount(round),
     getActiveJurorsCount(),
     supabase
       .from('startup_assignments')
@@ -122,7 +125,7 @@ export const getMatchmakingCounts = async (phase: 'screening' | 'pitching') => {
   ]);
 
   return {
-    startups: phaseStartups,
+    startups: roundStartups,
     jurors: activeJurors,
     assignments: totalAssignments
   };

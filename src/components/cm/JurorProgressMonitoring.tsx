@@ -36,10 +36,10 @@ interface JurorProgress {
 }
 
 interface JurorProgressMonitoringProps {
-  currentPhase: 'screeningPhase' | 'pitchingPhase';
+  currentRound: 'screeningRound' | 'pitchingRound';
 }
 
-export const JurorProgressMonitoring = ({ currentPhase }: JurorProgressMonitoringProps) => {
+export const JurorProgressMonitoring = ({ currentRound }: JurorProgressMonitoringProps) => {
   const [jurors, setJurors] = useState<JurorProgress[]>([]);
   const [filteredJurors, setFilteredJurors] = useState<JurorProgress[]>([]);
   const [loading, setLoading] = useState(true);
@@ -308,10 +308,10 @@ export const JurorProgressMonitoring = ({ currentPhase }: JurorProgressMonitorin
           <div>
             <CardTitle className="flex items-center gap-2">
               <CheckCircle className="w-5 h-5" />
-              Juror Progress Monitoring - {currentPhase === 'screeningPhase' ? 'Screening' : 'Pitching'}
+              Juror Progress Monitoring - {currentRound === 'screeningRound' ? 'Screening Round' : 'Pitching Round'}
             </CardTitle>
             <CardDescription>
-              Track {currentPhase === 'screeningPhase' ? 'evaluation' : 'pitch'} submission status by juror and send reminders
+              Track {currentRound === 'screeningRound' ? 'evaluation' : 'pitch'} submission status by juror and send reminders
             </CardDescription>
           </div>
           <div className="flex gap-2">

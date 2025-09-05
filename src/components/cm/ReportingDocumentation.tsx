@@ -16,18 +16,18 @@ import {
 import { toast } from "sonner";
 
 interface ReportingDocumentationProps {
-  currentPhase: 'screeningPhase' | 'pitchingPhase';
+  currentRound: 'screeningRound' | 'pitchingRound';
 }
 
-interface PhaseStats {
+interface RoundStats {
   totalStartups: number;
   completionRate: number;
   averageScore: number;
 }
 
-export const ReportingDocumentation = ({ currentPhase }: ReportingDocumentationProps) => {
+export const ReportingDocumentation = ({ currentRound }: ReportingDocumentationProps) => {
   const [generating, setGenerating] = useState<string | null>(null);
-  const [stats, setStats] = useState<PhaseStats>({
+  const [stats, setStats] = useState<RoundStats>({
     totalStartups: 0,
     completionRate: 0,
     averageScore: 0
@@ -35,14 +35,14 @@ export const ReportingDocumentation = ({ currentPhase }: ReportingDocumentationP
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchPhaseStats();
-  }, [currentPhase]);
+    fetchRoundStats();
+  }, [currentRound]);
 
-  const fetchPhaseStats = async () => {
+  const fetchRoundStats = async () => {
     try {
       setLoading(true);
       
-      if (currentPhase === 'screeningPhase') {
+      if (currentRound === 'screeningRound') {
         // Get startups under review count
         const { data: startups, error: startupsError } = await supabase
           .from('startups')
@@ -79,7 +79,7 @@ export const ReportingDocumentation = ({ currentPhase }: ReportingDocumentationP
           averageScore
         });
       } else {
-        // Pitching phase stats
+        // Pitching round stats
         const { data: pitchRequests, error: pitchError } = await supabase
           .from('pitch_requests')
           .select('status, startup_id');
@@ -92,7 +92,7 @@ export const ReportingDocumentation = ({ currentPhase }: ReportingDocumentationP
         const totalPitches = pitchRequests?.length || 0;
         const completionRate = totalPitches > 0 ? (completedPitches / totalPitches) * 100 : 0;
 
-        // For pitching phase, we might want post-pitch evaluation scores
+        // For pitching round, we might want post-pitch evaluation scores
         const { data: evaluations, error: evalError } = await supabase
           .from('evaluations')
           .select('overall_score')
@@ -110,7 +110,7 @@ export const ReportingDocumentation = ({ currentPhase }: ReportingDocumentationP
         });
       }
     } catch (error) {
-      console.error('Error fetching phase stats:', error);
+      console.error('Error fetching round stats:', error);
       toast.error('Failed to load statistics');
     } finally {
       setLoading(false);
@@ -153,15 +153,15 @@ export const ReportingDocumentation = ({ currentPhase }: ReportingDocumentationP
       type: 'secondary'
     },
     {
-      id: 'phase-summary',
-      title: `${currentPhase === 'screeningPhase' ? 'Screening' : 'Pitching'} Summary`,
-      description: `Complete ${currentPhase === 'screeningPhase' ? 'evaluation' : 'pitch'} phase documentation`,
+      id: 'round-summary',
+      title: `${currentRound === 'screeningRound' ? 'Screening Round' : 'Pitching Round'} Summary`,
+      description: `Complete ${currentRound === 'screeningRound' ? 'evaluation' : 'pitch'} round documentation`,
       icon: FileText,
       type: 'primary'
     }
   ];
 
-  if (currentPhase === 'pitchingPhase') {
+  if (currentRound === 'pitchingRound') {
     reports.push(
       {
         id: 'pitch-analytics',
@@ -187,7 +187,7 @@ export const ReportingDocumentation = ({ currentPhase }: ReportingDocumentationP
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <FileText className="w-5 h-5" />
-            Reporting & Documentation - {currentPhase === 'screeningPhase' ? 'Screening' : 'Pitching'}
+            Reporting & Documentation - {currentRound === 'screeningRound' ? 'Screening Round' : 'Pitching Round'}
           </CardTitle>
           <CardDescription>
             Generate comprehensive reports and export data for stakeholders
@@ -210,7 +210,7 @@ export const ReportingDocumentation = ({ currentPhase }: ReportingDocumentationP
                   {stats.totalStartups}
                 </div>
                 <div className="text-sm text-muted-foreground">
-                  {currentPhase === 'screeningPhase' ? 'Startups Evaluated' : 'Startups in Pitching'}
+                  {currentRound === 'screeningRound' ? 'Startups Evaluated' : 'Startups in Pitching'}
                 </div>
               </div>
               <div className="text-center p-4 bg-success/10 rounded-lg">
@@ -218,7 +218,7 @@ export const ReportingDocumentation = ({ currentPhase }: ReportingDocumentationP
                   {stats.completionRate.toFixed(0)}%
                 </div>
                 <div className="text-sm text-muted-foreground">
-                  {currentPhase === 'screeningPhase' ? 'Evaluations Complete' : 'Pitches Completed'}
+                  {currentRound === 'screeningRound' ? 'Evaluations Complete' : 'Pitches Completed'}
                 </div>
               </div>
               <div className="text-center p-4 bg-warning/10 rounded-lg">
@@ -289,7 +289,7 @@ export const ReportingDocumentation = ({ currentPhase }: ReportingDocumentationP
               Email Report to Stakeholders
             </Button>
             <Button variant="outline" size="sm">
-              Archive {currentPhase === 'screeningPhase' ? 'Screening' : 'Pitching'} Data
+              Archive {currentRound === 'screeningRound' ? 'Screening Round' : 'Pitching Round'} Data
             </Button>
             <Button variant="outline" size="sm">
               Generate Executive Summary
