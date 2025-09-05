@@ -60,12 +60,13 @@ export const JurorProgressMonitoring = ({ currentRound }: JurorProgressMonitorin
 
   const fetchJurorProgress = async () => {
     try {
-      // Fetch jurors with their assignments and evaluations
+      // Fetch jurors with their assignments and evaluations based on round
+      const assignmentTable = currentRound === 'screeningRound' ? 'screening_assignments' : 'pitching_assignments';
       const { data: jurorsData, error } = await supabase
         .from('jurors')
         .select(`
           *,
-          startup_assignments(
+          ${assignmentTable}(
             id,
             startup_id,
             status
@@ -79,8 +80,9 @@ export const JurorProgressMonitoring = ({ currentRound }: JurorProgressMonitorin
       let evaluationsData: any[] = [];
       
       if (jurorUserIds.length > 0) {
+        const evaluationTable = currentRound === 'screeningRound' ? 'screening_evaluations' : 'pitching_evaluations';
         const { data: evals, error: evalError } = await supabase
-          .from('evaluations')
+          .from(evaluationTable)
           .select('evaluator_id, status, last_modified_at')
           .in('evaluator_id', jurorUserIds);
           
@@ -90,7 +92,8 @@ export const JurorProgressMonitoring = ({ currentRound }: JurorProgressMonitorin
 
 
       const jurorProgress: JurorProgress[] = jurorsData?.map(juror => {
-        const assignments = juror.startup_assignments || [];
+        const assignmentField = currentRound === 'screeningRound' ? 'screening_assignments' : 'pitching_assignments';
+        const assignments = juror[assignmentField] || [];
         const assignedCount = assignments.length;
         
         // Get real evaluations for this juror (only if they have a user_id)
@@ -198,9 +201,10 @@ export const JurorProgressMonitoring = ({ currentRound }: JurorProgressMonitorin
 
       if (jurorError) throw jurorError;
 
-      // Fetch juror's startup assignments with evaluation status
+      // Fetch juror's startup assignments with evaluation status based on round
+      const assignmentTable = currentRound === 'screeningRound' ? 'screening_assignments' : 'pitching_assignments';
       const { data: assignments, error } = await supabase
-        .from('startup_assignments')
+        .from(assignmentTable)
         .select(`
           *,
           startups (
@@ -221,8 +225,9 @@ export const JurorProgressMonitoring = ({ currentRound }: JurorProgressMonitorin
       // Fetch evaluations for this juror to get real status (only if they have a user_id)
       let evaluations: any[] = [];
       if (jurorData.user_id) {
+        const evaluationTable = currentRound === 'screeningRound' ? 'screening_evaluations' : 'pitching_evaluations';
         const { data: evalData, error: evalError } = await supabase
-          .from('evaluations')
+          .from(evaluationTable)
           .select('startup_id, status, id')
           .eq('evaluator_id', jurorData.user_id);
 

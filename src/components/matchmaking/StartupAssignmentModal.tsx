@@ -136,15 +136,24 @@ export const StartupAssignmentModal = ({
       // Import supabase client
       const { supabase } = await import('@/integrations/supabase/client');
       
-      // Delete existing assignments for this startup
-      const { error: deleteError } = await supabase
-        .from('startup_assignments')
+      // Delete existing assignments for this startup in both tables
+      const { error: deleteScreeningError } = await supabase
+        .from('screening_assignments')
         .delete()
         .eq('startup_id', startup.id);
       
-      if (deleteError) throw deleteError;
+      const { error: deletePitchingError } = await supabase
+        .from('pitching_assignments')
+        .delete()
+        .eq('startup_id', startup.id);
+      
+      // If both fail, throw the error (likely means neither table exists for this startup)
+      if (deleteScreeningError && deletePitchingError) {
+        throw deleteScreeningError; // Default to screening error
+      }
 
-      // Insert new assignments
+      // Create new assignments - default to screening for now
+      // TODO: Make this round-aware based on current active round
       const assignmentRecords = selectedJurorIds.map(jurorId => ({
         startup_id: startup.id,
         juror_id: jurorId,
@@ -152,7 +161,7 @@ export const StartupAssignmentModal = ({
       }));
 
       const { error: insertError } = await supabase
-        .from('startup_assignments')
+        .from('screening_assignments')
         .insert(assignmentRecords);
       
       if (insertError) throw insertError;

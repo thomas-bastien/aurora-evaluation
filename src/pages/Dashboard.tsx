@@ -60,12 +60,25 @@ const Dashboard = () => {
         // Fetch consistent counts using utilities
         const counts = await getDashboardCounts();
         
+        // Get current active round to determine which tables to query
+        const { data: activeRound } = await supabase
+          .from('rounds')
+          .select('name')
+          .eq('status', 'active')
+          .maybeSingle();
+        
+        const isScreeningRound = !activeRound || activeRound.name === 'screening';
+        
         const [
           { count: evaluationsCount },
           { count: assignmentsCount }
         ] = await Promise.all([
-          supabase.from('evaluations').select('*', { count: 'exact', head: true }),
-          supabase.from('startup_assignments').select('*', { count: 'exact', head: true })
+          isScreeningRound 
+            ? supabase.from('screening_evaluations').select('*', { count: 'exact', head: true })
+            : supabase.from('pitching_evaluations').select('*', { count: 'exact', head: true }),
+          isScreeningRound
+            ? supabase.from('screening_assignments').select('*', { count: 'exact', head: true })
+            : supabase.from('pitching_assignments').select('*', { count: 'exact', head: true })
         ]);
 
         const { activeStartups, activeJurors, totalStartups, totalJurors } = counts;
@@ -84,16 +97,18 @@ const Dashboard = () => {
             .maybeSingle();
             
           if (jurorRecord) {
-            // Get assignments for this juror
+            // Get assignments for this juror based on current round
+            const assignmentTable = isScreeningRound ? 'screening_assignments' : 'pitching_assignments';
             const { count: myAssignmentsCount } = await supabase
-              .from('startup_assignments')
+              .from(assignmentTable)
               .select('*', { count: 'exact', head: true })
               .eq('juror_id', jurorRecord.id)
               .eq('status', 'assigned');
               
-            // Get completed evaluations by this juror
+            // Get completed evaluations by this juror based on current round
+            const evaluationTable = isScreeningRound ? 'screening_evaluations' : 'pitching_evaluations';
             const { count: myEvaluationsCount } = await supabase
-              .from('evaluations')
+              .from(evaluationTable)
               .select('*', { count: 'exact', head: true })
               .eq('evaluator_id', profile?.user_id)
               .eq('status', 'submitted');

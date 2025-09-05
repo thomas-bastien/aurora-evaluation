@@ -218,7 +218,22 @@ export type Database = {
           status?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fk_pitching_assignments_juror"
+            columns: ["juror_id"]
+            isOneToOne: false
+            referencedRelation: "jurors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_pitching_assignments_startup"
+            columns: ["startup_id"]
+            isOneToOne: false
+            referencedRelation: "startups"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       pitching_evaluations: {
         Row: {
@@ -278,7 +293,22 @@ export type Database = {
           updated_at?: string
           wants_pitch_session?: boolean | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fk_pitching_evaluations_evaluator"
+            columns: ["evaluator_id"]
+            isOneToOne: false
+            referencedRelation: "jurors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_pitching_evaluations_startup"
+            columns: ["startup_id"]
+            isOneToOne: false
+            referencedRelation: "startups"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -377,7 +407,22 @@ export type Database = {
           status?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fk_screening_assignments_juror"
+            columns: ["juror_id"]
+            isOneToOne: false
+            referencedRelation: "jurors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_screening_assignments_startup"
+            columns: ["startup_id"]
+            isOneToOne: false
+            referencedRelation: "startups"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       screening_evaluations: {
         Row: {
@@ -437,7 +482,22 @@ export type Database = {
           updated_at?: string
           wants_pitch_session?: boolean | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fk_screening_evaluations_evaluator"
+            columns: ["evaluator_id"]
+            isOneToOne: false
+            referencedRelation: "jurors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_screening_evaluations_startup"
+            columns: ["startup_id"]
+            isOneToOne: false
+            referencedRelation: "startups"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       sessions: {
         Row: {

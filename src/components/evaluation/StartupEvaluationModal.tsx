@@ -461,11 +461,34 @@ export const StartupEvaluationModal = ({
   const fetchExistingEvaluation = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('evaluations')
+      // Note: This component needs to be updated to be round-aware
+      // For now, checking both tables for existing evaluations
+      let data = null;
+      let error = null;
+      
+      // Try screening evaluations first
+      const { data: screeningData, error: screeningError } = await supabase
+        .from('screening_evaluations')
         .select('*')
         .eq('id', startup.evaluation_id)
-        .single();
+        .maybeSingle();
+        
+      if (!screeningError && screeningData) {
+        data = screeningData;
+      } else {
+        // Try pitching evaluations
+        const { data: pitchingData, error: pitchingError } = await supabase
+          .from('pitching_evaluations')
+          .select('*')
+          .eq('id', startup.evaluation_id)
+          .maybeSingle();
+          
+        if (pitchingError) {
+          error = pitchingError;
+        } else {
+          data = pitchingData;
+        }
+      }
       
       if (error) throw error;
       
@@ -640,16 +663,34 @@ export const StartupEvaluationModal = ({
       };
 
       if (startup.evaluation_id) {
-        // Update existing evaluation
-        const {
-          error
-        } = await supabase.from('evaluations').update(evaluationData).eq('id', startup.evaluation_id);
-        if (error) throw error;
+        // Update existing evaluation - determine which table to use
+        // Try screening evaluations first, then pitching
+        let updateError = null;
+        
+        const { error: screeningError } = await supabase
+          .from('screening_evaluations')
+          .update(evaluationData)
+          .eq('id', startup.evaluation_id);
+          
+        if (screeningError?.code === 'PGRST116') {
+          // Record not found in screening, try pitching
+          const { error: pitchingError } = await supabase
+            .from('pitching_evaluations')
+            .update(evaluationData)
+            .eq('id', startup.evaluation_id);
+            
+          updateError = pitchingError;
+        } else {
+          updateError = screeningError;
+        }
+        
+        if (updateError) throw updateError;
       } else {
-        // Create new evaluation
+        // Create new evaluation - default to screening table for now
+        // TODO: Make this round-aware based on current active round
         const {
           error
-        } = await supabase.from('evaluations').insert([evaluationData]);
+        } = await supabase.from('screening_evaluations').insert([evaluationData]);
         if (error) throw error;
       }
       toast.success(status === 'submitted' ? 'Evaluation submitted successfully!' : 'Evaluation saved as draft');

@@ -65,11 +65,14 @@ const EvaluationDashboard = () => {
         return;
       }
 
-      // Fetch startups assigned to this juror
-      const {
-        data: assignments,
-        error: assignmentsError
-      } = await supabase.from('startup_assignments').select(`
+      // Fetch startups assigned to this juror - check both screening and pitching tables
+      let assignments = null;
+      let assignmentsError = null;
+      
+      // Try screening assignments first
+      const { data: screeningAssignments, error: screeningError } = await supabase
+        .from('screening_assignments')
+        .select(`
           startup_id,
           startups (
             id,
@@ -86,16 +89,66 @@ const EvaluationDashboard = () => {
             country,
             linkedin_url
           )
-        `).eq('juror_id', juror.id).eq('status', 'assigned');
+        `)
+        .eq('juror_id', juror.id);
+
+      if (!screeningError && screeningAssignments?.length > 0) {
+        assignments = screeningAssignments;
+      } else {
+        // Try pitching assignments
+        const { data: pitchingAssignments, error: pitchingError } = await supabase
+          .from('pitching_assignments')
+          .select(`
+            startup_id,
+            startups (
+              id,
+              name,
+              description,
+              industry,
+              stage,
+              contact_email,
+              website,
+              pitch_deck_url,
+              demo_url,
+              location,
+              region,
+              country,
+              linkedin_url
+            )
+          `)
+          .eq('juror_id', juror.id);
+          
+        assignments = pitchingAssignments;
+        assignmentsError = pitchingError;
+      }
       if (assignmentsError) throw assignmentsError;
 
-      // Fetch existing evaluations for these startups
+      // Fetch existing evaluations for these startups - check both tables
       const startupIds = assignments?.map(a => a.startup_id) || [];
-      const {
-        data: evaluations,
-        error: evaluationsError
-      } = await supabase.from('evaluations').select('*').eq('evaluator_id', user?.id).in('startup_id', startupIds);
-      if (evaluationsError) throw evaluationsError;
+      let evaluations = null;
+      
+      if (startupIds.length > 0) {
+        // Try screening evaluations first
+        const { data: screeningEvaluations, error: screeningError } = await supabase
+          .from('screening_evaluations')
+          .select('*')
+          .eq('evaluator_id', user?.id)
+          .in('startup_id', startupIds);
+
+        if (!screeningError && screeningEvaluations?.length > 0) {
+          evaluations = screeningEvaluations;
+        } else {
+          // Try pitching evaluations
+          const { data: pitchingEvaluations, error: pitchingError } = await supabase
+            .from('pitching_evaluations')
+            .select('*')
+            .eq('evaluator_id', user?.id)
+            .in('startup_id', startupIds);
+            
+          if (pitchingError) throw pitchingError;
+          evaluations = pitchingEvaluations;
+        }
+      }
 
       // Combine data
       const startupsWithEvaluations: AssignedStartup[] = assignments?.map(assignment => {

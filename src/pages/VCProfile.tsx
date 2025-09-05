@@ -101,18 +101,41 @@ const VCProfile = () => {
   const fetchEvaluationStats = async () => {
     if (!user) return;
     try {
-      // Fetch assignments count
-      const {
-        count: totalAssigned
-      } = await supabase.from('startup_assignments').select('*', {
-        count: 'exact',
-        head: true
-      }).eq('juror_id', user.id).eq('status', 'assigned');
+      // Fetch assignments count - check both tables
+      let totalAssigned = 0;
+      
+      // Check screening assignments
+      const { count: screeningCount } = await supabase
+        .from('screening_assignments')
+        .select('*', { count: 'exact', head: true })
+        .eq('juror_id', user.id)
+        .eq('status', 'assigned');
+        
+      // Check pitching assignments  
+      const { count: pitchingCount } = await supabase
+        .from('pitching_assignments')
+        .select('*', { count: 'exact', head: true })
+        .eq('juror_id', user.id)
+        .eq('status', 'assigned');
 
-      // Fetch evaluations
-      const {
-        data: evaluations
-      } = await supabase.from('evaluations').select('*').eq('evaluator_id', user.id);
+      totalAssigned = (screeningCount || 0) + (pitchingCount || 0);
+
+      // Fetch evaluations - check both tables
+      let evaluations: any[] = [];
+      
+      // Get screening evaluations
+      const { data: screeningEvals } = await supabase
+        .from('screening_evaluations')
+        .select('*')
+        .eq('evaluator_id', user.id);
+        
+      // Get pitching evaluations  
+      const { data: pitchingEvals } = await supabase
+        .from('pitching_evaluations')
+        .select('*')
+        .eq('evaluator_id', user.id);
+        
+      evaluations = [...(screeningEvals || []), ...(pitchingEvals || [])];
       const completed = evaluations?.filter(e => e.status === 'submitted').length || 0;
       const draft = evaluations?.filter(e => e.status === 'draft').length || 0;
       const averageScore = evaluations && evaluations.length > 0 ? evaluations.filter(e => e.overall_score).reduce((sum, e) => sum + (e.overall_score || 0), 0) / evaluations.filter(e => e.overall_score).length : 0;

@@ -89,13 +89,14 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
       if (jurorsError) throw jurorsError;
 
       // Fetch existing assignments (only include active jurors with user_id)
+      const assignmentTable = currentRound === 'screeningRound' ? 'screening_assignments' : 'pitching_assignments';
       const { data: assignmentsData, error: assignmentsError } = await supabase
-        .from('startup_assignments')
+        .from(assignmentTable)
         .select(`
           startup_id,
           juror_id,
           startups!inner(name),
-          jurors!startup_assignments_juror_id_fkey!inner(name, user_id)
+          jurors!inner(name, user_id)
         `)
         .not('jurors.user_id', 'is', null);
 
@@ -144,8 +145,9 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
     try {
       // Delete all existing assignments for current startups
       const startupIds = startups.map(s => s.id);
+      const assignmentTable = currentRound === 'screeningRound' ? 'screening_assignments' : 'pitching_assignments';
       const { error: deleteError } = await supabase
-        .from('startup_assignments')
+        .from(assignmentTable)
         .delete()
         .in('startup_id', startupIds);
 
@@ -160,7 +162,7 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
 
       if (assignmentInserts.length > 0) {
         const { error: insertError } = await supabase
-          .from('startup_assignments')
+          .from(assignmentTable)
           .insert(assignmentInserts);
 
         if (insertError) throw insertError;
