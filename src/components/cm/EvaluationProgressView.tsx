@@ -65,20 +65,17 @@ export const EvaluationProgressView = () => {
 
   const fetchEvaluationProgress = async () => {
     try {
-      // Fetch startups with their evaluations
+      // Fetch startups with their evaluations and assignments
       const { data: startupsData, error } = await supabase
         .from('startups')
         .select(`
           *,
-          startup_assignments(
+          startup_assignments(id, status),
+          evaluations(
             id,
+            overall_score,
             status,
-            evaluations(
-              id,
-              overall_score,
-              status,
-              updated_at
-            )
+            updated_at
           )
         `);
 
@@ -91,7 +88,7 @@ export const EvaluationProgressView = () => {
 
       const evaluationData: StartupEvaluation[] = startupsData?.map(startup => {
         const assignments = startup.startup_assignments || [];
-        const evaluations = assignments.flatMap(a => a.evaluations || []);
+        const evaluations = startup.evaluations || [];
         const submittedEvaluations = evaluations.filter(e => e.status === 'submitted');
         
         totalEvaluations += assignments.length;

@@ -51,18 +51,16 @@ export const Top30Selection = () => {
         .from('startups')
         .select(`
           *,
-          startup_assignments(
-            evaluations(
-              overall_score,
-              status
-            )
+          evaluations(
+            overall_score,
+            status
           )
         `);
 
       if (error) throw error;
 
       const selectionData: StartupSelection[] = startupsData?.map(startup => {
-        const evaluations = startup.startup_assignments?.flatMap(a => a.evaluations || []) || [];
+        const evaluations = startup.evaluations || [];
         const submittedEvaluations = evaluations.filter(e => e.status === 'submitted');
         const scores = submittedEvaluations
           .map(e => e.overall_score)
