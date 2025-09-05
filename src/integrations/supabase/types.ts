@@ -190,6 +190,96 @@ export type Database = {
           },
         ]
       }
+      pitching_assignments: {
+        Row: {
+          assigned_by: string | null
+          created_at: string
+          id: string
+          juror_id: string
+          startup_id: string
+          status: string | null
+          updated_at: string
+        }
+        Insert: {
+          assigned_by?: string | null
+          created_at?: string
+          id?: string
+          juror_id: string
+          startup_id: string
+          status?: string | null
+          updated_at?: string
+        }
+        Update: {
+          assigned_by?: string | null
+          created_at?: string
+          id?: string
+          juror_id?: string
+          startup_id?: string
+          status?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      pitching_evaluations: {
+        Row: {
+          created_at: string
+          criteria_scores: Json | null
+          evaluator_id: string
+          guided_feedback: string[] | null
+          id: string
+          improvement_areas: string | null
+          investment_amount: number | null
+          last_modified_at: string | null
+          overall_notes: string | null
+          overall_score: number | null
+          pitch_development_aspects: string | null
+          recommendation: string | null
+          startup_id: string
+          status: string | null
+          strengths: string[] | null
+          updated_at: string
+          wants_pitch_session: boolean | null
+        }
+        Insert: {
+          created_at?: string
+          criteria_scores?: Json | null
+          evaluator_id: string
+          guided_feedback?: string[] | null
+          id?: string
+          improvement_areas?: string | null
+          investment_amount?: number | null
+          last_modified_at?: string | null
+          overall_notes?: string | null
+          overall_score?: number | null
+          pitch_development_aspects?: string | null
+          recommendation?: string | null
+          startup_id: string
+          status?: string | null
+          strengths?: string[] | null
+          updated_at?: string
+          wants_pitch_session?: boolean | null
+        }
+        Update: {
+          created_at?: string
+          criteria_scores?: Json | null
+          evaluator_id?: string
+          guided_feedback?: string[] | null
+          id?: string
+          improvement_areas?: string | null
+          investment_amount?: number | null
+          last_modified_at?: string | null
+          overall_notes?: string | null
+          overall_score?: number | null
+          pitch_development_aspects?: string | null
+          recommendation?: string | null
+          startup_id?: string
+          status?: string | null
+          strengths?: string[] | null
+          updated_at?: string
+          wants_pitch_session?: boolean | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           calendly_link: string | null
@@ -226,6 +316,126 @@ export type Database = {
           role?: Database["public"]["Enums"]["user_role"] | null
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      rounds: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          id: string
+          name: string
+          started_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          name: string
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      screening_assignments: {
+        Row: {
+          assigned_by: string | null
+          created_at: string
+          id: string
+          juror_id: string
+          startup_id: string
+          status: string | null
+          updated_at: string
+        }
+        Insert: {
+          assigned_by?: string | null
+          created_at?: string
+          id?: string
+          juror_id: string
+          startup_id: string
+          status?: string | null
+          updated_at?: string
+        }
+        Update: {
+          assigned_by?: string | null
+          created_at?: string
+          id?: string
+          juror_id?: string
+          startup_id?: string
+          status?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      screening_evaluations: {
+        Row: {
+          created_at: string
+          criteria_scores: Json | null
+          evaluator_id: string
+          guided_feedback: string[] | null
+          id: string
+          improvement_areas: string | null
+          investment_amount: number | null
+          last_modified_at: string | null
+          overall_notes: string | null
+          overall_score: number | null
+          pitch_development_aspects: string | null
+          recommendation: string | null
+          startup_id: string
+          status: string | null
+          strengths: string[] | null
+          updated_at: string
+          wants_pitch_session: boolean | null
+        }
+        Insert: {
+          created_at?: string
+          criteria_scores?: Json | null
+          evaluator_id: string
+          guided_feedback?: string[] | null
+          id?: string
+          improvement_areas?: string | null
+          investment_amount?: number | null
+          last_modified_at?: string | null
+          overall_notes?: string | null
+          overall_score?: number | null
+          pitch_development_aspects?: string | null
+          recommendation?: string | null
+          startup_id: string
+          status?: string | null
+          strengths?: string[] | null
+          updated_at?: string
+          wants_pitch_session?: boolean | null
+        }
+        Update: {
+          created_at?: string
+          criteria_scores?: Json | null
+          evaluator_id?: string
+          guided_feedback?: string[] | null
+          id?: string
+          improvement_areas?: string | null
+          investment_amount?: number | null
+          last_modified_at?: string | null
+          overall_notes?: string | null
+          overall_score?: number | null
+          pitch_development_aspects?: string | null
+          recommendation?: string | null
+          startup_id?: string
+          status?: string | null
+          strengths?: string[] | null
+          updated_at?: string
+          wants_pitch_session?: boolean | null
         }
         Relationships: []
       }
@@ -502,6 +712,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_modify_round: {
+        Args: { round_name: string }
+        Returns: boolean
+      }
+      get_current_round: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       get_current_user_role: {
         Args: Record<PropertyKey, never>
         Returns: string
