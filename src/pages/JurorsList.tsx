@@ -30,6 +30,10 @@ interface Juror {
   invitation_token: string | null;
   invitation_sent_at: string | null;
   invitation_expires_at: string | null;
+  preferred_regions: string[] | null;
+  target_verticals: string[] | null;
+  preferred_stages: string[] | null;
+  linkedin_url: string | null;
 }
 
 export default function JurorsList() {
@@ -38,6 +42,9 @@ export default function JurorsList() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [companyFilter, setCompanyFilter] = useState('');
+  const [regionFilter, setRegionFilter] = useState('');
+  const [verticalFilter, setVerticalFilter] = useState('');
+  const [stageFilter, setStageFilter] = useState('');
   const [csvModalOpen, setCsvModalOpen] = useState(false);
   const [draftModalOpen, setDraftModalOpen] = useState(false);
   const [formModalOpen, setFormModalOpen] = useState(false);
@@ -59,7 +66,7 @@ export default function JurorsList() {
 
   useEffect(() => {
     filterJurors();
-  }, [jurors, searchTerm, companyFilter]);
+  }, [jurors, searchTerm, companyFilter, regionFilter, verticalFilter, stageFilter]);
 
   const fetchJurors = async () => {
     try {
@@ -121,6 +128,24 @@ export default function JurorsList() {
 
     if (companyFilter && companyFilter !== 'all') {
       filtered = filtered.filter(juror => juror.company === companyFilter);
+    }
+
+    if (regionFilter && regionFilter !== 'all') {
+      filtered = filtered.filter(juror => 
+        juror.preferred_regions && juror.preferred_regions.includes(regionFilter)
+      );
+    }
+
+    if (verticalFilter && verticalFilter !== 'all') {
+      filtered = filtered.filter(juror => 
+        juror.target_verticals && juror.target_verticals.includes(verticalFilter)
+      );
+    }
+
+    if (stageFilter && stageFilter !== 'all') {
+      filtered = filtered.filter(juror => 
+        juror.preferred_stages && juror.preferred_stages.includes(stageFilter)
+      );
     }
 
     setFilteredJurors(filtered);
@@ -302,8 +327,11 @@ export default function JurorsList() {
     }
   };
 
-  // Get unique companies for filter
+  // Get unique values for filters
   const companies = [...new Set(jurors.filter(j => j.company).map(j => j.company))];
+  const regions = [...new Set(jurors.flatMap(j => j.preferred_regions || []))];
+  const verticals = [...new Set(jurors.flatMap(j => j.target_verticals || []))]; 
+  const stages = [...new Set(jurors.flatMap(j => j.preferred_stages || []))];
 
   const handleSendInvitation = async (juror: Juror) => {
     setSendingInvitation(juror.id);
@@ -417,9 +445,9 @@ export default function JurorsList() {
           </div>
           
           {filtersOpen && (
-            <div className="flex gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <Select value={companyFilter || 'all'} onValueChange={(value) => setCompanyFilter(value === 'all' ? '' : value)}>
-                <SelectTrigger className="w-48">
+                <SelectTrigger>
                   <SelectValue placeholder="Filter by company" />
                 </SelectTrigger>
                 <SelectContent>
@@ -430,13 +458,53 @@ export default function JurorsList() {
                 </SelectContent>
               </Select>
 
-              {(searchTerm || companyFilter) && (
+              <Select value={regionFilter || 'all'} onValueChange={(value) => setRegionFilter(value === 'all' ? '' : value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Filter by region" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Regions</SelectItem>
+                  {regions.map(region => (
+                    <SelectItem key={region} value={region}>{region}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select value={verticalFilter || 'all'} onValueChange={(value) => setVerticalFilter(value === 'all' ? '' : value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Filter by vertical" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Verticals</SelectItem>
+                  {verticals.map(vertical => (
+                    <SelectItem key={vertical} value={vertical}>{vertical}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select value={stageFilter || 'all'} onValueChange={(value) => setStageFilter(value === 'all' ? '' : value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Filter by stage" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Stages</SelectItem>
+                  {stages.map(stage => (
+                    <SelectItem key={stage} value={stage}>{stage}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {(searchTerm || companyFilter || regionFilter || verticalFilter || stageFilter) && (
                 <Button 
                   variant="outline" 
                   onClick={() => {
                     setSearchTerm('');
                     setCompanyFilter('');
+                    setRegionFilter('');
+                    setVerticalFilter('');
+                    setStageFilter('');
                   }}
+                  className="md:col-span-4"
                 >
                   Clear Filters
                 </Button>
@@ -467,6 +535,7 @@ export default function JurorsList() {
                   <TableHead>Email</TableHead>
                   <TableHead>Job Title</TableHead>
                   <TableHead>Company</TableHead>
+                  <TableHead>Preferences</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Member Since</TableHead>
                   {isAdmin && <TableHead className="w-[140px]">Actions</TableHead>}
@@ -479,14 +548,40 @@ export default function JurorsList() {
                     <TableCell>{juror.email}</TableCell>
                     <TableCell>{juror.job_title || '-'}</TableCell>
                     <TableCell>
-                      {juror.company ? (
-                        <div className="flex items-center gap-1">
-                          <Building className="h-4 w-4 text-muted-foreground" />
-                          {juror.company}
-                        </div>
-                      ) : (
-                        '-'
-                      )}
+                      <div className="space-y-1">
+                        {juror.preferred_regions && juror.preferred_regions.length > 0 && (
+                          <div className="flex flex-wrap gap-1">
+                            {juror.preferred_regions.slice(0, 2).map(region => (
+                              <Badge key={region} variant="secondary" className="text-xs">
+                                {region}
+                              </Badge>
+                            ))}
+                            {juror.preferred_regions.length > 2 && (
+                              <Badge variant="outline" className="text-xs">
+                                +{juror.preferred_regions.length - 2}
+                              </Badge>
+                            )}
+                          </div>
+                        )}
+                        {juror.target_verticals && juror.target_verticals.length > 0 && (
+                          <div className="flex flex-wrap gap-1">
+                            {juror.target_verticals.slice(0, 2).map(vertical => (
+                              <Badge key={vertical} variant="outline" className="text-xs">
+                                {vertical}
+                              </Badge>
+                            ))}
+                            {juror.target_verticals.length > 2 && (
+                              <Badge variant="outline" className="text-xs">
+                                +{juror.target_verticals.length - 2}
+                              </Badge>
+                            )}
+                          </div>
+                        )}
+                        {(!juror.preferred_regions || juror.preferred_regions.length === 0) && 
+                         (!juror.target_verticals || juror.target_verticals.length === 0) && (
+                          <span className="text-sm text-muted-foreground">No preferences set</span>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell>
                       {(() => {

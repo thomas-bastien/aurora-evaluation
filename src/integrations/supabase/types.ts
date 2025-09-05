@@ -99,7 +99,11 @@ export type Database = {
           invitation_sent_at: string | null
           invitation_token: string | null
           job_title: string | null
+          linkedin_url: string | null
           name: string
+          preferred_regions: string[] | null
+          preferred_stages: string[] | null
+          target_verticals: string[] | null
           updated_at: string
           user_id: string | null
         }
@@ -112,7 +116,11 @@ export type Database = {
           invitation_sent_at?: string | null
           invitation_token?: string | null
           job_title?: string | null
+          linkedin_url?: string | null
           name: string
+          preferred_regions?: string[] | null
+          preferred_stages?: string[] | null
+          target_verticals?: string[] | null
           updated_at?: string
           user_id?: string | null
         }
@@ -125,7 +133,11 @@ export type Database = {
           invitation_sent_at?: string | null
           invitation_token?: string | null
           job_title?: string | null
+          linkedin_url?: string | null
           name?: string
+          preferred_regions?: string[] | null
+          preferred_stages?: string[] | null
+          target_verticals?: string[] | null
           updated_at?: string
           user_id?: string | null
         }

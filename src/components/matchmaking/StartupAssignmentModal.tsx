@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Search, Building2, Mail, User } from "lucide-react";
+import { Search, Building2, Mail, User, Star, Target, MapPin } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface Startup {
@@ -15,6 +15,7 @@ interface Startup {
   description: string;
   location: string;
   founder_names: string[];
+  region?: string | null;
 }
 
 interface Juror {
@@ -23,6 +24,10 @@ interface Juror {
   email: string;
   company: string;
   job_title: string;
+  preferred_regions?: string[] | null;
+  target_verticals?: string[] | null;
+  preferred_stages?: string[] | null;
+  linkedin_url?: string | null;
 }
 
 interface Assignment {
@@ -63,6 +68,49 @@ export const StartupAssignmentModal = ({
     juror.company.toLowerCase().includes(searchTerm.toLowerCase()) ||
     juror.job_title.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  // Calculate fit score between startup and juror
+  const calculateFitScore = (juror: Juror) => {
+    let score = 0;
+    let matches = {
+      region: false,
+      vertical: false,
+      stage: false
+    };
+
+    // Region match (+3 points)
+    if (juror.preferred_regions && startup.region) {
+      if (juror.preferred_regions.includes(startup.region)) {
+        score += 3;
+        matches.region = true;
+      }
+    }
+
+    // Vertical/Industry match (+2 points)
+    if (juror.target_verticals && startup.industry) {
+      if (juror.target_verticals.includes(startup.industry)) {
+        score += 2;
+        matches.vertical = true;
+      }
+    }
+
+    // Stage match (+2 points)
+    if (juror.preferred_stages && startup.stage) {
+      if (juror.preferred_stages.includes(startup.stage)) {
+        score += 2;
+        matches.stage = true;
+      }
+    }
+
+    return { score, matches };
+  };
+
+  // Sort jurors by fit score (highest first)
+  const sortedJurors = filteredJurors.sort((a, b) => {
+    const scoreA = calculateFitScore(a).score;
+    const scoreB = calculateFitScore(b).score;
+    return scoreB - scoreA;
+  });
 
   const handleJurorToggle = (jurorId: string) => {
     setSelectedJurorIds(prev => 
@@ -196,8 +244,9 @@ export const StartupAssignmentModal = ({
 
         {/* Jurors List */}
         <div className="space-y-3 max-h-96 overflow-y-auto">
-          {filteredJurors.map((juror) => {
+          {sortedJurors.map((juror) => {
             const isSelected = selectedJurorIds.includes(juror.id);
+            const { score, matches } = calculateFitScore(juror);
             
             return (
               <div
@@ -215,11 +264,20 @@ export const StartupAssignmentModal = ({
                     onChange={() => {}} // Handled by parent onClick
                   />
                   <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <User className="w-4 h-4 text-muted-foreground" />
-                      <span className="font-medium">{juror.name}</span>
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <User className="w-4 h-4 text-muted-foreground" />
+                        <span className="font-medium">{juror.name}</span>
+                        {score > 0 && (
+                          <Badge variant="secondary" className="ml-2">
+                            <Star className="w-3 h-3 mr-1" />
+                            Fit Score: {score}
+                          </Badge>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                    
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground mb-2">
                       <span>{juror.job_title}</span>
                       <span>@{juror.company}</span>
                       <div className="flex items-center gap-1">
@@ -227,6 +285,30 @@ export const StartupAssignmentModal = ({
                         {juror.email}
                       </div>
                     </div>
+
+                    {/* Fit Badges */}
+                    {score > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {matches.region && (
+                          <Badge variant="default" className="text-xs">
+                            <MapPin className="w-2 h-2 mr-1" />
+                            Region Match
+                          </Badge>
+                        )}
+                        {matches.vertical && (
+                          <Badge variant="default" className="text-xs">
+                            <Target className="w-2 h-2 mr-1" />
+                            Vertical Match
+                          </Badge>
+                        )}
+                        {matches.stage && (
+                          <Badge variant="default" className="text-xs">
+                            <Building2 className="w-2 h-2 mr-1" />
+                            Stage Match
+                          </Badge>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

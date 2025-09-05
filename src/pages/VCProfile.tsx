@@ -12,12 +12,17 @@ import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
 import { User, Building2, Mail, Calendar, Save, Star, Target, FileText, TrendingUp, CheckCircle, Clock, AlertCircle } from 'lucide-react';
+import { REGION_OPTIONS, VERTICAL_OPTIONS, STAGE_OPTIONS } from '@/constants/jurorPreferences';
 interface ProfileForm {
   full_name: string;
   organization: string;
   calendly_link: string;
   expertise: string[];
   investment_stages: string[];
+  preferred_regions: string[];
+  target_verticals: string[];
+  preferred_stages: string[];
+  linkedin_url: string;
 }
 interface EvaluationStats {
   total_assigned: number;
@@ -44,10 +49,14 @@ const VCProfile = () => {
     organization: '',
     calendly_link: '',
     expertise: [],
-    investment_stages: []
+    investment_stages: [],
+    preferred_regions: [],
+    target_verticals: [],
+    preferred_stages: [],
+    linkedin_url: ''
   });
-  const expertiseOptions = ['AI/ML', 'Fintech', 'Healthcare', 'SaaS', 'E-commerce', 'Blockchain', 'IoT', 'Cybersecurity', 'EdTech', 'Climate Tech', 'Mobility', 'Gaming'];
-  const investmentStageOptions = ['Pre-Seed', 'Seed', 'Series A', 'Series B', 'Series C+', 'Growth'];
+  const expertiseOptions = VERTICAL_OPTIONS;
+  const investmentStageOptions = STAGE_OPTIONS;
   useEffect(() => {
     if (profile) {
       setFormData({
@@ -55,11 +64,40 @@ const VCProfile = () => {
         organization: profile.organization || '',
         calendly_link: profile.calendly_link || '',
         expertise: profile.expertise || [],
-        investment_stages: profile.investment_stages || []
+        investment_stages: profile.investment_stages || [],
+        preferred_regions: [],
+        target_verticals: [],
+        preferred_stages: [],
+        linkedin_url: ''
       });
     }
     fetchEvaluationStats();
+    fetchJurorPreferences();
   }, [profile]);
+  const fetchJurorPreferences = async () => {
+    if (!user) return;
+    
+    try {
+      const { data: jurorData } = await supabase
+        .from('jurors')
+        .select('preferred_regions, target_verticals, preferred_stages, linkedin_url')
+        .eq('user_id', user.id)
+        .maybeSingle();
+        
+      if (jurorData) {
+        setFormData(prev => ({
+          ...prev,
+          preferred_regions: jurorData.preferred_regions || [],
+          target_verticals: jurorData.target_verticals || [],
+          preferred_stages: jurorData.preferred_stages || [],
+          linkedin_url: jurorData.linkedin_url || ''
+        }));
+      }
+    } catch (error) {
+      console.error('Error fetching juror preferences:', error);
+    }
+  };
+
   const fetchEvaluationStats = async () => {
     if (!user) return;
     try {
@@ -93,9 +131,9 @@ const VCProfile = () => {
     if (!user) return;
     try {
       setSaving(true);
-      const {
-        error
-      } = await supabase.from('profiles').update({
+      
+      // Update profile
+      const { error: profileError } = await supabase.from('profiles').update({
         full_name: formData.full_name,
         organization: formData.organization,
         calendly_link: formData.calendly_link,
@@ -103,7 +141,19 @@ const VCProfile = () => {
         investment_stages: formData.investment_stages,
         updated_at: new Date().toISOString()
       }).eq('user_id', user.id);
-      if (error) throw error;
+      
+      if (profileError) throw profileError;
+      
+      // Update juror preferences
+      const { error: jurorError } = await supabase.from('jurors').update({
+        preferred_regions: formData.preferred_regions,
+        target_verticals: formData.target_verticals,
+        preferred_stages: formData.preferred_stages,
+        linkedin_url: formData.linkedin_url
+      }).eq('user_id', user.id);
+      
+      if (jurorError) throw jurorError;
+      
       toast.success('Profile updated successfully!');
     } catch (error) {
       console.error('Error updating profile:', error);
@@ -187,17 +237,104 @@ const VCProfile = () => {
                     </p>
                   </div>
 
+                  <div>
+                    <Label htmlFor="linkedin_url">LinkedIn Profile</Label>
+                    <Input 
+                      id="linkedin_url" 
+                      type="url" 
+                      value={formData.linkedin_url} 
+                      onChange={e => setFormData(prev => ({
+                        ...prev,
+                        linkedin_url: e.target.value
+                      }))} 
+                      placeholder="https://linkedin.com/in/your-profile" 
+                    />
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Your LinkedIn profile for networking and credibility
+                    </p>
+                  </div>
+
                   <Separator />
 
                   <div>
-                    <Label>Areas of Expertise</Label>
+                    <Label>Preferred Regions</Label>
+                    <p className="text-sm text-muted-foreground mb-2">Select regions you prefer to evaluate startups from</p>
                     <div className="flex flex-wrap gap-2 mt-2">
-                      {expertiseOptions.map(expertise => <Badge key={expertise} variant={formData.expertise.includes(expertise) ? "default" : "outline"} className="cursor-pointer" onClick={() => toggleArrayItem(formData.expertise, expertise, items => setFormData(prev => ({
-                      ...prev,
-                      expertise: items
-                    })))}>
+                      {REGION_OPTIONS.map(region => 
+                        <Badge 
+                          key={region} 
+                          variant={formData.preferred_regions.includes(region) ? "default" : "outline"} 
+                          className="cursor-pointer" 
+                          onClick={() => toggleArrayItem(formData.preferred_regions, region, items => setFormData(prev => ({
+                            ...prev,
+                            preferred_regions: items
+                          })))}
+                        >
+                          {region}
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label>Target Investment Verticals</Label>
+                    <p className="text-sm text-muted-foreground mb-2">Select industries you specialize in</p>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {VERTICAL_OPTIONS.map(vertical => 
+                        <Badge 
+                          key={vertical} 
+                          variant={formData.target_verticals.includes(vertical) ? "default" : "outline"} 
+                          className="cursor-pointer" 
+                          onClick={() => toggleArrayItem(formData.target_verticals, vertical, items => setFormData(prev => ({
+                            ...prev,
+                            target_verticals: items
+                          })))}
+                        >
+                          {vertical}
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label>Preferred Startup Stages</Label>
+                    <p className="text-sm text-muted-foreground mb-2">Select funding stages you prefer to evaluate</p>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {STAGE_OPTIONS.map(stage => 
+                        <Badge 
+                          key={stage} 
+                          variant={formData.preferred_stages.includes(stage) ? "default" : "outline"} 
+                          className="cursor-pointer" 
+                          onClick={() => toggleArrayItem(formData.preferred_stages, stage, items => setFormData(prev => ({
+                            ...prev,
+                            preferred_stages: items
+                          })))}
+                        >
+                          {stage}
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  <div>
+                    <Label>Legacy Expertise Areas</Label>
+                    <p className="text-sm text-muted-foreground mb-2">Previous expertise selections (maintained for compatibility)</p>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {expertiseOptions.map(expertise => 
+                        <Badge 
+                          key={expertise} 
+                          variant={formData.expertise.includes(expertise) ? "default" : "outline"} 
+                          className="cursor-pointer" 
+                          onClick={() => toggleArrayItem(formData.expertise, expertise, items => setFormData(prev => ({
+                            ...prev,
+                            expertise: items
+                          })))}
+                        >
                           {expertise}
-                        </Badge>)}
+                        </Badge>
+                      )}
                     </div>
                   </div>
 

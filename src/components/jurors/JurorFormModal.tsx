@@ -3,6 +3,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import { REGION_OPTIONS, VERTICAL_OPTIONS, STAGE_OPTIONS } from '@/constants/jurorPreferences';
 
 interface Juror {
   id?: string;
@@ -10,6 +13,10 @@ interface Juror {
   email: string;
   job_title: string | null;
   company: string | null;
+  preferred_regions: string[] | null;
+  target_verticals: string[] | null;
+  preferred_stages: string[] | null;
+  linkedin_url: string | null;
 }
 
 interface JurorFormModalProps {
@@ -32,7 +39,11 @@ export function JurorFormModal({
       name: '',
       email: '',
       job_title: '',
-      company: ''
+      company: '',
+      preferred_regions: [],
+      target_verticals: [],
+      preferred_stages: [],
+      linkedin_url: ''
     }
   );
 
@@ -45,7 +56,11 @@ export function JurorFormModal({
         name: '',
         email: '',
         job_title: '',
-        company: ''
+        company: '',
+        preferred_regions: [],
+        target_verticals: [],
+        preferred_stages: [],
+        linkedin_url: ''
       });
     }
   }, [initialData, mode, open]);
@@ -66,7 +81,11 @@ export function JurorFormModal({
         name: '',
         email: '',
         job_title: '',
-        company: ''
+        company: '',
+        preferred_regions: [],
+        target_verticals: [],
+        preferred_stages: [],
+        linkedin_url: ''
       });
     }
     
@@ -75,9 +94,18 @@ export function JurorFormModal({
 
   const isFormValid = formData.name?.trim() && formData.email?.trim();
 
+  const toggleArrayItem = (array: string[] | null, item: string, field: keyof Juror) => {
+    const currentArray = array || [];
+    const newArray = currentArray.includes(item) 
+      ? currentArray.filter(i => i !== item)
+      : [...currentArray, item];
+    
+    setFormData(prev => ({ ...prev, [field]: newArray }));
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {mode === 'edit' ? 'Edit Juror' : 'Add New Juror'}
@@ -126,6 +154,70 @@ export function JurorFormModal({
               onChange={(e) => setFormData(prev => ({ ...prev, company: e.target.value }))}
               placeholder="Enter company name"
             />
+          </div>
+
+          <div>
+            <Label htmlFor="linkedin_url">LinkedIn Profile (Optional)</Label>
+            <Input
+              id="linkedin_url"
+              type="url"
+              value={formData.linkedin_url || ''}
+              onChange={(e) => setFormData(prev => ({ ...prev, linkedin_url: e.target.value }))}
+              placeholder="https://linkedin.com/in/your-profile"
+            />
+          </div>
+
+          <Separator />
+
+          <div>
+            <Label>Preferred Regions</Label>
+            <p className="text-sm text-muted-foreground mb-2">Select regions you prefer to evaluate startups from</p>
+            <div className="flex flex-wrap gap-2">
+              {REGION_OPTIONS.map((region) => (
+                <Badge
+                  key={region}
+                  variant={(formData.preferred_regions || []).includes(region) ? "default" : "outline"}
+                  className="cursor-pointer"
+                  onClick={() => toggleArrayItem(formData.preferred_regions, region, 'preferred_regions')}
+                >
+                  {region}
+                </Badge>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <Label>Target Investment Verticals</Label>
+            <p className="text-sm text-muted-foreground mb-2">Select industries you specialize in</p>
+            <div className="flex flex-wrap gap-2">
+              {VERTICAL_OPTIONS.map((vertical) => (
+                <Badge
+                  key={vertical}
+                  variant={(formData.target_verticals || []).includes(vertical) ? "default" : "outline"}
+                  className="cursor-pointer"
+                  onClick={() => toggleArrayItem(formData.target_verticals, vertical, 'target_verticals')}
+                >
+                  {vertical}
+                </Badge>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <Label>Preferred Startup Stages</Label>
+            <p className="text-sm text-muted-foreground mb-2">Select funding stages you prefer to evaluate</p>
+            <div className="flex flex-wrap gap-2">
+              {STAGE_OPTIONS.map((stage) => (
+                <Badge
+                  key={stage}
+                  variant={(formData.preferred_stages || []).includes(stage) ? "default" : "outline"}
+                  className="cursor-pointer"
+                  onClick={() => toggleArrayItem(formData.preferred_stages, stage, 'preferred_stages')}
+                >
+                  {stage}
+                </Badge>
+              ))}
+            </div>
           </div>
 
           <div className="flex justify-end gap-2 pt-4">
