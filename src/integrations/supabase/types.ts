@@ -14,81 +14,6 @@ export type Database = {
   }
   public: {
     Tables: {
-      evaluations: {
-        Row: {
-          created_at: string
-          criteria_scores: Json | null
-          evaluator_id: string
-          guided_feedback: number[] | null
-          id: string
-          improvement_areas: string | null
-          investment_amount: number | null
-          last_modified_at: string | null
-          overall_notes: string | null
-          overall_score: number | null
-          pitch_development_aspects: string | null
-          recommendation: string | null
-          startup_id: string
-          status: string | null
-          strengths: string[] | null
-          updated_at: string
-          wants_pitch_session: boolean | null
-        }
-        Insert: {
-          created_at?: string
-          criteria_scores?: Json | null
-          evaluator_id: string
-          guided_feedback?: number[] | null
-          id?: string
-          improvement_areas?: string | null
-          investment_amount?: number | null
-          last_modified_at?: string | null
-          overall_notes?: string | null
-          overall_score?: number | null
-          pitch_development_aspects?: string | null
-          recommendation?: string | null
-          startup_id: string
-          status?: string | null
-          strengths?: string[] | null
-          updated_at?: string
-          wants_pitch_session?: boolean | null
-        }
-        Update: {
-          created_at?: string
-          criteria_scores?: Json | null
-          evaluator_id?: string
-          guided_feedback?: number[] | null
-          id?: string
-          improvement_areas?: string | null
-          investment_amount?: number | null
-          last_modified_at?: string | null
-          overall_notes?: string | null
-          overall_score?: number | null
-          pitch_development_aspects?: string | null
-          recommendation?: string | null
-          startup_id?: string
-          status?: string | null
-          strengths?: string[] | null
-          updated_at?: string
-          wants_pitch_session?: boolean | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "evaluations_evaluator_id_fkey"
-            columns: ["evaluator_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "evaluations_startup_id_fkey"
-            columns: ["startup_id"]
-            isOneToOne: false
-            referencedRelation: "startups"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       jurors: {
         Row: {
           company: string | null
@@ -543,51 +468,6 @@ export type Database = {
           vc_participants?: number | null
         }
         Relationships: []
-      }
-      startup_assignments: {
-        Row: {
-          assigned_by: string | null
-          created_at: string
-          id: string
-          juror_id: string
-          startup_id: string
-          status: string | null
-          updated_at: string
-        }
-        Insert: {
-          assigned_by?: string | null
-          created_at?: string
-          id?: string
-          juror_id: string
-          startup_id: string
-          status?: string | null
-          updated_at?: string
-        }
-        Update: {
-          assigned_by?: string | null
-          created_at?: string
-          id?: string
-          juror_id?: string
-          startup_id?: string
-          status?: string | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "startup_assignments_juror_id_fkey"
-            columns: ["juror_id"]
-            isOneToOne: false
-            referencedRelation: "jurors"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "startup_assignments_startup_id_fkey"
-            columns: ["startup_id"]
-            isOneToOne: false
-            referencedRelation: "startups"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       startup_sessions: {
         Row: {
