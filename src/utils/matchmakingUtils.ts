@@ -5,7 +5,7 @@ export interface Startup {
   name: string;
   verticals?: string[];
   stage?: string;
-  region?: string;
+  regions?: string[];
 }
 
 export interface Juror {
@@ -44,14 +44,15 @@ export function calculateCompatibility(juror: Juror, startup: Startup): Compatib
   const jurorStages = juror.preferred_stages || [];
   const stageMatch = startupStage && jurorStages.includes(startupStage);
   
-  const startupRegion = startup.region;
+  const startupRegions = startup.regions || [];
   const jurorRegions = juror.preferred_regions || [];
-  const regionMatch = startupRegion && jurorRegions.includes(startupRegion);
+  const regionMatches = startupRegions.filter(r => jurorRegions.includes(r));
+  const regionMatch = regionMatches.length > 0;
   
   const matches = {
     vertical: verticalMatches.length > 0,
     stage: !!stageMatch,
-    region: !!regionMatch
+    region: regionMatch
   };
   
   // Calculate score (weighted: vertical 50%, stage 30%, region 20%)
@@ -69,7 +70,7 @@ export function calculateCompatibility(juror: Juror, startup: Startup): Compatib
     details: {
       verticalMatches,
       stageMatch: stageMatch ? startupStage : null,
-      regionMatch: regionMatch ? startupRegion : null
+      regionMatch: regionMatch ? regionMatches.join(', ') : null
     }
   };
 }
@@ -111,7 +112,7 @@ export function detectDataInconsistencies(startups: Startup[], jurors: Juror[]):
   );
 
   const startupsWithoutRegionMatch = startups.filter(s => 
-    s.region && !allJurorRegions.has(s.region)
+    (s.regions || []).every(r => !allJurorRegions.has(r))
   );
 
   if (startupsWithoutVerticalMatch.length > 0) {

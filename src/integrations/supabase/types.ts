@@ -382,6 +382,7 @@ export type Database = {
           other_vertical_description: string | null
           pitch_deck_url: string | null
           region: string | null
+          regions: string[] | null
           stage: string | null
           status: string | null
           team_size: number | null
@@ -413,6 +414,7 @@ export type Database = {
           other_vertical_description?: string | null
           pitch_deck_url?: string | null
           region?: string | null
+          regions?: string[] | null
           stage?: string | null
           status?: string | null
           team_size?: number | null
@@ -444,6 +446,7 @@ export type Database = {
           other_vertical_description?: string | null
           pitch_deck_url?: string | null
           region?: string | null
+          regions?: string[] | null
           stage?: string | null
           status?: string | null
           team_size?: number | null

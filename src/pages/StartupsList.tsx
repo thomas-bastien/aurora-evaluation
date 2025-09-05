@@ -38,6 +38,7 @@ interface Startup {
   business_model: string | null;
   verticals: string[] | null;
   other_vertical_description: string | null;
+  regions: string[] | null;
 }
 
 export default function StartupsList() {
@@ -50,6 +51,7 @@ export default function StartupsList() {
   const [statusFilter, setStatusFilter] = useState('');
   const [businessModelFilter, setBusinessModelFilter] = useState('');
   const [verticalFilter, setVerticalFilter] = useState('');
+  const [regionFilter, setRegionFilter] = useState('');
   const [hasLinkedInFilter, setHasLinkedInFilter] = useState('');
   const [investmentMinFilter, setInvestmentMinFilter] = useState('');
   const [investmentMaxFilter, setInvestmentMaxFilter] = useState('');
@@ -129,6 +131,12 @@ export default function StartupsList() {
       );
     }
 
+    if (regionFilter && regionFilter !== 'all') {
+      filtered = filtered.filter(startup => 
+        startup.regions?.includes(regionFilter)
+      );
+    }
+
     if (hasLinkedInFilter && hasLinkedInFilter !== 'all') {
       if (hasLinkedInFilter === 'yes') {
         filtered = filtered.filter(startup => startup.linkedin_url);
@@ -158,7 +166,7 @@ export default function StartupsList() {
     setFilteredStartups(filtered);
   }, [
     startups, searchTerm, industryFilter, stageFilter, statusFilter, 
-    businessModelFilter, verticalFilter, hasLinkedInFilter, 
+    businessModelFilter, verticalFilter, regionFilter, hasLinkedInFilter, 
     investmentMinFilter, investmentMaxFilter
   ]);
 
@@ -191,6 +199,8 @@ export default function StartupsList() {
   const businessModels = [...new Set(startups.filter(s => s.business_model).map(s => s.business_model))];
   const allVerticals = startups.flatMap(s => s.verticals || []);
   const uniqueVerticals = [...new Set(allVerticals)];
+  const allRegions = startups.flatMap(s => s.regions || []);
+  const uniqueRegions = [...new Set(allRegions)];
 
   const clearAllFilters = () => {
     setIndustryFilter('');
@@ -198,6 +208,7 @@ export default function StartupsList() {
     setStatusFilter('');
     setBusinessModelFilter('');
     setVerticalFilter('');
+    setRegionFilter('');
     setHasLinkedInFilter('');
     setInvestmentMinFilter('');
     setInvestmentMaxFilter('');
@@ -210,6 +221,7 @@ export default function StartupsList() {
     if (statusFilter && statusFilter !== 'all') filters.push({ label: 'Status', value: statusFilter, onRemove: () => setStatusFilter('') });
     if (businessModelFilter && businessModelFilter !== 'all') filters.push({ label: 'Business Model', value: businessModelFilter, onRemove: () => setBusinessModelFilter('') });
     if (verticalFilter && verticalFilter !== 'all') filters.push({ label: 'Vertical', value: verticalFilter, onRemove: () => setVerticalFilter('') });
+    if (regionFilter && regionFilter !== 'all') filters.push({ label: 'Region', value: regionFilter, onRemove: () => setRegionFilter('') });
     if (hasLinkedInFilter && hasLinkedInFilter !== 'all') filters.push({ label: 'LinkedIn', value: hasLinkedInFilter === 'yes' ? 'Has LinkedIn' : 'No LinkedIn', onRemove: () => setHasLinkedInFilter('') });
     if (investmentMinFilter) filters.push({ label: 'Min Investment', value: `$${investmentMinFilter}`, onRemove: () => setInvestmentMinFilter('') });
     if (investmentMaxFilter) filters.push({ label: 'Max Investment', value: `$${investmentMaxFilter}`, onRemove: () => setInvestmentMaxFilter('') });
@@ -499,7 +511,22 @@ export default function StartupsList() {
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-4 mt-4">
+            <div className="grid grid-cols-4 gap-4 mt-4">
+              <div>
+                <label className="text-sm font-medium mb-2 block">Region</label>
+                <Select value={regionFilter || 'all'} onValueChange={(value) => setRegionFilter(value === 'all' ? '' : value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All Regions" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Regions</SelectItem>
+                    {uniqueRegions.map(region => (
+                      <SelectItem key={region} value={region}>{region}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
               <div>
                 <label className="text-sm font-medium mb-2 block">LinkedIn Profile</label>
                 <Select value={hasLinkedInFilter || 'all'} onValueChange={(value) => setHasLinkedInFilter(value === 'all' ? '' : value)}>

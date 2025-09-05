@@ -36,6 +36,7 @@ interface Startup {
   business_model: string | null;
   verticals: string[] | null;
   other_vertical_description: string | null;
+  regions: string[] | null;
 }
 
 const StartupProfile = () => {
@@ -240,6 +241,12 @@ const StartupProfile = () => {
                       <div className="flex items-center gap-2">
                         <MapPin className="w-4 h-4 text-muted-foreground" />
                         <span className="text-sm">{startup.location}</span>
+                      </div>
+                    )}
+                    {startup.regions && startup.regions.length > 0 && (
+                      <div className="flex items-center gap-2">
+                        <MapPin className="w-4 h-4 text-muted-foreground" />
+                        <span className="text-sm">Regions: {startup.regions.join(', ')}</span>
                       </div>
                     )}
                     {startup.team_size && (

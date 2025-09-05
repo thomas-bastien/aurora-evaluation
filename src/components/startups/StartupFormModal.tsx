@@ -9,7 +9,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Plus, X, Info } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { normalizeStage } from '@/utils/stageUtils';
-import { AURORA_VERTICALS, BUSINESS_MODELS, CURRENCIES } from '@/constants/startupConstants';
+import { AURORA_VERTICALS, BUSINESS_MODELS, CURRENCIES, REGION_OPTIONS } from '@/constants/startupConstants';
 import { STAGE_OPTIONS } from '@/constants/jurorPreferences';
 
 interface Startup {
@@ -33,6 +33,7 @@ interface Startup {
   business_model?: string;
   verticals?: string[];
   other_vertical_description?: string;
+  regions?: string[];
 }
 
 interface StartupFormModalProps {
@@ -55,6 +56,7 @@ export function StartupFormModal({
       founder_names: [],
       status: 'pending',
       verticals: [],
+      regions: [],
       investment_currency: 'GBP'
     }
   );
@@ -70,6 +72,7 @@ export function StartupFormModal({
         founder_names: [],
         status: 'pending',
         verticals: [],
+        regions: [],
         investment_currency: 'GBP'
       });
     }
@@ -83,7 +86,7 @@ export function StartupFormModal({
     };
     onSubmit(normalizedData);
     if (mode === 'create') {
-      setFormData({ founder_names: [], status: 'pending', verticals: [], investment_currency: 'GBP' });
+      setFormData({ founder_names: [], status: 'pending', verticals: [], regions: [], investment_currency: 'GBP' });
       setFounderInput('');
     }
     onOpenChange(false);
@@ -127,6 +130,29 @@ export function StartupFormModal({
         return {
           ...prev,
           verticals: [...currentVerticals, vertical]
+        };
+      }
+    });
+  };
+
+  const toggleRegion = (region: string) => {
+    setFormData(prev => {
+      const currentRegions = prev.regions || [];
+      const isSelected = currentRegions.includes(region);
+      
+      if (isSelected) {
+        return {
+          ...prev,
+          regions: currentRegions.filter(r => r !== region)
+        };
+      } else {
+        // Add region only if not already present (prevent duplicates)
+        if (currentRegions.includes(region)) {
+          return prev; // No change if duplicate
+        }
+        return {
+          ...prev,
+          regions: [...currentRegions, region]
         };
       }
     });
@@ -297,6 +323,7 @@ export function StartupFormModal({
                 id="location"
                 value={formData.location || ''}
                 onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
+                placeholder="Specific address or city"
               />
             </div>
             <div>
@@ -309,6 +336,38 @@ export function StartupFormModal({
                 value={formData.founded_year || ''}
                 onChange={(e) => setFormData(prev => ({ ...prev, founded_year: parseInt(e.target.value) || undefined }))}
               />
+            </div>
+          </div>
+
+          {/* Regions for Matchmaking */}
+          <div>
+            <Label>
+              Target Regions *
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Info className="inline w-3 h-3 ml-1 text-muted-foreground" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Select regions for investor matchmaking (separate from specific location above)</p>
+                </TooltipContent>
+              </Tooltip>
+            </Label>
+            <div className="grid grid-cols-2 gap-2 p-4 border rounded-lg max-h-40 overflow-y-auto">
+              {REGION_OPTIONS.map(region => (
+                <div key={region} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`region-${region}`}
+                    checked={(formData.regions || []).includes(region)}
+                    onCheckedChange={() => toggleRegion(region)}
+                  />
+                  <Label
+                    htmlFor={`region-${region}`}
+                    className="text-sm font-normal cursor-pointer"
+                  >
+                    {region}
+                  </Label>
+                </div>
+              ))}
             </div>
           </div>
 
