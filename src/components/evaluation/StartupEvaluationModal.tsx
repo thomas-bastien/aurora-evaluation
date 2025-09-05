@@ -14,7 +14,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
-import { Star, Save, Send, Info, Building2, DollarSign, Users, Calendar, Globe, FileText, Video, MapPin, Linkedin, Plus, X, Edit, CheckCircle } from "lucide-react";
+import { Star, Save, Send, Info, Building2, DollarSign, Users, Calendar, Globe, FileText, Video, MapPin, Linkedin, Plus, X, Edit, CheckCircle, AlertTriangle } from "lucide-react";
+import { cn } from "@/lib/utils";
 interface StartupEvaluationModalProps {
   startup: {
     id: string;
@@ -61,6 +62,92 @@ interface EvaluationForm {
   recommendation: string;
   investment_amount: number | null;
 }
+
+interface TextFieldValidation {
+  [key: string]: {
+    hasError: boolean;
+    message: string;
+  };
+}
+
+// Validation constants
+const MIN_CHARS = 30;
+const VALIDATION_MESSAGE = "Please add at least 30 characters so your feedback is specific and useful.";
+
+// TextareaWithValidation component
+interface TextareaWithValidationProps {
+  id: string;
+  label: string;
+  placeholder: string;
+  value: string;
+  onChange: (value: string) => void;
+  disabled?: boolean;
+  className?: string;
+  validation?: { hasError: boolean; message: string };
+  description?: string;
+}
+
+const TextareaWithValidation = ({ 
+  id, 
+  label, 
+  placeholder, 
+  value, 
+  onChange, 
+  disabled = false, 
+  className = "",
+  validation,
+  description
+}: TextareaWithValidationProps) => {
+  const charCount = value.length;
+  const isValid = charCount >= MIN_CHARS;
+  const showError = validation?.hasError && charCount > 0 && !isValid;
+
+  return (
+    <div>
+      <Label htmlFor={id} className="text-base font-semibold">
+        {label}
+      </Label>
+      {description && (
+        <p className="text-sm text-muted-foreground mt-1 mb-2">{description}</p>
+      )}
+      <Textarea
+        id={id}
+        placeholder={placeholder}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className={cn(
+          "mt-2 min-h-[80px]",
+          showError && "border-destructive focus-visible:ring-destructive",
+          className
+        )}
+        disabled={disabled}
+        aria-invalid={showError}
+        aria-describedby={showError ? `${id}-error` : `${id}-counter`}
+      />
+      <div className="flex justify-between items-center mt-1">
+        <div 
+          id={`${id}-counter`}
+          className={cn(
+            "text-xs",
+            charCount < MIN_CHARS ? "text-muted-foreground" : "text-primary"
+          )}
+        >
+          {charCount}/{MIN_CHARS}+ characters
+        </div>
+        {showError && (
+          <div 
+            id={`${id}-error`}
+            className="text-xs text-destructive flex items-center gap-1"
+            role="alert"
+          >
+            <AlertTriangle className="w-3 h-3" />
+            {validation?.message}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
 const evaluationSections: EvaluationSection[] = [{
   key: 'problem_statement',
   title: 'Problem Statement',
@@ -339,6 +426,7 @@ export const StartupEvaluationModal = ({
     recommendation: '',
     investment_amount: null
   });
+  const [validationErrors, setValidationErrors] = useState<TextFieldValidation>({});
   useEffect(() => {
     if (open && startup.evaluation_id) {
       fetchExistingEvaluation();
@@ -421,6 +509,52 @@ export const StartupEvaluationModal = ({
     const maxPossibleScore = totalCriteria * 2; // Max 2 points per criterion
     return maxPossibleScore > 0 ? totalScore / maxPossibleScore * 10 : 0;
   };
+  const validateOpenEndedFields = () => {
+    const errors: TextFieldValidation = {};
+    let hasErrors = false;
+
+    // Validate strengths (each non-empty strength must have at least 30 chars)
+    formData.strengths.forEach((strength, index) => {
+      if (strength.trim().length > 0 && strength.trim().length < MIN_CHARS) {
+        errors[`strength-${index}`] = {
+          hasError: true,
+          message: VALIDATION_MESSAGE
+        };
+        hasErrors = true;
+      }
+    });
+
+    // Validate improvement areas
+    if (formData.improvement_areas.trim().length > 0 && formData.improvement_areas.trim().length < MIN_CHARS) {
+      errors['improvement_areas'] = {
+        hasError: true,
+        message: VALIDATION_MESSAGE
+      };
+      hasErrors = true;
+    }
+
+    // Validate pitch development aspects
+    if (formData.pitch_development_aspects.trim().length > 0 && formData.pitch_development_aspects.trim().length < MIN_CHARS) {
+      errors['pitch_development_aspects'] = {
+        hasError: true,
+        message: VALIDATION_MESSAGE
+      };
+      hasErrors = true;
+    }
+
+    // Validate overall notes
+    if (formData.overall_notes.trim().length > 0 && formData.overall_notes.trim().length < MIN_CHARS) {
+      errors['overall_notes'] = {
+        hasError: true,
+        message: VALIDATION_MESSAGE
+      };
+      hasErrors = true;
+    }
+
+    setValidationErrors(errors);
+    return !hasErrors;
+  };
+
   const validateForm = () => {
     const allCriteriaCovered = evaluationSections.every(section => section.criteria.every(criterion => formData.criteria_scores[criterion.key] !== undefined));
     if (!allCriteriaCovered) {
@@ -450,11 +584,26 @@ export const StartupEvaluationModal = ({
       toast.error('Please specify aspects of the pitch that need further development');
       return false;
     }
+
+    // Validate open-ended fields for character count
+    if (!validateOpenEndedFields()) {
+      toast.error('Some feedback fields need at least 30 characters before submission');
+      return false;
+    }
+
     return true;
   };
   const handleSave = async (status: 'draft' | 'submitted') => {
     if (status === 'submitted' && !validateForm()) {
       return;
+    }
+
+    // For drafts, check if there are short fields and show reminder
+    if (status === 'draft') {
+      const hasShortFields = !validateOpenEndedFields();
+      if (hasShortFields) {
+        toast.info('Draft saved. Some answers need at least 30 characters before submission.');
+      }
     }
     if (!user?.id) {
       toast.error('Authentication required. Please sign in again.');
@@ -732,27 +881,63 @@ export const StartupEvaluationModal = ({
                           Click the + button below to add startup strengths (maximum 3)
                         </div>
                       )}
-                      {formData.strengths.map((strength, index) => (
-                        <div key={index} className="flex gap-2">
-                           <Textarea 
-                             placeholder={`Strength ${index + 1}`} 
-                             value={strength} 
-                             onChange={e => updateStrength(index, e.target.value)} 
-                             className="min-h-[60px] flex-1" 
-                             disabled={!isEditing}
-                           />
-                           <Button
-                             type="button"
-                             variant="outline"
-                             size="sm"
-                             onClick={() => removeStrength(index)}
-                             className="px-2 h-auto self-start mt-1"
-                             disabled={!isEditing}
-                           >
-                            <X className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      ))}
+                      {formData.strengths.map((strength, index) => {
+                        const charCount = strength.length;
+                        const isValid = charCount >= MIN_CHARS;
+                        const showError = validationErrors[`strength-${index}`]?.hasError && charCount > 0 && !isValid;
+                        
+                        return (
+                          <div key={index} className="space-y-1">
+                            <div className="flex gap-2">
+                              <div className="flex-1">
+                                <Textarea 
+                                  placeholder={`Strength ${index + 1}`} 
+                                  value={strength} 
+                                  onChange={e => updateStrength(index, e.target.value)} 
+                                  className={cn(
+                                    "min-h-[60px]",
+                                    showError && "border-destructive focus-visible:ring-destructive"
+                                  )}
+                                  disabled={!isEditing}
+                                  aria-invalid={showError}
+                                  aria-describedby={showError ? `strength-${index}-error` : `strength-${index}-counter`}
+                                />
+                                <div className="flex justify-between items-center mt-1">
+                                  <div 
+                                    id={`strength-${index}-counter`}
+                                    className={cn(
+                                      "text-xs",
+                                      charCount < MIN_CHARS ? "text-muted-foreground" : "text-primary"
+                                    )}
+                                  >
+                                    {charCount}/{MIN_CHARS}+ characters
+                                  </div>
+                                  {showError && (
+                                    <div 
+                                      id={`strength-${index}-error`}
+                                      className="text-xs text-destructive flex items-center gap-1"
+                                      role="alert"
+                                    >
+                                      <AlertTriangle className="w-3 h-3" />
+                                      {VALIDATION_MESSAGE}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => removeStrength(index)}
+                                className="px-2 h-auto self-start mt-1"
+                                disabled={!isEditing}
+                              >
+                               <X className="w-4 h-4" />
+                             </Button>
+                            </div>
+                          </div>
+                        );
+                      })}
                       {formData.strengths.length < 3 && (
                         <div className="flex justify-center pt-2">
                           <Button 
@@ -770,32 +955,31 @@ export const StartupEvaluationModal = ({
                     </div>
                   </div>
 
-                  <div>
-                    <Label htmlFor="improvement-areas" className="text-base font-semibold">
-                      Identify the main areas that need improvement
-                    </Label>
-                    <Textarea 
-                      id="improvement-areas" 
-                      placeholder="Describe the key areas where the startup needs to improve..." 
-                      value={formData.improvement_areas} 
-                      onChange={e => setFormData(prev => ({
-                        ...prev,
-                        improvement_areas: e.target.value
-                      }))} 
-                      className="mt-2 min-h-[80px]" 
-                      disabled={!isEditing}
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="pitch-development" className="text-base font-semibold">
-                      What aspects of the pitch need further development?
-                    </Label>
-                    <Textarea id="pitch-development" placeholder="Specify which aspects of the pitch require more work or clarity..." value={formData.pitch_development_aspects} onChange={e => setFormData(prev => ({
+                  <TextareaWithValidation
+                    id="improvement-areas"
+                    label="Identify the main areas that need improvement"
+                    placeholder="Describe the key areas where the startup needs to improve..."
+                    value={formData.improvement_areas}
+                    onChange={(value) => setFormData(prev => ({
                       ...prev,
-                      pitch_development_aspects: e.target.value
-                    }))} className="mt-2 min-h-[80px]" disabled={!isEditing} />
-                  </div>
+                      improvement_areas: value
+                    }))}
+                    disabled={!isEditing}
+                    validation={validationErrors['improvement_areas']}
+                  />
+
+                  <TextareaWithValidation
+                    id="pitch-development"
+                    label="What aspects of the pitch need further development?"
+                    placeholder="Specify which aspects of the pitch require more work or clarity..."
+                    value={formData.pitch_development_aspects}
+                    onChange={(value) => setFormData(prev => ({
+                      ...prev,
+                      pitch_development_aspects: value
+                    }))}
+                    disabled={!isEditing}
+                    validation={validationErrors['pitch_development_aspects']}
+                  />
 
                   <div className="flex items-center space-x-3">
                     <Switch id="pitch-session" checked={formData.wants_pitch_session} onCheckedChange={checked => setFormData(prev => ({
@@ -832,21 +1016,20 @@ export const StartupEvaluationModal = ({
                       </div>)}
                   </div>
 
-                  <div>
-                    <Label htmlFor="overall-notes" className="text-base font-semibold">Overall Notes</Label>
-                    <p className="text-sm text-muted-foreground mt-1">Additional comments and observations</p>
-                    <Textarea 
-                      id="overall-notes" 
-                      placeholder="Provide your overall assessment, key observations, and any additional comments..." 
-                      value={formData.overall_notes} 
-                      onChange={e => setFormData(prev => ({
-                        ...prev,
-                        overall_notes: e.target.value
-                      }))} 
-                      className="mt-2 min-h-[100px]" 
-                      disabled={!isEditing}
-                    />
-                  </div>
+                  <TextareaWithValidation
+                    id="overall-notes"
+                    label="Overall Notes"
+                    description="Additional comments and observations"
+                    placeholder="Provide your overall assessment, key observations, and any additional comments..."
+                    value={formData.overall_notes}
+                    onChange={(value) => setFormData(prev => ({
+                      ...prev,
+                      overall_notes: value
+                    }))}
+                    className="min-h-[100px]"
+                    disabled={!isEditing}
+                    validation={validationErrors['overall_notes']}
+                  />
                 </CardContent>
               </Card>
             </div>
