@@ -96,11 +96,16 @@ export function JurorFormModal({
 
   const toggleArrayItem = (array: string[] | null, item: string, field: keyof Juror) => {
     const currentArray = array || [];
-    const newArray = currentArray.includes(item) 
-      ? currentArray.filter(i => i !== item)
-      : [...currentArray, item];
-    
-    setFormData(prev => ({ ...prev, [field]: newArray }));
+    // Prevent duplicates explicitly
+    if (currentArray.includes(item)) {
+      // Remove item
+      const newArray = currentArray.filter(i => i !== item);
+      setFormData(prev => ({ ...prev, [field]: newArray }));
+    } else {
+      // Add item only if not already present
+      const newArray = [...currentArray, item];
+      setFormData(prev => ({ ...prev, [field]: newArray }));
+    }
   };
 
   return (

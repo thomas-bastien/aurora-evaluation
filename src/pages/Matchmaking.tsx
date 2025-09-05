@@ -8,6 +8,7 @@ import { AlertCircle, Building2, Users, CheckCircle2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { StartupAssignmentModal } from "@/components/matchmaking/StartupAssignmentModal";
 import { AssignmentSummary } from "@/components/matchmaking/AssignmentSummary";
+import { DataInconsistencyPanel } from "@/components/matchmaking/DataInconsistencyPanel";
 interface Startup {
   id: string;
   name: string;
@@ -252,6 +253,11 @@ const Matchmaking = () => {
               </div>
             </CardContent>
           </Card>
+        </div>
+
+        {/* Data Inconsistency Check */}
+        <div className="mb-8">
+          <DataInconsistencyPanel startups={startups} jurors={jurors} />
         </div>
 
         {/* Startups List */}

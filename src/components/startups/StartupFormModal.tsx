@@ -10,6 +10,7 @@ import { Plus, X, Info } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { normalizeStage } from '@/utils/stageUtils';
 import { AURORA_VERTICALS, BUSINESS_MODELS, CURRENCIES } from '@/constants/startupConstants';
+import { STAGE_OPTIONS } from '@/constants/jurorPreferences';
 
 interface Startup {
   name: string;
@@ -111,6 +112,7 @@ export function StartupFormModal({
       const isSelected = currentVerticals.includes(vertical);
       
       if (isSelected) {
+        // Remove vertical
         return {
           ...prev,
           verticals: currentVerticals.filter(v => v !== vertical),
@@ -118,6 +120,10 @@ export function StartupFormModal({
           other_vertical_description: vertical === 'Others (Specify)' ? '' : prev.other_vertical_description
         };
       } else {
+        // Add vertical only if not already present (prevent duplicates)
+        if (currentVerticals.includes(vertical)) {
+          return prev; // No change if duplicate
+        }
         return {
           ...prev,
           verticals: [...currentVerticals, vertical]
@@ -137,7 +143,8 @@ export function StartupFormModal({
   };
 
   const industries = ['Technology', 'Healthcare', 'Finance', 'Education', 'E-commerce', 'SaaS', 'AI/ML', 'Biotech', 'CleanTech', 'Other'];
-  const stages = ['Pre-Seed', 'Seed', 'Series A', 'Series B', 'Series C', 'Growth', 'IPO'];
+  // Use aligned stage options for consistency with juror preferences
+  const stages = STAGE_OPTIONS.map(stage => stage === 'Pre-seed' ? 'Pre-Seed' : stage);
   const statuses = ['pending', 'under-review', 'shortlisted', 'rejected'];
 
   return (

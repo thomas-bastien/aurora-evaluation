@@ -48,6 +48,17 @@ export const CURRENCIES = [
   { code: 'USD', symbol: '$', name: 'US Dollar' },
 ] as const;
 
+// Aligned region options for consistent matchmaking 
+export const REGION_OPTIONS = [
+  'Africa',
+  'Asia Pacific (APAC)', 
+  'Europe',
+  'Latin America (LATAM)',
+  'Middle East & North Africa (MENA)',
+  'North America'
+] as const;
+
 export type AuroraVertical = typeof AURORA_VERTICALS[number];
 export type BusinessModel = typeof BUSINESS_MODELS[number];
 export type CurrencyCode = typeof CURRENCIES[number]['code'];
+export type RegionOption = typeof REGION_OPTIONS[number];
