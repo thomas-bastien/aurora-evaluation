@@ -360,6 +360,7 @@ export type Database = {
       }
       startups: {
         Row: {
+          business_model: string | null
           contact_email: string | null
           contact_phone: string | null
           country: string | null
@@ -373,19 +374,24 @@ export type Database = {
           funding_raised: number | null
           id: string
           industry: string | null
+          investment_currency: string | null
           key_metrics: Json | null
           linkedin_url: string | null
           location: string | null
           name: string
+          other_vertical_description: string | null
           pitch_deck_url: string | null
           region: string | null
           stage: string | null
           status: string | null
           team_size: number | null
+          total_investment_received: number | null
           updated_at: string
+          verticals: string[] | null
           website: string | null
         }
         Insert: {
+          business_model?: string | null
           contact_email?: string | null
           contact_phone?: string | null
           country?: string | null
@@ -399,19 +405,24 @@ export type Database = {
           funding_raised?: number | null
           id?: string
           industry?: string | null
+          investment_currency?: string | null
           key_metrics?: Json | null
           linkedin_url?: string | null
           location?: string | null
           name: string
+          other_vertical_description?: string | null
           pitch_deck_url?: string | null
           region?: string | null
           stage?: string | null
           status?: string | null
           team_size?: number | null
+          total_investment_received?: number | null
           updated_at?: string
+          verticals?: string[] | null
           website?: string | null
         }
         Update: {
+          business_model?: string | null
           contact_email?: string | null
           contact_phone?: string | null
           country?: string | null
@@ -425,16 +436,20 @@ export type Database = {
           funding_raised?: number | null
           id?: string
           industry?: string | null
+          investment_currency?: string | null
           key_metrics?: Json | null
           linkedin_url?: string | null
           location?: string | null
           name?: string
+          other_vertical_description?: string | null
           pitch_deck_url?: string | null
           region?: string | null
           stage?: string | null
           status?: string | null
           team_size?: number | null
+          total_investment_received?: number | null
           updated_at?: string
+          verticals?: string[] | null
           website?: string | null
         }
         Relationships: [

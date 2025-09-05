@@ -8,7 +8,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Building2, Users, DollarSign, MapPin, Calendar, FileText, Star, MessageSquare, ExternalLink, AlertCircle } from "lucide-react";
+import { Building2, Users, DollarSign, MapPin, Calendar, FileText, Star, MessageSquare, ExternalLink, AlertCircle, Linkedin } from "lucide-react";
+import { CURRENCIES } from '@/constants/startupConstants';
 
 interface Startup {
   id: string;
@@ -29,6 +30,12 @@ interface Startup {
   contact_email: string | null;
   contact_phone: string | null;
   key_metrics: any;
+  linkedin_url: string | null;
+  total_investment_received: number | null;
+  investment_currency: string | null;
+  business_model: string | null;
+  verticals: string[] | null;
+  other_vertical_description: string | null;
 }
 
 const StartupProfile = () => {
@@ -125,9 +132,15 @@ const StartupProfile = () => {
     );
   }
 
-  const formatFunding = (amount: number | null) => {
+  const formatFunding = (amount: number | null, currency: string | null = 'USD') => {
     if (!amount) return 'N/A';
-    return `$${(amount / 1000000).toFixed(1)}M`;
+    const currencySymbol = CURRENCIES.find(c => c.code === currency)?.symbol || '$';
+    if (amount >= 1000000) {
+      return `${currencySymbol}${(amount / 1000000).toFixed(1)}M`;
+    } else if (amount >= 1000) {
+      return `${currencySymbol}${(amount / 1000).toFixed(0)}K`;
+    }
+    return `${currencySymbol}${amount.toLocaleString()}`;
   };
 
   const getStatusColor = (status: string | null) => {
@@ -162,8 +175,22 @@ const StartupProfile = () => {
                 {startup.description || 'No description available'}
               </p>
               <div className="flex items-center gap-4 mb-4">
-                {startup.industry && (
-                  <Badge variant="secondary">{startup.industry}</Badge>
+                {startup.business_model && (
+                  <Badge variant="secondary">{startup.business_model}</Badge>
+                )}
+                {startup.verticals && startup.verticals.length > 0 && (
+                  <div className="flex gap-2">
+                    {startup.verticals.slice(0, 3).map((vertical, index) => (
+                      <Badge key={index} variant="outline" className="text-xs">
+                        {vertical}
+                      </Badge>
+                    ))}
+                    {startup.verticals.length > 3 && (
+                      <Badge variant="outline" className="text-xs">
+                        +{startup.verticals.length - 3} more
+                      </Badge>
+                    )}
+                  </div>
                 )}
                 {startup.stage && (
                   <Badge variant="outline" className={getStageColor(startup.stage)}>
@@ -227,18 +254,40 @@ const StartupProfile = () => {
                         <span className="text-sm">{formatFunding(startup.funding_raised)} raised</span>
                       </div>
                     )}
+                    {startup.total_investment_received && (
+                      <div className="flex items-center gap-2">
+                        <DollarSign className="w-4 h-4 text-muted-foreground" />
+                        <span className="text-sm">
+                          {formatFunding(startup.total_investment_received, startup.investment_currency)} total investment
+                        </span>
+                      </div>
+                    )}
+                    {startup.business_model && (
+                      <div className="flex items-center gap-2">
+                        <Building2 className="w-4 h-4 text-muted-foreground" />
+                        <span className="text-sm">{startup.business_model}</span>
+                      </div>
+                    )}
                   </div>
 
-                  {startup.website && (
-                    <div className="pt-4">
+                  <div className="pt-4 flex gap-4">
+                    {startup.website && (
                       <Button variant="outline" asChild>
                         <a href={startup.website} target="_blank" rel="noopener noreferrer">
                           <ExternalLink className="w-4 h-4 mr-2" />
                           Visit Website
                         </a>
                       </Button>
-                    </div>
-                  )}
+                    )}
+                    {startup.linkedin_url && (
+                      <Button variant="outline" asChild>
+                        <a href={startup.linkedin_url} target="_blank" rel="noopener noreferrer">
+                          <Linkedin className="w-4 h-4 mr-2" />
+                          LinkedIn
+                        </a>
+                      </Button>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
 

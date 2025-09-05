@@ -5,8 +5,11 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, X } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Plus, X, Info } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { normalizeStage } from '@/utils/stageUtils';
+import { AURORA_VERTICALS, BUSINESS_MODELS, CURRENCIES } from '@/constants/startupConstants';
 
 interface Startup {
   name: string;
@@ -23,6 +26,12 @@ interface Startup {
   contact_phone: string;
   founder_names: string[];
   status: string;
+  linkedin_url?: string;
+  total_investment_received?: number;
+  investment_currency?: string;
+  business_model?: string;
+  verticals?: string[];
+  other_vertical_description?: string;
 }
 
 interface StartupFormModalProps {
@@ -43,7 +52,9 @@ export function StartupFormModal({
   const [formData, setFormData] = useState<Partial<Startup>>(
     initialData || {
       founder_names: [],
-      status: 'pending'
+      status: 'pending',
+      verticals: [],
+      investment_currency: 'GBP'
     }
   );
 
@@ -56,7 +67,9 @@ export function StartupFormModal({
     } else if (mode === 'create') {
       setFormData({
         founder_names: [],
-        status: 'pending'
+        status: 'pending',
+        verticals: [],
+        investment_currency: 'GBP'
       });
     }
   }, [initialData, mode, open]);
@@ -69,7 +82,7 @@ export function StartupFormModal({
     };
     onSubmit(normalizedData);
     if (mode === 'create') {
-      setFormData({ founder_names: [], status: 'pending' });
+      setFormData({ founder_names: [], status: 'pending', verticals: [], investment_currency: 'GBP' });
       setFounderInput('');
     }
     onOpenChange(false);
@@ -92,20 +105,52 @@ export function StartupFormModal({
     }));
   };
 
+  const toggleVertical = (vertical: string) => {
+    setFormData(prev => {
+      const currentVerticals = prev.verticals || [];
+      const isSelected = currentVerticals.includes(vertical);
+      
+      if (isSelected) {
+        return {
+          ...prev,
+          verticals: currentVerticals.filter(v => v !== vertical),
+          // Clear other vertical description if "Others (Specify)" is deselected
+          other_vertical_description: vertical === 'Others (Specify)' ? '' : prev.other_vertical_description
+        };
+      } else {
+        return {
+          ...prev,
+          verticals: [...currentVerticals, vertical]
+        };
+      }
+    });
+  };
+
+  const validateLinkedInUrl = (url: string) => {
+    if (!url) return true;
+    try {
+      const urlObj = new URL(url);
+      return urlObj.protocol === 'http:' || urlObj.protocol === 'https:';
+    } catch {
+      return false;
+    }
+  };
+
   const industries = ['Technology', 'Healthcare', 'Finance', 'Education', 'E-commerce', 'SaaS', 'AI/ML', 'Biotech', 'CleanTech', 'Other'];
   const stages = ['Pre-Seed', 'Seed', 'Series A', 'Series B', 'Series C', 'Growth', 'IPO'];
   const statuses = ['pending', 'under-review', 'shortlisted', 'rejected'];
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>
-            {mode === 'edit' ? 'Edit Startup' : 'Add New Startup'}
-          </DialogTitle>
-        </DialogHeader>
-        
-        <form onSubmit={handleSubmit} className="space-y-4">
+    <TooltipProvider>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {mode === 'edit' ? 'Edit Startup' : 'Add New Startup'}
+            </DialogTitle>
+          </DialogHeader>
+          
+          <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label htmlFor="name">Name *</Label>
@@ -117,17 +162,28 @@ export function StartupFormModal({
               />
             </div>
             <div>
-              <Label htmlFor="industry">Industry</Label>
+              <Label htmlFor="business_model">
+                Business Model *
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="inline w-3 h-3 ml-1 text-muted-foreground" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Select the primary business model for this startup</p>
+                  </TooltipContent>
+                </Tooltip>
+              </Label>
               <Select
-                value={formData.industry || ''}
-                onValueChange={(value) => setFormData(prev => ({ ...prev, industry: value }))}
+                value={formData.business_model || ''}
+                onValueChange={(value) => setFormData(prev => ({ ...prev, business_model: value }))}
+                required
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select industry" />
+                  <SelectValue placeholder="Select business model" />
                 </SelectTrigger>
                 <SelectContent>
-                  {industries.map(industry => (
-                    <SelectItem key={industry} value={industry}>{industry}</SelectItem>
+                  {BUSINESS_MODELS.map(model => (
+                    <SelectItem key={model} value={model}>{model}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -142,6 +198,50 @@ export function StartupFormModal({
               onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
               rows={3}
             />
+          </div>
+
+          {/* Aurora Verticals */}
+          <div>
+            <Label>
+              Verticals *
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Info className="inline w-3 h-3 ml-1 text-muted-foreground" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Use Aurora's official vertical taxonomy to ensure consistent reporting</p>
+                </TooltipContent>
+              </Tooltip>
+            </Label>
+            <div className="grid grid-cols-2 gap-2 p-4 border rounded-lg max-h-60 overflow-y-auto">
+              {AURORA_VERTICALS.map(vertical => (
+                <div key={vertical} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`vertical-${vertical}`}
+                    checked={(formData.verticals || []).includes(vertical)}
+                    onCheckedChange={() => toggleVertical(vertical)}
+                  />
+                  <Label
+                    htmlFor={`vertical-${vertical}`}
+                    className="text-sm font-normal cursor-pointer"
+                  >
+                    {vertical}
+                  </Label>
+                </div>
+              ))}
+            </div>
+            {(formData.verticals || []).includes('Others (Specify)') && (
+              <div className="mt-2">
+                <Label htmlFor="other_vertical">Specify other vertical *</Label>
+                <Input
+                  id="other_vertical"
+                  value={formData.other_vertical_description || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, other_vertical_description: e.target.value }))}
+                  placeholder="Please specify the vertical"
+                  required
+                />
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -250,6 +350,43 @@ export function StartupFormModal({
             </div>
           </div>
 
+          {/* Total Investment Received */}
+          <div>
+            <Label htmlFor="total_investment">Total Investment Received</Label>
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <Input
+                  id="total_investment"
+                  type="number"
+                  min="0"
+                  value={formData.total_investment_received || ''}
+                  onChange={(e) => setFormData(prev => ({ 
+                    ...prev, 
+                    total_investment_received: parseInt(e.target.value) || undefined 
+                  }))}
+                  placeholder="Investment amount"
+                />
+              </div>
+              <div className="w-32">
+                <Select
+                  value={formData.investment_currency || 'GBP'}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, investment_currency: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CURRENCIES.map(currency => (
+                      <SelectItem key={currency.code} value={currency.code}>
+                        {currency.symbol} {currency.code}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label htmlFor="contact_email">Contact Email</Label>
@@ -316,5 +453,6 @@ export function StartupFormModal({
         </form>
       </DialogContent>
     </Dialog>
+    </TooltipProvider>
   );
 }

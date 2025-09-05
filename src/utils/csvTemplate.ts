@@ -13,7 +13,13 @@ export function generateCSVTemplate(): string {
     'contact_email',
     'contact_phone',
     'founder_names',
-    'status'
+    'status',
+    'linkedin_url',
+    'total_investment_received',
+    'investment_currency',
+    'business_model',
+    'verticals',
+    'other_vertical_description'
   ];
 
   const exampleRows = [
@@ -31,7 +37,13 @@ export function generateCSVTemplate(): string {
       'founder@techflow.com',
       '+1-555-0123',
       'Jane Smith;John Doe',
-      'pending'
+      'pending',
+      'https://linkedin.com/company/techflow',
+      '750000',
+      'USD',
+      'B2B',
+      'Artificial Intelligence (AI/ML);Enterprise Software',
+      ''
     ],
     [
       'EcoMart',
@@ -47,7 +59,13 @@ export function generateCSVTemplate(): string {
       'hello@ecomart.io',
       '+1-555-0456',
       'Maria Garcia',
-      'under-review'
+      'under-review',
+      'https://linkedin.com/company/ecomart',
+      '200000',
+      'USD',
+      'Marketplace',
+      'RetailTech & E-commerce;Energy & Sustainability',
+      ''
     ]
   ];
 

@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Building, MapPin, Users, DollarSign, Calendar, Upload, Plus, Download, Edit, Trash2, Search, Filter } from 'lucide-react';
+import { Building, MapPin, Users, DollarSign, Calendar, Upload, Plus, Download, Edit, Trash2, Search, Filter, Linkedin, ExternalLink } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CSVUploadModal } from '@/components/startups/CSVUploadModal';
 import { StartupFormModal } from '@/components/startups/StartupFormModal';
@@ -18,6 +18,7 @@ import { useToast } from '@/hooks/use-toast';
 import { getStageColor } from '@/utils/stageUtils';
 import { FilterPanel } from '@/components/common/FilterPanel';
 import { useUserProfile } from '@/hooks/useUserProfile';
+import { AURORA_VERTICALS, BUSINESS_MODELS, CURRENCIES } from '@/constants/startupConstants';
 
 interface Startup {
   id: string;
@@ -31,6 +32,12 @@ interface Startup {
   funding_goal: number | null;
   status: string | null;
   founder_names: string[] | null;
+  linkedin_url: string | null;
+  total_investment_received: number | null;
+  investment_currency: string | null;
+  business_model: string | null;
+  verticals: string[] | null;
+  other_vertical_description: string | null;
 }
 
 export default function StartupsList() {
@@ -41,6 +48,11 @@ export default function StartupsList() {
   const [industryFilter, setIndustryFilter] = useState('');
   const [stageFilter, setStageFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [businessModelFilter, setBusinessModelFilter] = useState('');
+  const [verticalFilter, setVerticalFilter] = useState('');
+  const [hasLinkedInFilter, setHasLinkedInFilter] = useState('');
+  const [investmentMinFilter, setInvestmentMinFilter] = useState('');
+  const [investmentMaxFilter, setInvestmentMaxFilter] = useState('');
   
   // Modal states
   const [csvModalOpen, setCsvModalOpen] = useState(false);
@@ -107,12 +119,58 @@ export default function StartupsList() {
       filtered = filtered.filter(startup => startup.status === statusFilter);
     }
 
-    setFilteredStartups(filtered);
-  }, [startups, searchTerm, industryFilter, stageFilter, statusFilter]);
+    if (businessModelFilter && businessModelFilter !== 'all') {
+      filtered = filtered.filter(startup => startup.business_model === businessModelFilter);
+    }
 
-  const formatFunding = (amount: number | null) => {
+    if (verticalFilter && verticalFilter !== 'all') {
+      filtered = filtered.filter(startup => 
+        startup.verticals?.includes(verticalFilter)
+      );
+    }
+
+    if (hasLinkedInFilter && hasLinkedInFilter !== 'all') {
+      if (hasLinkedInFilter === 'yes') {
+        filtered = filtered.filter(startup => startup.linkedin_url);
+      } else if (hasLinkedInFilter === 'no') {
+        filtered = filtered.filter(startup => !startup.linkedin_url);
+      }
+    }
+
+    if (investmentMinFilter) {
+      const min = parseFloat(investmentMinFilter);
+      if (!isNaN(min)) {
+        filtered = filtered.filter(startup => 
+          startup.total_investment_received && startup.total_investment_received >= min
+        );
+      }
+    }
+
+    if (investmentMaxFilter) {
+      const max = parseFloat(investmentMaxFilter);
+      if (!isNaN(max)) {
+        filtered = filtered.filter(startup => 
+          startup.total_investment_received && startup.total_investment_received <= max
+        );
+      }
+    }
+
+    setFilteredStartups(filtered);
+  }, [
+    startups, searchTerm, industryFilter, stageFilter, statusFilter, 
+    businessModelFilter, verticalFilter, hasLinkedInFilter, 
+    investmentMinFilter, investmentMaxFilter
+  ]);
+
+  const formatFunding = (amount: number | null, currency: string | null = 'USD') => {
     if (!amount) return 'N/A';
-    return `$${(amount / 1000000).toFixed(1)}M`;
+    const currencySymbol = CURRENCIES.find(c => c.code === currency)?.symbol || '$';
+    if (amount >= 1000000) {
+      return `${currencySymbol}${(amount / 1000000).toFixed(1)}M`;
+    } else if (amount >= 1000) {
+      return `${currencySymbol}${(amount / 1000).toFixed(0)}K`;
+    }
+    return `${currencySymbol}${amount.toLocaleString()}`;
   };
 
   const getStatusColor = (status: string | null) => {
@@ -130,6 +188,33 @@ export default function StartupsList() {
   const industries = [...new Set(startups.filter(s => s.industry).map(s => s.industry))];
   const stages = [...new Set(startups.filter(s => s.stage).map(s => s.stage))];
   const statuses = [...new Set(startups.filter(s => s.status).map(s => s.status))];
+  const businessModels = [...new Set(startups.filter(s => s.business_model).map(s => s.business_model))];
+  const allVerticals = startups.flatMap(s => s.verticals || []);
+  const uniqueVerticals = [...new Set(allVerticals)];
+
+  const clearAllFilters = () => {
+    setIndustryFilter('');
+    setStageFilter('');
+    setStatusFilter('');
+    setBusinessModelFilter('');
+    setVerticalFilter('');
+    setHasLinkedInFilter('');
+    setInvestmentMinFilter('');
+    setInvestmentMaxFilter('');
+  };
+
+  const getActiveFilters = () => {
+    const filters = [];
+    if (industryFilter && industryFilter !== 'all') filters.push({ label: 'Industry', value: industryFilter, onRemove: () => setIndustryFilter('') });
+    if (stageFilter && stageFilter !== 'all') filters.push({ label: 'Stage', value: stageFilter, onRemove: () => setStageFilter('') });
+    if (statusFilter && statusFilter !== 'all') filters.push({ label: 'Status', value: statusFilter, onRemove: () => setStatusFilter('') });
+    if (businessModelFilter && businessModelFilter !== 'all') filters.push({ label: 'Business Model', value: businessModelFilter, onRemove: () => setBusinessModelFilter('') });
+    if (verticalFilter && verticalFilter !== 'all') filters.push({ label: 'Vertical', value: verticalFilter, onRemove: () => setVerticalFilter('') });
+    if (hasLinkedInFilter && hasLinkedInFilter !== 'all') filters.push({ label: 'LinkedIn', value: hasLinkedInFilter === 'yes' ? 'Has LinkedIn' : 'No LinkedIn', onRemove: () => setHasLinkedInFilter('') });
+    if (investmentMinFilter) filters.push({ label: 'Min Investment', value: `$${investmentMinFilter}`, onRemove: () => setInvestmentMinFilter('') });
+    if (investmentMaxFilter) filters.push({ label: 'Max Investment', value: `$${investmentMaxFilter}`, onRemove: () => setInvestmentMaxFilter('') });
+    return filters;
+  };
 
   const handleCSVParsed = (data: Partial<Startup>[]) => {
     setDraftData(data);
@@ -345,29 +430,35 @@ export default function StartupsList() {
           <FilterPanel
             isOpen={filtersOpen}
             onOpenChange={setFiltersOpen}
-            onClearAll={() => {
-              setSearchTerm('');
-              setIndustryFilter('');
-              setStageFilter('');
-              setStatusFilter('');
-            }}
-            activeFilters={[
-              ...(industryFilter ? [{ label: 'Industry', value: industryFilter, onRemove: () => setIndustryFilter('') }] : []),
-              ...(stageFilter ? [{ label: 'Stage', value: stageFilter, onRemove: () => setStageFilter('') }] : []),
-              ...(statusFilter ? [{ label: 'Status', value: statusFilter, onRemove: () => setStatusFilter('') }] : [])
-            ]}
+            onClearAll={clearAllFilters}
+            activeFilters={getActiveFilters()}
           >
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-4 gap-4">
               <div>
-                <label className="text-sm font-medium mb-2 block">Industry</label>
-                <Select value={industryFilter || 'all'} onValueChange={(value) => setIndustryFilter(value === 'all' ? '' : value)}>
+                <label className="text-sm font-medium mb-2 block">Business Model</label>
+                <Select value={businessModelFilter || 'all'} onValueChange={(value) => setBusinessModelFilter(value === 'all' ? '' : value)}>
                   <SelectTrigger>
-                    <SelectValue placeholder="All Industries" />
+                    <SelectValue placeholder="All Models" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Industries</SelectItem>
-                    {industries.map(industry => (
-                      <SelectItem key={industry} value={industry || 'unknown'}>{industry}</SelectItem>
+                    <SelectItem value="all">All Models</SelectItem>
+                    {businessModels.map(model => (
+                      <SelectItem key={model} value={model || 'unknown'}>{model}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium mb-2 block">Vertical</label>
+                <Select value={verticalFilter || 'all'} onValueChange={(value) => setVerticalFilter(value === 'all' ? '' : value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All Verticals" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-60 overflow-y-auto">
+                    <SelectItem value="all">All Verticals</SelectItem>
+                    {uniqueVerticals.map(vertical => (
+                      <SelectItem key={vertical} value={vertical}>{vertical}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -405,6 +496,42 @@ export default function StartupsList() {
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-4 mt-4">
+              <div>
+                <label className="text-sm font-medium mb-2 block">LinkedIn Profile</label>
+                <Select value={hasLinkedInFilter || 'all'} onValueChange={(value) => setHasLinkedInFilter(value === 'all' ? '' : value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Any" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Any</SelectItem>
+                    <SelectItem value="yes">Has LinkedIn</SelectItem>
+                    <SelectItem value="no">No LinkedIn</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium mb-2 block">Min Investment</label>
+                <Input
+                  type="number"
+                  placeholder="Minimum amount"
+                  value={investmentMinFilter}
+                  onChange={(e) => setInvestmentMinFilter(e.target.value)}
+                />
+              </div>
+
+              <div>
+                <label className="text-sm font-medium mb-2 block">Max Investment</label>
+                <Input
+                  type="number"
+                  placeholder="Maximum amount"
+                  value={investmentMaxFilter}
+                  onChange={(e) => setInvestmentMaxFilter(e.target.value)}
+                />
               </div>
             </div>
           </FilterPanel>
@@ -463,19 +590,33 @@ export default function StartupsList() {
                 </CardHeader>
                 
                 <CardContent className="space-y-4">
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                  <div className="flex items-center gap-2 flex-wrap text-sm">
+                    {startup.business_model && (
+                      <Badge variant="secondary" className="text-xs">
+                        {startup.business_model}
+                      </Badge>
+                    )}
                     {startup.stage && (
                       <Badge variant="outline" className={getStageColor(startup.stage)}>
                         {startup.stage}
                       </Badge>
                     )}
-                    {startup.industry && (
-                      <span className="flex items-center gap-1">
-                        <Building className="h-3 w-3" />
-                        {startup.industry}
-                      </span>
-                    )}
                   </div>
+
+                  {startup.verticals && startup.verticals.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {startup.verticals.slice(0, 2).map((vertical, index) => (
+                        <Badge key={index} variant="outline" className="text-xs">
+                          {vertical.length > 20 ? vertical.substring(0, 20) + '...' : vertical}
+                        </Badge>
+                      ))}
+                      {startup.verticals.length > 2 && (
+                        <Badge variant="outline" className="text-xs">
+                          +{startup.verticals.length - 2} more
+                        </Badge>
+                      )}
+                    </div>
+                  )}
                   
                   {startup.location && (
                     <div className="flex items-center gap-1 text-sm text-muted-foreground">
@@ -499,21 +640,44 @@ export default function StartupsList() {
                     )}
                   </div>
                   
-                  {startup.funding_goal && (
-                    <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                      <DollarSign className="h-3 w-3" />
-                      <span>Seeking {formatFunding(startup.funding_goal)}</span>
-                    </div>
-                  )}
-                  
-                  {startup.founder_names && startup.founder_names.length > 0 && (
-                    <div className="text-sm">
-                      <span className="text-muted-foreground">Founders: </span>
-                      <span className="font-medium">
-                        {startup.founder_names.join(', ')}
-                      </span>
-                    </div>
-                  )}
+                  <div className="space-y-2">
+                    {startup.total_investment_received && (
+                      <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                        <DollarSign className="h-3 w-3" />
+                        <span>{formatFunding(startup.total_investment_received, startup.investment_currency)} raised</span>
+                      </div>
+                    )}
+                    {startup.funding_goal && (
+                      <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                        <DollarSign className="h-3 w-3" />
+                        <span>Seeking {formatFunding(startup.funding_goal)}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    {startup.founder_names && startup.founder_names.length > 0 && (
+                      <div className="text-sm flex-1">
+                        <span className="text-muted-foreground">Founders: </span>
+                        <span className="font-medium">
+                          {startup.founder_names.slice(0, 2).join(', ')}
+                          {startup.founder_names.length > 2 && ` +${startup.founder_names.length - 2} more`}
+                        </span>
+                      </div>
+                    )}
+                    {startup.linkedin_url && (
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        asChild
+                        className="h-8 w-8 p-0"
+                      >
+                        <a href={startup.linkedin_url} target="_blank" rel="noopener noreferrer">
+                          <Linkedin className="h-4 w-4" />
+                        </a>
+                      </Button>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
             ))}
