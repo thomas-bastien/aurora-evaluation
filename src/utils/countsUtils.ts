@@ -75,7 +75,7 @@ export const getPhaseStartupsCount = getRoundStartupsCount;
  */
 export const getJurorAssignedStartupsCount = async (jurorId: string): Promise<number> => {
   const { count } = await supabase
-    .from('startup_assignments')
+    .from('screening_assignments')
     .select('*', { count: 'exact', head: true })
     .eq('juror_id', jurorId)
     .eq('status', 'assigned');
@@ -119,7 +119,7 @@ export const getMatchmakingCounts = async (round: 'screening' | 'pitching') => {
     getRoundStartupsCount(round),
     getActiveJurorsCount(),
     supabase
-      .from('startup_assignments')
+      .from('screening_assignments')
       .select('*', { count: 'exact', head: true })
       .then(({ count }) => count || 0)
   ]);

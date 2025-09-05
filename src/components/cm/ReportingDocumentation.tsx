@@ -52,14 +52,14 @@ export const ReportingDocumentation = ({ currentRound }: ReportingDocumentationP
 
         // Get evaluation stats
         const { data: evaluations, error: evaluationsError } = await supabase
-          .from('evaluations')
+          .from('screening_evaluations')
           .select('status, overall_score');
         
         if (evaluationsError) throw evaluationsError;
 
         // Get assignment count for completion rate calculation
         const { data: assignments, error: assignmentsError } = await supabase
-          .from('startup_assignments')
+          .from('screening_assignments')
           .select('id');
         
         if (assignmentsError) throw assignmentsError;
@@ -94,7 +94,7 @@ export const ReportingDocumentation = ({ currentRound }: ReportingDocumentationP
 
         // For pitching round, we might want post-pitch evaluation scores
         const { data: evaluations, error: evalError } = await supabase
-          .from('evaluations')
+          .from('pitching_evaluations')
           .select('overall_score')
           .eq('status', 'submitted');
         

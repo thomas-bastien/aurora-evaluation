@@ -112,9 +112,7 @@ export const useRounds = () => {
         const assignmentCount = assignments?.length || 0;
         const evaluationCount = evaluations?.length || 0;
 
-        if (evaluationCount < assignmentCount * 0.8) { // Allow 80% completion rate
-          return { canComplete: false, reason: 'Not enough evaluations completed (need 80% completion)' };
-        }
+        // Removed 80% completion constraint - allow completion regardless of evaluation count
 
         return { canComplete: true, reason: '' };
       }

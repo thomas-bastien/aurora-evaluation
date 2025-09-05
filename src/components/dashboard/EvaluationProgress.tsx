@@ -29,9 +29,9 @@ export const EvaluationProgress = () => {
 
         // Fetch completed evaluations
         const { count: completedEvaluations } = await supabase
-          .from('evaluations')
+          .from('screening_evaluations')
           .select('*', { count: 'exact', head: true })
-          .eq('status', 'completed');
+          .eq('status', 'submitted');
 
         // Fetch sessions data
         const { data: sessionsData } = await supabase

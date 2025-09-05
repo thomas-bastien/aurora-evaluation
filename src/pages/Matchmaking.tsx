@@ -68,7 +68,7 @@ const Matchmaking = () => {
       const {
         data: assignmentsData,
         error: assignmentsError
-      } = await supabase.from('startup_assignments').select(`
+      } = await supabase.from('screening_assignments').select(`
           startup_id,
           juror_id,
           startups(name),
@@ -136,17 +136,17 @@ const Matchmaking = () => {
   const handleConfirmAssignments = async () => {
     try {
       // Delete existing assignments
-      await supabase.from('startup_assignments').delete().neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all
+      await supabase.from('screening_assignments').delete().neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all
 
       // Insert new assignments with appropriate status
       const assignmentRecords = assignments.map(assignment => ({
         startup_id: assignment.startup_id,
         juror_id: assignment.juror_id,
-        status: hasCompleteData() ? 'confirmed' : 'draft'
+        status: hasCompleteData() ? 'assigned' : 'assigned'
       }));
       const {
         error
-      } = await supabase.from('startup_assignments').insert(assignmentRecords);
+      } = await supabase.from('screening_assignments').insert(assignmentRecords);
       if (error) throw error;
       setIsConfirmed(true);
       const statusMessage = hasCompleteData() ? "All assignments have been confirmed successfully." : "Assignments have been saved as drafts. You can finalize them once all data is uploaded.";

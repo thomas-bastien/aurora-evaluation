@@ -64,7 +64,7 @@ export const ResultsCommunication = ({ currentRound }: ResultsCommunicationProps
         .from('startups')
         .select(`
           *,
-          evaluations(
+          screening_evaluations(
             overall_score,
             status,
             strengths,
@@ -75,8 +75,8 @@ export const ResultsCommunication = ({ currentRound }: ResultsCommunicationProps
 
       if (error) throw error;
 
-      const resultsData: StartupResult[] = startupsData?.map(startup => {
-        const evaluations = startup.evaluations || [];
+        const resultsData: StartupResult[] = startupsData?.map(startup => {
+        const evaluations = startup.screening_evaluations || [];
         const submittedEvaluations = evaluations.filter(e => e.status === 'submitted');
         const scores = submittedEvaluations
           .map(e => e.overall_score)
@@ -305,7 +305,7 @@ The Aurora Team`
       const jurorNotifications = await Promise.allSettled(
         jurors.map(async (juror) => {
           const { count } = await supabase
-            .from('evaluations')
+            .from('screening_evaluations')
             .select('*', { count: 'exact', head: true })
             .eq('evaluator_id', juror.user_id)
             .eq('status', 'submitted');
