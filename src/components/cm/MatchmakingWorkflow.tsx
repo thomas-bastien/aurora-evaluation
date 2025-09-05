@@ -84,15 +84,16 @@ export const MatchmakingWorkflow = ({ currentPhase }: MatchmakingWorkflowProps) 
 
       if (jurorsError) throw jurorsError;
 
-      // Fetch existing assignments
+      // Fetch existing assignments (only include active jurors with user_id)
       const { data: assignmentsData, error: assignmentsError } = await supabase
         .from('startup_assignments')
         .select(`
           startup_id,
           juror_id,
           startups!inner(name),
-          jurors!inner(name)
-        `);
+          jurors!startup_assignments_juror_id_fkey!inner(name, user_id)
+        `)
+        .not('jurors.user_id', 'is', null);
 
       if (assignmentsError) throw assignmentsError;
 
