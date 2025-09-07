@@ -29,6 +29,7 @@ interface StartupSelection {
   evaluationsCount: number;
   isSelected: boolean;
   isAutoSelected: boolean;
+  isPreviouslySelected: boolean;
 }
 
 interface Top30SelectionProps {
@@ -94,21 +95,28 @@ export const Top30Selection = ({ currentRound = 'screening', isReadOnly = false 
           rank: 0, // Will be set after sorting
           evaluationsCount: submittedEvaluations.length,
           isSelected: false,
-          isAutoSelected: false
+          isAutoSelected: false,
+          isPreviouslySelected: startup.status === 'shortlisted'
         };
-      }).filter(startup => startup.evaluationsCount > 0) || [];
+      }) || []; // Remove filter to show all startups
 
-      // Sort by total score and assign ranks
+      // Sort by total score and assign ranks (startups with no evaluations go to bottom)
       const sortedStartups = selectionData
-        .sort((a, b) => b.totalScore - a.totalScore)
+        .sort((a, b) => {
+          // If one has no evaluations and the other does, put no-evaluation at bottom
+          if (a.evaluationsCount === 0 && b.evaluationsCount > 0) return 1;
+          if (b.evaluationsCount === 0 && a.evaluationsCount > 0) return -1;
+          // Otherwise sort by total score
+          return b.totalScore - a.totalScore;
+        })
         .map((startup, index) => {
           const rank = index + 1;
-          const isAutoSelected = rank <= 30;
+          const isAutoSelected = rank <= 30 && startup.evaluationsCount > 0;
           return { 
             ...startup, 
             rank,
-            isSelected: isAutoSelected,
-            isAutoSelected
+            isSelected: startup.isPreviouslySelected || isAutoSelected,
+            isAutoSelected: !startup.isPreviouslySelected && isAutoSelected
           };
         });
 
@@ -348,7 +356,15 @@ export const Top30Selection = ({ currentRound = 'screening', isReadOnly = false 
                   </div>
                   <div className="col-span-3">
                     <div>
-                      <h4 className="font-semibold text-foreground">{startup.name}</h4>
+                      <div className="flex items-center gap-2">
+                        <h4 className="font-semibold text-foreground">{startup.name}</h4>
+                        {startup.evaluationsCount === 0 && (
+                          <div className="flex items-center gap-1">
+                            <AlertTriangle className="w-4 h-4 text-warning" />
+                            <span className="text-xs text-warning font-medium">No Evaluations</span>
+                          </div>
+                        )}
+                      </div>
                       <p className="text-sm text-muted-foreground">{startup.industry}</p>
                     </div>
                   </div>
@@ -365,17 +381,32 @@ export const Top30Selection = ({ currentRound = 'screening', isReadOnly = false 
                     </div>
                   </div>
                   <div className="col-span-1">
-                    <span className="text-sm">{startup.evaluationsCount}</span>
+                    <div className="flex items-center gap-1">
+                      <span className={`text-sm ${startup.evaluationsCount === 0 ? 'text-warning font-medium' : ''}`}>
+                        {startup.evaluationsCount}
+                      </span>
+                      {startup.evaluationsCount === 0 && (
+                        <AlertTriangle className="w-3 h-3 text-warning" />
+                      )}
+                    </div>
                   </div>
                   <div className="col-span-1">
                     <div className="flex flex-col gap-1">
                       {startup.isSelected ? (
                         <Badge className="bg-success text-success-foreground">
-                          {startup.isAutoSelected ? 'Auto' : 'Manual'}
+                          {startup.isPreviouslySelected ? 'Previously Selected' : (startup.isAutoSelected ? 'Auto' : 'Manual')}
                         </Badge>
                       ) : (
                         <Badge variant="outline">Not Selected</Badge>
                       )}
+                      
+                      {/* Evaluation status warnings */}
+                      {startup.evaluationsCount === 0 && (
+                        <Badge variant="destructive" className="text-xs">
+                          No Evaluations
+                        </Badge>
+                      )}
+                      
                       {/* Status context based on startup's current status relative to round */}
                       {startup.status === 'shortlisted' && (
                         <Badge variant="secondary" className="text-xs">
@@ -410,7 +441,7 @@ export const Top30Selection = ({ currentRound = 'screening', isReadOnly = false 
             <AlertTriangle className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
             <h3 className="text-lg font-semibold mb-2">No startups available</h3>
             <p className="text-muted-foreground">
-              No startups with completed evaluations found
+              No startups found for this round
             </p>
           </div>
         )}
