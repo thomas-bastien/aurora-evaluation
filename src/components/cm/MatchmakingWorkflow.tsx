@@ -18,6 +18,7 @@ interface Startup {
   location: string;
   founder_names: string[];
   contact_email?: string;
+  status?: string;
 }
 
 interface Juror {
@@ -61,21 +62,38 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
       // Use consistent counting utilities for validation
       const counts = await getMatchmakingCounts(currentRound === 'screeningRound' ? 'screening' : 'pitching');
 
-      // Fetch startups based on current round
-      let startupStatusFilter;
-      if (currentRound === 'pitchingRound') {
-        // In pitching round, only show selected/shortlisted startups (top 30)
-        startupStatusFilter = 'shortlisted';
+      // Determine which tables to use based on current round
+      const assignmentTable = currentRound === 'screeningRound' ? 'screening_assignments' : 'pitching_assignments';
+
+      // First, get all startups that have assignments in this round (including historical)
+      // This ensures we show all startups that have participated in the round
+      const { data: assignmentStartupIds, error: assignmentIdsError } = await supabase
+        .from(assignmentTable)
+        .select('startup_id')
+        .not('startup_id', 'is', null);
+
+      if (assignmentIdsError) throw assignmentIdsError;
+
+      const participatingStartupIds = [...new Set(assignmentStartupIds?.map(a => a.startup_id) || [])];
+
+      // Fetch startups - either those with assignments OR those eligible for the current round
+      let startupsQuery = supabase.from('startups').select('*');
+      
+      if (participatingStartupIds.length > 0) {
+        if (currentRound === 'pitchingRound') {
+          // For pitching round: show assigned startups + shortlisted startups
+          startupsQuery = startupsQuery.or(`id.in.(${participatingStartupIds.join(',')}),status.eq.shortlisted`);
+        } else {
+          // For screening round: show assigned startups + under-review startups
+          startupsQuery = startupsQuery.or(`id.in.(${participatingStartupIds.join(',')}),status.eq.under-review`);
+        }
       } else {
-        // In screening round, show all startups under review
-        startupStatusFilter = 'under-review';
+        // Fallback to status-based filtering if no assignments exist yet
+        const statusFilter = currentRound === 'pitchingRound' ? 'shortlisted' : 'under-review';
+        startupsQuery = startupsQuery.eq('status', statusFilter);
       }
 
-      const { data: startupsData, error: startupsError } = await supabase
-        .from('startups')
-        .select('*')
-        .eq('status', startupStatusFilter)
-        .order('name');
+      const { data: startupsData, error: startupsError } = await startupsQuery.order('name');
 
       if (startupsError) throw startupsError;
 
@@ -89,7 +107,6 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
       if (jurorsError) throw jurorsError;
 
       // Fetch existing assignments (only include active jurors with user_id)
-      const assignmentTable = currentRound === 'screeningRound' ? 'screening_assignments' : 'pitching_assignments';
       const { data: assignmentsData, error: assignmentsError } = await supabase
         .from(assignmentTable)
         .select(`
@@ -109,7 +126,7 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
         juror_name: (assignment.jurors as any).name,
       })) || [];
 
-      console.log(`Loaded ${startupsData?.length || 0} startups for ${currentRound}`);
+      console.log(`Loaded ${startupsData?.length || 0} startups for ${currentRound} (${participatingStartupIds.length} with assignments)`);
       console.log(`Loaded ${jurorsData?.length || 0} jurors`);
       console.log(`Loaded ${mappedAssignments.length} existing assignments`);
 
@@ -413,6 +430,19 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
                           <Badge variant={startup.stage ? "outline" : "secondary"}>
                             {startup.stage || "No Stage"}
                           </Badge>
+                          
+                          {/* Status context badge */}
+                          {currentRound === 'screeningRound' && startup.status === 'shortlisted' && (
+                            <Badge variant="default" className="bg-green-100 text-green-800 border-green-300">
+                              Historical - Now Selected
+                            </Badge>
+                          )}
+                          {currentRound === 'pitchingRound' && startup.status === 'under-review' && (
+                            <Badge variant="outline" className="border-yellow-300 text-yellow-800">
+                              Historical - Still Under Review
+                            </Badge>
+                          )}
+                          
                           <Badge variant={isFullyAssigned ? "default" : "destructive"}>
                             {assignmentCount}/{requiredAssignments} Jurors Assigned
                           </Badge>
