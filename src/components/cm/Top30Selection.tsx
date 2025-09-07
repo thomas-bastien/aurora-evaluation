@@ -129,13 +129,13 @@ export const Top30Selection = ({ currentRound = 'screening', isReadOnly = false 
     }
   };
 
-  const handleBulkSelectTop30 = () => {
+  const handleBulkSelectTopRanked = () => {
     setStartups(prev => prev.map(startup => ({
       ...startup,
       isSelected: startup.rank <= 30,
       isAutoSelected: startup.rank <= 30
     })));
-    toast.success('Automatically selected top 30 startups by score');
+    toast.success('Automatically selected top ranked startups by score');
   };
 
   const handleToggleSelection = (startupId: string) => {
@@ -209,7 +209,7 @@ export const Top30Selection = ({ currentRound = 'screening', isReadOnly = false 
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `top-30-selection-${new Date().toISOString().split('T')[0]}.csv`;
+    a.download = `selected-startups-${new Date().toISOString().split('T')[0]}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -240,7 +240,7 @@ export const Top30Selection = ({ currentRound = 'screening', isReadOnly = false 
           <div>
             <CardTitle className="flex items-center gap-2">
               <Trophy className="w-5 h-5" />
-              Top 30 Startup Selection
+              Startup Selection
             </CardTitle>
             <CardDescription>
               Select the top performing startups to advance to Pitching
@@ -282,9 +282,9 @@ export const Top30Selection = ({ currentRound = 'screening', isReadOnly = false 
 
         {/* Action Buttons */}
         <div className="flex gap-2 mb-6">
-          <Button onClick={handleBulkSelectTop30} disabled={isReadOnly}>
+          <Button onClick={handleBulkSelectTopRanked} disabled={isReadOnly}>
             <Star className="w-4 h-4 mr-2" />
-            Auto-Select Top 30
+            Auto-Select Top Ranked
           </Button>
           <Button variant="outline" onClick={handleClearSelections} disabled={isReadOnly}>
             Clear All
@@ -301,7 +301,7 @@ export const Top30Selection = ({ currentRound = 'screening', isReadOnly = false 
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Confirm Top 30 Selection</DialogTitle>
+                <DialogTitle>Confirm Selection</DialogTitle>
                 <DialogDescription>
                   Are you sure you want to finalize the selection of {selectionCount} startups for Pitching? 
                   This action will update their status and cannot be easily undone.

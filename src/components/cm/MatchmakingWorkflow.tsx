@@ -296,7 +296,7 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
   const roundTitle = currentRound === 'screeningRound' ? 'Screening Round' : 'Pitching Round';
   const roundDescription = currentRound === 'screeningRound' 
     ? 'Assign 3 jurors to each startup for initial evaluation'
-    : 'Assign 2-3 jurors to the Top 30 finalists for pitch calls';
+    : 'Assign 2-3 jurors to the Finalists for pitch calls';
 
   return (
     <div className="space-y-6">
@@ -332,9 +332,9 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
                 <Building2 className="w-5 h-5 text-primary" />
                 <div>
                   <p className="text-2xl font-bold">{startups.length}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {currentRound === 'pitchingRound' ? 'Top 30 Finalists' : 'Startups'}
-                  </p>
+                   <p className="text-sm text-muted-foreground">
+                     {currentRound === 'pitchingRound' ? 'Finalists' : 'Startups'}
+                   </p>
                 </div>
               </div>
             </div>
@@ -409,9 +409,9 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
 
           {/* Startups List */}
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold">
-              {currentRound === 'pitchingRound' ? 'Top 30 Finalists' : 'Startups'} Requiring Assignment
-            </h3>
+             <h3 className="text-lg font-semibold">
+               {currentRound === 'pitchingRound' ? 'Finalists' : 'Startups'} Requiring Assignment
+             </h3>
             {startups.map((startup) => {
               const assignmentCount = getStartupAssignmentCount(startup.id);
               const requiredAssignments = currentRound === 'pitchingRound' ? 2 : 3;

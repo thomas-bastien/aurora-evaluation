@@ -89,7 +89,7 @@ export const useRounds = () => {
   const validateRoundCompletion = async (roundName: string) => {
     try {
       if (roundName === 'screening') {
-        // Check if top 30 selection is made
+        // Check if startup selection is made
         const { count } = await supabase
           .from('startups')
           .select('*', { count: 'exact', head: true })

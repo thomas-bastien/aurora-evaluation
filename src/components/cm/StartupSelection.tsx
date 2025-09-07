@@ -46,7 +46,7 @@ export const StartupSelection = ({ currentRound, roundInfo, isReadOnly }: Startu
               </CardTitle>
               <CardDescription>
                 {currentRound === 'screeningRound' 
-                  ? 'Review evaluation results and select the top 30 startups for Pitching Round'
+                  ? 'Review evaluation results and select startups for Pitching Round'
                   : 'Review pitch results and make final selections'
                 }
               </CardDescription>
@@ -73,9 +73,9 @@ export const StartupSelection = ({ currentRound, roundInfo, isReadOnly }: Startu
                 <BarChart3 className="w-4 h-4" />
                 Evaluation Results
               </TabsTrigger>
-              <TabsTrigger value="top-30-selection" className="flex items-center gap-2">
+              <TabsTrigger value="selected-startups" className="flex items-center gap-2">
                 <Trophy className="w-4 h-4" />
-                {currentRound === 'screeningRound' ? 'Top 30 Selection' : 'Final Selection'}
+                {currentRound === 'screeningRound' ? 'Selected' : 'Final Selection'}
               </TabsTrigger>
             </TabsList>
 
@@ -83,7 +83,7 @@ export const StartupSelection = ({ currentRound, roundInfo, isReadOnly }: Startu
               <EvaluationProgressView currentRound={roundName} />
             </TabsContent>
 
-            <TabsContent value="top-30-selection" className="space-y-6">
+            <TabsContent value="selected-startups" className="space-y-6">
               <Top30Selection currentRound={roundName} isReadOnly={isReadOnly} />
             </TabsContent>
           </Tabs>

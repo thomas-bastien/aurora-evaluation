@@ -180,10 +180,10 @@ The Aurora Team`
         subject: 'Screening Round Evaluation Results - Summary Report',
         content: `Thank you for your participation as an evaluator in the Screening Round of our startup evaluation process.
 
-        **Summary:**
-        • Total startups evaluated: [TOTAL_STARTUPS]
-        • Top 30 selected for Pitching Round
-        • Average evaluation score: [AVERAGE_SCORE]
+         **Summary:**
+         • Total startups evaluated: [TOTAL_STARTUPS]
+         • Selected startups for Pitching Round
+         • Average evaluation score: [AVERAGE_SCORE]
 
 Please find the detailed results and your contribution report attached.
 
@@ -326,11 +326,11 @@ The Aurora Team`
       const successfulNotifications = jurorNotifications.filter(result => result.status === 'fulfilled').length;
       toast.success(`Sent transition notifications to ${successfulNotifications} jurors`);
 
-      // Show transition success message
-      toast.success(
-        "Screening round completed! You can now switch to Pitching round to assign jurors to the top 30 finalists.",
-        { duration: 10000 }
-      );
+       // Show transition success message
+       toast.success(
+         "Screening round completed! You can now switch to Pitching round to assign jurors to the finalists.",
+         { duration: 10000 }
+       );
 
     } catch (error) {
       console.error('Error in round transition:', error);

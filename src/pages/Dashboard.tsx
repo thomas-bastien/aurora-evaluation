@@ -279,10 +279,10 @@ const Dashboard = () => {
                     icon={Star}
                     onClick={() => navigate('/selection?phase=screening')}
                   />
-                  <FunnelStage
-                    title="Selection – Semi-finalists"
-                    description="Confirm the 30 semi-finalists that progress to Pitching"
-                    tooltip="Confirm the 30 semi-finalists that progress to Pitching."
+                   <FunnelStage
+                     title="Selection – Semifinalists"
+                     description="Confirm the semifinalists that progress to Pitching"
+                     tooltip="Confirm the semifinalists that progress to Pitching."
                     status={
                       dashboardData.screeningStats.selectionComplete 
                         ? 'completed' 
@@ -333,17 +333,17 @@ const Dashboard = () => {
               </CardHeader>
               <CardContent>
                 <div className="flex flex-col space-y-4">
-                  <FunnelStage
-                    title="Matchmaking (Finalists)"
-                    description="Assign jurors to the Top 30 semi-finalists for live pitch calls"
-                    tooltip="Assign jurors to the Top 30 semi-finalists for live pitch calls."
+                   <FunnelStage
+                     title="Matchmaking (Finalists)"
+                     description="Assign jurors to the semifinalists for live pitch calls"
+                     tooltip="Assign jurors to the semifinalists for live pitch calls."
                     status={
                       dashboardData.pitchingStats.matchmakingProgress === 100 
                         ? 'completed' 
                         : dashboardData.activePhase === 'pitching' ? 'current' : 'upcoming'
                     }
                     progress={dashboardData.pitchingStats.matchmakingProgress}
-                    statusText={`${Math.round((dashboardData.pitchingStats.matchmakingProgress / 100) * 30)}/30 covered`}
+                    statusText={`${Math.round((dashboardData.pitchingStats.matchmakingProgress / 100) * dashboardData.activeStartups)} startups covered`}
                     icon={Network}
                     onClick={() => navigate('/selection/matchmaking?phase=pitching')}
                   />

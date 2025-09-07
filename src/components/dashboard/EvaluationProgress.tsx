@@ -45,7 +45,7 @@ export const EvaluationProgress = () => {
         setStages([
           { name: "Initial Screening", completed: total, total: total, status: "completed" },
           { name: "Detailed Evaluation", completed: evaluationsComplete, total: total, status: evaluationsComplete === total ? "completed" : "active" },
-          { name: "Final Selection", completed: 0, total: 30, status: "pending" },
+          { name: "Final Selection", completed: 0, total: 0, status: "pending" },
           { name: "Pitch Sessions", completed: sessionsCompleted, total: sessionsData?.length || 0, status: sessionsCompleted > 0 ? "active" : "pending" },
         ]);
       } catch (error) {

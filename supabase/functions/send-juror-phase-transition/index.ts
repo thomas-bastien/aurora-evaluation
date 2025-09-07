@@ -54,7 +54,7 @@ const handler = async (req: Request): Promise<Response> => {
             <h3 style="margin-top: 0; color: #1e40af;">Your Contribution:</h3>
             <ul>
               <li>You completed evaluations for <strong>${evaluationCount || 'multiple'}</strong> startups</li>
-              <li>Your insights helped us identify the top 30 finalists</li>
+              <li>Your insights helped us identify the finalists</li>
               <li>The Pitching Round is now beginning</li>
             </ul>
           </div>
