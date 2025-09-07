@@ -127,7 +127,7 @@ const Selection = () => {
             </TabsTrigger>
             <TabsTrigger value="juror-progress" className="flex items-center gap-2">
               <Users className="w-4 h-4" />
-              Evaluations
+              Jury Progress
             </TabsTrigger>
             <TabsTrigger value="startup-selection" className="flex items-center gap-2">
               <Star className="w-4 h-4" />
