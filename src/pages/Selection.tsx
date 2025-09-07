@@ -91,7 +91,7 @@ const Selection = () => {
                         <div className="flex items-center gap-2">
                           {round.status === 'completed' && <CheckCircle className="w-4 h-4 text-success" />}
                           {round.status === 'pending' && <Lock className="w-4 h-4 text-muted-foreground" />}
-                          {round.name === 'screening' ? 'Screening Round' : 'Pitching Round'}
+                          {round.name === 'screening' ? 'Screening' : 'Pitching'}
                         </div>
                       </SelectItem>
                     ))}
