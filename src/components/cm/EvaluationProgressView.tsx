@@ -195,9 +195,16 @@ export const EvaluationProgressView = ({ currentRound = 'screening' }: Evaluatio
         };
       }) || [];
 
-      // Sort by total score and assign ranks
+      // Sort by average score and assign ranks (startups with no evaluations go to bottom)
       const sortedStartups = evaluationData
-        .sort((a, b) => b.totalScore - a.totalScore)
+        .sort((a, b) => {
+          // If one has no evaluations and the other does, put no-evaluation at bottom
+          if (a.averageScore === null && b.averageScore !== null) return 1;
+          if (b.averageScore === null && a.averageScore !== null) return -1;
+          if (a.averageScore === null && b.averageScore === null) return 0;
+          // Otherwise sort by average score (higher scores first)
+          return b.averageScore - a.averageScore;
+        })
         .map((startup, index) => ({ ...startup, rank: index + 1 }));
 
       setStartups(sortedStartups);

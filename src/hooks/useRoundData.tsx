@@ -161,7 +161,12 @@ export const useRoundData = (roundName: string) => {
         return acc;
       }, {});
 
-      return Object.values(startupScores).sort((a: any, b: any) => b.totalScore - a.totalScore);
+      return Object.values(startupScores).sort((a: any, b: any) => {
+        // Sort by average score (higher scores first)
+        if (a.averageScore === 0 && b.averageScore > 0) return 1;
+        if (b.averageScore === 0 && a.averageScore > 0) return -1;
+        return b.averageScore - a.averageScore;
+      });
     } catch (error) {
       console.error('Error fetching evaluations with scores:', error);
       return [];

@@ -100,14 +100,14 @@ export const Top30Selection = ({ currentRound = 'screening', isReadOnly = false 
         };
       }) || []; // Remove filter to show all startups
 
-      // Sort by total score and assign ranks (startups with no evaluations go to bottom)
+      // Sort by average score and assign ranks (startups with no evaluations go to bottom)
       const sortedStartups = selectionData
         .sort((a, b) => {
           // If one has no evaluations and the other does, put no-evaluation at bottom
           if (a.evaluationsCount === 0 && b.evaluationsCount > 0) return 1;
           if (b.evaluationsCount === 0 && a.evaluationsCount > 0) return -1;
-          // Otherwise sort by total score
-          return b.totalScore - a.totalScore;
+          // Otherwise sort by average score (higher scores first)
+          return b.averageScore - a.averageScore;
         })
         .map((startup, index) => {
           const rank = index + 1;
