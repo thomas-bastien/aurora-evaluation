@@ -4,30 +4,58 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
-import { Trophy, Star, BarChart3, Filter, CheckCircle, Clock, AlertCircle, Settings } from "lucide-react";
+import { 
+  Trophy, 
+  Star,
+  BarChart3,
+  Filter,
+  CheckCircle,
+  Clock,
+  AlertCircle,
+  Settings
+} from "lucide-react";
 import { EvaluationProgressView } from "./EvaluationProgressView";
 import { Top30Selection } from "./Top30Selection";
 import { RoundManagement } from "./RoundManagement";
 import type { Round } from "@/hooks/useRounds";
+
 interface StartupSelectionProps {
   currentRound: 'screeningRound' | 'pitchingRound';
   roundInfo?: Round;
   isReadOnly?: boolean;
 }
-export const StartupSelection = ({
-  currentRound,
-  roundInfo,
-  isReadOnly
-}: StartupSelectionProps) => {
+
+export const StartupSelection = ({ currentRound, roundInfo, isReadOnly }: StartupSelectionProps) => {
   const roundName = currentRound === 'screeningRound' ? 'screening' : 'pitching';
-  return <div className="space-y-6">
-      {/* Round Management Section - Only for Active Rounds */}
-      {roundInfo?.status === 'active' && <RoundManagement roundName={roundName} roundInfo={roundInfo} />}
+
+  return (
+    <div className="space-y-6">
+      {/* Round Management Section - For Active and Completed Rounds */}
+      {(roundInfo?.status === 'active' || roundInfo?.status === 'completed') && (
+        <RoundManagement roundName={roundName} roundInfo={roundInfo} />
+      )}
 
       {/* Read-Only Banner for Completed/Pending Rounds */}
-      {isReadOnly && <Card className="border-warning bg-warning/5">
-          
-        </Card>}
+      {isReadOnly && (
+        <Card className="border-warning bg-warning/5">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-3">
+              <AlertCircle className="w-5 h-5 text-warning" />
+              <div>
+                <p className="font-medium text-warning">
+                  {roundInfo?.status === 'completed' 
+                    ? `${currentRound === 'screeningRound' ? 'Screening' : 'Pitching'} round has been completed` 
+                    : `${currentRound === 'screeningRound' ? 'Screening' : 'Pitching'} round is not yet active`
+                  }
+                </p>
+                <p className="text-sm text-warning/80">
+                  You can view historical data but cannot make changes.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>
@@ -38,7 +66,10 @@ export const StartupSelection = ({
                 Startup Selection - {currentRound === 'screeningRound' ? 'Screening Round' : 'Pitching Round'}
               </CardTitle>
               <CardDescription>
-                {currentRound === 'screeningRound' ? 'Review evaluation results and select the top 30 startups for Pitching Round' : 'Review pitch results and make final selections'}
+                {currentRound === 'screeningRound' 
+                  ? 'Review evaluation results and select the top 30 startups for Pitching Round'
+                  : 'Review pitch results and make final selections'
+                }
               </CardDescription>
             </div>
             <div className="flex items-center gap-2">
@@ -47,9 +78,11 @@ export const StartupSelection = ({
                 {roundInfo?.status === 'completed' && 'Completed'}
                 {roundInfo?.status === 'pending' && 'Pending'}
               </Badge>
-              {isReadOnly && <Badge variant="outline" className="text-muted-foreground">
+              {isReadOnly && (
+                <Badge variant="outline" className="text-muted-foreground">
                   Read Only
-                </Badge>}
+                </Badge>
+              )}
             </div>
           </div>
         </CardHeader>
@@ -77,5 +110,6 @@ export const StartupSelection = ({
           </Tabs>
         </CardContent>
       </Card>
-    </div>;
+    </div>
+  );
 };
