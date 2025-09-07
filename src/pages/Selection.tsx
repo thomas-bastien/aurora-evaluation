@@ -56,7 +56,8 @@ const Selection = () => {
   // Get current round info
   const currentRoundName = currentRound === 'screeningRound' ? 'screening' : 'pitching';
   const currentRoundInfo = rounds.find(r => r.name === currentRoundName);
-  const isReadOnly = !canModifyRound(currentRoundName);
+  // Only allow modifications to the active round
+  const isReadOnly = activeRound?.name !== currentRoundName;
   return <div className="min-h-screen bg-background">
       <DashboardHeader />
       
@@ -86,7 +87,6 @@ const Selection = () => {
                       <SelectItem 
                         key={round.name} 
                         value={round.name === 'screening' ? 'screeningRound' : 'pitchingRound'}
-                        disabled={round.status === 'pending'}
                       >
                         <div className="flex items-center gap-2">
                           {round.status === 'completed' && <CheckCircle className="w-4 h-4 text-success" />}
@@ -109,7 +109,12 @@ const Selection = () => {
                   {isReadOnly && (
                     <Badge variant="outline" className="text-muted-foreground">
                       <Lock className="w-3 h-3 mr-1" />
-                      Read Only
+                      View Only
+                    </Badge>
+                  )}
+                  {currentRoundInfo?.status === 'pending' && (
+                    <Badge variant="outline" className="text-amber-600 border-amber-200">
+                      Not Started
                     </Badge>
                   )}
                 </div>
