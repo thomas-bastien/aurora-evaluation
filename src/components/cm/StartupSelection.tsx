@@ -30,6 +30,8 @@ export const StartupSelection = ({ currentRound, roundInfo, isReadOnly }: Startu
   const [selectedStartupsCount, setSelectedStartupsCount] = useState(0);
   const [selectionCallback, setSelectionCallback] = useState<(() => Promise<void>) | null>(null);
 
+  console.log('StartupSelection render', { selectionCallback: !!selectionCallback, selectedStartupsCount });
+
   return (
     <div className="space-y-6">
       {/* Round Management Section - For Active and Completed Rounds */}

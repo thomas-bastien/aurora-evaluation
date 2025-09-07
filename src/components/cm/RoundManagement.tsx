@@ -25,7 +25,7 @@ interface RoundManagementProps {
   roundName: string;
   roundInfo: Round;
   selectedStartupsCount?: number;
-  onConfirmSelection?: () => Promise<void>;
+  onConfirmSelection?: (() => Promise<void>) | null;
 }
 
 export const RoundManagement = ({ roundName, roundInfo, selectedStartupsCount = 0, onConfirmSelection }: RoundManagementProps) => {
@@ -61,14 +61,23 @@ export const RoundManagement = ({ roundName, roundInfo, selectedStartupsCount = 
   const handleCompleteRound = async () => {
     setCompleting(true);
     try {
+      console.log('Starting round completion process', { roundName, onConfirmSelection });
+      
       // First confirm selection if callback provided
-      if (onConfirmSelection) {
+      if (onConfirmSelection && typeof onConfirmSelection === 'function') {
+        console.log('Calling onConfirmSelection callback');
         await onConfirmSelection();
+        console.log('Selection confirmed successfully');
+      } else {
+        console.warn('No confirmation callback provided');
       }
+      
       // Then complete the round
+      console.log('Completing round');
       const success = await completeRound(roundName);
       if (success) {
         setShowCompleteDialog(false);
+        console.log('Round completed successfully');
       }
     } catch (error) {
       console.error('Error in unified confirmation:', error);
@@ -373,7 +382,7 @@ export const RoundManagement = ({ roundName, roundInfo, selectedStartupsCount = 
           <Dialog open={showCompleteDialog} onOpenChange={setShowCompleteDialog}>
             <DialogTrigger asChild>
               <Button 
-                disabled={!validation?.canComplete || (roundName === 'screening' && selectedStartupsCount === 0)}
+                disabled={!validation?.canComplete || (roundName === 'screening' && selectedStartupsCount === 0) || !onConfirmSelection}
                 size="lg"
               >
                 <CheckCircle className="w-4 h-4 mr-2" />

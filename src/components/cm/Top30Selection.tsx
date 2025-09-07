@@ -123,7 +123,13 @@ export const Top30Selection = ({ currentRound = 'screening', isReadOnly = false,
 
   useEffect(() => {
     // Set the confirmation callback for the parent component
+    console.log('Setting confirmation callback in Top30Selection', { handleConfirmSelection });
     onSetConfirmCallback?.(handleConfirmSelection);
+    
+    // Cleanup function to clear callback when component unmounts
+    return () => {
+      onSetConfirmCallback?.(null);
+    };
   }, [handleConfirmSelection, onSetConfirmCallback]);
 
   const fetchStartupsForSelection = async () => {
