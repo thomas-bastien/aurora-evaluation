@@ -157,35 +157,58 @@ export const Top30Selection = ({ currentRound = 'screening', isReadOnly = false 
 
   const handleConfirmSelection = async () => {
     try {
+      setLoading(true);
       const selectedStartups = startups.filter(s => s.isSelected);
       
+      console.log('Confirming selection for startups:', {
+        selectedCount: selectedStartups.length,
+        selectedIds: selectedStartups.map(s => s.id),
+        currentRound
+      });
+      
       // Update startup status to 'shortlisted' for selected startups
-      const { error } = await supabase
-        .from('startups')
-        .update({ status: 'shortlisted' })
-        .in('id', selectedStartups.map(s => s.id));
-
-      if (error) throw error;
-
-      // Update non-selected startups to 'evaluated'
-      const nonSelectedStartups = startups.filter(s => !s.isSelected);
-      if (nonSelectedStartups.length > 0) {
-        const { error: nonSelectedError } = await supabase
+      if (selectedStartups.length > 0) {
+        const { error, data } = await supabase
           .from('startups')
-          .update({ status: 'evaluated' })
-          .in('id', nonSelectedStartups.map(s => s.id));
+          .update({ status: 'shortlisted' })
+          .in('id', selectedStartups.map(s => s.id))
+          .select('id, name, status');
 
-        if (nonSelectedError) throw nonSelectedError;
+        if (error) {
+          console.error('Error updating selected startups:', error);
+          throw new Error(`Failed to update selected startups: ${error.message}`);
+        }
+        
+        console.log('Successfully updated selected startups:', data);
+      }
+
+      // Update non-selected startups to 'rejected' (valid status from DB)
+      const nonSelectedStartups = startups.filter(s => !s.isSelected && s.status !== 'rejected');
+      if (nonSelectedStartups.length > 0) {
+        const { error: nonSelectedError, data: nonSelectedData } = await supabase
+          .from('startups')
+          .update({ status: 'rejected' })
+          .in('id', nonSelectedStartups.map(s => s.id))
+          .select('id, name, status');
+
+        if (nonSelectedError) {
+          console.error('Error updating non-selected startups:', nonSelectedError);
+          throw new Error(`Failed to update non-selected startups: ${nonSelectedError.message}`);
+        }
+        
+        console.log('Successfully updated non-selected startups:', nonSelectedData);
       }
 
       toast.success(`Successfully selected ${selectedStartups.length} startups for Pitching`);
       setShowConfirmDialog(false);
       
       // Refresh data
-      fetchStartupsForSelection();
-    } catch (error) {
+      await fetchStartupsForSelection();
+    } catch (error: any) {
       console.error('Error confirming selection:', error);
-      toast.error('Failed to confirm selection');
+      toast.error(error.message || 'Failed to confirm selection. Please check console for details.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -311,8 +334,8 @@ export const Top30Selection = ({ currentRound = 'screening', isReadOnly = false 
                 <Button variant="outline" onClick={() => setShowConfirmDialog(false)}>
                   Cancel
                 </Button>
-                <Button onClick={handleConfirmSelection}>
-                  Confirm Selection
+                <Button onClick={handleConfirmSelection} disabled={loading}>
+                  {loading ? 'Processing...' : 'Confirm Selection'}
                 </Button>
               </DialogFooter>
             </DialogContent>
