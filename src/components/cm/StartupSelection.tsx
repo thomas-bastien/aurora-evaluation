@@ -35,27 +35,6 @@ export const StartupSelection = ({ currentRound, roundInfo, isReadOnly }: Startu
         <RoundManagement roundName={roundName} roundInfo={roundInfo} />
       )}
 
-      {/* Read-Only Banner for Completed/Pending Rounds */}
-      {isReadOnly && (
-        <Card className="border-warning bg-warning/5">
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <AlertCircle className="w-5 h-5 text-warning" />
-              <div>
-                <p className="font-medium text-warning">
-                  {roundInfo?.status === 'completed' 
-                    ? `${currentRound === 'screeningRound' ? 'Screening' : 'Pitching'} round has been completed` 
-                    : `${currentRound === 'screeningRound' ? 'Screening' : 'Pitching'} round is not yet active`
-                  }
-                </p>
-                <p className="text-sm text-warning/80">
-                  You can view historical data but cannot make changes.
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       <Card>
         <CardHeader>
