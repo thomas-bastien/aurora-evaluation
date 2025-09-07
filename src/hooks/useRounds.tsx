@@ -190,12 +190,98 @@ export const useRounds = () => {
     fetchRounds();
   }, []);
 
+  const reopenRound = async (roundName: string): Promise<boolean> => {
+    try {
+      // Validate reopen requirements
+      const validation = await validateRoundReopen(roundName);
+      if (!validation.canReopen) {
+        toast.error(`Cannot reopen round: ${validation.reason}`);
+        return false;
+      }
+
+      // Reopen current round (set back to active)
+      const { error: reopenError } = await supabase
+        .from('rounds')
+        .update({ 
+          status: 'active',
+          completed_at: null
+        })
+        .eq('name', roundName);
+
+      if (reopenError) throw reopenError;
+
+      // Deactivate next round if it exists
+      const nextRound = getNextRound(roundName);
+      if (nextRound) {
+        const { error: deactivateError } = await supabase
+          .from('rounds')
+          .update({ 
+            status: 'pending',
+            started_at: null
+          })
+          .eq('name', nextRound);
+
+        if (deactivateError) throw deactivateError;
+      }
+
+      await fetchRounds();
+      toast.success(`${roundName} round reopened successfully`);
+      return true;
+    } catch (error) {
+      console.error('Error reopening round:', error);
+      toast.error('Failed to reopen round');
+      return false;
+    }
+  };
+
+  const validateRoundReopen = async (roundName: string) => {
+    try {
+      // Check if this is the most recently completed round
+      const { data: rounds } = await supabase
+        .from('rounds')
+        .select('name, status, completed_at')
+        .order('completed_at', { ascending: false });
+
+      const completedRounds = rounds?.filter(r => r.status === 'completed') || [];
+      const mostRecentCompleted = completedRounds[0];
+
+      if (!mostRecentCompleted || mostRecentCompleted.name !== roundName) {
+        return { canReopen: false, reason: 'Only the most recently completed round can be reopened' };
+      }
+
+      // Check for progress in next round that might be affected
+      const nextRound = getNextRound(roundName);
+      let affectedData = { assignments: 0, evaluations: 0, pitches: 0 };
+      
+      if (nextRound && roundName === 'screening') {
+        const [assignments, evaluations, pitches] = await Promise.all([
+          supabase.from('pitching_assignments').select('*', { count: 'exact', head: true }),
+          supabase.from('pitching_evaluations').select('*', { count: 'exact', head: true }),
+          supabase.from('pitch_requests').select('*', { count: 'exact', head: true })
+        ]);
+
+        affectedData = {
+          assignments: assignments.count || 0,
+          evaluations: evaluations.count || 0,
+          pitches: pitches.count || 0
+        };
+      }
+
+      return { canReopen: true, reason: '', affectedData };
+    } catch (error) {
+      console.error('Error validating round reopen:', error);
+      return { canReopen: false, reason: 'Error validating reopen requirements' };
+    }
+  };
+
   return {
     rounds,
     activeRound,
     loading,
     fetchRounds,
     completeRound,
+    reopenRound,
+    validateRoundReopen,
     canModifyRound,
     getRoundProgress,
     validateRoundCompletion

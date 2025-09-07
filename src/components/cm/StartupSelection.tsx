@@ -30,8 +30,8 @@ export const StartupSelection = ({ currentRound, roundInfo, isReadOnly }: Startu
 
   return (
     <div className="space-y-6">
-      {/* Round Management Section - Only for Active Rounds */}
-      {roundInfo?.status === 'active' && (
+      {/* Round Management Section - For Active and Completed Rounds */}
+      {(roundInfo?.status === 'active' || roundInfo?.status === 'completed') && (
         <RoundManagement roundName={roundName} roundInfo={roundInfo} />
       )}
 
