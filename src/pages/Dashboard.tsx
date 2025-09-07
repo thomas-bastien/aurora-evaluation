@@ -203,7 +203,7 @@ const Dashboard = () => {
         {/* Cohort Summary Card */}
         <div className="mb-8 animate-fade-in">
           <CohortSummaryCard
-            activeStartups={dashboardData.activeStartups}
+            totalStartups={dashboardData.totalStartups}
             activeJurors={dashboardData.activeJurors}
             activePhase={dashboardData.activePhase}
             evaluationProgress={dashboardData.evaluationProgress}
