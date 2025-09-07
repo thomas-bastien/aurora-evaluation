@@ -84,13 +84,19 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
           // For pitching round: show assigned startups + shortlisted startups
           startupsQuery = startupsQuery.or(`id.in.(${participatingStartupIds.join(',')}),status.eq.shortlisted`);
         } else {
-          // For screening round: show assigned startups + under-review startups
-          startupsQuery = startupsQuery.or(`id.in.(${participatingStartupIds.join(',')}),status.eq.under-review`);
+          // For screening round: show ALL startups that have assignments (including rejected)
+          // Plus any pending startups that don't have assignments yet
+          startupsQuery = startupsQuery.or(`id.in.(${participatingStartupIds.join(',')}),status.eq.pending`);
         }
       } else {
         // Fallback to status-based filtering if no assignments exist yet
-        const statusFilter = currentRound === 'pitchingRound' ? 'shortlisted' : 'under-review';
-        startupsQuery = startupsQuery.eq('status', statusFilter);
+        if (currentRound === 'pitchingRound') {
+          startupsQuery = startupsQuery.eq('status', 'shortlisted');
+        } else {
+          // For screening round with no existing assignments, show ALL startups including rejected
+          // This ensures rejected startups are visible but not assignable
+          startupsQuery = startupsQuery; // No filter - show all startups
+        }
       }
 
       const { data: startupsData, error: startupsError } = await startupsQuery.order('name');
@@ -356,7 +362,7 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
                   <p className="text-2xl font-bold">
                     {startups.filter(startup => {
                       const requiredAssignments = currentRound === 'pitchingRound' ? 2 : 3;
-                      return getStartupAssignmentCount(startup.id) >= requiredAssignments;
+                      return startup.status !== 'rejected' && getStartupAssignmentCount(startup.id) >= requiredAssignments;
                     }).length}
                   </p>
                   <p className="text-sm text-muted-foreground">Fully Assigned</p>
@@ -371,7 +377,7 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
                   <p className="text-2xl font-bold">
                     {startups.filter(startup => {
                       const requiredAssignments = currentRound === 'pitchingRound' ? 2 : 3;
-                      return getStartupAssignmentCount(startup.id) < requiredAssignments;
+                      return startup.status !== 'rejected' && getStartupAssignmentCount(startup.id) < requiredAssignments;
                     }).length}
                   </p>
                   <p className="text-sm text-muted-foreground">Need Assignment</p>
@@ -410,7 +416,12 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
           {/* Startups List */}
           <div className="space-y-4">
              <h3 className="text-lg font-semibold">
-               {currentRound === 'pitchingRound' ? 'Finalists' : 'Startups'} Requiring Assignment
+               {currentRound === 'pitchingRound' ? 'Semifinalists' : 'All Startups'}
+               {currentRound === 'screeningRound' && (
+                 <span className="text-sm font-normal text-muted-foreground ml-2">
+                   (Including rejected startups - assignment only available for non-rejected)
+                 </span>
+               )}
              </h3>
             {startups.map((startup) => {
               const assignmentCount = getStartupAssignmentCount(startup.id);
@@ -432,14 +443,19 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
                           </Badge>
                           
                           {/* Status context badge */}
+                          {startup.status === 'rejected' && (
+                            <Badge variant="destructive" className="bg-red-100 text-red-800 border-red-300">
+                              Rejected
+                            </Badge>
+                          )}
                           {currentRound === 'screeningRound' && startup.status === 'shortlisted' && (
                             <Badge variant="default" className="bg-green-100 text-green-800 border-green-300">
                               Semifinalist
                             </Badge>
                           )}
-                          {currentRound === 'pitchingRound' && startup.status === 'under-review' && (
+                          {currentRound === 'pitchingRound' && startup.status === 'pending' && (
                             <Badge variant="outline" className="border-yellow-300 text-yellow-800">
-                              Historical - Still Under Review
+                              Historical - Still Pending
                             </Badge>
                           )}
                           
@@ -456,13 +472,20 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
                       </div>
 
                       <div className="flex flex-col gap-2 ml-4">
-                        <Button
-                          onClick={() => handleAssignStartup(startup)}
-                          variant={isFullyAssigned ? "outline" : "default"}
-                          size="sm"
-                        >
-                          {assignmentCount === 0 ? "Assign Jurors" : "Edit Assignment"}
-                        </Button>
+                        {startup.status === 'rejected' ? (
+                          <div className="text-center">
+                            <p className="text-sm text-muted-foreground mb-1">Cannot assign jurors</p>
+                            <p className="text-xs text-muted-foreground">Startup was rejected</p>
+                          </div>
+                        ) : (
+                          <Button
+                            onClick={() => handleAssignStartup(startup)}
+                            variant={isFullyAssigned ? "outline" : "default"}
+                            size="sm"
+                          >
+                            {assignmentCount === 0 ? "Assign Jurors" : "Edit Assignment"}
+                          </Button>
+                        )}
                       </div>
                     </div>
                   </CardContent>
