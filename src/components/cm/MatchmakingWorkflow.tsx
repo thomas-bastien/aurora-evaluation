@@ -489,20 +489,41 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
                       </div>
 
                       <div className="flex flex-col gap-2 ml-4">
-                        {startup.status === 'rejected' ? (
-                          <div className="text-center">
-                            <p className="text-sm text-muted-foreground mb-1">Cannot assign jurors</p>
-                            <p className="text-xs text-muted-foreground">Startup was rejected</p>
-                          </div>
-                        ) : (
-                          <Button
-                            onClick={() => handleAssignStartup(startup)}
-                            variant={isFullyAssigned ? "outline" : "default"}
-                            size="sm"
-                          >
-                            {assignmentCount === 0 ? "Assign Jurors" : "Edit Assignment"}
-                          </Button>
-                        )}
+                        {(() => {
+                          // Determine if startup should be assignable based on status and round
+                          const isScreeningRound = currentRound === 'screeningRound';
+                          const isRejected = startup.status === 'rejected';
+                          const isShortlisted = startup.status === 'shortlisted';
+                          
+                          if (isRejected) {
+                            return (
+                              <div className="text-center">
+                                <p className="text-sm text-muted-foreground mb-1">Cannot assign jurors</p>
+                                <p className="text-xs text-muted-foreground">Startup was rejected</p>
+                              </div>
+                            );
+                          }
+                          
+                          if (isScreeningRound && isShortlisted) {
+                            return (
+                              <div className="text-center">
+                                <p className="text-sm text-muted-foreground mb-1">Cannot assign jurors</p>
+                                <p className="text-xs text-muted-foreground">Already selected for pitching round</p>
+                              </div>
+                            );
+                          }
+                          
+                          // Startup is assignable
+                          return (
+                            <Button
+                              onClick={() => handleAssignStartup(startup)}
+                              variant={isFullyAssigned ? "outline" : "default"}
+                              size="sm"
+                            >
+                              {assignmentCount === 0 ? "Assign Jurors" : "Edit Assignment"}
+                            </Button>
+                          );
+                        })()}
                       </div>
                     </div>
                   </CardContent>
