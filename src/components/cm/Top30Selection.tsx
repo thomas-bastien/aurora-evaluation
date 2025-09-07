@@ -137,16 +137,21 @@ export const Top30Selection = ({ currentRound = 'screening', isReadOnly = false,
       // Determine which evaluation table to use based on current round
       const evaluationTable = currentRound === 'screening' ? 'screening_evaluations' : 'pitching_evaluations';
       
-      // Fetch startups with their evaluation scores
-      const { data: startupsData, error } = await supabase
-        .from('startups')
-        .select(`
-          *,
-          ${evaluationTable}!startup_id(
-            overall_score,
-            status
-          )
-        `);
+      // Build query with status filtering for pitching round
+      let query = supabase.from('startups').select(`
+        *,
+        ${evaluationTable}!startup_id(
+          overall_score,
+          status
+        )
+      `);
+      
+      // During pitching round, only show semifinalists (shortlisted startups)
+      if (currentRound === 'pitching') {
+        query = query.eq('status', 'shortlisted');
+      }
+      
+      const { data: startupsData, error } = await query;
 
       if (error) throw error;
       

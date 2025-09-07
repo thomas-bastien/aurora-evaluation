@@ -59,24 +59,33 @@ export const ResultsCommunication = ({ currentRound }: ResultsCommunicationProps
 
   const fetchResultsData = async () => {
     try {
-      // Fetch startups with their evaluation results
-      const { data: startupsData, error } = await supabase
-        .from('startups')
-        .select(`
-          *,
-          screening_evaluations(
-            overall_score,
-            status,
-            strengths,
-            improvement_areas,
-            overall_notes
-          )
-        `);
+      // Determine which evaluation table to use based on current round
+      const evaluationTable = currentRound === 'screeningRound' ? 'screening_evaluations' : 'pitching_evaluations';
+      
+      // Build query with status filtering for pitching round
+      let query = supabase.from('startups').select(`
+        *,
+        ${evaluationTable}(
+          overall_score,
+          status,
+          strengths,
+          improvement_areas,
+          overall_notes
+        )
+      `);
+      
+      // During pitching round, only show semifinalists (shortlisted startups)
+      if (currentRound === 'pitchingRound') {
+        query = query.eq('status', 'shortlisted');
+      }
+      
+      const { data: startupsData, error } = await query;
 
       if (error) throw error;
 
-        const resultsData: StartupResult[] = startupsData?.map(startup => {
-        const evaluations = startup.screening_evaluations || [];
+      const resultsData: StartupResult[] = startupsData?.map(startup => {
+        const evaluationKey = currentRound === 'screeningRound' ? 'screening_evaluations' : 'pitching_evaluations';
+        const evaluations = startup[evaluationKey] || [];
         const submittedEvaluations = evaluations.filter(e => e.status === 'submitted');
         const scores = submittedEvaluations
           .map(e => e.overall_score)
