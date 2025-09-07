@@ -210,6 +210,22 @@ export const useRounds = () => {
 
       if (reopenError) throw reopenError;
 
+      // Revert startup statuses if reopening screening round
+      if (roundName === 'screening') {
+        const { error: revertError } = await supabase
+          .from('startups')
+          .update({ status: 'pending' })
+          .in('status', ['shortlisted', 'rejected']);
+
+        if (revertError) {
+          console.error('Error reverting startup statuses:', revertError);
+          toast.error('Failed to revert startup statuses');
+          return false;
+        }
+
+        console.log('Startup statuses reverted to pending for screening round reopen');
+      }
+
       // Deactivate next round if it exists
       const nextRound = getNextRound(roundName);
       if (nextRound) {
