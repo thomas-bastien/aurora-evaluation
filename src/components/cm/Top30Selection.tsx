@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -50,6 +50,14 @@ export const Top30Selection = ({ currentRound = 'screening', isReadOnly = false,
   const [startupEvaluations, setStartupEvaluations] = useState<any[]>([]);
   const [selectedJurorEvaluation, setSelectedJurorEvaluation] = useState<any>(null);
 
+  // Ref to access current startups value without causing re-renders
+  const startupsRef = useRef<StartupSelection[]>([]);
+
+  // Keep ref in sync with startups state
+  useEffect(() => {
+    startupsRef.current = startups;
+  }, [startups]);
+
   useEffect(() => {
     fetchStartupsForSelection();
   }, []);
@@ -63,7 +71,7 @@ export const Top30Selection = ({ currentRound = 'screening', isReadOnly = false,
   const handleConfirmSelection = useCallback(async () => {
     try {
       setLoading(true);
-      const selectedStartups = startups.filter(s => s.isSelected);
+      const selectedStartups = startupsRef.current.filter(s => s.isSelected);
       
       console.log('Confirming selection for startups:', {
         selectedCount: selectedStartups.length,
@@ -88,7 +96,7 @@ export const Top30Selection = ({ currentRound = 'screening', isReadOnly = false,
       }
 
       // Update non-selected startups to 'rejected' (valid status from DB)
-      const nonSelectedStartups = startups.filter(s => !s.isSelected && s.status !== 'rejected');
+      const nonSelectedStartups = startupsRef.current.filter(s => !s.isSelected && s.status !== 'rejected');
       if (nonSelectedStartups.length > 0) {
         const { error: nonSelectedError, data: nonSelectedData } = await supabase
           .from('startups')
@@ -106,15 +114,13 @@ export const Top30Selection = ({ currentRound = 'screening', isReadOnly = false,
 
       toast.success(`Successfully selected ${selectedStartups.length} startups for Pitching`);
       
-      // Refresh data
-      await fetchStartupsForSelection();
     } catch (error: any) {
       console.error('Error confirming selection:', error);
       toast.error(error.message || 'Failed to confirm selection. Please check console for details.');
     } finally {
       setLoading(false);
     }
-  }, [startups, currentRound]);
+  }, [currentRound]);
 
   useEffect(() => {
     // Set the confirmation callback for the parent component
