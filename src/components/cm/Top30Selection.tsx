@@ -140,7 +140,7 @@ export const Top30Selection = ({ currentRound = 'screening', isReadOnly = false,
       // Build query with status filtering for pitching round
       let query = supabase.from('startups').select(`
         *,
-        ${evaluationTable}!startup_id(
+        ${evaluationTable}(
           overall_score,
           status
         )
