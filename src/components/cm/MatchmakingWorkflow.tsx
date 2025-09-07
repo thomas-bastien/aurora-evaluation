@@ -76,25 +76,17 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
 
       const participatingStartupIds = [...new Set(assignmentStartupIds?.map(a => a.startup_id) || [])];
 
-      // Fetch startups - either those with assignments OR those eligible for the current round
+      // Fetch startups based on current round
       let startupsQuery = supabase.from('startups').select('*');
       
-      if (participatingStartupIds.length > 0) {
-        if (currentRound === 'pitchingRound') {
-          // For pitching round: show assigned startups + shortlisted startups
-          startupsQuery = startupsQuery.or(`id.in.(${participatingStartupIds.join(',')}),status.eq.shortlisted`);
-        } else {
-          // For screening round: show ALL startups - those with assignments AND all others
-          startupsQuery = startupsQuery; // No filter - show all startups regardless of status
-        }
+      if (currentRound === 'pitchingRound') {
+        // For pitching round: ONLY show shortlisted startups (Semi-finalists)
+        // Never show eliminated or pending startups regardless of assignments
+        startupsQuery = startupsQuery.eq('status', 'shortlisted');
+        console.log('Filtering for pitching round: only shortlisted startups');
       } else {
-        // Fallback to status-based filtering if no assignments exist yet
-        if (currentRound === 'pitchingRound') {
-          startupsQuery = startupsQuery.eq('status', 'shortlisted');
-        } else {
-          // For screening round with no existing assignments, show ALL startups
-          startupsQuery = startupsQuery; // No filter - show all startups
-        }
+        // For screening round: show ALL startups regardless of status
+        console.log('Screening round: showing all startups');
       }
 
       const { data: startupsData, error: startupsError } = await startupsQuery;
@@ -130,7 +122,7 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
         juror_name: (assignment.jurors as any).name,
       })) || [];
 
-      console.log(`Loaded ${startupsData?.length || 0} startups for ${currentRound} (${participatingStartupIds.length} with assignments)`);
+      console.log(`Loaded ${startupsData?.length || 0} startups for ${currentRound}${currentRound === 'pitchingRound' ? ' (shortlisted only)' : ' (all statuses)'}`);
       console.log(`Loaded ${jurorsData?.length || 0} jurors`);
       console.log(`Loaded ${mappedAssignments.length} existing assignments`);
 
@@ -313,7 +305,7 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
   const roundTitle = currentRound === 'screeningRound' ? 'Screening Round' : 'Pitching Round';
   const roundDescription = currentRound === 'screeningRound' 
     ? 'Assign 3 jurors to each startup for initial evaluation'
-    : 'Assign 2-3 jurors to the Selected startups for pitch calls';
+    : 'Assign 2-3 jurors to Semi-finalist startups selected from Screening Round';
 
   return (
     <div className="space-y-6">
@@ -335,7 +327,8 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
                 <span className="font-medium text-warning">Incomplete Data Warning</span>
               </div>
               <p className="text-sm text-muted-foreground">
-                {startups.length === 0 && "No startups found for this round. "}
+                {startups.length === 0 && currentRound === 'pitchingRound' && "No Semi-finalist startups found. Please select startups in Screening Round first. "}
+                {startups.length === 0 && currentRound === 'screeningRound' && "No startups found for this round. "}
                 {jurors.length === 0 && "No jurors available for assignment. "}
                 Please ensure all required data is loaded before proceeding with assignments.
               </p>
@@ -350,8 +343,8 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
                 <div>
                   <p className="text-2xl font-bold">{startups.length}</p>
                    <p className="text-sm text-muted-foreground">
-                      {currentRound === 'pitchingRound' ? 'Selected Startups' : 'Startups'}
-                    </p>
+                     {currentRound === 'pitchingRound' ? 'Semi-finalists' : 'Startups'}
+                   </p>
                 </div>
               </div>
             </div>
@@ -426,14 +419,19 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
 
           {/* Startups List */}
           <div className="space-y-4">
-              <h3 className="text-lg font-semibold">
-                {currentRound === 'pitchingRound' ? 'Selected Startups' : 'All Startups'}
-               {currentRound === 'screeningRound' && (
-                 <span className="text-sm font-normal text-muted-foreground ml-2">
-                   (Including rejected startups - assignment only available for non-rejected)
-                 </span>
-               )}
-             </h3>
+            <h3 className="text-lg font-semibold">
+              {currentRound === 'pitchingRound' ? 'Semi-finalist Startups' : 'All Startups'}
+              {currentRound === 'screeningRound' && (
+                <span className="text-sm font-normal text-muted-foreground ml-2">
+                  (Including rejected startups - assignment only available for non-rejected)
+                </span>
+              )}
+              {currentRound === 'pitchingRound' && (
+                <span className="text-sm font-normal text-muted-foreground ml-2">
+                  (Only startups selected from Screening Round)
+                </span>
+              )}
+            </h3>
             {startups.map((startup) => {
               const assignmentCount = getStartupAssignmentCount(startup.id);
               const requiredAssignments = currentRound === 'pitchingRound' ? 2 : 3;
