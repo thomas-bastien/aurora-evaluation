@@ -36,7 +36,8 @@ interface StartupEvaluation {
   averageScore: number | null;
   totalScore: number;
   rank: number;
-  status: 'completed' | 'in-progress' | 'pending';
+  status: string; // Business status from database (rejected, shortlisted, under-review, etc.)
+  evaluationStatus?: 'completed' | 'in-progress' | 'pending'; // Evaluation progress status
   lastUpdated: string;
 }
 
@@ -166,12 +167,15 @@ export const EvaluationProgressView = ({ currentRound = 'screening' }: Evaluatio
         
         const totalScore = scores.reduce((sum, score) => sum + score, 0);
         
-        // Determine status
-        let status: 'completed' | 'in-progress' | 'pending' = 'pending';
+        // Use the actual startup status from the database instead of evaluation progress
+        const businessStatus = startup.status || 'under-review';
+        
+        // Keep evaluation progress as a separate indicator
+        let evaluationStatus: 'completed' | 'in-progress' | 'pending' = 'pending';
         if (submittedEvaluations.length === assignments.length && assignments.length > 0) {
-          status = 'completed';
+          evaluationStatus = 'completed';
         } else if (submittedEvaluations.length > 0) {
-          status = 'in-progress';
+          evaluationStatus = 'in-progress';
         }
         
         const lastUpdated = evaluations
@@ -190,7 +194,8 @@ export const EvaluationProgressView = ({ currentRound = 'screening' }: Evaluatio
           averageScore,
           totalScore,
           rank: 0, // Will be set after sorting
-          status,
+          status: businessStatus as any, // Use actual startup business status
+          evaluationStatus, // Keep evaluation progress separately
           lastUpdated
         };
       }) || [];
@@ -286,14 +291,16 @@ export const EvaluationProgressView = ({ currentRound = 'screening' }: Evaluatio
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'completed':
-        return <Badge className="bg-success text-success-foreground">Completed</Badge>;
-      case 'in-progress':
-        return <Badge className="bg-primary text-primary-foreground">In Progress</Badge>;
+      case 'rejected':
+        return <Badge className="bg-destructive text-destructive-foreground">Rejected</Badge>;
+      case 'shortlisted':
+        return <Badge className="bg-success text-success-foreground">Selected for Pitching</Badge>;
+      case 'under-review':
+        return <Badge className="bg-primary text-primary-foreground">Under Review</Badge>;
       case 'pending':
         return <Badge className="bg-muted text-muted-foreground">Pending</Badge>;
       default:
-        return <Badge variant="outline">Unknown</Badge>;
+        return <Badge variant="outline">{status || 'Unknown'}</Badge>;
     }
   };
 
@@ -454,8 +461,9 @@ export const EvaluationProgressView = ({ currentRound = 'screening' }: Evaluatio
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value="completed">Completed</SelectItem>
-                <SelectItem value="in-progress">In Progress</SelectItem>
+                <SelectItem value="rejected">Rejected</SelectItem>
+                <SelectItem value="shortlisted">Selected for Pitching</SelectItem>
+                <SelectItem value="under-review">Under Review</SelectItem>
                 <SelectItem value="pending">Pending</SelectItem>
               </SelectContent>
             </Select>
