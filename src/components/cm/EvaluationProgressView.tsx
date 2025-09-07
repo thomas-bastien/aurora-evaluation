@@ -114,19 +114,24 @@ export const EvaluationProgressView = ({ currentRound = 'screening' }: Evaluatio
 
       console.log('User role:', authTest?.role);
 
-      // Fetch startups with their evaluations and assignments
-      const { data: startupsData, error } = await supabase
-        .from('startups')
-        .select(`
-          *,
-          ${assignmentTable}!startup_id(id, status),
-          ${evaluationTable}!startup_id(
-            id,
-            overall_score,
-            status,
-            updated_at
-          )
-        `);
+      // Build query with status filtering for pitching round
+      let query = supabase.from('startups').select(`
+        *,
+        ${assignmentTable}!startup_id(id, status),
+        ${evaluationTable}!startup_id(
+          id,
+          overall_score,
+          status,
+          updated_at
+        )
+      `);
+      
+      // During pitching round, only show semifinalists (shortlisted startups)
+      if (currentRound === 'pitching' || currentRound === 'pitchingRound') {
+        query = query.eq('status', 'shortlisted');
+      }
+      
+      const { data: startupsData, error } = await query;
 
       if (error) {
         console.error('Database query error:', error);
