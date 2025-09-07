@@ -313,7 +313,7 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
   const roundTitle = currentRound === 'screeningRound' ? 'Screening Round' : 'Pitching Round';
   const roundDescription = currentRound === 'screeningRound' 
     ? 'Assign 3 jurors to each startup for initial evaluation'
-    : 'Assign 2-3 jurors to the Semifinalists for pitch calls';
+    : 'Assign 2-3 jurors to the Selected startups for pitch calls';
 
   return (
     <div className="space-y-6">
@@ -350,8 +350,8 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
                 <div>
                   <p className="text-2xl font-bold">{startups.length}</p>
                    <p className="text-sm text-muted-foreground">
-                     {currentRound === 'pitchingRound' ? 'Finalists' : 'Startups'}
-                   </p>
+                      {currentRound === 'pitchingRound' ? 'Selected Startups' : 'Startups'}
+                    </p>
                 </div>
               </div>
             </div>
@@ -426,8 +426,8 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
 
           {/* Startups List */}
           <div className="space-y-4">
-             <h3 className="text-lg font-semibold">
-               {currentRound === 'pitchingRound' ? 'Semifinalists' : 'All Startups'}
+              <h3 className="text-lg font-semibold">
+                {currentRound === 'pitchingRound' ? 'Selected Startups' : 'All Startups'}
                {currentRound === 'screeningRound' && (
                  <span className="text-sm font-normal text-muted-foreground ml-2">
                    (Including rejected startups - assignment only available for non-rejected)

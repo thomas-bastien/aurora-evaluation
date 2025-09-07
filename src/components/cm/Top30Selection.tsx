@@ -473,17 +473,17 @@ export const Top30Selection = ({ currentRound = 'screening', isReadOnly = false,
                       {/* Status context based on startup's current status relative to round */}
                       {startup.status === 'shortlisted' && (
                         <Badge variant="secondary" className="text-xs">
-                          Semifinalist
+                          Selected
                         </Badge>
                       )}
                       {startup.status === 'finalist' && (
                         <Badge variant="secondary" className="text-xs">
-                          Finalist
+                          Selected
                         </Badge>
                       )}
                       {startup.status === 'under-review' && (
                         <Badge variant="default" className="text-xs">
-                          Active in Round
+                          Under Review
                         </Badge>
                       )}
                     </div>

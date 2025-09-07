@@ -294,7 +294,7 @@ export const EvaluationProgressView = ({ currentRound = 'screening' }: Evaluatio
       case 'rejected':
         return <Badge className="bg-destructive text-destructive-foreground">Rejected</Badge>;
       case 'shortlisted':
-        return <Badge className="bg-success text-success-foreground">Selected for Pitching</Badge>;
+        return <Badge className="bg-success text-success-foreground">Selected</Badge>;
       case 'under-review':
         return <Badge className="bg-primary text-primary-foreground">Under Review</Badge>;
       case 'pending':
@@ -462,7 +462,7 @@ export const EvaluationProgressView = ({ currentRound = 'screening' }: Evaluatio
               <SelectContent>
                 <SelectItem value="all">All Statuses</SelectItem>
                 <SelectItem value="rejected">Rejected</SelectItem>
-                <SelectItem value="shortlisted">Selected for Pitching</SelectItem>
+                <SelectItem value="shortlisted">Selected</SelectItem>
                 <SelectItem value="under-review">Under Review</SelectItem>
                 <SelectItem value="pending">Pending</SelectItem>
               </SelectContent>
