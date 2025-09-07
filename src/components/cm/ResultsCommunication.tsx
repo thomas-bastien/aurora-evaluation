@@ -328,7 +328,7 @@ The Aurora Team`
 
        // Show transition success message
        toast.success(
-         "Screening round completed! You can now switch to Pitching round to assign jurors to the finalists.",
+         "Screening round completed! You can now switch to Pitching round to assign jurors to the semifinalists.",
          { duration: 10000 }
        );
 

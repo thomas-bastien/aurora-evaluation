@@ -334,7 +334,7 @@ const Dashboard = () => {
               <CardContent>
                 <div className="flex flex-col space-y-4">
                    <FunnelStage
-                     title="Matchmaking (Finalists)"
+                     title="Matchmaking (Semifinalists)"
                      description="Assign jurors to the semifinalists for live pitch calls"
                      tooltip="Assign jurors to the semifinalists for live pitch calls."
                     status={
@@ -493,10 +493,10 @@ const Dashboard = () => {
                 <div className="flex flex-col space-y-4">
                   <FunnelStage
                     title="Assigned Startups (Pitching)"
-                    description="Your allocated finalists for the Pitching round"
-                    tooltip="Your allocated finalists for the Pitching round."
+                    description="Your allocated semifinalists for the Pitching round"
+                    tooltip="Your allocated semifinalists for the Pitching round."
                     status={dashboardData.activePhase === 'pitching' ? 'current' : 'upcoming'}
-                    statusText="View your finalist assignments"
+                    statusText="View your semifinalist assignments"
                     icon={Building2}
                     onClick={() => navigate('/evaluate?phase=pitching&view=assigned')}
                   />

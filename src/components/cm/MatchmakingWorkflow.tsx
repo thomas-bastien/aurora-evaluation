@@ -296,7 +296,7 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
   const roundTitle = currentRound === 'screeningRound' ? 'Screening Round' : 'Pitching Round';
   const roundDescription = currentRound === 'screeningRound' 
     ? 'Assign 3 jurors to each startup for initial evaluation'
-    : 'Assign 2-3 jurors to the Finalists for pitch calls';
+    : 'Assign 2-3 jurors to the Semifinalists for pitch calls';
 
   return (
     <div className="space-y-6">
@@ -434,7 +434,7 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
                           {/* Status context badge */}
                           {currentRound === 'screeningRound' && startup.status === 'shortlisted' && (
                             <Badge variant="default" className="bg-green-100 text-green-800 border-green-300">
-                              Historical - Now Selected
+                              Semifinalist
                             </Badge>
                           )}
                           {currentRound === 'pitchingRound' && startup.status === 'under-review' && (
