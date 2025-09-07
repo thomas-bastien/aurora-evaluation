@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -43,9 +44,11 @@ interface EvaluationProgressViewProps {
 }
 
 export const EvaluationProgressView = ({ currentRound = 'screening' }: EvaluationProgressViewProps) => {
+  const { user, session, loading: authLoading } = useAuth();
   const [startups, setStartups] = useState<StartupEvaluation[]>([]);
   const [filteredStartups, setFilteredStartups] = useState<StartupEvaluation[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [stageFilter, setStageFilter] = useState('all');
   const [regionFilter, setRegionFilter] = useState('all');
@@ -60,18 +63,48 @@ export const EvaluationProgressView = ({ currentRound = 'screening' }: Evaluatio
   });
 
   useEffect(() => {
-    fetchEvaluationProgress();
-  }, []);
+    if (!authLoading && user && session) {
+      fetchEvaluationProgress();
+    }
+  }, [user, session, authLoading, currentRound]);
 
   useEffect(() => {
     filterAndSortStartups();
   }, [startups, searchTerm, stageFilter, regionFilter, statusFilter, sortField, sortDirection]);
 
   const fetchEvaluationProgress = async () => {
+    if (!user || !session) {
+      console.error('User not authenticated when fetching evaluation progress');
+      setError('Authentication required to view evaluation data');
+      setLoading(false);
+      return;
+    }
+
     try {
+      setError(null);
+      setLoading(true);
+      
+      console.log('Fetching evaluation progress for round:', currentRound);
+      console.log('Current user:', user.id);
+      console.log('Session valid:', !!session);
+
       // Determine which tables to use based on current round
       const assignmentTable = currentRound === 'screening' ? 'screening_assignments' : 'pitching_assignments';
       const evaluationTable = currentRound === 'screening' ? 'screening_evaluations' : 'pitching_evaluations';
+
+      // Test auth context first
+      const { data: authTest, error: authError } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('user_id', user.id)
+        .single();
+
+      if (authError) {
+        console.error('Auth test failed:', authError);
+        throw new Error(`Authentication check failed: ${authError.message}`);
+      }
+
+      console.log('User role:', authTest?.role);
 
       // Fetch startups with their evaluations and assignments
       const { data: startupsData, error } = await supabase
@@ -87,7 +120,13 @@ export const EvaluationProgressView = ({ currentRound = 'screening' }: Evaluatio
           )
         `);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Database query error:', error);
+        throw error;
+      }
+
+      console.log('Raw startups data:', startupsData?.length, 'startups found');
+      console.log('Sample startup data:', startupsData?.[0]);
 
       let totalEvaluations = 0;
       let completedEvaluations = 0;
@@ -163,9 +202,11 @@ export const EvaluationProgressView = ({ currentRound = 'screening' }: Evaluatio
         averageScore: validScoreCount > 0 ? totalScoreSum / validScoreCount : 0
       });
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching evaluation progress:', error);
-      toast.error('Failed to load evaluation progress');
+      const errorMessage = error?.message || 'Failed to load evaluation progress';
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -252,7 +293,7 @@ export const EvaluationProgressView = ({ currentRound = 'screening' }: Evaluatio
     </button>
   );
 
-  if (loading) {
+  if (authLoading || loading) {
     return (
       <Card>
         <CardContent className="pt-6">
@@ -262,6 +303,37 @@ export const EvaluationProgressView = ({ currentRound = 'screening' }: Evaluatio
                 <div className="h-16 bg-muted rounded-lg"></div>
               </div>
             ))}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card>
+        <CardContent className="pt-6">
+          <div className="text-center py-8">
+            <div className="text-red-500 mb-4">
+              <h3 className="text-lg font-semibold mb-2">Error Loading Data</h3>
+              <p className="text-sm">{error}</p>
+            </div>
+            <Button onClick={fetchEvaluationProgress} variant="outline">
+              Try Again
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!user || !session) {
+    return (
+      <Card>
+        <CardContent className="pt-6">
+          <div className="text-center py-8">
+            <h3 className="text-lg font-semibold mb-2">Authentication Required</h3>
+            <p className="text-muted-foreground">Please log in to view evaluation data</p>
           </div>
         </CardContent>
       </Card>
