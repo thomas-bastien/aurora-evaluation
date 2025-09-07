@@ -39,6 +39,7 @@ interface StartupEvaluationModalProps {
   onClose: () => void;
   onEvaluationUpdate: () => void;
   mode?: 'view' | 'edit'; // Add mode prop to distinguish between view and edit
+  currentRound: 'screening' | 'pitching';
 }
 interface EvaluationCriterion {
   key: string;
@@ -406,7 +407,8 @@ export const StartupEvaluationModal = ({
   open,
   onClose,
   onEvaluationUpdate,
-  mode = 'edit' // Default to edit mode for backward compatibility
+  mode = 'edit', // Default to edit mode for backward compatibility
+  currentRound
 }: StartupEvaluationModalProps) => {
   const {
     user
@@ -461,34 +463,14 @@ export const StartupEvaluationModal = ({
   const fetchExistingEvaluation = async () => {
     try {
       setLoading(true);
-      // Note: This component needs to be updated to be round-aware
-      // For now, checking both tables for existing evaluations
-      let data = null;
-      let error = null;
+      // Use round-aware table selection
+      const evaluationsTable = currentRound === 'screening' ? 'screening_evaluations' : 'pitching_evaluations';
       
-      // Try screening evaluations first
-      const { data: screeningData, error: screeningError } = await supabase
-        .from('screening_evaluations')
+      const { data, error } = await supabase
+        .from(evaluationsTable)
         .select('*')
         .eq('id', startup.evaluation_id)
         .maybeSingle();
-        
-      if (!screeningError && screeningData) {
-        data = screeningData;
-      } else {
-        // Try pitching evaluations
-        const { data: pitchingData, error: pitchingError } = await supabase
-          .from('pitching_evaluations')
-          .select('*')
-          .eq('id', startup.evaluation_id)
-          .maybeSingle();
-          
-        if (pitchingError) {
-          error = pitchingError;
-        } else {
-          data = pitchingData;
-        }
-      }
       
       if (error) throw error;
       
@@ -509,7 +491,9 @@ export const StartupEvaluationModal = ({
           improvement_areas: data.improvement_areas || '',
           pitch_development_aspects: data.pitch_development_aspects || '',
           wants_pitch_session: data.wants_pitch_session || false,
-          guided_feedback: data.guided_feedback as number[] || [],
+          guided_feedback: Array.isArray(data.guided_feedback) 
+            ? data.guided_feedback.map((item: any) => typeof item === 'string' ? parseInt(item) : item).filter(item => !isNaN(item))
+            : [],
           overall_notes: data.overall_notes || '',
           recommendation: data.recommendation || '',
           investment_amount: data.investment_amount
@@ -663,34 +647,20 @@ export const StartupEvaluationModal = ({
       };
 
       if (startup.evaluation_id) {
-        // Update existing evaluation - determine which table to use
-        // Try screening evaluations first, then pitching
-        let updateError = null;
-        
-        const { error: screeningError } = await supabase
-          .from('screening_evaluations')
+        // Update existing evaluation - use round-aware table
+        const evaluationsTable = currentRound === 'screening' ? 'screening_evaluations' : 'pitching_evaluations';
+        const { error } = await supabase
+          .from(evaluationsTable)
           .update(evaluationData)
           .eq('id', startup.evaluation_id);
           
-        if (screeningError?.code === 'PGRST116') {
-          // Record not found in screening, try pitching
-          const { error: pitchingError } = await supabase
-            .from('pitching_evaluations')
-            .update(evaluationData)
-            .eq('id', startup.evaluation_id);
-            
-          updateError = pitchingError;
-        } else {
-          updateError = screeningError;
-        }
-        
-        if (updateError) throw updateError;
+        if (error) throw error;
       } else {
-        // Create new evaluation - default to screening table for now
-        // TODO: Make this round-aware based on current active round
+        // Create new evaluation - use round-aware table
+        const evaluationsTable = currentRound === 'screening' ? 'screening_evaluations' : 'pitching_evaluations';
         const {
           error
-        } = await supabase.from('screening_evaluations').insert([evaluationData]);
+        } = await supabase.from(evaluationsTable).insert([evaluationData]);
         if (error) throw error;
       }
       toast.success(status === 'submitted' ? 'Evaluation submitted successfully!' : 'Evaluation saved as draft');

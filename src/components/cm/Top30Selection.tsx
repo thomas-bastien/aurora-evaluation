@@ -622,8 +622,9 @@ export const Top30Selection = ({ currentRound = 'screening', isReadOnly = false,
         onClose={() => setSelectedJurorEvaluation(null)}
         onEvaluationUpdate={() => {}} 
         mode="view"
+        currentRound="screening"
       />
     )}
-    </TooltipProvider>
+  </TooltipProvider>
   );
 };

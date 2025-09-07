@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserProfile } from "@/hooks/useUserProfile";
+import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { Card, CardContent } from "@/components/ui/card";
@@ -37,6 +38,8 @@ const EvaluationDashboard = () => {
   const {
     profile
   } = useUserProfile();
+  const [searchParams] = useSearchParams();
+  const currentRound = searchParams.get('round') as 'screening' | 'pitching' || 'screening';
   const [assignedStartups, setAssignedStartups] = useState<AssignedStartup[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -45,7 +48,7 @@ const EvaluationDashboard = () => {
     if (user && profile?.role === 'vc') {
       fetchAssignedStartups();
     }
-  }, [user, profile]);
+  }, [user, profile, currentRound]);
   const fetchAssignedStartups = async () => {
     try {
       setLoading(true);
@@ -65,13 +68,13 @@ const EvaluationDashboard = () => {
         return;
       }
 
-      // Fetch startups assigned to this juror - check both screening and pitching tables
-      let assignments = null;
-      let assignmentsError = null;
-      
-      // Try screening assignments first
-      const { data: screeningAssignments, error: screeningError } = await supabase
-        .from('screening_assignments')
+      // Determine which tables to use based on current round
+      const assignmentsTable = currentRound === 'screening' ? 'screening_assignments' : 'pitching_assignments';
+      const evaluationsTable = currentRound === 'screening' ? 'screening_evaluations' : 'pitching_evaluations';
+
+      // Fetch startups assigned to this juror for the current round
+      const { data: assignments, error: assignmentsError } = await supabase
+        .from(assignmentsTable)
         .select(`
           startup_id,
           startups (
@@ -92,62 +95,21 @@ const EvaluationDashboard = () => {
         `)
         .eq('juror_id', juror.id);
 
-      if (!screeningError && screeningAssignments?.length > 0) {
-        assignments = screeningAssignments;
-      } else {
-        // Try pitching assignments
-        const { data: pitchingAssignments, error: pitchingError } = await supabase
-          .from('pitching_assignments')
-          .select(`
-            startup_id,
-            startups (
-              id,
-              name,
-              description,
-              industry,
-              stage,
-              contact_email,
-              website,
-              pitch_deck_url,
-              demo_url,
-              location,
-              region,
-              country,
-              linkedin_url
-            )
-          `)
-          .eq('juror_id', juror.id);
-          
-        assignments = pitchingAssignments;
-        assignmentsError = pitchingError;
-      }
       if (assignmentsError) throw assignmentsError;
 
-      // Fetch existing evaluations for these startups - check both tables
+      // Fetch existing evaluations for these startups from the current round
       const startupIds = assignments?.map(a => a.startup_id) || [];
-      let evaluations = null;
+      let evaluations = [];
       
       if (startupIds.length > 0) {
-        // Try screening evaluations first
-        const { data: screeningEvaluations, error: screeningError } = await supabase
-          .from('screening_evaluations')
+        const { data: roundEvaluations, error: evaluationsError } = await supabase
+          .from(evaluationsTable)
           .select('*')
           .eq('evaluator_id', user?.id)
           .in('startup_id', startupIds);
-
-        if (!screeningError && screeningEvaluations?.length > 0) {
-          evaluations = screeningEvaluations;
-        } else {
-          // Try pitching evaluations
-          const { data: pitchingEvaluations, error: pitchingError } = await supabase
-            .from('pitching_evaluations')
-            .select('*')
-            .eq('evaluator_id', user?.id)
-            .in('startup_id', startupIds);
-            
-          if (pitchingError) throw pitchingError;
-          evaluations = pitchingEvaluations;
-        }
+          
+        if (evaluationsError) throw evaluationsError;
+        evaluations = roundEvaluations || [];
       }
 
       // Combine data
@@ -220,9 +182,11 @@ const EvaluationDashboard = () => {
       <main className="max-w-7xl mx-auto px-6 py-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground mb-2">Your Evaluations</h1>
+          <h1 className="text-3xl font-bold text-foreground mb-2">
+            {currentRound === 'screening' ? 'Screening' : 'Pitching'} Round Evaluations
+          </h1>
           <p className="text-lg text-muted-foreground mb-6">
-            Review and evaluate the startups assigned to you
+            Review and evaluate the startups assigned to you for the {currentRound} round
           </p>
           
           {/* Progress Overview */}
@@ -281,7 +245,12 @@ const EvaluationDashboard = () => {
         </Card>
 
         {/* Startups List */}
-        <StartupsEvaluationList startups={filteredStartups} loading={loading} onEvaluationUpdate={fetchAssignedStartups} />
+        <StartupsEvaluationList 
+          startups={filteredStartups} 
+          loading={loading} 
+          onEvaluationUpdate={fetchAssignedStartups}
+          currentRound={currentRound}
+        />
       </main>
     </div>;
 };

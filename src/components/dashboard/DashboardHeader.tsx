@@ -61,11 +61,24 @@ export const DashboardHeader = () => {
                 </DropdownMenu>
               )}
               
-              {/* Show Evaluate for VC users (jurors) */}
+              {/* Show Evaluate Dropdown for VC users (jurors) */}
               {profile?.role === 'vc' && (
-                <a href="/evaluate" className={`hover:text-primary transition-smooth ${isActive('/evaluate') ? 'text-primary' : 'text-muted-foreground'}`}>
-                  Evaluate
-                </a>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className={`flex items-center gap-1 hover:text-primary transition-smooth ${isActive('/evaluate') ? 'text-primary' : 'text-muted-foreground'}`}>
+                      Evaluate
+                      <ChevronDown className="w-4 h-4" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="bg-card border border-border shadow-elegant">
+                    <DropdownMenuItem onClick={() => navigate('/evaluate?round=screening')} className="cursor-pointer">
+                      Screening Evaluations
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate('/evaluate?round=pitching')} className="cursor-pointer">
+                      Pitching Evaluations
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               )}
               
               {/* Ecosystem Dropdown */}

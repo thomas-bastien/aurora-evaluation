@@ -43,9 +43,10 @@ interface StartupsEvaluationListProps {
   startups: AssignedStartup[];
   loading: boolean;
   onEvaluationUpdate: () => void;
+  currentRound: 'screening' | 'pitching';
 }
 
-export const StartupsEvaluationList = ({ startups, loading, onEvaluationUpdate }: StartupsEvaluationListProps) => {
+export const StartupsEvaluationList = ({ startups, loading, onEvaluationUpdate, currentRound }: StartupsEvaluationListProps) => {
   const [selectedStartup, setSelectedStartup] = useState<AssignedStartup | null>(null);
   const [modalMode, setModalMode] = useState<'view' | 'edit'>('edit');
 
@@ -247,6 +248,7 @@ export const StartupsEvaluationList = ({ startups, loading, onEvaluationUpdate }
           onClose={() => setSelectedStartup(null)}
           onEvaluationUpdate={onEvaluationUpdate}
           mode={modalMode}
+          currentRound={currentRound}
         />
       )}
     </>

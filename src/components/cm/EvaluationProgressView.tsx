@@ -710,6 +710,7 @@ export const EvaluationProgressView = ({ currentRound = 'screening' }: Evaluatio
           onClose={() => setSelectedJurorEvaluation(null)}
           onEvaluationUpdate={() => {}} 
           mode="view"
+          currentRound="screening"
         />
       )}
     </TooltipProvider>
