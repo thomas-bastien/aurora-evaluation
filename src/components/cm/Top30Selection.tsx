@@ -149,6 +149,8 @@ export const Top30Selection = ({ currentRound = 'screening', isReadOnly = false,
         `);
 
       if (error) throw error;
+      
+      console.log(`Fetched ${startupsData?.length || 0} startups for selection in ${currentRound} round`);
 
       const selectionData: StartupSelection[] = startupsData?.map(startup => {
         const evaluationKey = currentRound === 'screening' ? 'screening_evaluations' : 'pitching_evaluations';
@@ -179,7 +181,9 @@ export const Top30Selection = ({ currentRound = 'screening', isReadOnly = false,
           isAutoSelected: false,
           isPreviouslySelected: startup.status === 'shortlisted'
         };
-      }) || []; // Remove filter to show all startups
+      }) || [];
+
+      console.log(`Processed ${selectionData.length} startups after evaluation mapping`);
 
       // Sort by average score and assign ranks (startups with no evaluations go to bottom)
       const sortedStartups = selectionData
