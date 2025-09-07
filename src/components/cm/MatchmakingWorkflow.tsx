@@ -99,7 +99,7 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
         }
       }
 
-      const { data: startupsData, error: startupsError } = await startupsQuery.order('name');
+      const { data: startupsData, error: startupsError } = await startupsQuery;
 
       if (startupsError) throw startupsError;
 
@@ -136,7 +136,20 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
       console.log(`Loaded ${jurorsData?.length || 0} jurors`);
       console.log(`Loaded ${mappedAssignments.length} existing assignments`);
 
-      setStartups(startupsData || []);
+      // Sort startups: non-rejected first (by name), then rejected (by name)
+      const sortedStartups = (startupsData || []).sort((a, b) => {
+        const aRejected = a.status === 'rejected';
+        const bRejected = b.status === 'rejected';
+        
+        if (aRejected !== bRejected) {
+          return aRejected ? 1 : -1; // Rejected startups go to bottom
+        }
+        
+        // Within the same group, sort alphabetically by name
+        return a.name.localeCompare(b.name);
+      });
+
+      setStartups(sortedStartups);
       setJurors(jurorsData || []);
       setAssignments(mappedAssignments);
     } catch (error) {
@@ -429,7 +442,13 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
               const isFullyAssigned = assignmentCount >= requiredAssignments;
 
               return (
-                <Card key={startup.id} className={`transition-all ${isFullyAssigned ? 'bg-success/5 border-success/20' : ''}`}>
+                <Card key={startup.id} className={`transition-all ${
+                  startup.status === 'rejected' 
+                    ? 'bg-destructive/5 border-destructive/20' 
+                    : isFullyAssigned 
+                      ? 'bg-success/5 border-success/20' 
+                      : ''
+                }`}>
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
