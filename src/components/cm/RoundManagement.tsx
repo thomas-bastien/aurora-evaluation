@@ -335,7 +335,7 @@ export const RoundManagement = ({ roundName, roundInfo }: RoundManagementProps) 
         {validation?.canComplete && (
           <Alert className="border-success bg-success/5">
             <CheckCircle className="h-4 w-4 text-success" />
-            <AlertDescription className="text-success-foreground">
+            <AlertDescription className="text-foreground">
               All requirements met! This round is ready to be completed.
             </AlertDescription>
           </Alert>
