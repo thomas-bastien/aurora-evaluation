@@ -140,7 +140,7 @@ const Selection = () => {
             </TabsTrigger>
             <TabsTrigger value="communications" className="flex items-center gap-2">
               <MessageSquare className="w-4 h-4" />
-              Results
+              Communication
             </TabsTrigger>
             <TabsTrigger value="reports" className="flex items-center gap-2">
               <FileText className="w-4 h-4" />
