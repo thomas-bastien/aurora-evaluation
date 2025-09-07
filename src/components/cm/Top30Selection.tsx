@@ -13,7 +13,6 @@ import {
   AlertTriangle, 
   Star,
   RotateCcw,
-  Download,
   Eye,
   AlertCircle
 } from "lucide-react";
@@ -232,30 +231,6 @@ export const Top30Selection = ({ currentRound = 'screening', isReadOnly = false,
   };
 
 
-  const exportSelectionList = () => {
-    const selectedStartups = startups.filter(s => s.isSelected);
-    const csvContent = [
-      ['Rank', 'Name', 'Industry', 'Stage', 'Region', 'Average Score', 'Total Score', 'Evaluations'],
-      ...selectedStartups.map(startup => [
-        startup.rank,
-        startup.name,
-        startup.industry,
-        startup.stage,
-        startup.region,
-        startup.averageScore.toFixed(2),
-        startup.totalScore.toFixed(2),
-        startup.evaluationsCount
-      ])
-    ].map(row => row.join(',')).join('\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `selected-startups-${new Date().toISOString().split('T')[0]}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
 
   const viewStartupEvaluations = async (startupId: string) => {
     try {
@@ -352,10 +327,6 @@ export const Top30Selection = ({ currentRound = 'screening', isReadOnly = false,
             <Button variant="outline" onClick={fetchStartupsForSelection}>
               <RotateCcw className="w-4 h-4 mr-2" />
               Refresh
-            </Button>
-            <Button variant="outline" onClick={exportSelectionList} disabled={selectionCount === 0}>
-              <Download className="w-4 h-4 mr-2" />
-              Export
             </Button>
           </div>
         </div>
