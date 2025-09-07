@@ -69,33 +69,56 @@ export const Top30Selection = ({ currentRound = 'screening', isReadOnly = false,
 
   const handleConfirmSelection = useCallback(async () => {
     try {
-      setLoading(true);
-      const selectedStartups = startupsRef.current.filter(s => s.isSelected);
+      // State guards - prevent multiple calls and validate selection
+      if (loading) {
+        console.log('Confirmation already in progress, skipping');
+        return;
+      }
+      
+      const currentStartups = startupsRef.current;
+      if (!currentStartups || currentStartups.length === 0) {
+        console.warn('No startups data available for confirmation');
+        toast.error('No startups data available');
+        return;
+      }
+      
+      const selectedStartups = currentStartups.filter(s => s.isSelected);
       
       console.log('Confirming selection for startups:', {
+        totalStartups: currentStartups.length,
         selectedCount: selectedStartups.length,
         selectedIds: selectedStartups.map(s => s.id),
         currentRound
       });
       
-      // Update startup status to 'shortlisted' for selected startups
-      if (selectedStartups.length > 0) {
-        const { error, data } = await supabase
-          .from('startups')
-          .update({ status: 'shortlisted' })
-          .in('id', selectedStartups.map(s => s.id))
-          .select('id, name, status');
-
-        if (error) {
-          console.error('Error updating selected startups:', error);
-          throw new Error(`Failed to update selected startups: ${error.message}`);
-        }
-        
-        console.log('Successfully updated selected startups:', data);
+      // Validate that we have some selection to process
+      if (selectedStartups.length === 0) {
+        console.warn('No startups selected for confirmation');
+        toast.error('No startups selected');
+        return;
       }
+      
+      setLoading(true);
+      let actualSelectedCount = 0;
+      let actualRejectedCount = 0;
+      
+      // Update startup status to 'shortlisted' for selected startups
+      const { error, data } = await supabase
+        .from('startups')
+        .update({ status: 'shortlisted' })
+        .in('id', selectedStartups.map(s => s.id))
+        .select('id, name, status');
+
+      if (error) {
+        console.error('Error updating selected startups:', error);
+        throw new Error(`Failed to update selected startups: ${error.message}`);
+      }
+      
+      actualSelectedCount = data?.length || 0;
+      console.log('Successfully updated selected startups:', data);
 
       // Update non-selected startups to 'rejected' (valid status from DB)
-      const nonSelectedStartups = startupsRef.current.filter(s => !s.isSelected && s.status !== 'rejected');
+      const nonSelectedStartups = currentStartups.filter(s => !s.isSelected && s.status !== 'rejected');
       if (nonSelectedStartups.length > 0) {
         const { error: nonSelectedError, data: nonSelectedData } = await supabase
           .from('startups')
@@ -108,10 +131,13 @@ export const Top30Selection = ({ currentRound = 'screening', isReadOnly = false,
           throw new Error(`Failed to update non-selected startups: ${nonSelectedError.message}`);
         }
         
+        actualRejectedCount = nonSelectedData?.length || 0;
         console.log('Successfully updated non-selected startups:', nonSelectedData);
       }
 
-      toast.success(`Successfully selected ${selectedStartups.length} startups for Pitching`);
+      // Only show success toast after successful database operations with actual counts
+      console.log('Selection confirmed successfully:', { actualSelectedCount, actualRejectedCount });
+      toast.success(`Successfully selected ${actualSelectedCount} startups for Pitching`);
       
     } catch (error: any) {
       console.error('Error confirming selection:', error);
@@ -119,7 +145,7 @@ export const Top30Selection = ({ currentRound = 'screening', isReadOnly = false,
     } finally {
       setLoading(false);
     }
-  }, [currentRound]);
+  }, []); // Remove currentRound from dependencies to prevent unnecessary recreations
 
   useEffect(() => {
     // Set the confirmation callback for the parent component
