@@ -24,9 +24,11 @@ import { useRoundData } from "@/hooks/useRoundData";
 interface RoundManagementProps {
   roundName: string;
   roundInfo: Round;
+  selectedStartupsCount?: number;
+  onConfirmSelection?: () => Promise<void>;
 }
 
-export const RoundManagement = ({ roundName, roundInfo }: RoundManagementProps) => {
+export const RoundManagement = ({ roundName, roundInfo, selectedStartupsCount = 0, onConfirmSelection }: RoundManagementProps) => {
   const { completeRound, reopenRound, getRoundProgress, validateRoundCompletion, validateRoundReopen } = useRounds();
   const { loading } = useRoundData(roundName);
   const [progress, setProgress] = useState<any>(null);
@@ -58,11 +60,21 @@ export const RoundManagement = ({ roundName, roundInfo }: RoundManagementProps) 
 
   const handleCompleteRound = async () => {
     setCompleting(true);
-    const success = await completeRound(roundName);
-    if (success) {
-      setShowCompleteDialog(false);
+    try {
+      // First confirm selection if callback provided
+      if (onConfirmSelection) {
+        await onConfirmSelection();
+      }
+      // Then complete the round
+      const success = await completeRound(roundName);
+      if (success) {
+        setShowCompleteDialog(false);
+      }
+    } catch (error) {
+      console.error('Error in unified confirmation:', error);
+    } finally {
+      setCompleting(false);
     }
-    setCompleting(false);
   };
 
   const handleReopenRound = async () => {
@@ -344,38 +356,59 @@ export const RoundManagement = ({ roundName, roundInfo }: RoundManagementProps) 
         {/* Round Completion */}
         <div className="flex items-center justify-between pt-4 border-t">
           <div>
-            <h4 className="font-medium">Complete {roundName.charAt(0).toUpperCase() + roundName.slice(1)} Round</h4>
+            <h4 className="font-medium">Confirm Selection</h4>
             <p className="text-sm text-muted-foreground">
-              Finalize this round and {roundName === 'screening' ? 'activate pitching round' : 'complete the evaluation process'}
+              {roundName === 'screening' 
+                ? `Confirm selection of ${selectedStartupsCount} startups and complete screening round`
+                : `Finalize selection of ${selectedStartupsCount} startups and complete pitching round`
+              }
             </p>
+            {selectedStartupsCount > 0 && (
+              <p className="text-xs text-primary font-medium mt-1">
+                {selectedStartupsCount} startups selected
+              </p>
+            )}
           </div>
 
           <Dialog open={showCompleteDialog} onOpenChange={setShowCompleteDialog}>
             <DialogTrigger asChild>
               <Button 
-                disabled={!validation?.canComplete}
+                disabled={!validation?.canComplete || (roundName === 'screening' && selectedStartupsCount === 0)}
                 size="lg"
               >
-                Complete Round
-                <ArrowRight className="w-4 h-4 ml-2" />
+                <CheckCircle className="w-4 h-4 mr-2" />
+                Confirm Selection
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Complete {roundName.charAt(0).toUpperCase() + roundName.slice(1)} Round</DialogTitle>
+                <DialogTitle>Confirm Selection & Complete Round</DialogTitle>
                 <DialogDescription>
-                  Are you sure you want to complete the {roundName} round? This action will:
-                  <ul className="mt-2 list-disc list-inside space-y-1">
-                    <li>Lock all {roundName} evaluations and prevent further changes</li>
-                    <li>Mark the {roundName} round as completed</li>
-                    {roundName === 'screening' && <li>Activate the pitching round for selected startups</li>}
-                    {roundName === 'pitching' && <li>Finalize the evaluation process</li>}
-                  </ul>
-                  
-                  <div className="mt-4 p-3 bg-warning/10 rounded-md">
-                    <p className="text-sm font-medium text-warning-foreground">
-                      ⚠️ This action cannot be undone
+                  <div className="space-y-4">
+                    <p>
+                      This will confirm your selection of <strong>{selectedStartupsCount} startups</strong> and complete the {roundName} round.
                     </p>
+                    
+                    <div className="bg-primary/10 p-3 rounded-md">
+                      <p className="text-sm font-medium text-primary">
+                        Selection Summary: {selectedStartupsCount} startups will advance to {roundName === 'screening' ? 'pitching' : 'final selection'}
+                      </p>
+                    </div>
+                    
+                    <p>This action will:</p>
+                    <ul className="list-disc list-inside space-y-1 text-sm">
+                      <li>Update startup statuses (selected → 'shortlisted', unselected → 'rejected')</li>
+                      <li>Lock all {roundName} evaluations and prevent further changes</li>
+                      <li>Mark the {roundName} round as completed</li>
+                      {roundName === 'screening' && <li>Activate the pitching round for selected startups</li>}
+                      {roundName === 'pitching' && <li>Finalize the evaluation process</li>}
+                    </ul>
+                    
+                    <div className="p-3 bg-warning/10 rounded-md">
+                      <p className="text-sm font-medium text-warning-foreground">
+                        ⚠️ This action cannot be undone
+                      </p>
+                    </div>
                   </div>
                 </DialogDescription>
               </DialogHeader>
@@ -384,7 +417,7 @@ export const RoundManagement = ({ roundName, roundInfo }: RoundManagementProps) 
                   Cancel
                 </Button>
                 <Button onClick={handleCompleteRound} disabled={completing}>
-                  {completing ? 'Completing...' : `Complete ${roundName.charAt(0).toUpperCase() + roundName.slice(1)} Round`}
+                  {completing ? 'Processing...' : 'Confirm Selection & Complete Round'}
                 </Button>
               </DialogFooter>
             </DialogContent>

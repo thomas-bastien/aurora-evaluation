@@ -27,12 +27,19 @@ interface StartupSelectionProps {
 
 export const StartupSelection = ({ currentRound, roundInfo, isReadOnly }: StartupSelectionProps) => {
   const roundName = currentRound === 'screeningRound' ? 'screening' : 'pitching';
+  const [selectedStartupsCount, setSelectedStartupsCount] = useState(0);
+  const [selectionCallback, setSelectionCallback] = useState<(() => Promise<void>) | null>(null);
 
   return (
     <div className="space-y-6">
       {/* Round Management Section - For Active and Completed Rounds */}
       {(roundInfo?.status === 'active' || roundInfo?.status === 'completed') && (
-        <RoundManagement roundName={roundName} roundInfo={roundInfo} />
+        <RoundManagement 
+          roundName={roundName} 
+          roundInfo={roundInfo} 
+          selectedStartupsCount={selectedStartupsCount}
+          onConfirmSelection={selectionCallback}
+        />
       )}
 
 
@@ -84,7 +91,12 @@ export const StartupSelection = ({ currentRound, roundInfo, isReadOnly }: Startu
             </TabsContent>
 
             <TabsContent value="selected-startups" className="space-y-6">
-              <Top30Selection currentRound={roundName} isReadOnly={isReadOnly} />
+              <Top30Selection 
+                currentRound={roundName} 
+                isReadOnly={isReadOnly}
+                onSelectionChange={setSelectedStartupsCount}
+                onSetConfirmCallback={setSelectionCallback}
+              />
             </TabsContent>
           </Tabs>
         </CardContent>

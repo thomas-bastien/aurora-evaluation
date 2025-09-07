@@ -38,12 +38,13 @@ interface StartupSelection {
 interface Top30SelectionProps {
   currentRound?: string;
   isReadOnly?: boolean;
+  onSelectionChange?: (count: number) => void;
+  onSetConfirmCallback?: (callback: (() => Promise<void>) | null) => void;
 }
 
-export const Top30Selection = ({ currentRound = 'screening', isReadOnly = false }: Top30SelectionProps) => {
+export const Top30Selection = ({ currentRound = 'screening', isReadOnly = false, onSelectionChange, onSetConfirmCallback }: Top30SelectionProps) => {
   const [startups, setStartups] = useState<StartupSelection[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [selectionCount, setSelectionCount] = useState(0);
   const [selectedStartupForDetails, setSelectedStartupForDetails] = useState<string | null>(null);
   const [startupEvaluations, setStartupEvaluations] = useState<any[]>([]);
@@ -54,8 +55,15 @@ export const Top30Selection = ({ currentRound = 'screening', isReadOnly = false 
   }, []);
 
   useEffect(() => {
-    setSelectionCount(startups.filter(s => s.isSelected).length);
-  }, [startups]);
+    const count = startups.filter(s => s.isSelected).length;
+    setSelectionCount(count);
+    onSelectionChange?.(count);
+  }, [startups, onSelectionChange]);
+
+  useEffect(() => {
+    // Set the confirmation callback for the parent component
+    onSetConfirmCallback?.(handleConfirmSelection);
+  }, [startups, onSetConfirmCallback]);
 
   const fetchStartupsForSelection = async () => {
     try {
@@ -206,7 +214,6 @@ export const Top30Selection = ({ currentRound = 'screening', isReadOnly = false 
       }
 
       toast.success(`Successfully selected ${selectedStartups.length} startups for Pitching`);
-      setShowConfirmDialog(false);
       
       // Refresh data
       await fetchStartupsForSelection();
@@ -377,34 +384,14 @@ export const Top30Selection = ({ currentRound = 'screening', isReadOnly = false 
           <Button variant="outline" onClick={handleClearSelections} disabled={isReadOnly}>
             Clear All
           </Button>
-          <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
-            <DialogTrigger asChild>
-              <Button 
-                className="ml-auto"
-                disabled={selectionCount === 0 || isReadOnly}
-              >
-                <CheckCircle className="w-4 h-4 mr-2" />
-                Confirm Selection ({selectionCount})
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Confirm Selection</DialogTitle>
-                <DialogDescription>
-                  Are you sure you want to finalize the selection of {selectionCount} startups for Pitching? 
-                  This action will update their status and cannot be easily undone.
-                </DialogDescription>
-              </DialogHeader>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setShowConfirmDialog(false)}>
-                  Cancel
-                </Button>
-                <Button onClick={handleConfirmSelection} disabled={loading}>
-                  {loading ? 'Processing...' : 'Confirm Selection'}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+          <div className="ml-auto flex items-center gap-4">
+            <div className="text-sm text-muted-foreground">
+              {selectionCount > 0 && `${selectionCount} startups selected`}
+            </div>
+            <div className="text-xs text-muted-foreground">
+              Use the "Confirm Selection" button above to finalize your choices
+            </div>
+          </div>
         </div>
 
         {/* Startup Selection List */}
