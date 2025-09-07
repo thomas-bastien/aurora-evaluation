@@ -149,6 +149,9 @@ export const Top30Selection = ({ currentRound = 'screening', isReadOnly = false,
       // During pitching round, only show semifinalists (shortlisted startups)
       if (currentRound === 'pitching') {
         query = query.eq('status', 'shortlisted');
+      } else {
+        // During screening round, show ALL startups regardless of status (including rejected ones for re-evaluation)
+        query = query.in('status', ['pending', 'shortlisted', 'rejected', 'under-review', 'finalist']);
       }
       
       const { data: startupsData, error } = await query;
