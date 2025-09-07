@@ -58,18 +58,60 @@ export const useRoundData = (roundName: string) => {
 
   const getStartupsForRound = async () => {
     try {
-      let query = supabase.from('startups').select('*');
-      
+      // Fetch startups that have participated in this round (have assignments or evaluations)
+      // regardless of their current status to preserve historical data
       if (roundName === 'screening') {
-        query = query.in('status', ['under-review', 'pending']);
+        // Get startups with screening assignments or evaluations
+        const [assignmentsResult, evaluationsResult] = await Promise.all([
+          supabase
+            .from('screening_assignments')
+            .select('startup_id')
+            .then(res => res.data?.map(a => a.startup_id) || []),
+          supabase
+            .from('screening_evaluations')
+            .select('startup_id')
+            .then(res => res.data?.map(e => e.startup_id) || [])
+        ]);
+        
+        const participantIds = [...new Set([...assignmentsResult, ...evaluationsResult])];
+        
+        if (participantIds.length === 0) return [];
+        
+        const { data, error } = await supabase
+          .from('startups')
+          .select('*')
+          .in('id', participantIds);
+          
+        if (error) throw error;
+        return data || [];
+        
       } else if (roundName === 'pitching') {
-        query = query.eq('status', 'shortlisted');
+        // Get startups with pitching assignments or evaluations
+        const [assignmentsResult, evaluationsResult] = await Promise.all([
+          supabase
+            .from('pitching_assignments')
+            .select('startup_id')
+            .then(res => res.data?.map(a => a.startup_id) || []),
+          supabase
+            .from('pitching_evaluations')
+            .select('startup_id')
+            .then(res => res.data?.map(e => e.startup_id) || [])
+        ]);
+        
+        const participantIds = [...new Set([...assignmentsResult, ...evaluationsResult])];
+        
+        if (participantIds.length === 0) return [];
+        
+        const { data, error } = await supabase
+          .from('startups')
+          .select('*')
+          .in('id', participantIds);
+          
+        if (error) throw error;
+        return data || [];
       }
-
-      const { data, error } = await query;
-      if (error) throw error;
       
-      return data || [];
+      return [];
     } catch (error) {
       console.error('Error fetching startups for round:', error);
       return [];

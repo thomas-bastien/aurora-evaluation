@@ -22,6 +22,7 @@ interface StartupSelection {
   industry: string;
   stage: string;
   region: string;
+  status: string;
   averageScore: number;
   totalScore: number;
   rank: number;
@@ -87,6 +88,7 @@ export const Top30Selection = ({ currentRound = 'screening', isReadOnly = false 
           industry: startup.industry || 'N/A',
           stage: startup.stage || 'N/A',
           region: startup.region || 'N/A',
+          status: startup.status || 'pending',
           averageScore,
           totalScore,
           rank: 0, // Will be set after sorting
@@ -366,13 +368,31 @@ export const Top30Selection = ({ currentRound = 'screening', isReadOnly = false 
                     <span className="text-sm">{startup.evaluationsCount}</span>
                   </div>
                   <div className="col-span-1">
-                    {startup.isSelected ? (
-                      <Badge className="bg-success text-success-foreground">
-                        {startup.isAutoSelected ? 'Auto' : 'Manual'}
-                      </Badge>
-                    ) : (
-                      <Badge variant="outline">Not Selected</Badge>
-                    )}
+                    <div className="flex flex-col gap-1">
+                      {startup.isSelected ? (
+                        <Badge className="bg-success text-success-foreground">
+                          {startup.isAutoSelected ? 'Auto' : 'Manual'}
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline">Not Selected</Badge>
+                      )}
+                      {/* Status context based on startup's current status relative to round */}
+                      {startup.status === 'shortlisted' && (
+                        <Badge variant="secondary" className="text-xs">
+                          Advanced to Pitching
+                        </Badge>
+                      )}
+                      {startup.status === 'finalist' && (
+                        <Badge variant="secondary" className="text-xs">
+                          Reached Finals
+                        </Badge>
+                      )}
+                      {startup.status === 'under-review' && (
+                        <Badge variant="default" className="text-xs">
+                          Active in Round
+                        </Badge>
+                      )}
+                    </div>
                   </div>
                   <div className="col-span-1">
                     <Button size="sm" variant="outline">
