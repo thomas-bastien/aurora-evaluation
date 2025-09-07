@@ -32,8 +32,8 @@ const AdminRedirect = () => {
   const navigate = useNavigate();
   
   useEffect(() => {
-    console.log('AdminRedirect: Redirecting to /selection?phase=screening');
-    navigate('/selection?phase=screening', { replace: true });
+    console.log('AdminRedirect: Redirecting to /selection?round=screening');
+    navigate('/selection?round=screening', { replace: true });
   }, [navigate]);
   
   return (

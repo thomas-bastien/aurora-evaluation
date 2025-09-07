@@ -32,7 +32,7 @@ const Dashboard = () => {
     activeJurors: 0,
     totalStartups: 0,
     totalJurors: 0,
-    activePhase: 'screening' as 'screening' | 'pitching',
+    activeRound: 'screening' as 'screening' | 'pitching',
     evaluationProgress: 0,
     reminders: 0,
     nextMilestone: 'Loading...',
@@ -130,7 +130,7 @@ const Dashboard = () => {
           activeJurors,
           totalStartups,
           totalJurors,
-          activePhase: 'screening', // TODO: Make this dynamic based on actual phase
+          activeRound: 'screening', // TODO: Make this dynamic based on actual round
           evaluationProgress,
           reminders: 12, // TODO: Calculate actual reminders sent
           nextMilestone: profile?.role === 'vc' ? 'Complete your startup evaluations' : 'Complete juror matchmaking assignments',
@@ -205,7 +205,7 @@ const Dashboard = () => {
           <CohortSummaryCard
             totalStartups={dashboardData.totalStartups}
             activeJurors={dashboardData.activeJurors}
-            activePhase={dashboardData.activePhase}
+            activeRound={dashboardData.activeRound}
             evaluationProgress={dashboardData.evaluationProgress}
             reminders={dashboardData.reminders}
             nextMilestone={dashboardData.nextMilestone}
@@ -222,17 +222,17 @@ const Dashboard = () => {
                   <div>
                     <CardTitle className="flex items-center gap-2">
                       <Badge variant="secondary" className="px-3 py-1">Round 1</Badge>
-                      Screening Phase
+                      Screening Round
                     </CardTitle>
                     <CardDescription>
                       Initial evaluation and selection of semi-finalists
                     </CardDescription>
                   </div>
                   <Badge 
-                    variant={dashboardData.activePhase === 'screening' ? 'default' : 'outline'}
+                    variant={dashboardData.activeRound === 'screening' ? 'default' : 'outline'}
                     className="px-3 py-1"
                   >
-                    {dashboardData.activePhase === 'screening' ? 'Active' : 'Upcoming'}
+                    {dashboardData.activeRound === 'screening' ? 'Active' : 'Upcoming'}
                   </Badge>
                 </div>
               </CardHeader>
@@ -245,7 +245,7 @@ const Dashboard = () => {
                     status={
                       dashboardData.screeningStats.startupsUploaded > 0 && dashboardData.screeningStats.jurorsUploaded > 0 
                         ? 'completed' 
-                        : dashboardData.activePhase === 'screening' ? 'current' : 'upcoming'
+                        : dashboardData.activeRound === 'screening' ? 'current' : 'upcoming'
                     }
                     statusText={`${dashboardData.screeningStats.startupsUploaded} active startups, ${dashboardData.screeningStats.jurorsUploaded} active jurors uploaded`}
                     icon={Upload}
@@ -263,7 +263,7 @@ const Dashboard = () => {
                     progress={dashboardData.screeningStats.matchmakingProgress}
                     statusText={`${Math.round((dashboardData.screeningStats.matchmakingProgress / 100) * dashboardData.activeStartups)}/${dashboardData.activeStartups} startups covered`}
                     icon={Network}
-                    onClick={() => navigate('/selection/matchmaking?phase=screening')}
+                    onClick={() => navigate('/selection/matchmaking?round=screening')}
                   />
                   <FunnelStage
                     title="Evaluations (Screening)"
@@ -277,7 +277,7 @@ const Dashboard = () => {
                     progress={dashboardData.screeningStats.evaluationsProgress}
                     statusText={`${dashboardData.screeningStats.evaluationsProgress}% completed`}
                     icon={Star}
-                    onClick={() => navigate('/selection?phase=screening')}
+                    onClick={() => navigate('/selection?round=screening')}
                   />
                    <FunnelStage
                      title="Selection – Semifinalists"
@@ -290,7 +290,7 @@ const Dashboard = () => {
                     }
                     statusText={dashboardData.screeningStats.selectionComplete ? 'Complete' : 'Pending'}
                     icon={CheckCircle}
-                    onClick={() => navigate('/selection?phase=screening')}
+                     onClick={() => navigate('/selection?round=screening')}
                   />
                   <FunnelStage
                     title="Results Communication (Screening)"
@@ -303,7 +303,7 @@ const Dashboard = () => {
                     }
                     statusText={dashboardData.screeningStats.resultsComplete ? 'Complete' : 'Pending'}
                     icon={MessageSquare}
-                    onClick={() => navigate('/selection?phase=screening')}
+                    onClick={() => navigate('/selection?round=screening')}
                     isLast
                   />
                 </div>
@@ -317,17 +317,17 @@ const Dashboard = () => {
                   <div>
                     <CardTitle className="flex items-center gap-2">
                       <Badge variant="default" className="px-3 py-1">Round 2</Badge>
-                      Pitching Phase
+                      Pitching Round
                     </CardTitle>
                     <CardDescription>
                       Final pitch presentations and selection of winners
                     </CardDescription>
                   </div>
                   <Badge 
-                    variant={dashboardData.activePhase === 'pitching' ? 'default' : 'outline'}
+                    variant={dashboardData.activeRound === 'pitching' ? 'default' : 'outline'}
                     className="px-3 py-1"
                   >
-                    {dashboardData.activePhase === 'pitching' ? 'Active' : 'Upcoming'}
+                    {dashboardData.activeRound === 'pitching' ? 'Active' : 'Upcoming'}
                   </Badge>
                 </div>
               </CardHeader>
@@ -337,15 +337,15 @@ const Dashboard = () => {
                      title="Matchmaking (Semifinalists)"
                      description="Assign jurors to the semifinalists for live pitch calls"
                      tooltip="Assign jurors to the semifinalists for live pitch calls."
-                    status={
-                      dashboardData.pitchingStats.matchmakingProgress === 100 
-                        ? 'completed' 
-                        : dashboardData.activePhase === 'pitching' ? 'current' : 'upcoming'
-                    }
+                     status={
+                       dashboardData.pitchingStats.matchmakingProgress === 100 
+                         ? 'completed' 
+                         : dashboardData.activeRound === 'pitching' ? 'current' : 'upcoming'
+                     }
                     progress={dashboardData.pitchingStats.matchmakingProgress}
                     statusText={`${Math.round((dashboardData.pitchingStats.matchmakingProgress / 100) * dashboardData.activeStartups)} startups covered`}
                     icon={Network}
-                    onClick={() => navigate('/selection/matchmaking?phase=pitching')}
+                    onClick={() => navigate('/selection/matchmaking?round=pitching')}
                   />
                   <FunnelStage
                     title="Pitch Calls"
@@ -358,7 +358,7 @@ const Dashboard = () => {
                     }
                     statusText={`${dashboardData.pitchingStats.pitchCallsScheduled} scheduled / ${dashboardData.pitchingStats.pitchCallsCompleted} completed`}
                     icon={Phone}
-                    onClick={() => navigate('/selection?phase=pitching')}
+                    onClick={() => navigate('/selection?round=pitching')}
                   />
                   <FunnelStage
                     title="Evaluations (Pitching)"
@@ -372,7 +372,7 @@ const Dashboard = () => {
                     progress={dashboardData.pitchingStats.evaluationsProgress}
                     statusText={`${dashboardData.pitchingStats.evaluationsProgress}% submitted`}
                     icon={Star}
-                    onClick={() => navigate('/selection?phase=pitching')}
+                    onClick={() => navigate('/selection?round=pitching')}
                   />
                   <FunnelStage
                     title="Selection – Finalists"
@@ -385,7 +385,7 @@ const Dashboard = () => {
                     }
                     statusText={dashboardData.pitchingStats.finalSelectionComplete ? 'Complete' : 'Pending'}
                     icon={TrendingUp}
-                    onClick={() => navigate('/selection?phase=pitching')}
+                    onClick={() => navigate('/selection?round=pitching')}
                   />
                   <FunnelStage
                     title="Results Communication & Final Report"
@@ -398,7 +398,7 @@ const Dashboard = () => {
                     }
                     statusText={dashboardData.pitchingStats.finalResultsComplete ? 'Complete' : 'Pending'}
                     icon={FileText}
-                    onClick={() => navigate('/selection?phase=pitching')}
+                    onClick={() => navigate('/selection?round=pitching')}
                     isLast
                   />
                 </div>
@@ -431,10 +431,10 @@ const Dashboard = () => {
                     </CardDescription>
                   </div>
                   <Badge 
-                    variant={dashboardData.activePhase === 'screening' ? 'default' : 'outline'}
+                    variant={dashboardData.activeRound === 'screening' ? 'default' : 'outline'}
                     className="px-3 py-1"
                   >
-                    {dashboardData.activePhase === 'screening' ? 'Active' : 'Upcoming'}
+                    {dashboardData.activeRound === 'screening' ? 'Active' : 'Upcoming'}
                   </Badge>
                 </div>
               </CardHeader>
@@ -444,10 +444,10 @@ const Dashboard = () => {
                     title="Assigned Startups (Screening)"
                     description="Your allocated startups for the Screening round"
                     tooltip="Your allocated startups for the Screening round."
-                    status={dashboardData.activePhase === 'screening' ? 'current' : 'upcoming'}
+                    status={dashboardData.activeRound === 'screening' ? 'current' : 'upcoming'}
                     statusText="View your assignments"
                     icon={Building2}
-                    onClick={() => navigate('/evaluate?phase=screening&view=assigned')}
+                    onClick={() => navigate('/evaluate?round=screening&view=assigned')}
                   />
                   <FunnelStage
                     title="Evaluate (Screening)"
@@ -461,7 +461,7 @@ const Dashboard = () => {
                     progress={dashboardData.screeningStats.evaluationsProgress}
                     statusText={`${dashboardData.screeningStats.evaluationsProgress}% submitted`}
                     icon={Star}
-                    onClick={() => navigate('/evaluate?phase=screening')}
+                    onClick={() => navigate('/evaluate?round=screening')}
                     isLast
                   />
                 </div>
@@ -482,10 +482,10 @@ const Dashboard = () => {
                     </CardDescription>
                   </div>
                   <Badge 
-                    variant={dashboardData.activePhase === 'pitching' ? 'default' : 'outline'}
+                    variant={dashboardData.activeRound === 'pitching' ? 'default' : 'outline'}
                     className="px-3 py-1"
                   >
-                    {dashboardData.activePhase === 'pitching' ? 'Active' : 'Upcoming'}
+                    {dashboardData.activeRound === 'pitching' ? 'Active' : 'Upcoming'}
                   </Badge>
                 </div>
               </CardHeader>
@@ -495,10 +495,10 @@ const Dashboard = () => {
                     title="Assigned Startups (Pitching)"
                     description="Your allocated semifinalists for the Pitching round"
                     tooltip="Your allocated semifinalists for the Pitching round."
-                    status={dashboardData.activePhase === 'pitching' ? 'current' : 'upcoming'}
+                    status={dashboardData.activeRound === 'pitching' ? 'current' : 'upcoming'}
                     statusText="View your semifinalist assignments"
                     icon={Building2}
-                    onClick={() => navigate('/evaluate?phase=pitching&view=assigned')}
+                    onClick={() => navigate('/evaluate?round=pitching&view=assigned')}
                   />
                   <FunnelStage
                     title="Pitching Calls"
@@ -525,7 +525,7 @@ const Dashboard = () => {
                     progress={dashboardData.pitchingStats.evaluationsProgress}
                     statusText={`${dashboardData.pitchingStats.evaluationsProgress}% submitted`}
                     icon={Star}
-                    onClick={() => navigate('/evaluate?phase=pitching')}
+                    onClick={() => navigate('/evaluate?round=pitching')}
                     isLast
                   />
                 </div>

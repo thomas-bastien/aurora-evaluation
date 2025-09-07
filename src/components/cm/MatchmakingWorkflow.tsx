@@ -335,7 +335,7 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
                 <span className="font-medium text-warning">Incomplete Data Warning</span>
               </div>
               <p className="text-sm text-muted-foreground">
-                {startups.length === 0 && "No startups found for this phase. "}
+                {startups.length === 0 && "No startups found for this round. "}
                 {jurors.length === 0 && "No jurors available for assignment. "}
                 Please ensure all required data is loaded before proceeding with assignments.
               </p>

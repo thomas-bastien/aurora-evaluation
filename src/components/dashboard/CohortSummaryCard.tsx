@@ -5,7 +5,7 @@ import { Trophy, Users, Building2, TrendingUp } from "lucide-react";
 interface CohortSummaryCardProps {
   totalStartups: number;
   activeJurors: number;
-  activePhase: 'screening' | 'pitching';
+  activeRound: 'screening' | 'pitching';
   evaluationProgress: number;
   reminders: number;
   nextMilestone: string;
@@ -14,7 +14,7 @@ interface CohortSummaryCardProps {
 export const CohortSummaryCard = ({
   totalStartups,
   activeJurors,
-  activePhase,
+  activeRound,
   evaluationProgress,
   reminders,
   nextMilestone
@@ -37,10 +37,10 @@ export const CohortSummaryCard = ({
             </div>
           </div>
           <Badge 
-            variant={activePhase === 'screening' ? 'secondary' : 'default'} 
+            variant={activeRound === 'screening' ? 'secondary' : 'default'} 
             className="px-3 py-1 font-medium"
           >
-            {activePhase === 'screening' ? 'Screening Phase' : 'Pitching Phase'}
+            {activeRound === 'screening' ? 'Screening Round' : 'Pitching Round'}
           </Badge>
         </div>
       </CardHeader>

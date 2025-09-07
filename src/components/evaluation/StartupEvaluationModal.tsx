@@ -765,7 +765,7 @@ export const StartupEvaluationModal = ({
             <div className="flex items-center justify-between">
               <DialogTitle className="flex items-center gap-2 text-xl">
                 <Star className="w-5 h-5" />
-                Phase 1 Evaluation - {startup.name}
+                Round 1 Evaluation - {startup.name}
               </DialogTitle>
               <div className="flex items-center gap-2">
                 {mode === 'view' && (

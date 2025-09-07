@@ -142,7 +142,7 @@ export const RoundManagement = ({ roundName, roundInfo, selectedStartupsCount = 
           <Alert className="border-success bg-success/5">
             <CheckCircle className="h-4 w-4 text-success" />
             <AlertDescription className="text-success-foreground">
-              The {roundName} round has been successfully completed. All evaluations are locked and the next phase is active.
+              All evaluations are locked and the next round is active.
             </AlertDescription>
           </Alert>
 

@@ -315,8 +315,8 @@ The Aurora Team`
               jurorId: juror.id,
               name: juror.name,
               email: juror.email,
-              fromPhase: 'screening',
-              toPhase: 'pitching',
+              fromRound: 'screening',
+              toRound: 'pitching',
               evaluationCount: count || 0
             }
           });
