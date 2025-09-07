@@ -455,6 +455,48 @@ export type Database = {
         }
         Relationships: []
       }
+      startup_round_statuses: {
+        Row: {
+          created_at: string
+          id: string
+          round_id: string
+          startup_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          round_id: string
+          startup_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          round_id?: string
+          startup_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "startup_round_statuses_round_id_fkey"
+            columns: ["round_id"]
+            isOneToOne: false
+            referencedRelation: "rounds"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "startup_round_statuses_startup_id_fkey"
+            columns: ["startup_id"]
+            isOneToOne: false
+            referencedRelation: "startups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       startup_sessions: {
         Row: {
           created_at: string
@@ -649,6 +691,14 @@ export type Database = {
       get_current_user_role: {
         Args: Record<PropertyKey, never>
         Returns: string
+      }
+      get_startup_status_for_round: {
+        Args: { round_name: string; startup_uuid: string }
+        Returns: string
+      }
+      update_startup_status_for_round: {
+        Args: { new_status: string; round_name: string; startup_uuid: string }
+        Returns: undefined
       }
     }
     Enums: {

@@ -1,37 +1,57 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { StartupEvaluationModal } from "@/components/evaluation/StartupEvaluationModal";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Separator } from "@/components/ui/separator";
+import { Progress } from "@/components/ui/progress";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
-  Trophy, 
-  CheckCircle, 
-  AlertTriangle, 
   Star,
-  RotateCcw,
+  RefreshCw,
+  ChevronUp,
+  ChevronDown,
   Eye,
-  AlertCircle
+  FileText,
+  Users,
+  Award,
+  TrendingUp,
+  ArrowUpDown,
+  CheckCircle2,
+  XCircle,
+  Clock,
+  Filter
 } from "lucide-react";
-import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { StartupEvaluationModal } from "@/components/evaluation/StartupEvaluationModal";
+import { StatusBadge } from "@/components/common/StatusBadge";
+import { RoundStatusDisplay } from "@/components/common/RoundStatusDisplay";
+import { useToast } from "@/hooks/use-toast";
 
 interface StartupSelection {
   id: string;
   name: string;
-  industry: string;
-  stage: string;
-  region: string;
+  description: string | null;
+  verticals: string[];
+  stage: string | null;
+  regions: string[];
+  pitch_deck_url: string | null;
+  demo_url: string | null;
+  contact_email: string | null;
+  founder_names: string[];
+  website: string | null;
   status: string;
-  averageScore: number;
-  totalScore: number;
+  // Round-specific status
+  roundStatus: 'pending' | 'selected' | 'rejected';
+  // Evaluation data
+  totalEvaluations: number;
+  averageScore: number | null;
+  totalScore: number | null;
+  // Selection state
   rank: number;
-  evaluationsCount: number;
   isSelected: boolean;
-  isAutoSelected: boolean;
-  isPreviouslySelected: boolean;
 }
 
 interface Top30SelectionProps {
@@ -42,191 +62,240 @@ interface Top30SelectionProps {
 }
 
 export const Top30Selection = ({ currentRound = 'screening', isReadOnly = false, onSelectionChange, onSetConfirmCallback }: Top30SelectionProps) => {
+  const { toast } = useToast();
   const [startups, setStartups] = useState<StartupSelection[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectionCount, setSelectionCount] = useState(0);
-  const [selectedStartupForDetails, setSelectedStartupForDetails] = useState<string | null>(null);
-  const [startupEvaluations, setStartupEvaluations] = useState<any[]>([]);
-  const [selectedJurorEvaluation, setSelectedJurorEvaluation] = useState<any>(null);
+  const [sortField, setSortField] = useState<'rank' | 'name' | 'averageScore'>('rank');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'selected' | 'rejected'>('all');
+  const [selectedForDetails, setSelectedForDetails] = useState<StartupSelection | null>(null);
+  const [evaluationModalStartup, setEvaluationModalStartup] = useState<any>(null);
 
-  // Ref to access current startups value without causing re-renders
-  const startupsRef = useRef<StartupSelection[]>([]);
-
-  // Keep ref in sync with startups state
-  useEffect(() => {
-    startupsRef.current = startups;
-  }, [startups]);
+  // Keep a ref to the current startups for use in callbacks
+  const startupsRef = useRef(startups);
+  startupsRef.current = startups;
 
   useEffect(() => {
     fetchStartupsForSelection();
-  }, []);
+  }, [currentRound]);
 
   useEffect(() => {
     const count = startups.filter(s => s.isSelected).length;
-    setSelectionCount(count);
     onSelectionChange?.(count);
   }, [startups, onSelectionChange]);
+
+  useEffect(() => {
+    onSetConfirmCallback?.(handleConfirmSelection);
+    return () => onSetConfirmCallback?.(null);
+  }, [onSetConfirmCallback]);
 
   const handleConfirmSelection = useCallback(async () => {
     try {
       setLoading(true);
       const selectedStartups = startupsRef.current.filter(s => s.isSelected);
       
-      console.log('Confirming selection for startups (PRESERVING NON-SELECTED STATUSES):', {
+      console.log('Confirming selection with round-specific statuses:', {
         selectedCount: selectedStartups.length,
         selectedIds: selectedStartups.map(s => s.id),
-        currentRound,
-        preservingNonSelectedStatuses: true
+        currentRound
       });
       
-      // Only update startup status to 'shortlisted' for selected startups
-      // DO NOT automatically reject non-selected startups to preserve their existing statuses
+      // Update round-specific statuses for selected startups
       if (selectedStartups.length > 0) {
-        const { error, data } = await supabase
-          .from('startups')
-          .update({ status: 'shortlisted' })
-          .in('id', selectedStartups.map(s => s.id))
-          .select('id, name, status');
+        const updatePromises = selectedStartups.map(startup => 
+          supabase.rpc('update_startup_status_for_round', {
+            startup_uuid: startup.id,
+            round_name: currentRound,
+            new_status: 'selected'
+          })
+        );
 
-        if (error) {
-          console.error('Error updating selected startups:', error);
-          throw new Error(`Failed to update selected startups: ${error.message}`);
+        await Promise.all(updatePromises);
+
+        // For screening round, also set pitching status to pending
+        if (currentRound === 'screening') {
+          const pitchingPromises = selectedStartups.map(startup => 
+            supabase.rpc('update_startup_status_for_round', {
+              startup_uuid: startup.id,
+              round_name: 'pitching',
+              new_status: 'pending'
+            })
+          );
+          await Promise.all(pitchingPromises);
         }
-        
-        console.log('Successfully updated selected startups to shortlisted:', data);
       }
-
-      // REMOVED: Automatic rejection of non-selected startups
-      // This preserves existing statuses like 'pending', 'under-review', etc.
-      // Mass rejection should only happen during explicit round finalization
       
-      toast.success(`Successfully selected ${selectedStartups.length} startups for Pitching (other statuses preserved)`);
+      const actionLabel = currentRound === 'screening' ? 'selected for Pitching Round' : 'selected as Finalists';
+      toast({ title: "Success", description: `Successfully ${actionLabel}: ${selectedStartups.length} startups` });
       
       // Refresh the data to show updated statuses
       await fetchStartupsForSelection();
       
     } catch (error: any) {
       console.error('Error confirming selection:', error);
-      toast.error(error.message || 'Failed to confirm selection. Please check console for details.');
+      toast({ title: "Error", description: `Failed to confirm selection: ${error.message}`, variant: "destructive" });
     } finally {
       setLoading(false);
     }
-  }, [currentRound]);
-
-  useEffect(() => {
-    // Set the confirmation callback for the parent component
-    console.log('Setting confirmation callback in Top30Selection', { handleConfirmSelection });
-    onSetConfirmCallback?.(handleConfirmSelection);
-    
-    // Cleanup function to clear callback when component unmounts
-    return () => {
-      onSetConfirmCallback?.(null);
-    };
-  }, [handleConfirmSelection, onSetConfirmCallback]);
+  }, [currentRound, toast]);
 
   const fetchStartupsForSelection = async () => {
     try {
-      // Determine which evaluation table to use based on current round
+      setLoading(true);
+      
+      console.log('Fetching startups for selection, currentRound:', currentRound);
+
+      // First get the evaluation table name based on current round
       const evaluationTable = currentRound === 'screening' ? 'screening_evaluations' : 'pitching_evaluations';
       
-      // Build query with status filtering for pitching round
-      let query = supabase.from('startups').select(`
-        *,
-        ${evaluationTable}(
-          overall_score,
+      console.log('Using tables:', { evaluationTable });
+
+      // Fetch startups with evaluation data and round-specific status
+      const { data: startupsData, error: startupsError } = await supabase
+        .from('startups')
+        .select(`
+          id,
+          name,
+          description,
+          verticals,
+          stage,
+          regions,
+          pitch_deck_url,
+          demo_url,
+          contact_email,
+          founder_names,
+          website,
           status
-        )
-      `);
-      
-      // During pitching round, only show semifinalists (shortlisted startups)
-      if (currentRound === 'pitching') {
-        query = query.eq('status', 'shortlisted');
-      } else {
-        // During screening round, show ALL startups regardless of status (including rejected ones for re-evaluation)
-        query = query.in('status', ['pending', 'shortlisted', 'rejected', 'under-review', 'finalist']);
+        `)
+        .order('name');
+
+      if (startupsError) {
+        console.error('Error fetching startups:', startupsError);
+        throw startupsError;
       }
-      
-      const { data: startupsData, error } = await query;
 
-      if (error) throw error;
-      
-      console.log(`Fetched ${startupsData?.length || 0} startups for selection in ${currentRound} round`);
+      console.log(`Fetched ${startupsData?.length || 0} startups`);
 
-      const selectionData: StartupSelection[] = startupsData?.map(startup => {
-        const evaluationKey = currentRound === 'screening' ? 'screening_evaluations' : 'pitching_evaluations';
-        const evaluations = startup[evaluationKey] || [];
-        const submittedEvaluations = evaluations.filter((e: any) => e.status === 'submitted');
-        const scores = submittedEvaluations
+      // Fetch round-specific statuses
+      const { data: roundStatusData, error: roundStatusError } = await supabase
+        .from('startup_round_statuses')
+        .select(`
+          startup_id,
+          status,
+          rounds!inner(name)
+        `)
+        .eq('rounds.name', currentRound);
+
+      if (roundStatusError) {
+        console.error('Error fetching round statuses:', roundStatusError);
+        throw roundStatusError;
+      }
+
+      // Create a lookup for round statuses
+      const statusLookup = roundStatusData?.reduce((acc, item) => {
+        acc[item.startup_id] = item.status as 'pending' | 'selected' | 'rejected';
+        return acc;
+      }, {} as Record<string, 'pending' | 'selected' | 'rejected'>) || {};
+
+      // Fetch evaluations for the current round
+      const { data: evaluationsData, error: evaluationsError } = await supabase
+        .from(evaluationTable)
+        .select('startup_id, overall_score, status')
+        .eq('status', 'submitted');
+
+      if (evaluationsError) {
+        console.error('Error fetching evaluations:', evaluationsError);
+        throw evaluationsError;
+      }
+
+      console.log(`Fetched ${evaluationsData?.length || 0} evaluations from ${evaluationTable}`);
+
+      // Group evaluations by startup
+      const evaluationsByStartup = evaluationsData?.reduce((acc, evaluation) => {
+        if (!acc[evaluation.startup_id]) {
+          acc[evaluation.startup_id] = [];
+        }
+        acc[evaluation.startup_id].push(evaluation);
+        return acc;
+      }, {} as Record<string, any[]>) || {};
+
+      console.log('Evaluations grouped by startup:', Object.keys(evaluationsByStartup).length);
+
+      // Calculate scores and create startup selection objects
+      const startupsWithScores: StartupSelection[] = (startupsData || []).map(startup => {
+        const evaluations = evaluationsByStartup[startup.id] || [];
+        const scores = evaluations
           .map(e => e.overall_score)
-          .filter(score => score !== null) as number[];
-        
-        const averageScore = scores.length > 0 
-          ? scores.reduce((sum, score) => sum + score, 0) / scores.length 
-          : 0;
-        
-        const totalScore = scores.reduce((sum, score) => sum + score, 0);
-        
+          .filter(score => score !== null && score !== undefined);
+
+        const totalScore = scores.reduce((sum, score) => sum + parseFloat(score.toString()), 0);
+        const averageScore = scores.length > 0 ? totalScore / scores.length : null;
+        const roundStatus = statusLookup[startup.id] || 'pending';
+
         return {
-          id: startup.id,
-          name: startup.name,
-          industry: startup.industry || 'N/A',
-          stage: startup.stage || 'N/A',
-          region: startup.region || 'N/A',
-          status: startup.status || 'pending',
+          ...startup,
+          roundStatus,
+          totalEvaluations: evaluations.length,
           averageScore,
           totalScore,
           rank: 0, // Will be set after sorting
-          evaluationsCount: submittedEvaluations.length,
-          isSelected: false,
-          isAutoSelected: false,
-          isPreviouslySelected: startup.status === 'shortlisted'
+          isSelected: false
         };
-      }) || [];
+      });
 
-      console.log(`Processed ${selectionData.length} startups after evaluation mapping`);
+      // For pitching round, only show startups that were selected in screening
+      let filteredStartups = startupsWithScores;
+      if (currentRound === 'pitching') {
+        // Get startups that were selected in screening round
+        const { data: screeningSelected, error: screeningError } = await supabase
+          .from('startup_round_statuses')
+          .select(`
+            startup_id,
+            rounds!inner(name)
+          `)
+          .eq('rounds.name', 'screening')
+          .eq('status', 'selected');
 
-      // Sort by average score and assign ranks (startups with no evaluations go to bottom)
-      const sortedStartups = selectionData
-        .sort((a, b) => {
-          // If one has no evaluations and the other does, put no-evaluation at bottom
-          if (a.evaluationsCount === 0 && b.evaluationsCount > 0) return 1;
-          if (b.evaluationsCount === 0 && a.evaluationsCount > 0) return -1;
-          // Otherwise sort by average score (higher scores first)
-          return b.averageScore - a.averageScore;
-        })
-        .map((startup, index) => {
-          const rank = index + 1;
-          const isAutoSelected = rank <= 30 && startup.evaluationsCount > 0;
-          return { 
-            ...startup, 
-            rank,
-            isSelected: startup.isPreviouslySelected || isAutoSelected,
-            isAutoSelected: !startup.isPreviouslySelected && isAutoSelected
-          };
-        });
+        if (!screeningError && screeningSelected) {
+          const selectedStartupIds = new Set(screeningSelected.map(s => s.startup_id));
+          filteredStartups = startupsWithScores.filter(s => selectedStartupIds.has(s.id));
+        }
+      }
 
+      // Sort by average score (descending) and assign ranks
+      const sortedStartups = filteredStartups
+        .filter(s => s.averageScore !== null) // Only include startups with scores
+        .sort((a, b) => (b.averageScore || 0) - (a.averageScore || 0))
+        .map((startup, index) => ({
+          ...startup,
+          rank: index + 1
+        }));
+
+      console.log(`Processed ${sortedStartups.length} startups with evaluation scores for ${currentRound} round`);
+      
       setStartups(sortedStartups);
+      
     } catch (error) {
-      console.error('Error fetching startups for selection:', error);
-      toast.error('Failed to load startups for selection');
+      console.error('Error in fetchStartupsForSelection:', error);
+      toast({ title: "Error", description: 'Failed to fetch startups data', variant: "destructive" });
     } finally {
       setLoading(false);
     }
   };
 
   const handleBulkSelectTopRanked = () => {
-    setStartups(prev => prev.map(startup => ({
+    const updatedStartups = startups.map(startup => ({
       ...startup,
-      isSelected: startup.rank <= 30,
-      isAutoSelected: startup.rank <= 30
-    })));
-    toast.success('Automatically selected top ranked startups by score');
+      isSelected: startup.rank <= 30
+    }));
+    setStartups(updatedStartups);
+    toast({ title: "Success", description: 'Auto-selected top 30 startups' });
   };
 
   const handleToggleSelection = (startupId: string) => {
     setStartups(prev => prev.map(startup =>
       startup.id === startupId
-        ? { ...startup, isSelected: !startup.isSelected, isAutoSelected: false }
+        ? { ...startup, isSelected: !startup.isSelected }
         : startup
     ));
   };
@@ -234,81 +303,66 @@ export const Top30Selection = ({ currentRound = 'screening', isReadOnly = false,
   const handleClearSelections = () => {
     setStartups(prev => prev.map(startup => ({
       ...startup,
-      isSelected: false,
-      isAutoSelected: false
+      isSelected: false
     })));
-    toast.success('All selections cleared');
+    toast({ title: "Success", description: 'Cleared all selections' });
   };
 
-
-
-  const viewStartupEvaluations = async (startupId: string) => {
-    try {
-      // Fetch all jurors assigned to evaluate this startup based on current round
-      const assignmentTable = currentRound === 'screening' ? 'screening_assignments' : 'pitching_assignments';
-      const { data: assignments, error } = await supabase
-        .from(assignmentTable)
-        .select(`
-          *,
-          jurors (
-            id,
-            name,
-            email,
-            company,
-            job_title,
-            user_id
-          )
-        `)
-        .eq('startup_id', startupId);
-
-      if (error) throw error;
-
-      // Fetch evaluations for this startup to get real status
-      const evaluationTable = currentRound === 'screening' ? 'screening_evaluations' : 'pitching_evaluations';
-      const jurorUserIds = assignments?.filter(a => a.jurors?.user_id).map(a => a.jurors.user_id) || [];
-      
-      let evaluations: any[] = [];
-      if (jurorUserIds.length > 0) {
-        const { data: evalData, error: evalError } = await supabase
-          .from(evaluationTable)
-          .select('evaluator_id, status, id, overall_score, strengths, improvement_areas')
-          .eq('startup_id', startupId)
-          .in('evaluator_id', jurorUserIds);
-
-        if (evalError) throw evalError;
-        evaluations = evalData || [];
-      }
-
-      // Enrich assignments with evaluation data
-      const enrichedAssignments = assignments?.map(assignment => {
-        const evaluation = evaluations?.find(evaluation => evaluation.evaluator_id === assignment.jurors?.user_id);
-        return {
-          ...assignment,
-          evaluation_id: evaluation?.id,
-          evaluation_status: evaluation?.status || 'not_started',
-          overall_score: evaluation?.overall_score,
-          strengths: evaluation?.strengths,
-          improvement_areas: evaluation?.improvement_areas
-        };
-      }) || [];
-
-      setStartupEvaluations(enrichedAssignments);
-      setSelectedStartupForDetails(startupId);
-    } catch (error) {
-      console.error('Error fetching startup evaluations:', error);
-      toast.error('Failed to load startup evaluations');
+  const handleSort = (field: 'rank' | 'name' | 'averageScore') => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
     }
   };
+
+  // Sort and filter startups
+  const filteredAndSortedStartups = [...startups]
+    .filter(startup => {
+      if (statusFilter === 'all') return true;
+      return startup.roundStatus === statusFilter;
+    })
+    .sort((a, b) => {
+      let aValue, bValue;
+      
+      switch (sortField) {
+        case 'name':
+          aValue = a.name.toLowerCase();
+          bValue = b.name.toLowerCase();
+          break;
+        case 'averageScore':
+          aValue = a.averageScore || 0;
+          bValue = b.averageScore || 0;
+          break;
+        case 'rank':
+        default:
+          aValue = a.rank;
+          bValue = b.rank;
+          break;
+      }
+      
+      if (sortDirection === 'asc') {
+        return aValue < bValue ? -1 : aValue > bValue ? 1 : 0;
+      } else {
+        return aValue > bValue ? -1 : aValue < bValue ? 1 : 0;
+      }
+    });
+
+  const selectedCount = startups.filter(s => s.isSelected).length;
+  const autoSelectedCount = Math.min(30, filteredAndSortedStartups.length);
+  const remainingSlots = 30 - selectedCount;
 
   if (loading) {
     return (
       <Card>
-        <CardContent className="pt-6">
+        <CardHeader>
+          <CardTitle>Loading Startups...</CardTitle>
+        </CardHeader>
+        <CardContent>
           <div className="space-y-4">
             {[...Array(5)].map((_, i) => (
-              <div key={i} className="animate-pulse">
-                <div className="h-16 bg-muted rounded-lg"></div>
-              </div>
+              <Skeleton key={i} className="h-16 w-full" />
             ))}
           </div>
         </CardContent>
@@ -316,315 +370,336 @@ export const Top30Selection = ({ currentRound = 'screening', isReadOnly = false,
     );
   }
 
-  const selectedStartups = startups.filter(s => s.isSelected);
-  const autoSelectedCount = startups.filter(s => s.isAutoSelected).length;
-
   return (
-    <TooltipProvider>
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle className="flex items-center gap-2">
-              <Trophy className="w-5 h-5" />
-              Startup Selection
-            </CardTitle>
-            <CardDescription>
-              Select the top performing startups to advance to Pitching
-            </CardDescription>
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Star className="w-5 h-5" />
+            {currentRound === 'screening' ? 'Select Startups for Pitching Round' : 'Select Final Startups'}
+          </CardTitle>
+          <CardDescription>
+            {currentRound === 'screening' 
+              ? 'Review evaluation results and select startups to advance to the pitching round'
+              : 'Review pitch results and select the final startups'
+            }
+          </CardDescription>
+        </CardHeader>
+
+        <CardContent>
+          {/* Summary and Filter Controls */}
+          <div className="flex justify-between items-center mb-6">
+            <div className="space-y-2">
+              <h3 className="text-lg font-semibold text-foreground">
+                {currentRound === 'screening' ? 'Select Startups for Pitching Round' : 'Select Final Startups'}
+              </h3>
+              <div className="flex items-center gap-6 text-sm text-muted-foreground">
+                <span>Total: {startups.length} startups</span>
+                <span>Selected: {selectedCount}</span>
+                <span>Auto-Selected: {autoSelectedCount}</span>
+                <span className={remainingSlots < 0 ? 'text-red-600' : 'text-green-600'}>
+                  {remainingSlots < 0 ? `Over by ${Math.abs(remainingSlots)}` : `Remaining: ${remainingSlots}`}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Filter className="w-4 h-4 text-muted-foreground" />
+              <Select value={statusFilter} onValueChange={(value: 'all' | 'pending' | 'selected' | 'rejected') => setStatusFilter(value)}>
+                <SelectTrigger className="w-32">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="selected">Selected</SelectItem>
+                  <SelectItem value="rejected">Rejected</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={fetchStartupsForSelection}>
-              <RotateCcw className="w-4 h-4 mr-2" />
+
+          {/* Action Buttons */}
+          <div className="flex gap-2 mb-6">
+            <Button 
+              onClick={handleBulkSelectTopRanked} 
+              disabled={isReadOnly || startups.length === 0}
+            >
+              <Star className="w-4 h-4 mr-2" />
+              Auto-Select Top 30
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={handleClearSelections} 
+              disabled={isReadOnly || selectedCount === 0}
+            >
+              <XCircle className="w-4 h-4 mr-2" />
+              Clear All
+            </Button>
+            <Button 
+              variant="ghost" 
+              onClick={fetchStartupsForSelection}
+            >
+              <RefreshCw className="w-4 h-4 mr-2" />
               Refresh
             </Button>
           </div>
-        </div>
-      </CardHeader>
-      
-      <CardContent>
-        {/* Selection Summary */}
-        <div className="grid grid-cols-4 gap-4 mb-6">
-          <div className="text-center p-4 bg-muted rounded-lg">
-            <div className="text-2xl font-bold text-foreground">{startups.length}</div>
-            <div className="text-sm text-muted-foreground">Total Startups</div>
-          </div>
-          <div className="text-center p-4 bg-primary/10 rounded-lg">
-            <div className="text-2xl font-bold text-primary">{selectionCount}</div>
-            <div className="text-sm text-muted-foreground">Selected</div>
-          </div>
-          <div className="text-center p-4 bg-warning/10 rounded-lg">
-            <div className="text-2xl font-bold text-warning">{autoSelectedCount}</div>
-            <div className="text-sm text-muted-foreground">Auto-Selected</div>
-          </div>
-          <div className="text-center p-4 bg-success/10 rounded-lg">
-            <div className="text-2xl font-bold text-success">{Math.max(0, 30 - selectionCount)}</div>
-            <div className="text-sm text-muted-foreground">Remaining</div>
-          </div>
-        </div>
 
-        {/* Action Buttons */}
-        <div className="flex gap-2 mb-6">
-          <Button onClick={handleBulkSelectTopRanked} disabled={isReadOnly}>
-            <Star className="w-4 h-4 mr-2" />
-            Auto-Select Top Ranked
-          </Button>
-          <Button variant="outline" onClick={handleClearSelections} disabled={isReadOnly}>
-            Clear All
-          </Button>
-          <div className="ml-auto flex items-center gap-4">
-            <div className="text-sm text-muted-foreground">
-              {selectionCount > 0 && `${selectionCount} startups selected`}
-            </div>
-            <div className="text-xs text-muted-foreground">
-              Use the "Confirm Selection" button above to finalize your choices
-            </div>
-          </div>
-        </div>
-
-        {/* Startup Selection List */}
-        <div className="border border-border rounded-lg overflow-hidden">
-          <div className="bg-muted px-4 py-3 border-b border-border">
-            <div className="grid grid-cols-12 gap-4 text-sm font-medium text-muted-foreground">
+          {/* Startup List */}
+          <div className="space-y-3">
+            {/* Header */}
+            <div className="grid grid-cols-12 gap-3 px-4 py-2 bg-muted rounded-lg text-sm font-medium text-muted-foreground">
               <div className="col-span-1">Select</div>
-              <div className="col-span-1">Rank</div>
-              <div className="col-span-3">Startup</div>
-              <div className="col-span-1">Stage</div>
-              <div className="col-span-1">Region</div>
-              <div className="col-span-2">Score</div>
-              <div className="col-span-1">Evals</div>
-              <div className="col-span-1">Status</div>
+              <div className="col-span-1 cursor-pointer flex items-center gap-1" onClick={() => handleSort('rank')}>
+                Rank
+                <ArrowUpDown className="w-3 h-3" />
+              </div>
+              <div className="col-span-3 cursor-pointer flex items-center gap-1" onClick={() => handleSort('name')}>
+                Startup
+                <ArrowUpDown className="w-3 h-3" />
+              </div>
+              <div className="col-span-2">Details</div>
+              <div className="col-span-2 cursor-pointer flex items-center gap-1" onClick={() => handleSort('averageScore')}>
+                Score
+                <ArrowUpDown className="w-3 h-3" />
+              </div>
+              <div className="col-span-2">Status</div>
               <div className="col-span-1">Actions</div>
             </div>
-          </div>
-          
-          <div className="divide-y divide-border max-h-96 overflow-y-auto">
-            {startups.map(startup => (
-              <div key={startup.id} className={`px-4 py-3 transition-colors ${
-                startup.isSelected ? 'bg-success/5 border-success/20' : 'hover:bg-muted/50'
-              }`}>
-                <div className="grid grid-cols-12 gap-4 items-center">
-                  <div className="col-span-1">
+
+            {/* Startup Rows */}
+            <div className="space-y-2 max-h-96 overflow-y-auto">
+              {filteredAndSortedStartups.map(startup => (
+                <div 
+                  key={startup.id} 
+                  className={`grid grid-cols-12 gap-3 px-4 py-3 border border-border rounded-lg transition-colors ${
+                    startup.isSelected ? 'bg-green-50 border-green-200' : 'hover:bg-muted/50'
+                  }`}
+                >
+                  <div className="col-span-1 flex items-center justify-center">
                     <Checkbox
                       checked={startup.isSelected}
                       onCheckedChange={() => handleToggleSelection(startup.id)}
                       disabled={isReadOnly}
                     />
                   </div>
-                  <div className="col-span-1">
-                    <div className="flex items-center gap-2">
-                      {startup.rank <= 30 && <Trophy className="w-4 h-4 text-warning" />}
-                      <span className="font-medium">{startup.rank}</span>
-                    </div>
+
+                  <div className="col-span-1 flex items-center justify-center">
+                    <div className="text-2xl font-bold text-primary">#{startup.rank}</div>
                   </div>
-                  <div className="col-span-3">
+
+                  <div className="col-span-3 flex items-center">
                     <div>
-                      <div className="flex items-center gap-2">
-                        <h4 className="font-semibold text-foreground">{startup.name}</h4>
-                        {startup.evaluationsCount === 0 && (
-                          <div className="flex items-center gap-1">
-                            <AlertTriangle className="w-4 h-4 text-warning" />
-                            <span className="text-xs text-warning font-medium">No Evaluations</span>
-                          </div>
+                      <h3 className="font-semibold text-foreground">{startup.name}</h3>
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Badge variant="outline" className="text-xs">
+                          {startup.stage || 'Unknown'}
+                        </Badge>
+                        {startup.averageScore && (
+                          <Badge variant="secondary" className="text-xs">
+                            Score: {startup.averageScore.toFixed(1)}/10
+                          </Badge>
                         )}
                       </div>
-                      <p className="text-sm text-muted-foreground">{startup.industry}</p>
                     </div>
                   </div>
-                  <div className="col-span-1">
-                    <Badge variant="outline">{startup.stage}</Badge>
-                  </div>
-                  <div className="col-span-1">
-                    <span className="text-sm">{startup.region}</span>
-                  </div>
+
                   <div className="col-span-2">
-                    <div>
-                      <div className="font-semibold text-lg">{startup.averageScore.toFixed(1)}</div>
-                      <div className="text-xs text-muted-foreground">Total: {startup.totalScore.toFixed(1)}</div>
+                    <div className="text-sm text-muted-foreground">
+                      <div>Stage: {startup.stage || 'N/A'}</div>
+                      <div>Regions: {startup.regions?.join(', ') || 'N/A'}</div>
                     </div>
                   </div>
-                  <div className="col-span-1">
-                    <div className="flex items-center gap-1">
-                      <span className={`text-sm ${startup.evaluationsCount === 0 ? 'text-warning font-medium' : ''}`}>
-                        {startup.evaluationsCount}
-                      </span>
-                      {startup.evaluationsCount === 0 && (
-                        <AlertTriangle className="w-3 h-3 text-warning" />
-                      )}
+
+                  <div className="col-span-2">
+                    <div className="text-center">
+                      <div className="text-lg font-semibold">
+                        {startup.averageScore?.toFixed(1) || 'N/A'}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {startup.totalEvaluations} evaluations
+                      </div>
                     </div>
                   </div>
-                  <div className="col-span-1">
-                    <div className="flex flex-col gap-1">
-                      {startup.isSelected ? (
-                        <Badge className="bg-success text-success-foreground">
-                          {startup.isPreviouslySelected ? 'Previously Selected' : (startup.isAutoSelected ? 'Auto' : 'Manual')}
-                        </Badge>
-                      ) : (
-                        <Badge variant="outline">Not Selected</Badge>
-                      )}
-                      
-                      {/* Evaluation status warnings */}
-                      {startup.evaluationsCount === 0 && (
-                        <Badge variant="destructive" className="text-xs">
-                          No Evaluations
-                        </Badge>
-                      )}
-                      
-                      {/* Status context based on startup's current status relative to round */}
-                      {startup.status === 'shortlisted' && (
-                        <Badge variant="secondary" className="text-xs">
-                          Selected
-                        </Badge>
-                      )}
-                      {startup.status === 'finalist' && (
-                        <Badge variant="secondary" className="text-xs">
-                          Selected
-                        </Badge>
-                      )}
-                      {startup.status === 'under-review' && (
-                        <Badge variant="default" className="text-xs">
-                          Under Review
-                        </Badge>
-                      )}
-                    </div>
+
+                  <div className="col-span-2 flex items-center justify-center">
+                    <StatusBadge status={startup.roundStatus} />
                   </div>
-                   <div className="col-span-1">
-                     <Tooltip>
-                       <TooltipTrigger asChild>
-                         <Button
-                           variant="ghost"
-                           size="sm"
-                           className="w-full"
-                           onClick={() => viewStartupEvaluations(startup.id)}
-                         >
-                           <Eye className="w-4 h-4" />
-                         </Button>
-                       </TooltipTrigger>
-                       <TooltipContent>
-                         <p>View evaluation details</p>
-                       </TooltipContent>
-                     </Tooltip>
-                   </div>
+
+                  <div className="col-span-1 flex items-center justify-center">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setSelectedForDetails(startup)}
+                    >
+                      <Eye className="w-4 h-4" />
+                    </Button>
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {startups.length === 0 && (
-          <div className="text-center py-8">
-            <AlertTriangle className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-semibold mb-2">No startups available</h3>
-            <p className="text-muted-foreground">
-              No startups found for this round
-            </p>
-          </div>
-        )}
-      </CardContent>
-    </Card>
-
-    {/* Startup Evaluations Details Modal */}
-    <Dialog open={!!selectedStartupForDetails} onOpenChange={() => setSelectedStartupForDetails(null)}>
-      <DialogContent className="max-w-5xl max-h-[80vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>
-            Startup Evaluation Details - {startups.find(s => s.id === selectedStartupForDetails)?.name}
-          </DialogTitle>
-        </DialogHeader>
-        
-        <div className="space-y-4">
-          {startupEvaluations.length === 0 ? (
-            <div className="text-center py-8">
-              <AlertCircle className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-semibold mb-2">No Evaluations Found</h3>
-              <p className="text-muted-foreground">This startup has no juror assignments yet.</p>
-            </div>
-          ) : (
-            <div className="grid gap-4">
-              {startupEvaluations.map((assignment) => (
-                <Card key={assignment.id} className="border-l-4 border-l-primary">
-                  <CardHeader className="pb-3">
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="text-lg">{assignment.jurors?.name || 'Unknown Juror'}</CardTitle>
-                      <Tooltip>
-                        <TooltipTrigger>
-                          <Badge variant={assignment.evaluation_status === 'submitted' ? 'default' : assignment.evaluation_status === 'draft' ? 'secondary' : 'outline'}>
-                            {assignment.evaluation_status === 'submitted' ? 'Evaluation Complete' : assignment.evaluation_status === 'draft' ? 'In Progress' : 'Not Started'}
-                          </Badge>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>
-                            {assignment.evaluation_status === 'submitted' 
-                              ? 'Evaluation has been completed and submitted by the juror' 
-                              : assignment.evaluation_status === 'draft'
-                              ? 'Evaluation is in progress but not yet submitted'
-                              : 'Juror has been assigned to startup but evaluation not started'}
-                          </p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </div>
-                    <CardDescription>
-                      {assignment.jurors?.job_title} at {assignment.jurors?.company} • {assignment.jurors?.email}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    {assignment.evaluation_status === 'submitted' && assignment.overall_score && (
-                      <div className="mb-3">
-                        <p className="text-sm font-medium">Overall Score: <span className="text-lg font-bold text-primary">{assignment.overall_score}/10</span></p>
-                      </div>
-                    )}
-                    
-                    {assignment.strengths && assignment.strengths.length > 0 && (
-                      <div className="mb-3">
-                        <p className="text-sm font-medium">Key Strengths:</p>
-                        <ul className="text-sm text-muted-foreground list-disc list-inside">
-                          {assignment.strengths.map((strength: string, index: number) => (
-                            <li key={index}>{strength}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                    
-                    <div className="flex gap-2 mt-4">
-                      <Button 
-                        size="sm" 
-                        variant="outline"
-                        onClick={() => setSelectedJurorEvaluation({
-                          ...startups.find(s => s.id === selectedStartupForDetails),
-                          evaluation_id: assignment.evaluation_id,
-                          evaluation_status: assignment.evaluation_status || 'not_started',
-                          evaluator_id: assignment.jurors?.user_id
-                        })}
-                        disabled={assignment.evaluation_status === 'not_started'}
-                      >
-                        <Eye className="w-4 h-4 mr-2" />
-                        View Evaluation
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
               ))}
             </div>
-          )}
-        </div>
-      </DialogContent>
-    </Dialog>
+          </div>
 
-    {/* Individual Juror Evaluation Modal */}
-    {selectedJurorEvaluation && (
-      <StartupEvaluationModal
-        startup={{
-          ...selectedJurorEvaluation,
-          evaluation_id: selectedJurorEvaluation.evaluation_id,
-          evaluation_status: selectedJurorEvaluation.evaluation_status
-        }}
-        open={!!selectedJurorEvaluation}
-        onClose={() => setSelectedJurorEvaluation(null)}
-        onEvaluationUpdate={() => {}} 
-        mode="view"
-        currentRound="screening"
-      />
-    )}
-  </TooltipProvider>
+          {filteredAndSortedStartups.length === 0 && (
+            <div className="text-center py-8 text-muted-foreground">
+              No startups found matching the current filters.
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Startup Details Modal */}
+      {selectedForDetails && (
+        <Dialog open={!!selectedForDetails} onOpenChange={() => setSelectedForDetails(null)}>
+          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <FileText className="w-5 h-5" />
+                {selectedForDetails.name} - Detailed Information
+              </DialogTitle>
+            </DialogHeader>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Left Column - Basic Info */}
+              <div className="space-y-4">
+                <div>
+                  <h4 className="font-semibold mb-2">Basic Information</h4>
+                  <div className="space-y-2 text-sm">
+                    <div><span className="font-medium">Stage:</span> {selectedForDetails.stage || 'Not specified'}</div>
+                    <div><span className="font-medium">Regions:</span> {selectedForDetails.regions?.join(', ') || 'Not specified'}</div>
+                    <div><span className="font-medium">Verticals:</span> {selectedForDetails.verticals?.join(', ') || 'Not specified'}</div>
+                    <div><span className="font-medium">Contact:</span> {selectedForDetails.contact_email || 'Not provided'}</div>
+                    {selectedForDetails.website && (
+                      <div><span className="font-medium">Website:</span> 
+                        <a href={selectedForDetails.website} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline ml-1">
+                          {selectedForDetails.website}
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <Separator />
+
+                <div>
+                  <h4 className="font-semibold mb-2">Description</h4>
+                  <p className="text-sm text-muted-foreground">
+                    {selectedForDetails.description || 'No description available'}
+                  </p>
+                </div>
+
+                <Separator />
+
+                <div>
+                  <h4 className="font-semibold mb-2">Founders</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedForDetails.founder_names?.length > 0 ? (
+                      selectedForDetails.founder_names.map((founder, index) => (
+                        <Badge key={index} variant="secondary">{founder}</Badge>
+                      ))
+                    ) : (
+                      <span className="text-sm text-muted-foreground">No founders listed</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Column - Evaluation & Status */}
+              <div className="space-y-4">
+                <RoundStatusDisplay 
+                  screeningStatus={selectedForDetails.roundStatus}
+                  pitchingStatus={selectedForDetails.roundStatus} 
+                />
+
+                <Separator />
+
+                <div>
+                  <h4 className="font-semibold mb-2 flex items-center gap-2">
+                    <Award className="w-4 h-4" />
+                    Evaluation Results
+                  </h4>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm">Rank:</span>
+                      <Badge variant="outline" className="font-bold">#{selectedForDetails.rank}</Badge>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm">Evaluations:</span>
+                      <Badge variant="secondary">{selectedForDetails.totalEvaluations}</Badge>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm">Average Score:</span>
+                      <Badge variant="default" className="font-bold">
+                        {selectedForDetails.averageScore?.toFixed(1) || 'N/A'}/10
+                      </Badge>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm">Total Score:</span>
+                      <Badge variant="outline">
+                        {selectedForDetails.totalScore?.toFixed(1) || 'N/A'}
+                      </Badge>
+                    </div>
+                  </div>
+                  
+                  <div className="mt-4">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setEvaluationModalStartup(selectedForDetails)}
+                      className="w-full"
+                    >
+                      <Eye className="w-4 h-4 mr-2" />
+                      View Individual Evaluations
+                    </Button>
+                  </div>
+                </div>
+
+                <Separator />
+
+                <div>
+                  <h4 className="font-semibold mb-2">Resources</h4>
+                  <div className="space-y-2">
+                    {selectedForDetails.pitch_deck_url && (
+                      <a
+                        href={selectedForDetails.pitch_deck_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 text-sm text-blue-600 hover:underline"
+                      >
+                        <FileText className="w-4 h-4" />
+                        Pitch Deck
+                      </a>
+                    )}
+                    {selectedForDetails.demo_url && (
+                      <a
+                        href={selectedForDetails.demo_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 text-sm text-blue-600 hover:underline"
+                      >
+                        <Eye className="w-4 h-4" />
+                        Demo
+                      </a>
+                    )}
+                    {!selectedForDetails.pitch_deck_url && !selectedForDetails.demo_url && (
+                      <span className="text-sm text-muted-foreground">No resources available</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Evaluation Modal */}
+      {evaluationModalStartup && (
+        <StartupEvaluationModal
+          startup={evaluationModalStartup}
+          onClose={() => setEvaluationModalStartup(null)}
+          currentRound={currentRound as 'screening' | 'pitching'}
+        />
+      )}
+    </div>
   );
 };
