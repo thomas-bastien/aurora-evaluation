@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -60,10 +60,66 @@ export const Top30Selection = ({ currentRound = 'screening', isReadOnly = false,
     onSelectionChange?.(count);
   }, [startups, onSelectionChange]);
 
+  const handleConfirmSelection = useCallback(async () => {
+    try {
+      setLoading(true);
+      const selectedStartups = startups.filter(s => s.isSelected);
+      
+      console.log('Confirming selection for startups:', {
+        selectedCount: selectedStartups.length,
+        selectedIds: selectedStartups.map(s => s.id),
+        currentRound
+      });
+      
+      // Update startup status to 'shortlisted' for selected startups
+      if (selectedStartups.length > 0) {
+        const { error, data } = await supabase
+          .from('startups')
+          .update({ status: 'shortlisted' })
+          .in('id', selectedStartups.map(s => s.id))
+          .select('id, name, status');
+
+        if (error) {
+          console.error('Error updating selected startups:', error);
+          throw new Error(`Failed to update selected startups: ${error.message}`);
+        }
+        
+        console.log('Successfully updated selected startups:', data);
+      }
+
+      // Update non-selected startups to 'rejected' (valid status from DB)
+      const nonSelectedStartups = startups.filter(s => !s.isSelected && s.status !== 'rejected');
+      if (nonSelectedStartups.length > 0) {
+        const { error: nonSelectedError, data: nonSelectedData } = await supabase
+          .from('startups')
+          .update({ status: 'rejected' })
+          .in('id', nonSelectedStartups.map(s => s.id))
+          .select('id, name, status');
+
+        if (nonSelectedError) {
+          console.error('Error updating non-selected startups:', nonSelectedError);
+          throw new Error(`Failed to update non-selected startups: ${nonSelectedError.message}`);
+        }
+        
+        console.log('Successfully updated non-selected startups:', nonSelectedData);
+      }
+
+      toast.success(`Successfully selected ${selectedStartups.length} startups for Pitching`);
+      
+      // Refresh data
+      await fetchStartupsForSelection();
+    } catch (error: any) {
+      console.error('Error confirming selection:', error);
+      toast.error(error.message || 'Failed to confirm selection. Please check console for details.');
+    } finally {
+      setLoading(false);
+    }
+  }, [startups, currentRound]);
+
   useEffect(() => {
     // Set the confirmation callback for the parent component
     onSetConfirmCallback?.(handleConfirmSelection);
-  }, [startups, onSetConfirmCallback]);
+  }, [handleConfirmSelection, onSetConfirmCallback]);
 
   const fetchStartupsForSelection = async () => {
     try {
@@ -169,61 +225,6 @@ export const Top30Selection = ({ currentRound = 'screening', isReadOnly = false,
     toast.success('All selections cleared');
   };
 
-  const handleConfirmSelection = async () => {
-    try {
-      setLoading(true);
-      const selectedStartups = startups.filter(s => s.isSelected);
-      
-      console.log('Confirming selection for startups:', {
-        selectedCount: selectedStartups.length,
-        selectedIds: selectedStartups.map(s => s.id),
-        currentRound
-      });
-      
-      // Update startup status to 'shortlisted' for selected startups
-      if (selectedStartups.length > 0) {
-        const { error, data } = await supabase
-          .from('startups')
-          .update({ status: 'shortlisted' })
-          .in('id', selectedStartups.map(s => s.id))
-          .select('id, name, status');
-
-        if (error) {
-          console.error('Error updating selected startups:', error);
-          throw new Error(`Failed to update selected startups: ${error.message}`);
-        }
-        
-        console.log('Successfully updated selected startups:', data);
-      }
-
-      // Update non-selected startups to 'rejected' (valid status from DB)
-      const nonSelectedStartups = startups.filter(s => !s.isSelected && s.status !== 'rejected');
-      if (nonSelectedStartups.length > 0) {
-        const { error: nonSelectedError, data: nonSelectedData } = await supabase
-          .from('startups')
-          .update({ status: 'rejected' })
-          .in('id', nonSelectedStartups.map(s => s.id))
-          .select('id, name, status');
-
-        if (nonSelectedError) {
-          console.error('Error updating non-selected startups:', nonSelectedError);
-          throw new Error(`Failed to update non-selected startups: ${nonSelectedError.message}`);
-        }
-        
-        console.log('Successfully updated non-selected startups:', nonSelectedData);
-      }
-
-      toast.success(`Successfully selected ${selectedStartups.length} startups for Pitching`);
-      
-      // Refresh data
-      await fetchStartupsForSelection();
-    } catch (error: any) {
-      console.error('Error confirming selection:', error);
-      toast.error(error.message || 'Failed to confirm selection. Please check console for details.');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const exportSelectionList = () => {
     const selectedStartups = startups.filter(s => s.isSelected);
