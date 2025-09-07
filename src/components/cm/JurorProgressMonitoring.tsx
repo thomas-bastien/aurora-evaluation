@@ -50,6 +50,8 @@ export const JurorProgressMonitoring = ({ currentRound }: JurorProgressMonitorin
   const [jurorAssignments, setJurorAssignments] = useState<any[]>([]);
   const [selectedStartupForEvaluation, setSelectedStartupForEvaluation] = useState<any>(null);
 
+  const roundTitle = currentRound === 'screeningRound' ? 'Screening Round' : 'Pitching Round';
+
   useEffect(() => {
     fetchJurorProgress();
   }, []);
@@ -313,7 +315,7 @@ export const JurorProgressMonitoring = ({ currentRound }: JurorProgressMonitorin
           <div>
             <CardTitle className="flex items-center gap-2">
               <CheckCircle className="w-5 h-5" />
-              Jury progress - Screening Round
+              Jury Progress - {roundTitle}
             </CardTitle>
             <CardDescription>
               Track {currentRound === 'screeningRound' ? 'evaluation' : 'pitch'} submission status by juror and send reminders
