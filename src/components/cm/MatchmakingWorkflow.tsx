@@ -84,9 +84,9 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
           // For pitching round: show assigned startups + shortlisted startups
           startupsQuery = startupsQuery.or(`id.in.(${participatingStartupIds.join(',')}),status.eq.shortlisted`);
         } else {
-          // For screening round: show ALL startups (regardless of status)
-          // This includes startups with assignments AND all other startups (pending, rejected, etc.)
-          startupsQuery = startupsQuery.or(`id.in.(${participatingStartupIds.join(',')}),id.neq.''`);
+          // For screening round: show ALL startups that have assignments (including rejected)
+          // Plus any pending startups that don't have assignments yet
+          startupsQuery = startupsQuery.or(`id.in.(${participatingStartupIds.join(',')}),status.eq.pending`);
         }
       } else {
         // Fallback to status-based filtering if no assignments exist yet
