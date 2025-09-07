@@ -72,13 +72,15 @@ export const Top30Selection = ({ currentRound = 'screening', isReadOnly = false,
       setLoading(true);
       const selectedStartups = startupsRef.current.filter(s => s.isSelected);
       
-      console.log('Confirming selection for startups:', {
+      console.log('Confirming selection for startups (PRESERVING NON-SELECTED STATUSES):', {
         selectedCount: selectedStartups.length,
         selectedIds: selectedStartups.map(s => s.id),
-        currentRound
+        currentRound,
+        preservingNonSelectedStatuses: true
       });
       
-      // Update startup status to 'shortlisted' for selected startups
+      // Only update startup status to 'shortlisted' for selected startups
+      // DO NOT automatically reject non-selected startups to preserve their existing statuses
       if (selectedStartups.length > 0) {
         const { error, data } = await supabase
           .from('startups')
@@ -91,27 +93,17 @@ export const Top30Selection = ({ currentRound = 'screening', isReadOnly = false,
           throw new Error(`Failed to update selected startups: ${error.message}`);
         }
         
-        console.log('Successfully updated selected startups:', data);
+        console.log('Successfully updated selected startups to shortlisted:', data);
       }
 
-      // Update non-selected startups to 'rejected' (valid status from DB)
-      const nonSelectedStartups = startupsRef.current.filter(s => !s.isSelected && s.status !== 'rejected');
-      if (nonSelectedStartups.length > 0) {
-        const { error: nonSelectedError, data: nonSelectedData } = await supabase
-          .from('startups')
-          .update({ status: 'rejected' })
-          .in('id', nonSelectedStartups.map(s => s.id))
-          .select('id, name, status');
-
-        if (nonSelectedError) {
-          console.error('Error updating non-selected startups:', nonSelectedError);
-          throw new Error(`Failed to update non-selected startups: ${nonSelectedError.message}`);
-        }
-        
-        console.log('Successfully updated non-selected startups:', nonSelectedData);
-      }
-
-      toast.success(`Successfully selected ${selectedStartups.length} startups for Pitching`);
+      // REMOVED: Automatic rejection of non-selected startups
+      // This preserves existing statuses like 'pending', 'under-review', etc.
+      // Mass rejection should only happen during explicit round finalization
+      
+      toast.success(`Successfully selected ${selectedStartups.length} startups for Pitching (other statuses preserved)`);
+      
+      // Refresh the data to show updated statuses
+      await fetchStartupsForSelection();
       
     } catch (error: any) {
       console.error('Error confirming selection:', error);
