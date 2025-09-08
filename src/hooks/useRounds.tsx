@@ -62,19 +62,8 @@ export const useRounds = () => {
 
       if (completeError) throw completeError;
 
-      // Activate next round if it exists
-      const nextRound = getNextRound(roundName);
-      if (nextRound) {
-        const { error: activateError } = await supabase
-          .from('rounds')
-          .update({ 
-            status: 'active',
-            started_at: new Date().toISOString()
-          })
-          .eq('name', nextRound);
-
-        if (activateError) throw activateError;
-      }
+      // Note: No longer automatically activating next round
+      // Community managers can manually activate rounds as needed
 
       await fetchRounds();
       toast.success(`${roundName} round completed successfully`);
@@ -144,7 +133,7 @@ export const useRounds = () => {
 
   const canModifyRound = (roundName: string): boolean => {
     const round = rounds.find(r => r.name === roundName);
-    return round?.status === 'active';
+    return round?.status === 'active' || round?.status === 'pending';
   };
 
   const getRoundProgress = async (roundName: string) => {
