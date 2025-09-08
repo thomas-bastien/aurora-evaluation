@@ -20,6 +20,7 @@ import { getStatusColor } from '@/utils/statusUtils';
 import { FilterPanel } from '@/components/common/FilterPanel';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { AURORA_VERTICALS, BUSINESS_MODELS, CURRENCIES } from '@/constants/startupConstants';
+import { StatusBadge } from '@/components/common/StatusBadge';
 
 interface Startup {
   id: string;
@@ -56,6 +57,8 @@ export default function StartupsList() {
   const [hasLinkedInFilter, setHasLinkedInFilter] = useState('');
   const [investmentMinFilter, setInvestmentMinFilter] = useState('');
   const [investmentMaxFilter, setInvestmentMaxFilter] = useState('');
+  const [selectedRound, setSelectedRound] = useState<'screening' | 'pitching'>('screening');
+  const [roundStatuses, setRoundStatuses] = useState<Map<string, string>>(new Map());
   
   // Modal states
   const [csvModalOpen, setCsvModalOpen] = useState(false);
@@ -86,6 +89,24 @@ export default function StartupsList() {
         } else {
           setStartups(data || []);
         }
+
+        // Fetch round-specific statuses
+        const { data: roundStatusData, error: roundError } = await supabase
+          .from('startup_round_statuses')
+          .select(`
+            startup_id,
+            status,
+            rounds!inner(name)
+          `)
+          .eq('rounds.name', selectedRound);
+
+        if (!roundError && roundStatusData) {
+          const statusMap = new Map();
+          roundStatusData.forEach(item => {
+            statusMap.set(item.startup_id, item.status);
+          });
+          setRoundStatuses(statusMap);
+        }
       } catch (error) {
         console.error('Error fetching startups:', error);
       } finally {
@@ -94,7 +115,7 @@ export default function StartupsList() {
     };
 
     fetchStartups();
-  }, []);
+  }, [selectedRound]);
 
   // Filter startups based on search and filters
   useEffect(() => {
@@ -119,7 +140,10 @@ export default function StartupsList() {
     }
 
     if (statusFilter && statusFilter !== 'all') {
-      filtered = filtered.filter(startup => startup.status === statusFilter);
+      filtered = filtered.filter(startup => {
+        const roundStatus = roundStatuses.get(startup.id) || 'pending';
+        return roundStatus === statusFilter;
+      });
     }
 
     if (businessModelFilter && businessModelFilter !== 'all') {
@@ -168,7 +192,7 @@ export default function StartupsList() {
   }, [
     startups, searchTerm, industryFilter, stageFilter, statusFilter, 
     businessModelFilter, verticalFilter, regionFilter, hasLinkedInFilter, 
-    investmentMinFilter, investmentMaxFilter
+    investmentMinFilter, investmentMaxFilter, roundStatuses, selectedRound
   ]);
 
   const formatFunding = (amount: number | null, currency: string | null = 'USD') => {
@@ -187,7 +211,7 @@ export default function StartupsList() {
   // Get unique values for filters
   const industries = [...new Set(startups.filter(s => s.industry).map(s => s.industry))];
   const stages = [...new Set(startups.filter(s => s.stage).map(s => s.stage))];
-  const statuses = [...new Set(startups.filter(s => s.status).map(s => s.status))];
+  const statuses = [...new Set(Array.from(roundStatuses.values()))];  // Use round-specific statuses
   const businessModels = [...new Set(startups.filter(s => s.business_model).map(s => s.business_model))];
   const allVerticals = startups.flatMap(s => s.verticals || []);
   const uniqueVerticals = [...new Set(allVerticals)];
@@ -425,6 +449,15 @@ export default function StartupsList() {
                 className="pl-10"
               />
             </div>
+            <Select value={selectedRound} onValueChange={(value: 'screening' | 'pitching') => setSelectedRound(value)}>
+              <SelectTrigger className="w-40">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="screening">Screening Round</SelectItem>
+                <SelectItem value="pitching">Pitching Round</SelectItem>
+              </SelectContent>
+            </Select>
             <Button variant="outline" onClick={() => setFiltersOpen(!filtersOpen)}>
               <Filter className="h-4 w-4 mr-2" />
               Filters
@@ -577,9 +610,11 @@ export default function StartupsList() {
                         {startup.name}
                       </CardTitle>
                       <div className="flex items-center gap-2">
-                        <Badge className={getStatusColor(startup.status)}>
-                          {startup.status?.replace('-', ' ') || 'pending'}
-                        </Badge>
+                        <StatusBadge 
+                          status={roundStatuses.get(startup.id) || 'pending'}
+                          roundName={selectedRound}
+                          showRoundContext={true}
+                        />
                         {isAdmin && (
                           <div className="flex gap-1">
                             <Button

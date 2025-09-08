@@ -1,16 +1,24 @@
 import { supabase } from "@/integrations/supabase/client";
 
-// Define what constitutes "active" entities for consistent counting
-const ACTIVE_STARTUP_STATUSES = ['under_review', 'selected'];
-
 /**
- * Get count of active startups (those in evaluation phases)
+ * Get count of active startups (those currently in any active round)
  */
 export const getActiveStartupsCount = async (): Promise<number> => {
+  // Get active round
+  const { data: activeRound } = await supabase
+    .from('rounds')
+    .select('id, name')
+    .eq('status', 'active')
+    .maybeSingle();
+    
+  if (!activeRound) return 0;
+  
+  // Count startups with 'selected' status in the active round
   const { count } = await supabase
-    .from('startups')
+    .from('startup_round_statuses')
     .select('*', { count: 'exact', head: true })
-    .in('status', ACTIVE_STARTUP_STATUSES);
+    .eq('round_id', activeRound.id)
+    .in('status', ['selected', 'under_review']);
   
   return count || 0;
 };
@@ -50,21 +58,26 @@ export const getTotalJurorsCount = async (): Promise<number> => {
 };
 
 /**
- * Get count of startups for a specific round
+ * Get count of startups for a specific round using round-specific statuses
  */
 export const getRoundStartupsCount = async (round: 'screening' | 'pitching'): Promise<number> => {
-  if (round === 'screening') {
-    // For screening, count active startups
-    return getActiveStartupsCount();
-  } else {
-    // For pitching, count shortlisted startups
-    const { count } = await supabase
-      .from('startups')
-      .select('*', { count: 'exact', head: true })
-      .eq('status', 'selected');
-      
-    return count || 0;
-  }
+  // Get round by name
+  const { data: roundData } = await supabase
+    .from('rounds')
+    .select('id')
+    .eq('name', round)
+    .maybeSingle();
+    
+  if (!roundData) return 0;
+  
+  // Count startups with active statuses in this specific round
+  const { count } = await supabase
+    .from('startup_round_statuses')
+    .select('*', { count: 'exact', head: true })
+    .eq('round_id', roundData.id)
+    .in('status', ['selected', 'under_review']);
+    
+  return count || 0;
 };
 
 // Keep the old function name for backward compatibility
@@ -111,6 +124,8 @@ export const getDashboardCounts = async () => {
  * Get counts specific to matchmaking workflow
  */
 export const getMatchmakingCounts = async (round: 'screening' | 'pitching') => {
+  const assignmentTable = round === 'screening' ? 'screening_assignments' : 'pitching_assignments';
+  
   const [
     roundStartups,
     activeJurors,
@@ -119,7 +134,7 @@ export const getMatchmakingCounts = async (round: 'screening' | 'pitching') => {
     getRoundStartupsCount(round),
     getActiveJurorsCount(),
     supabase
-      .from('screening_assignments')
+      .from(assignmentTable)
       .select('*', { count: 'exact', head: true })
       .then(({ count }) => count || 0)
   ]);

@@ -84,7 +84,6 @@ export const FunnelStage = ({
         <Button
           variant="ghost"
           onClick={onClick}
-          disabled={status === 'upcoming'}
           className={`p-6 h-auto w-full transition-all duration-200 ${styles.card}`}
         >
           <div className="flex flex-col items-start w-full space-y-3">
