@@ -781,8 +781,12 @@ export const Top30Selection = ({ currentRound, roundInfo, isReadOnly = false, on
             {/* Startup Rows */}
             <div className="space-y-2">
               {filteredAndSortedStartups.map((startup) => (
-                <div key={startup.id} className="grid grid-cols-12 gap-4 p-4 border rounded-lg hover:bg-muted/30 transition-colors">
-                  <div className="col-span-1 flex items-center justify-center">
+                <div 
+                  key={startup.id} 
+                  className="grid grid-cols-12 gap-4 p-4 border rounded-lg hover:bg-muted/30 transition-colors cursor-pointer"
+                  onClick={() => setSelectedForDetails(startup)}
+                >
+                  <div className="col-span-1 flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
                     <Checkbox
                       checked={startup.isSelected}
                       onCheckedChange={() => handleToggleSelection(startup.id)}
@@ -834,13 +838,16 @@ export const Top30Selection = ({ currentRound, roundInfo, isReadOnly = false, on
                     <StatusBadge status={startup.roundStatus} />
                   </div>
 
-                  <div className="col-span-1 flex items-center justify-center gap-1">
+                  <div className="col-span-1 flex items-center justify-center gap-1" onClick={(e) => e.stopPropagation()}>
                     {!isReadOnly && startup.roundStatus !== 'selected' && startup.roundStatus !== 'rejected' && (
                       <div className="flex gap-1">
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => handleIndividualSelect(startup.id)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleIndividualSelect(startup.id);
+                          }}
                           disabled={loading}
                           className="text-green-600 hover:text-green-700 hover:bg-green-50"
                         >
@@ -849,7 +856,10 @@ export const Top30Selection = ({ currentRound, roundInfo, isReadOnly = false, on
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => handleIndividualReject(startup.id)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleIndividualReject(startup.id);
+                          }}
                           disabled={loading}
                           className="text-red-600 hover:text-red-700 hover:bg-red-50"
                         >
@@ -860,7 +870,10 @@ export const Top30Selection = ({ currentRound, roundInfo, isReadOnly = false, on
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => setSelectedForDetails(startup)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedForDetails(startup);
+                      }}
                     >
                       <Eye className="w-4 h-4" />
                     </Button>
