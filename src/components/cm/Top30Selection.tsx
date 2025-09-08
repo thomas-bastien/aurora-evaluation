@@ -4,10 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { 
   Star,
   RefreshCw,
@@ -22,13 +23,16 @@ import {
   CheckCircle2,
   XCircle,
   Clock,
-  Filter
+  Filter,
+  CheckCircle,
+  AlertTriangle
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { StartupEvaluationModal } from "@/components/evaluation/StartupEvaluationModal";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { RoundStatusDisplay } from "@/components/common/RoundStatusDisplay";
 import { useToast } from "@/hooks/use-toast";
+import { useRounds, type Round } from "@/hooks/useRounds";
 
 interface StartupSelection {
   id: string;
@@ -59,10 +63,12 @@ interface Top30SelectionProps {
   isReadOnly?: boolean;
   onSelectionChange?: (count: number) => void;
   onSetConfirmCallback?: (callback: (() => Promise<void>) | null) => void;
+  roundInfo?: Round;
 }
 
-export const Top30Selection = ({ currentRound = 'screening', isReadOnly = false, onSelectionChange, onSetConfirmCallback }: Top30SelectionProps) => {
+export const Top30Selection = ({ currentRound = 'screening', isReadOnly = false, onSelectionChange, onSetConfirmCallback, roundInfo }: Top30SelectionProps) => {
   const { toast } = useToast();
+  const { completeRound, getRoundProgress, validateRoundCompletion } = useRounds();
   const [startups, setStartups] = useState<StartupSelection[]>([]);
   const [loading, setLoading] = useState(true);
   const [sortField, setSortField] = useState<'rank' | 'name' | 'averageScore'>('rank');
@@ -70,6 +76,10 @@ export const Top30Selection = ({ currentRound = 'screening', isReadOnly = false,
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'selected' | 'rejected' | 'under-review'>('all');
   const [selectedForDetails, setSelectedForDetails] = useState<StartupSelection | null>(null);
   const [evaluationModalStartup, setEvaluationModalStartup] = useState<any>(null);
+  const [showCompleteDialog, setShowCompleteDialog] = useState(false);
+  const [completing, setCompleting] = useState(false);
+  const [progress, setProgress] = useState<any>(null);
+  const [validation, setValidation] = useState<any>(null);
 
   // Keep a ref to the current startups for use in callbacks
   const startupsRef = useRef(startups);
@@ -77,6 +87,7 @@ export const Top30Selection = ({ currentRound = 'screening', isReadOnly = false,
 
   useEffect(() => {
     fetchStartupsForSelection();
+    loadRoundData();
   }, [currentRound]);
 
   useEffect(() => {
@@ -85,9 +96,41 @@ export const Top30Selection = ({ currentRound = 'screening', isReadOnly = false,
   }, [startups, onSelectionChange]);
 
   useEffect(() => {
-    onSetConfirmCallback?.(handleConfirmSelection);
-    return () => onSetConfirmCallback?.(null);
+    onSetConfirmCallback?.(null); // Remove the old callback since we handle it internally now
   }, [onSetConfirmCallback]);
+
+  const loadRoundData = async () => {
+    if (roundInfo?.status === 'active') {
+      const [progressData, validationData] = await Promise.all([
+        getRoundProgress(currentRound),
+        validateRoundCompletion(currentRound)
+      ]);
+      setProgress(progressData);
+      setValidation(validationData);
+    }
+  };
+
+  const handleCompleteRound = async () => {
+    setCompleting(true);
+    try {
+      console.log('Starting round completion process');
+      
+      // First confirm selections
+      await handleConfirmSelection();
+      
+      // Then complete the round
+      console.log('Completing round');
+      const success = await completeRound(currentRound);
+      if (success) {
+        setShowCompleteDialog(false);
+        console.log('Round completed successfully');
+      }
+    } catch (error) {
+      console.error('Error in round completion:', error);
+    } finally {
+      setCompleting(false);
+    }
+  };
 
   const handleConfirmSelection = useCallback(async () => {
     try {
@@ -444,7 +487,83 @@ export const Top30Selection = ({ currentRound = 'screening', isReadOnly = false,
               <RefreshCw className="w-4 h-4 mr-2" />
               Refresh
             </Button>
+            
+            {/* Confirm Selection Button */}
+            {roundInfo?.status === 'active' && !isReadOnly && (
+              <Dialog open={showCompleteDialog} onOpenChange={setShowCompleteDialog}>
+                <DialogTrigger asChild>
+                  <Button 
+                    disabled={selectedCount === 0 || !validation?.canComplete}
+                    size="default"
+                    className="bg-primary hover:bg-primary/90"
+                  >
+                    <CheckCircle className="w-4 h-4 mr-2" />
+                    Confirm Selection
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Confirm Selection & Complete Round</DialogTitle>
+                    <DialogDescription>
+                      <div className="space-y-4">
+                        <p>
+                          This will confirm your selection of <strong>{selectedCount} startups</strong> and complete the {currentRound} round.
+                        </p>
+                        
+                        <div className="bg-primary/10 p-3 rounded-md">
+                          <p className="text-sm font-medium text-primary">
+                            Selection Summary: {selectedCount} startups will advance to {currentRound === 'screening' ? 'pitching' : 'final selection'}
+                          </p>
+                        </div>
+                        
+                        <p>This action will:</p>
+                        <ul className="list-disc list-inside space-y-1 text-sm">
+                          <li>Update startup statuses (selected → 'shortlisted', unselected → 'rejected')</li>
+                          <li>Lock all {currentRound} evaluations and prevent further changes</li>
+                          <li>Mark the {currentRound} round as completed</li>
+                          {currentRound === 'screening' && <li>Activate the pitching round for selected startups</li>}
+                          {currentRound === 'pitching' && <li>Finalize the evaluation process</li>}
+                        </ul>
+                        
+                        <div className="p-3 bg-warning/10 rounded-md">
+                          <p className="text-sm font-medium text-warning-foreground">
+                            ⚠️ This action cannot be undone
+                          </p>
+                        </div>
+                      </div>
+                    </DialogDescription>
+                  </DialogHeader>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setShowCompleteDialog(false)}>
+                      Cancel
+                    </Button>
+                    <Button onClick={handleCompleteRound} disabled={completing}>
+                      {completing ? 'Processing...' : 'Confirm Selection & Complete Round'}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            )}
           </div>
+
+          {/* Round Validation Status */}
+          {roundInfo?.status === 'active' && validation && !validation.canComplete && (
+            <Alert className="mb-6">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>
+                <strong>Requirements not met:</strong> {validation.reason}
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {roundInfo?.status === 'active' && validation?.canComplete && (
+            <Alert className="border-success bg-success/5 mb-6">
+              <CheckCircle className="h-4 w-4 text-success" />
+              <AlertDescription className="text-foreground">
+                All requirements met! This round is ready to be completed.
+              </AlertDescription>
+            </Alert>
+          )}
 
           {/* Startup List */}
           <div className="space-y-3">

@@ -14,10 +14,8 @@ import {
   AlertCircle,
   Settings
 } from "lucide-react";
-import { WorkflowGuide } from "@/components/common/WorkflowGuide";
 import { EvaluationProgressView } from "./EvaluationProgressView";
 import { Top30Selection } from "./Top30Selection";
-import { RoundManagement } from "./RoundManagement";
 import type { Round } from "@/hooks/useRounds";
 
 interface StartupSelectionProps {
@@ -35,20 +33,6 @@ export const StartupSelection = ({ currentRound, roundInfo, isReadOnly }: Startu
 
   return (
     <div className="space-y-6">
-      {/* Workflow Guide */}
-      <WorkflowGuide userRole="admin" currentRound={roundName as 'screening' | 'pitching'} />
-
-      {/* Round Management Section - For Active and Completed Rounds */}
-      {(roundInfo?.status === 'active' || roundInfo?.status === 'completed') && (
-        <RoundManagement 
-          roundName={roundName} 
-          roundInfo={roundInfo} 
-          selectedStartupsCount={selectedStartupsCount}
-          onConfirmSelection={selectionCallback}
-        />
-      )}
-
-
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -107,6 +91,7 @@ export const StartupSelection = ({ currentRound, roundInfo, isReadOnly }: Startu
                 isReadOnly={isReadOnly}
                 onSelectionChange={setSelectedStartupsCount}
                 onSetConfirmCallback={setSelectionCallback}
+                roundInfo={roundInfo}
               />
             </TabsContent>
           </Tabs>
