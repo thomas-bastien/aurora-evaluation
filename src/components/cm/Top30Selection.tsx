@@ -696,7 +696,9 @@ export const Top30Selection = ({ currentRound = 'screening', isReadOnly = false,
       {evaluationModalStartup && (
         <StartupEvaluationModal
           startup={evaluationModalStartup}
+          open={!!evaluationModalStartup}
           onClose={() => setEvaluationModalStartup(null)}
+          onEvaluationUpdate={() => {}}
           currentRound={currentRound as 'screening' | 'pitching'}
         />
       )}
