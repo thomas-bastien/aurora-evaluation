@@ -63,21 +63,53 @@ export const ResultsCommunication = ({ currentRound }: ResultsCommunicationProps
       // Determine which evaluation table to use based on current round
       const evaluationTable = currentRound === 'screeningRound' ? 'screening_evaluations' : 'pitching_evaluations';
       
-      // Fetch all startups and their round-specific statuses
-      const { data: startupsData, error: startupsError } = await supabase
-        .from('startups')
-        .select(`
-          *,
-          ${evaluationTable}(
-            overall_score,
-            status,
-            strengths,
-            improvement_areas,
-            overall_notes
-          )
-        `);
-
-      if (startupsError) throw startupsError;
+      let startupsData;
+      
+      if (currentRound === 'pitchingRound') {
+        console.log('Pitching round: filtering for startups selected in screening round');
+        
+        // For pitching round, only fetch startups that were selected in screening
+        const { data, error } = await supabase
+          .from('startups')
+          .select(`
+            *,
+            ${evaluationTable}(
+              overall_score,
+              status,
+              strengths,
+              improvement_areas,
+              overall_notes
+            ),
+            startup_round_statuses!inner(
+              status,
+              rounds!inner(name)
+            )
+          `)
+          .eq('startup_round_statuses.rounds.name', 'screening')
+          .eq('startup_round_statuses.status', 'selected');
+        
+        if (error) throw error;
+        startupsData = data;
+      } else {
+        console.log('Screening round: showing all startups');
+        
+        // For screening round, fetch all startups
+        const { data, error } = await supabase
+          .from('startups')
+          .select(`
+            *,
+            ${evaluationTable}(
+              overall_score,
+              status,
+              strengths,
+              improvement_areas,
+              overall_notes
+            )
+          `);
+        
+        if (error) throw error;
+        startupsData = data;
+      }
 
       // Get round-specific statuses from startup_round_statuses table
       const { data: roundStatusesData, error: roundStatusError } = await supabase
@@ -96,6 +128,9 @@ export const ResultsCommunication = ({ currentRound }: ResultsCommunicationProps
       roundStatusesData?.forEach(rs => {
         roundStatusMap.set(rs.startup_id, rs.status);
       });
+
+      console.log(`Loaded ${startupsData?.length || 0} startups for ${currentRound} communication`);
+      console.log(`Found ${roundStatusesData?.length || 0} round statuses`);
 
       const resultsData: StartupResult[] = startupsData?.map(startup => {
         const evaluationKey = currentRound === 'screeningRound' ? 'screening_evaluations' : 'pitching_evaluations';
