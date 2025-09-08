@@ -114,24 +114,52 @@ export const EvaluationProgressView = ({ currentRound = 'screening' }: Evaluatio
 
       console.log('User role:', authTest?.role);
 
-      // Build query with status filtering for pitching round
-      let query = supabase.from('startups').select(`
-        *,
-        ${assignmentTable}!startup_id(id, status),
-        ${evaluationTable}!startup_id(
-          id,
-          overall_score,
-          status,
-          updated_at
-        )
-      `);
+      // Build query with filtering for pitching round
+      let startupsData, error;
       
-      // During pitching round, only show semifinalists (shortlisted startups)
       if (currentRound === 'pitching' || currentRound === 'pitchingRound') {
-        query = query.eq('status', 'shortlisted');
+        // For pitching round: ONLY show startups that were SELECTED in screening round
+        const { data, error: queryError } = await supabase
+          .from('startups')
+          .select(`
+            *,
+            ${assignmentTable}!startup_id(id, status),
+            ${evaluationTable}!startup_id(
+              id,
+              overall_score,
+              status,
+              updated_at
+            ),
+            startup_round_statuses!inner(
+              status,
+              rounds!inner(name)
+            )
+          `)
+          .eq('startup_round_statuses.rounds.name', 'screening')
+          .eq('startup_round_statuses.status', 'selected');
+        
+        startupsData = data;
+        error = queryError;
+        console.log('Filtering for pitching round: only startups selected in screening round');
+      } else {
+        // For screening round: show ALL startups
+        const { data, error: queryError } = await supabase
+          .from('startups')
+          .select(`
+            *,
+            ${assignmentTable}!startup_id(id, status),
+            ${evaluationTable}!startup_id(
+              id,
+              overall_score,
+              status,
+              updated_at
+            )
+          `);
+        
+        startupsData = data;
+        error = queryError;
+        console.log('Showing all startups for screening round');
       }
-      
-      const { data: startupsData, error } = await query;
 
       if (error) {
         console.error('Database query error:', error);
@@ -139,6 +167,7 @@ export const EvaluationProgressView = ({ currentRound = 'screening' }: Evaluatio
       }
 
       console.log('Raw startups data:', startupsData?.length, 'startups found');
+      console.log(`Showing ${startupsData?.length || 0} startups for ${currentRound}${(currentRound === 'pitching' || currentRound === 'pitchingRound') ? ' (selected in screening only)' : ' (all)'}`);
       console.log('Sample startup data:', startupsData?.[0]);
 
       let totalEvaluations = 0;

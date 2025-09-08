@@ -97,33 +97,71 @@ export const Top30Selection = ({ currentRound, roundInfo, isReadOnly = false, on
       
       console.log('Using tables:', { evaluationTable });
 
-      // Fetch startups with evaluation data and round-specific status
-      const { data: startupsData, error: startupsError } = await supabase
-        .from('startups')
-        .select(`
-          id,
-          name,
-          description,
-          verticals,
-          stage,
-          regions,
-          pitch_deck_url,
-          demo_url,
-          contact_email,
-          founder_names,
-          website,
-          status
-        `)
-        .order('name');
+      // Fetch startups with filtering for pitching round
+      let startupsData, startupsError;
+      
+      if (currentRound === 'pitching') {
+        // For pitching round: ONLY show startups that were SELECTED in screening round
+        const { data, error } = await supabase
+          .from('startups')
+          .select(`
+            id,
+            name,
+            description,
+            verticals,
+            stage,
+            regions,
+            pitch_deck_url,
+            demo_url,
+            contact_email,
+            founder_names,
+            website,
+            status,
+            startup_round_statuses!inner(
+              status,
+              rounds!inner(name)
+            )
+          `)
+          .eq('startup_round_statuses.rounds.name', 'screening')
+          .eq('startup_round_statuses.status', 'selected')
+          .order('name');
+        
+        startupsData = data;
+        startupsError = error;
+        console.log('Filtering for pitching round: only startups selected in screening round');
+      } else {
+        // For screening round: show ALL startups
+        const { data, error } = await supabase
+          .from('startups')
+          .select(`
+            id,
+            name,
+            description,
+            verticals,
+            stage,
+            regions,
+            pitch_deck_url,
+            demo_url,
+            contact_email,
+            founder_names,
+            website,
+            status
+          `)
+          .order('name');
+        
+        startupsData = data;
+        startupsError = error;
+        console.log('Showing all startups for screening round');
+      }
 
       if (startupsError) {
         console.error('Error fetching startups:', startupsError);
         throw startupsError;
       }
 
-      console.log(`Fetched ${startupsData?.length || 0} startups`);
+      console.log(`Fetched ${startupsData?.length || 0} startups${currentRound === 'pitching' ? ' (selected in screening only)' : ' (all)'}`);
 
-      // Fetch round-specific statuses
+      // Fetch round-specific statuses for the current round
       const { data: roundStatusData, error: roundStatusError } = await supabase
         .from('startup_round_statuses')
         .select(`
@@ -131,12 +169,15 @@ export const Top30Selection = ({ currentRound, roundInfo, isReadOnly = false, on
           status,
           rounds!inner(name)
         `)
-        .eq('rounds.name', currentRound);
+        .eq('rounds.name', currentRound)
+        .in('startup_id', startupsData?.map(s => s.id) || []);
 
       if (roundStatusError) {
         console.error('Error fetching round statuses:', roundStatusError);
         throw roundStatusError;
       }
+
+      console.log(`Fetched ${roundStatusData?.length || 0} round statuses for ${currentRound} round`);
 
       // Create a lookup for round statuses
       const statusLookup = roundStatusData?.reduce((acc, item) => {
