@@ -80,7 +80,7 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
       let startupsData, startupsError;
       
       if (currentRound === 'pitchingRound') {
-        // For pitching round: ONLY show startups with 'pending' status in startup_round_statuses for pitching round
+        // For pitching round: ONLY show startups that were SELECTED in screening round
         const { data, error } = await supabase
           .from('startups')
           .select(`
@@ -90,12 +90,12 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
               rounds!inner(name)
             )
           `)
-          .eq('startup_round_statuses.rounds.name', 'pitching')
-          .eq('startup_round_statuses.status', 'pending');
+          .eq('startup_round_statuses.rounds.name', 'screening')
+          .eq('startup_round_statuses.status', 'selected');
         
         startupsData = data;
         startupsError = error;
-        console.log('Filtering for pitching round: only startups with pending status in pitching round');
+        console.log('Filtering for pitching round: only startups selected in screening round');
       } else {
         // For screening round: show ALL startups regardless of status
         const { data, error } = await supabase.from('startups').select('*');
@@ -135,7 +135,7 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
         juror_name: (assignment.jurors as any).name,
       })) || [];
 
-      console.log(`Loaded ${startupsData?.length || 0} startups for ${currentRound}${currentRound === 'pitchingRound' ? ' (pending in pitching round only)' : ' (all statuses)'}`);
+      console.log(`Loaded ${startupsData?.length || 0} startups for ${currentRound}${currentRound === 'pitchingRound' ? ' (selected in screening only)' : ' (all statuses)'}`);
       console.log(`Loaded ${jurorsData?.length || 0} jurors`);
       console.log(`Loaded ${mappedAssignments.length} existing assignments`);
 
@@ -348,7 +348,7 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
                 <span className="font-medium text-warning">Incomplete Data Warning</span>
               </div>
               <p className="text-sm text-muted-foreground">
-                {startups.length === 0 && currentRound === 'pitchingRound' && "No startups found for pitching round. Please confirm startup selection in Screening Round first. "}
+                {startups.length === 0 && currentRound === 'pitchingRound' && "No startups found for pitching round. Only startups selected in Screening Round will appear here. "}
                 {startups.length === 0 && currentRound === 'screeningRound' && "No startups found for this round. "}
                 {jurors.length === 0 && "No jurors available for assignment. "}
                 Please ensure all required data is loaded before proceeding with assignments.
