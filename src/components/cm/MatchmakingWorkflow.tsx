@@ -8,6 +8,7 @@ import { AlertCircle, Building2, Users, CheckCircle2, Eye, Check } from "lucide-
 import { toast } from "sonner";
 import { StartupAssignmentModal } from "@/components/matchmaking/StartupAssignmentModal";
 import { AssignmentSummary } from "@/components/matchmaking/AssignmentSummary";
+import { StatusBadge } from "@/components/common/StatusBadge";
 
 interface Startup {
   id: string;
@@ -19,6 +20,7 @@ interface Startup {
   founder_names: string[];
   contact_email?: string;
   status?: string;
+  roundStatus?: string;
 }
 
 interface Juror {
@@ -106,6 +108,26 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
 
       if (startupsError) throw startupsError;
 
+      // Fetch round-specific statuses for the current round
+      const currentRoundName = currentRound === 'screeningRound' ? 'screening' : 'pitching';
+      const { data: roundStatusData, error: roundStatusError } = await supabase
+        .from('startup_round_statuses')
+        .select(`
+          startup_id,
+          status,
+          rounds!inner(name)
+        `)
+        .eq('rounds.name', currentRoundName)
+        .in('startup_id', startupsData?.map(s => s.id) || []);
+
+      if (roundStatusError) throw roundStatusError;
+
+      // Create a lookup for round-specific statuses
+      const roundStatusLookup = roundStatusData?.reduce((acc, item) => {
+        acc[item.startup_id] = item.status;
+        return acc;
+      }, {} as Record<string, string>) || {};
+
       // Fetch jurors/VCs
       const { data: jurorsData, error: jurorsError } = await supabase
         .from('jurors')
@@ -139,10 +161,13 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
       console.log(`Loaded ${jurorsData?.length || 0} jurors`);
       console.log(`Loaded ${mappedAssignments.length} existing assignments`);
 
-      // Sort startups: non-rejected first (by name), then rejected (by name)
-      const sortedStartups = (startupsData || []).sort((a, b) => {
-        const aRejected = a.status === 'rejected';
-        const bRejected = b.status === 'rejected';
+      // Sort startups: rejected first (by name), then others (by name)
+      const sortedStartups = (startupsData || []).map(startup => ({
+        ...startup,
+        roundStatus: roundStatusLookup[startup.id] || 'pending'
+      })).sort((a, b) => {
+        const aRejected = a.roundStatus === 'rejected';
+        const bRejected = b.roundStatus === 'rejected';
         
         if (aRejected !== bRejected) {
           return aRejected ? 1 : -1; // Rejected startups go to bottom
@@ -387,7 +412,7 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
                   <p className="text-2xl font-bold">
                     {startups.filter(startup => {
                       const requiredAssignments = currentRound === 'pitchingRound' ? 2 : 3;
-                      return startup.status !== 'rejected' && getStartupAssignmentCount(startup.id) >= requiredAssignments;
+                      return startup.roundStatus !== 'rejected' && getStartupAssignmentCount(startup.id) >= requiredAssignments;
                     }).length}
                   </p>
                   <p className="text-sm text-muted-foreground">Fully Assigned</p>
@@ -402,7 +427,7 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
                   <p className="text-2xl font-bold">
                     {startups.filter(startup => {
                       const requiredAssignments = currentRound === 'pitchingRound' ? 2 : 3;
-                      return startup.status !== 'rejected' && getStartupAssignmentCount(startup.id) < requiredAssignments;
+                      return startup.roundStatus !== 'rejected' && getStartupAssignmentCount(startup.id) < requiredAssignments;
                     }).length}
                   </p>
                   <p className="text-sm text-muted-foreground">Need Assignment</p>
@@ -460,7 +485,7 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
 
               return (
                 <Card key={startup.id} className={`transition-all ${
-                  startup.status === 'rejected' 
+                  startup.roundStatus === 'rejected' 
                     ? 'bg-destructive/5 border-destructive/20' 
                     : isFullyAssigned 
                       ? 'bg-success/5 border-success/20' 
@@ -478,22 +503,8 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
                             {startup.stage || "No Stage"}
                           </Badge>
                           
-                          {/* Status context badge */}
-                          {startup.status === 'rejected' && (
-                            <Badge variant="destructive" className="bg-red-100 text-red-800 border-red-300">
-                              Rejected
-                            </Badge>
-                          )}
-                          {currentRound === 'screeningRound' && startup.status === 'selected' && (
-                            <Badge variant="default" className="bg-green-100 text-green-800 border-green-300">
-                              Selected
-                            </Badge>
-                          )}
-                          {currentRound === 'pitchingRound' && startup.status === 'pending' && (
-                            <Badge variant="outline" className="border-yellow-300 text-yellow-800">
-                              Historical - Still Pending
-                            </Badge>
-                          )}
+                          {/* Round-specific status badge using StatusBadge component */}
+                          <StatusBadge status={startup.roundStatus || 'pending'} roundName={currentRound === 'screeningRound' ? 'screening' : 'pitching'} />
                           
                           <Badge variant={isFullyAssigned ? "default" : "destructive"}>
                             {assignmentCount}/{requiredAssignments} Jurors Assigned
@@ -509,30 +520,19 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
 
                       <div className="flex flex-col gap-2 ml-4">
                         {(() => {
-                          // Determine if startup should be assignable based on status and round
-                          const isScreeningRound = currentRound === 'screeningRound';
-                          const isRejected = startup.status === 'rejected';
-                          const isSelected = startup.status === 'selected';
+                          // Determine if startup should be assignable based on round-specific status
+                          const isRejected = startup.roundStatus === 'rejected';
                           
                           if (isRejected) {
                             return (
                               <div className="text-center">
                                 <p className="text-sm text-muted-foreground mb-1">Cannot assign jurors</p>
-                                <p className="text-xs text-muted-foreground">Startup was rejected</p>
+                                <p className="text-xs text-muted-foreground">Startup was rejected in this round</p>
                               </div>
                             );
                           }
                           
-                          if (isScreeningRound && isSelected) {
-                            return (
-                              <div className="text-center">
-                                <p className="text-sm text-muted-foreground mb-1">Cannot assign jurors</p>
-                                <p className="text-xs text-muted-foreground">Already selected for pitching round</p>
-                              </div>
-                            );
-                          }
-                          
-                          // Startup is assignable
+                          // Startup is assignable for any non-rejected status
                           return (
                             <Button
                               onClick={() => handleAssignStartup(startup)}

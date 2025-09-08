@@ -167,7 +167,26 @@ export const EvaluationProgressView = ({ currentRound = 'screening' }: Evaluatio
         throw error;
       }
 
-      console.log('Raw startups data:', startupsData?.length, 'startups found');
+      // Get round-specific statuses from startup_round_statuses table
+      const currentRoundName = currentRound === 'screening' ? 'screening' : 'pitching';
+      const { data: roundStatusesData, error: roundStatusError } = await supabase
+        .from('startup_round_statuses')
+        .select(`
+          startup_id,
+          status,
+          rounds!inner(name)
+        `)
+        .eq('rounds.name', currentRoundName);
+
+      if (roundStatusError) throw roundStatusError;
+
+      // Create a map of startup IDs to their round-specific statuses
+      const roundStatusMap = new Map();
+      roundStatusesData?.forEach(rs => {
+        roundStatusMap.set(rs.startup_id, rs.status);
+      });
+
+      console.log(`Raw startups data:`, startupsData?.length, 'startups found');
       console.log(`Showing ${startupsData?.length || 0} startups for ${currentRound}${(currentRound === 'pitching' || currentRound === 'pitchingRound') ? ' (selected in screening only)' : ' (all)'}`);
       console.log('Sample startup data:', startupsData?.[0]);
 
@@ -202,8 +221,8 @@ export const EvaluationProgressView = ({ currentRound = 'screening' }: Evaluatio
         
         const totalScore = scores.reduce((sum, score) => sum + score, 0);
         
-        // Use the actual startup status from the database instead of evaluation progress
-        const businessStatus = startup.status || 'under-review';
+        // Use the actual startup round status from the database instead of evaluation progress
+        const roundStatus = roundStatusMap.get(startup.id) || 'pending';
         
         // Keep evaluation progress as a separate indicator
         let evaluationStatus: 'completed' | 'in-progress' | 'pending' = 'pending';
@@ -229,7 +248,7 @@ export const EvaluationProgressView = ({ currentRound = 'screening' }: Evaluatio
           averageScore,
           totalScore,
           rank: 0, // Will be set after sorting
-          status: businessStatus as any, // Use actual startup business status
+          status: roundStatus as any, // Use round-specific startup status
           evaluationStatus, // Keep evaluation progress separately
           lastUpdated
         };
@@ -325,7 +344,8 @@ export const EvaluationProgressView = ({ currentRound = 'screening' }: Evaluatio
   };
 
   const getStatusBadge = (status: string) => {
-    return <StatusBadge status={status} />;
+    const currentRoundName = currentRound === 'screening' ? 'screening' : 'pitching';
+    return <StatusBadge status={status} roundName={currentRoundName} />;
   };
 
   const viewStartupEvaluations = async (startupId: string) => {
