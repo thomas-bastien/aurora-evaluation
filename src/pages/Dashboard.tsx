@@ -250,6 +250,7 @@ const Dashboard = () => {
                     statusText={`${dashboardData.screeningStats.startupsUploaded} active startups, ${dashboardData.screeningStats.jurorsUploaded} active jurors uploaded`}
                     icon={Upload}
                     onClick={() => navigate('/startups')}
+                    role="admin"
                   />
                   <FunnelStage
                     title="Matchmaking (Screening)"
@@ -264,6 +265,7 @@ const Dashboard = () => {
                     statusText={`${Math.round((dashboardData.screeningStats.matchmakingProgress / 100) * dashboardData.activeStartups)}/${dashboardData.activeStartups} startups covered`}
                     icon={Network}
                     onClick={() => navigate('/selection/matchmaking?round=screening')}
+                    role="admin"
                   />
                   <FunnelStage
                     title="Evaluations (Screening)"
@@ -278,6 +280,7 @@ const Dashboard = () => {
                     statusText={`${dashboardData.screeningStats.evaluationsProgress}% completed`}
                     icon={Star}
                     onClick={() => navigate('/selection?round=screening')}
+                    role="admin"
                   />
                    <FunnelStage
                      title="Selection – Selected Startups"
@@ -291,6 +294,7 @@ const Dashboard = () => {
                     statusText={dashboardData.screeningStats.selectionComplete ? 'Complete' : 'Pending'}
                     icon={CheckCircle}
                      onClick={() => navigate('/selection?round=screening')}
+                     role="admin"
                   />
                   <FunnelStage
                     title="Results Communication (Screening)"
@@ -304,6 +308,7 @@ const Dashboard = () => {
                     statusText={dashboardData.screeningStats.resultsComplete ? 'Complete' : 'Pending'}
                     icon={MessageSquare}
                     onClick={() => navigate('/selection?round=screening')}
+                    role="admin"
                     isLast
                   />
                 </div>
@@ -346,6 +351,7 @@ const Dashboard = () => {
                     statusText={`${Math.round((dashboardData.pitchingStats.matchmakingProgress / 100) * dashboardData.activeStartups)} startups covered`}
                     icon={Network}
                     onClick={() => navigate('/selection/matchmaking?round=pitching')}
+                    role="admin"
                   />
                   <FunnelStage
                     title="Pitch Calls"
@@ -359,6 +365,7 @@ const Dashboard = () => {
                     statusText={`${dashboardData.pitchingStats.pitchCallsScheduled} scheduled / ${dashboardData.pitchingStats.pitchCallsCompleted} completed`}
                     icon={Phone}
                     onClick={() => navigate('/selection?round=pitching')}
+                    role="admin"
                   />
                   <FunnelStage
                     title="Evaluations (Pitching)"
@@ -373,6 +380,7 @@ const Dashboard = () => {
                     statusText={`${dashboardData.pitchingStats.evaluationsProgress}% submitted`}
                     icon={Star}
                     onClick={() => navigate('/selection?round=pitching')}
+                    role="admin"
                   />
                   <FunnelStage
                     title="Selection – Finalists"
@@ -386,6 +394,7 @@ const Dashboard = () => {
                     statusText={dashboardData.pitchingStats.finalSelectionComplete ? 'Complete' : 'Pending'}
                     icon={TrendingUp}
                     onClick={() => navigate('/selection?round=pitching')}
+                    role="admin"
                   />
                   <FunnelStage
                     title="Results Communication & Final Report"
@@ -399,6 +408,7 @@ const Dashboard = () => {
                     statusText={dashboardData.pitchingStats.finalResultsComplete ? 'Complete' : 'Pending'}
                     icon={FileText}
                     onClick={() => navigate('/selection?round=pitching')}
+                    role="admin"
                     isLast
                   />
                 </div>

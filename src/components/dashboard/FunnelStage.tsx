@@ -17,6 +17,7 @@ interface FunnelStageProps {
   icon: LucideIcon;
   onClick: () => void;
   isLast?: boolean;
+  role?: 'admin' | 'vc';
 }
 
 export const FunnelStage = ({
@@ -28,7 +29,8 @@ export const FunnelStage = ({
   statusText,
   icon: Icon,
   onClick,
-  isLast = false
+  isLast = false,
+  role = 'vc'
 }: FunnelStageProps) => {
   const getStatusStyles = () => {
     switch (status) {
@@ -54,7 +56,12 @@ export const FunnelStage = ({
           badge: 'bg-destructive text-destructive-foreground'
         };
       default: // upcoming
-        return {
+        return role === 'admin' ? {
+          card: 'bg-background border-border hover:bg-muted/20',
+          icon: 'bg-muted/20 text-foreground',
+          title: 'text-foreground',
+          badge: 'bg-muted/20 text-foreground'
+        } : {
           card: 'bg-muted/30 border-border hover:bg-muted/50',
           icon: 'bg-muted text-muted-foreground',
           title: 'text-muted-foreground',
