@@ -57,8 +57,8 @@ const Selection = () => {
   // Get current round info
   const currentRoundName = currentRound === 'screeningRound' ? 'screening' : 'pitching';
   const currentRoundInfo = rounds.find(r => r.name === currentRoundName);
-  // Allow modifications to any round that isn't completed
-  const isReadOnly = currentRoundInfo?.status === 'completed';
+  // Allow modifications to active and completed rounds (not just active)
+  const isReadOnly = currentRoundInfo?.status === 'pending';
   return <div className="min-h-screen bg-background">
       <DashboardHeader />
       

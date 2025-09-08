@@ -62,7 +62,19 @@ export const useRounds = () => {
 
       if (completeError) throw completeError;
 
-      // Note: Removed automatic activation of next round to allow multiple active rounds
+      // Activate next round if it exists
+      const nextRound = getNextRound(roundName);
+      if (nextRound) {
+        const { error: activateError } = await supabase
+          .from('rounds')
+          .update({ 
+            status: 'active',
+            started_at: new Date().toISOString()
+          })
+          .eq('name', nextRound);
+
+        if (activateError) throw activateError;
+      }
 
       await fetchRounds();
       toast.success(`${roundName} round completed successfully`);
@@ -77,16 +89,10 @@ export const useRounds = () => {
   const validateRoundCompletion = async (roundName: string) => {
     try {
       if (roundName === 'screening') {
-        // Check if startup selection is made using startup_round_statuses
-        const screeningRound = rounds.find(r => r.name === 'screening');
-        if (!screeningRound) {
-          return { canComplete: false, reason: 'Screening round not found' };
-        }
-
+        // Check if startup selection is made
         const { count } = await supabase
-          .from('startup_round_statuses')
+          .from('startups')
           .select('*', { count: 'exact', head: true })
-          .eq('round_id', screeningRound.id)
           .eq('status', 'selected');
 
         if (!count || count === 0) {
@@ -112,14 +118,13 @@ export const useRounds = () => {
       }
 
       if (roundName === 'pitching') {
-        // Check pitching round requirements using startup_round_statuses  
-        const pitchingRound = rounds.find(r => r.name === 'pitching');
-        if (!pitchingRound) {
-          return { canComplete: false, reason: 'Pitching round not found' };
-        }
+        // Check pitching round requirements
+        const { count } = await supabase
+          .from('startups')
+          .select('*', { count: 'exact', head: true })
+          .in('status', ['finalist', 'winner']);
 
-        // Allow completion without strict requirements for now
-        return { canComplete: true, reason: '' };
+        return { canComplete: true, reason: '' }; // Allow completion without strict requirements for now
       }
 
       return { canComplete: false, reason: 'Unknown round' };
@@ -139,7 +144,7 @@ export const useRounds = () => {
 
   const canModifyRound = (roundName: string): boolean => {
     const round = rounds.find(r => r.name === roundName);
-    return round?.status !== 'completed';
+    return round?.status === 'active';
   };
 
   const getRoundProgress = async (roundName: string) => {
