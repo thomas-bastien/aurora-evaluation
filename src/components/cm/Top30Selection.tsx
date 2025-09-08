@@ -10,7 +10,6 @@ import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { 
-  Star,
   RefreshCw,
   ChevronUp,
   ChevronDown,
@@ -20,11 +19,9 @@ import {
   Award,
   TrendingUp,
   ArrowUpDown,
-  CheckCircle2,
   XCircle,
   Clock,
   Filter,
-  CheckCircle,
   AlertTriangle
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -311,62 +308,7 @@ export const Top30Selection = ({ currentRound, roundInfo, isReadOnly = false, on
     }
   }, [startups, currentRound, toast, fetchStartupsForSelection]);
 
-  const handleIndividualReject = useCallback(async (startupId: string) => {
-    try {
-      setLoading(true);
-      
-      await supabase.rpc('update_startup_status_for_round', {
-        startup_uuid: startupId,
-        round_name: currentRound,
-        new_status: 'rejected'
-      });
-      
-      const startup = startups.find(s => s.id === startupId);
-      toast({ title: "Success", description: `Successfully rejected ${startup?.name || 'startup'}` });
-      
-      // Refresh the data to show updated statuses
-      await fetchStartupsForSelection();
-      
-    } catch (error: any) {
-      console.error('Error rejecting startup:', error);
-      toast({ title: "Error", description: `Failed to reject startup: ${error.message}`, variant: "destructive" });
-    } finally {
-      setLoading(false);
-    }
-  }, [currentRound, startups, toast, fetchStartupsForSelection]);
 
-  const handleIndividualSelect = useCallback(async (startupId: string) => {
-    try {
-      setLoading(true);
-      
-      await supabase.rpc('update_startup_status_for_round', {
-        startup_uuid: startupId,
-        round_name: currentRound,
-        new_status: 'selected'
-      });
-
-      // For screening round, also set pitching status to pending
-      if (currentRound === 'screening') {
-        await supabase.rpc('update_startup_status_for_round', {
-          startup_uuid: startupId,
-          round_name: 'pitching',
-          new_status: 'pending'
-        });
-      }
-      
-      const startup = startups.find(s => s.id === startupId);
-      toast({ title: "Success", description: `Successfully selected ${startup?.name || 'startup'}` });
-      
-      // Refresh the data to show updated statuses
-      await fetchStartupsForSelection();
-      
-    } catch (error: any) {
-      console.error('Error selecting startup:', error);
-      toast({ title: "Error", description: `Failed to select startup: ${error.message}`, variant: "destructive" });
-    } finally {
-      setLoading(false);
-    }
-  }, [currentRound, toast, fetchStartupsForSelection]);
 
   const handleConfirmSelection = useCallback(async () => {
     try {
@@ -418,23 +360,6 @@ export const Top30Selection = ({ currentRound, roundInfo, isReadOnly = false, on
     }
   }, [currentRound, toast, fetchStartupsForSelection]);
 
-  const handleBulkSelectTopRanked = useCallback(() => {
-    if (isReadOnly) return;
-    
-    const topCount = Math.min(30, startups.length);
-    const updatedStartups = startups.map((startup, index) => ({
-      ...startup,
-      isSelected: index < topCount
-    }));
-    
-    setStartups(updatedStartups);
-    startupsRef.current = updatedStartups;
-    
-    const selectedCount = updatedStartups.filter(s => s.isSelected).length;
-    onSelectionChange?.(selectedCount);
-    
-    toast({ title: "Success", description: `Auto-selected top ${selectedCount} startups` });
-  }, [startups, isReadOnly, onSelectionChange, toast]);
 
   const handleToggleSelection = useCallback((startupId: string) => {
     if (isReadOnly) return;
@@ -559,7 +484,7 @@ export const Top30Selection = ({ currentRound, roundInfo, isReadOnly = false, on
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Star className="w-5 h-5" />
+            <Users className="w-5 h-5" />
             {currentRound === 'screening' ? 'Select Startups for Pitching Round' : 'Select Final Startups'}
           </CardTitle>
           <CardDescription>
@@ -606,13 +531,6 @@ export const Top30Selection = ({ currentRound, roundInfo, isReadOnly = false, on
 
           {/* Action Buttons */}
           <div className="flex gap-2 mb-6">
-            <Button 
-              onClick={handleBulkSelectTopRanked} 
-              disabled={isReadOnly || startups.length === 0}
-            >
-              <Star className="w-4 h-4 mr-2" />
-              Auto-Select Top 30
-            </Button>
             <Button 
               variant="outline" 
               onClick={handleClearSelections} 
@@ -676,7 +594,7 @@ export const Top30Selection = ({ currentRound, roundInfo, isReadOnly = false, on
                     size="default"
                     className="bg-primary hover:bg-primary/90"
                   >
-                    <CheckCircle className="w-4 h-4 mr-2" />
+                    <ArrowUpDown className="w-4 h-4 mr-2" />
                     Confirm Selection
                   </Button>
                 </DialogTrigger>
@@ -838,35 +756,7 @@ export const Top30Selection = ({ currentRound, roundInfo, isReadOnly = false, on
                     <StatusBadge status={startup.roundStatus} />
                   </div>
 
-                  <div className="col-span-1 flex items-center justify-center gap-1" onClick={(e) => e.stopPropagation()}>
-                    {!isReadOnly && startup.roundStatus !== 'selected' && startup.roundStatus !== 'rejected' && (
-                      <div className="flex gap-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleIndividualSelect(startup.id);
-                          }}
-                          disabled={loading}
-                          className="text-green-600 hover:text-green-700 hover:bg-green-50"
-                        >
-                          <CheckCircle className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleIndividualReject(startup.id);
-                          }}
-                          disabled={loading}
-                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                        >
-                          <XCircle className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    )}
+                  <div className="col-span-1 flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
                     <Button
                       variant="ghost"
                       size="sm"
