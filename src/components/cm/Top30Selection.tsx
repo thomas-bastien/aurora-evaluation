@@ -963,7 +963,7 @@ export const Top30Selection = ({ currentRound, roundInfo, isReadOnly = false, on
             ...evaluationModalStartup,
             industry: '',
             location: evaluationModalStartup.regions?.[0] || '',
-            evaluation_status: 'pending'
+            evaluation_status: 'not_started'
           }}
           open={!!evaluationModalStartup}
           onClose={() => setEvaluationModalStartup(null)}

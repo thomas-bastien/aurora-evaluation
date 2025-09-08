@@ -90,7 +90,6 @@ export const StartupSelection = ({ currentRound, roundInfo, isReadOnly }: Startu
                 currentRound={roundName} 
                 isReadOnly={isReadOnly}
                 onSelectionChange={setSelectedStartupsCount}
-                onSetConfirmCallback={setSelectionCallback}
                 roundInfo={roundInfo}
               />
             </TabsContent>
