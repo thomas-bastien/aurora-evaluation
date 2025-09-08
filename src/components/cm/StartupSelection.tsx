@@ -14,6 +14,7 @@ import {
   AlertCircle,
   Settings
 } from "lucide-react";
+import { WorkflowGuide } from "@/components/common/WorkflowGuide";
 import { EvaluationProgressView } from "./EvaluationProgressView";
 import { Top30Selection } from "./Top30Selection";
 import { RoundManagement } from "./RoundManagement";
@@ -34,6 +35,9 @@ export const StartupSelection = ({ currentRound, roundInfo, isReadOnly }: Startu
 
   return (
     <div className="space-y-6">
+      {/* Workflow Guide */}
+      <WorkflowGuide userRole="admin" currentRound={roundName as 'screening' | 'pitching'} />
+
       {/* Round Management Section - For Active and Completed Rounds */}
       {(roundInfo?.status === 'active' || roundInfo?.status === 'completed') && (
         <RoundManagement 
@@ -51,13 +55,18 @@ export const StartupSelection = ({ currentRound, roundInfo, isReadOnly }: Startu
             <div>
               <CardTitle className="flex items-center gap-2">
                 <Star className="w-5 h-5" />
-                Startup Selection - {currentRound === 'screeningRound' ? 'Screening Round' : 'Pitching Round'}
+                Make Selections - {currentRound === 'screeningRound' ? 'Screening Round' : 'Pitching Round'}
               </CardTitle>
               <CardDescription>
-                {currentRound === 'screeningRound' 
-                  ? 'Review evaluation results and select startups for Pitching Round'
-                  : 'Review pitch results and make final selections'
-                }
+                <div className="space-y-1">
+                  <p><strong>Community Manager Workflow:</strong> Review juror evaluations and make selection decisions.</p>
+                  <p className="text-sm">
+                    {currentRound === 'screeningRound' 
+                      ? 'Review screening evaluation scores and feedback from jurors. Select which startups advance to the Pitching Round.'
+                      : 'Review pitching evaluation results from jurors after pitch calls. Make final startup selections.'
+                    }
+                  </p>
+                </div>
               </CardDescription>
             </div>
             <div className="flex items-center gap-2">

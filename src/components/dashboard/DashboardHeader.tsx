@@ -50,12 +50,22 @@ export const DashboardHeader = () => {
                       <ChevronDown className="w-4 h-4" />
                     </button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" className="bg-card border border-border shadow-elegant">
+                  <DropdownMenuContent align="start" className="bg-card border border-border shadow-elegant w-80">
+                    <div className="px-3 py-2 border-b border-border">
+                      <p className="text-xs font-medium text-primary">Community Manager Workflow</p>
+                      <p className="text-xs text-muted-foreground">Manage matchmaking, monitor progress, make selections</p>
+                    </div>
                     <DropdownMenuItem onClick={() => navigate('/selection?round=screening')} className="cursor-pointer">
-                      Screening
+                      <div className="flex flex-col">
+                        <span>Screening Round</span>
+                        <span className="text-xs text-muted-foreground">Assign jurors → Monitor evaluations → Select for pitching</span>
+                      </div>
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => navigate('/selection?round=pitching')} className="cursor-pointer">
-                      Pitching
+                      <div className="flex flex-col">
+                        <span>Pitching Round</span>
+                        <span className="text-xs text-muted-foreground">Re-assign jurors → Monitor pitch calls → Final selections</span>
+                      </div>
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -70,12 +80,22 @@ export const DashboardHeader = () => {
                       <ChevronDown className="w-4 h-4" />
                     </button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" className="bg-card border border-border shadow-elegant">
+                  <DropdownMenuContent align="start" className="bg-card border border-border shadow-elegant w-80">
+                    <div className="px-3 py-2 border-b border-border">
+                      <p className="text-xs font-medium text-primary">Juror Workflow</p>
+                      <p className="text-xs text-muted-foreground">Evaluate assigned startups only - no selection decisions</p>
+                    </div>
                     <DropdownMenuItem onClick={() => navigate('/evaluate?round=screening')} className="cursor-pointer">
-                      Screening Evaluations
+                      <div className="flex flex-col">
+                        <span>Screening Evaluations</span>
+                        <span className="text-xs text-muted-foreground">Review pitch decks → Score & provide feedback</span>
+                      </div>
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => navigate('/evaluate?round=pitching')} className="cursor-pointer">
-                      Pitching Evaluations
+                      <div className="flex flex-col">
+                        <span>Pitching Evaluations</span>
+                        <span className="text-xs text-muted-foreground">Join pitch calls → Evaluate presentations</span>
+                      </div>
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>

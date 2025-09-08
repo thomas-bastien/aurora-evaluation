@@ -38,7 +38,7 @@ interface StartupEvaluationModalProps {
   open: boolean;
   onClose: () => void;
   onEvaluationUpdate: () => void;
-  mode?: 'view' | 'edit'; // Add mode prop to distinguish between view and edit
+  mode?: 'view' | 'edit'; // Juror Evaluation: view completed evaluations or edit draft/new evaluations
   currentRound: 'screening' | 'pitching';
 }
 interface EvaluationCriterion {

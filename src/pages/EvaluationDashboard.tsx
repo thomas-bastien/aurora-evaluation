@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { StartupsEvaluationList } from "@/components/evaluation/StartupsEvaluationList";
 import { EvaluationStats } from "@/components/evaluation/EvaluationStats";
+import { WorkflowGuide } from "@/components/common/WorkflowGuide";
 import { Search, Filter, CheckCircle, Clock, AlertCircle } from "lucide-react";
 interface AssignedStartup {
   id: string;
@@ -180,14 +181,25 @@ const EvaluationDashboard = () => {
       <DashboardHeader />
       
       <main className="max-w-7xl mx-auto px-6 py-8">
+        {/* Workflow Guide */}
+        <WorkflowGuide userRole="vc" currentRound={currentRound} />
+
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-foreground mb-2">
-            {currentRound === 'screening' ? 'Screening' : 'Pitching'} Round Evaluations
+            {currentRound === 'screening' ? 'Screening' : 'Pitching'} Round - Evaluate Startups
           </h1>
-          <p className="text-lg text-muted-foreground mb-6">
-            Review and evaluate the startups assigned to you for the {currentRound} round
-          </p>
+          <div className="space-y-2">
+            <p className="text-lg text-muted-foreground">
+              <strong>Juror Workflow:</strong> Evaluate the startups assigned to you by Community Managers.
+            </p>
+            <p className="text-sm text-muted-foreground">
+              {currentRound === 'screening' 
+                ? 'Complete screening evaluations by reviewing pitch decks and providing scores and feedback for each assigned startup.'
+                : 'Join scheduled pitch calls and complete pitching evaluations after each presentation to help determine final selections.'
+              }
+            </p>
+          </div>
           
           {/* Progress Overview */}
           <Card className="mb-6">

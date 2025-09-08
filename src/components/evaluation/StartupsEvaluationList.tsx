@@ -92,11 +92,12 @@ export const StartupsEvaluationList = ({ startups, loading, onEvaluationUpdate, 
       <Card>
         <CardContent className="p-8 text-center">
           <Building2 className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-          <h3 className="text-lg font-semibold mb-2">No Startups Assigned</h3>
-          <p className="text-muted-foreground">
-            You don't have any startups assigned for evaluation yet. 
-            Please contact your administrator if you believe this is an error.
-          </p>
+          <h3 className="text-lg font-semibold mb-2">No Startups Assigned for Evaluation</h3>
+          <div className="space-y-2 text-muted-foreground">
+            <p><strong>Juror Workflow:</strong> You evaluate startups assigned to you by Community Managers.</p>
+            <p>You don't have any startups assigned for evaluation in this round yet. The Community Manager will assign startups to you through the matchmaking process.</p>
+            <p className="text-sm">Contact your administrator if you believe this is an error.</p>
+          </div>
         </CardContent>
       </Card>
     );

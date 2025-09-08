@@ -313,10 +313,18 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Users className="w-5 h-5" />
-            Matchmaking - {roundTitle}
+            Assign Jurors - {roundTitle}
           </CardTitle>
           <CardDescription>
-            {roundDescription}
+            <div className="space-y-1">
+              <p><strong>Community Manager Workflow:</strong> Assign jurors to startups for evaluation.</p>
+              <p className="text-sm">
+                {currentRound === 'screeningRound' 
+                  ? 'Assign 3 jurors to each startup. Jurors will evaluate pitch decks and provide scores/feedback.' 
+                  : 'Re-assign 2-3 jurors to each startup selected for Pitching Round. Jurors will join pitch calls and evaluate presentations.'
+                }
+              </p>
+            </div>
           </CardDescription>
         </CardHeader>
         <CardContent>

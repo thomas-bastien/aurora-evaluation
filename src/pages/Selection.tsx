@@ -12,6 +12,7 @@ import { JurorProgressMonitoring } from "@/components/cm/JurorProgressMonitoring
 import { StartupSelection } from "@/components/cm/StartupSelection";
 import { ResultsCommunication } from "@/components/cm/ResultsCommunication";
 import { ReportingDocumentation } from "@/components/cm/ReportingDocumentation";
+import { WorkflowGuide } from "@/components/common/WorkflowGuide";
 import { useRounds } from "@/hooks/useRounds";
 const Selection = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -62,6 +63,9 @@ const Selection = () => {
       <DashboardHeader />
       
       <main className="max-w-7xl mx-auto px-6 py-8">
+        {/* Workflow Guide */}
+        <WorkflowGuide userRole="admin" currentRound={currentRound === 'screeningRound' ? 'screening' : 'pitching'} />
+
         {/* Header with Global Phase Selector */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-6">

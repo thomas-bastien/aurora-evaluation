@@ -315,10 +315,18 @@ export const JurorProgressMonitoring = ({ currentRound }: JurorProgressMonitorin
           <div>
             <CardTitle className="flex items-center gap-2">
               <CheckCircle className="w-5 h-5" />
-              Jury Progress - {roundTitle}
+              Monitor Jury Progress - {roundTitle}
             </CardTitle>
             <CardDescription>
-              Track {currentRound === 'screeningRound' ? 'evaluation' : 'pitch'} submission status by juror and send reminders
+              <div className="space-y-1">
+                <p><strong>Community Manager Workflow:</strong> Track juror evaluation progress and send reminders.</p>
+                <p className="text-sm">
+                  {currentRound === 'screeningRound' 
+                    ? 'Monitor which jurors have completed screening evaluations and follow up with those who are behind schedule.' 
+                    : 'Track pitch call completion status and pitching evaluation submissions from jurors.'
+                  }
+                </p>
+              </div>
             </CardDescription>
           </div>
           <div className="flex gap-2">
