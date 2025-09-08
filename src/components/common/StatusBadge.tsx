@@ -1,7 +1,7 @@
 import { Badge } from '@/components/ui/badge';
 
 interface StatusBadgeProps {
-  status: 'pending' | 'selected' | 'rejected';
+  status: 'pending' | 'selected' | 'rejected' | 'under-review';
   className?: string;
 }
 
@@ -19,6 +19,12 @@ export function StatusBadge({ status, className }: StatusBadgeProps) {
           variant: 'destructive' as const,
           className: 'bg-red-100 text-red-800 border-red-200 hover:bg-red-200',
           label: 'Rejected'
+        };
+      case 'under-review':
+        return {
+          variant: 'default' as const,
+          className: 'bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-200',
+          label: 'Under Review'
         };
       case 'pending':
       default:

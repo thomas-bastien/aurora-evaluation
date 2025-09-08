@@ -2,8 +2,8 @@ import { Badge } from '@/components/ui/badge';
 import { StatusBadge } from './StatusBadge';
 
 interface RoundStatusDisplayProps {
-  screeningStatus?: 'pending' | 'selected' | 'rejected';
-  pitchingStatus?: 'pending' | 'selected' | 'rejected';
+  screeningStatus?: 'pending' | 'selected' | 'rejected' | 'under-review';
+  pitchingStatus?: 'pending' | 'selected' | 'rejected' | 'under-review';
   className?: string;
 }
 

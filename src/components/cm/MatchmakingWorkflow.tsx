@@ -80,10 +80,10 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
       let startupsQuery = supabase.from('startups').select('*');
       
       if (currentRound === 'pitchingRound') {
-        // For pitching round: ONLY show shortlisted startups (Semi-finalists)
+        // For pitching round: ONLY show selected startups from screening round
         // Never show eliminated or pending startups regardless of assignments
         startupsQuery = startupsQuery.eq('status', 'shortlisted');
-        console.log('Filtering for pitching round: only shortlisted startups');
+        console.log('Filtering for pitching round: only selected startups');
       } else {
         // For screening round: show ALL startups regardless of status
         console.log('Screening round: showing all startups');
@@ -305,7 +305,7 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
   const roundTitle = currentRound === 'screeningRound' ? 'Screening Round' : 'Pitching Round';
   const roundDescription = currentRound === 'screeningRound' 
     ? 'Assign 3 jurors to each startup for initial evaluation'
-    : 'Assign 2-3 jurors to Semi-finalist startups selected from Screening Round';
+    : 'Assign 2-3 jurors to selected startups from Screening Round';
 
   return (
     <div className="space-y-6">
@@ -327,7 +327,7 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
                 <span className="font-medium text-warning">Incomplete Data Warning</span>
               </div>
               <p className="text-sm text-muted-foreground">
-                {startups.length === 0 && currentRound === 'pitchingRound' && "No Semi-finalist startups found. Please select startups in Screening Round first. "}
+                {startups.length === 0 && currentRound === 'pitchingRound' && "No selected startups found. Please select startups in Screening Round first. "}
                 {startups.length === 0 && currentRound === 'screeningRound' && "No startups found for this round. "}
                 {jurors.length === 0 && "No jurors available for assignment. "}
                 Please ensure all required data is loaded before proceeding with assignments.
@@ -342,9 +342,9 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
                 <Building2 className="w-5 h-5 text-primary" />
                 <div>
                   <p className="text-2xl font-bold">{startups.length}</p>
-                   <p className="text-sm text-muted-foreground">
-                     {currentRound === 'pitchingRound' ? 'Semi-finalists' : 'Startups'}
-                   </p>
+                    <p className="text-sm text-muted-foreground">
+                      {currentRound === 'pitchingRound' ? 'Selected Startups' : 'Startups'}
+                    </p>
                 </div>
               </div>
             </div>
@@ -420,7 +420,7 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
           {/* Startups List */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold">
-              {currentRound === 'pitchingRound' ? 'Semi-finalist Startups' : 'All Startups'}
+              {currentRound === 'pitchingRound' ? 'Selected Startups' : 'All Startups'}
               {currentRound === 'screeningRound' && (
                 <span className="text-sm font-normal text-muted-foreground ml-2">
                   (Including rejected startups - assignment only available for non-rejected)

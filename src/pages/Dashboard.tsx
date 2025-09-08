@@ -225,7 +225,7 @@ const Dashboard = () => {
                       Screening Round
                     </CardTitle>
                     <CardDescription>
-                      Initial evaluation and selection of semi-finalists
+                      Initial evaluation and selection of startups for pitching round
                     </CardDescription>
                   </div>
                   <Badge 
@@ -280,9 +280,9 @@ const Dashboard = () => {
                     onClick={() => navigate('/selection?round=screening')}
                   />
                    <FunnelStage
-                     title="Selection – Semifinalists"
-                     description="Confirm the semifinalists that progress to Pitching"
-                     tooltip="Confirm the semifinalists that progress to Pitching."
+                     title="Selection – Selected Startups"
+                     description="Confirm the startups that progress to Pitching"
+                     tooltip="Confirm the startups that progress to Pitching."
                     status={
                       dashboardData.screeningStats.selectionComplete 
                         ? 'completed' 
@@ -424,7 +424,7 @@ const Dashboard = () => {
                   <div>
                     <CardTitle className="flex items-center gap-2">
                       <Badge variant="secondary" className="px-3 py-1">Round 1</Badge>
-                      Screening Round (Semi-finalists)
+                      Screening Round
                     </CardTitle>
                     <CardDescription>
                       Initial evaluation of your assigned startups

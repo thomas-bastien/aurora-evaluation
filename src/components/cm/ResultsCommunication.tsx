@@ -26,6 +26,7 @@ interface StartupResult {
   industry: string;
   averageScore: number;
   isSelected: boolean;
+  roundStatus?: string;
   feedbackSummary: string;
   feedbackStatus: 'draft' | 'reviewed' | 'approved' | 'sent';
   communicationSent: boolean;
@@ -33,7 +34,7 @@ interface StartupResult {
 
 interface CommunicationTemplate {
   id: string;
-  type: 'selected' | 'not-selected' | 'juror-report';
+  type: 'selected' | 'not-selected' | 'under-review' | 'rejected' | 'juror-report';
   subject: string;
   content: string;
 }
@@ -62,26 +63,39 @@ export const ResultsCommunication = ({ currentRound }: ResultsCommunicationProps
       // Determine which evaluation table to use based on current round
       const evaluationTable = currentRound === 'screeningRound' ? 'screening_evaluations' : 'pitching_evaluations';
       
-      // Build query with status filtering for pitching round
-      let query = supabase.from('startups').select(`
-        *,
-        ${evaluationTable}(
-          overall_score,
-          status,
-          strengths,
-          improvement_areas,
-          overall_notes
-        )
-      `);
-      
-      // During pitching round, only show semifinalists (shortlisted startups)
-      if (currentRound === 'pitchingRound') {
-        query = query.eq('status', 'shortlisted');
-      }
-      
-      const { data: startupsData, error } = await query;
+      // Fetch all startups and their round-specific statuses
+      const { data: startupsData, error: startupsError } = await supabase
+        .from('startups')
+        .select(`
+          *,
+          ${evaluationTable}(
+            overall_score,
+            status,
+            strengths,
+            improvement_areas,
+            overall_notes
+          )
+        `);
 
-      if (error) throw error;
+      if (startupsError) throw startupsError;
+
+      // Get round-specific statuses from startup_round_statuses table
+      const { data: roundStatusesData, error: roundStatusError } = await supabase
+        .from('startup_round_statuses')
+        .select(`
+          startup_id,
+          status,
+          rounds!inner(name)
+        `)
+        .eq('rounds.name', currentRound === 'screeningRound' ? 'screening' : 'pitching');
+
+      if (roundStatusError) throw roundStatusError;
+
+      // Create a map of startup IDs to their round-specific statuses
+      const roundStatusMap = new Map();
+      roundStatusesData?.forEach(rs => {
+        roundStatusMap.set(rs.startup_id, rs.status);
+      });
 
       const resultsData: StartupResult[] = startupsData?.map(startup => {
         const evaluationKey = currentRound === 'screeningRound' ? 'screening_evaluations' : 'pitching_evaluations';
@@ -94,6 +108,9 @@ export const ResultsCommunication = ({ currentRound }: ResultsCommunicationProps
         const averageScore = scores.length > 0 
           ? scores.reduce((sum, score) => sum + score, 0) / scores.length 
           : 0;
+
+        // Use round-specific status from startup_round_statuses table
+        const roundStatus = roundStatusMap.get(startup.id) || 'pending';
 
         // Generate AI feedback summary (placeholder - would use actual AI)
         const strengths = submittedEvaluations.flatMap(e => e.strengths || []);
@@ -108,7 +125,8 @@ export const ResultsCommunication = ({ currentRound }: ResultsCommunicationProps
           email: startup.contact_email || 'no-email@example.com',
           industry: startup.industry || 'N/A',
           averageScore,
-          isSelected: startup.status === 'shortlisted',
+          isSelected: roundStatus === 'selected',
+          roundStatus,
           feedbackSummary,
           feedbackStatus: 'draft' as const,
           communicationSent: false
@@ -156,8 +174,11 @@ The Aurora Evaluation Team`;
       {
         id: '1',
         type: 'selected',
-        subject: '🎉 Congratulations! You\'ve been selected for the Pitching Round',
-        content: `Congratulations! Your startup has been selected to advance to the Pitching Round of our evaluation process.
+        subject: currentRound === 'screeningRound' 
+          ? '🎉 Congratulations! You\'ve been selected for the Pitching Round'
+          : '🎉 Congratulations! You\'ve been selected as a Finalist',
+        content: currentRound === 'screeningRound'
+          ? `Congratulations! Your startup has been selected to advance to the Pitching Round of our evaluation process.
 
 **Next Steps:**
 • You will receive a calendar invite for your pitch session
@@ -168,9 +189,53 @@ We look forward to seeing your presentation!
 
 Best regards,
 The Aurora Team`
+          : `Congratulations! Your startup has been selected as a Finalist in our evaluation process.
+
+**What this means:**
+• You are among our top selected startups
+• Further partnership opportunities may be available
+• You will receive detailed feedback from our evaluation panel
+
+We are excited to continue our relationship with your startup!
+
+Best regards,
+The Aurora Team`
       },
       {
         id: '2',
+        type: 'under-review',
+        subject: 'Your Application Status - Under Review',
+        content: `Thank you for participating in our startup evaluation process. Your application is currently under review by our evaluation panel.
+
+**Current Status:**
+• Your startup is being evaluated by our expert panel
+• We expect to have results within [TIMEFRAME]
+• No action is required from your side at this time
+
+We appreciate your patience as we complete our thorough evaluation process.
+
+Best regards,
+The Aurora Team`
+      },
+      {
+        id: '3',
+        type: 'rejected',
+        subject: 'Thank you for your participation',
+        content: `Thank you for participating in our startup evaluation process. After careful consideration by our evaluation panel, we have decided not to move forward with your startup at this time.
+
+**Your Feedback:**
+[FEEDBACK_SUMMARY]
+
+While we cannot proceed with your startup in this round, we were impressed by your dedication and innovation. We encourage you to:
+• Continue developing your business based on the feedback provided
+• Consider applying to future programs
+• Stay connected with our community
+
+Best regards,
+The Aurora Team`
+      },
+      {
+        id: '4',
         type: 'not-selected',
         subject: 'Thank you for participating in our evaluation process',
         content: `Thank you for participating in our startup evaluation process. While your startup was not selected for the next phase, we were impressed by your dedication and innovation.
@@ -184,14 +249,14 @@ Best regards,
 The Aurora Team`
       },
       {
-        id: '3',
+        id: '5',
         type: 'juror-report',
-        subject: 'Screening Round Evaluation Results - Summary Report',
-        content: `Thank you for your participation as an evaluator in the Screening Round of our startup evaluation process.
+        subject: `${currentRound === 'screeningRound' ? 'Screening' : 'Pitching'} Round Evaluation Results - Summary Report`,
+        content: `Thank you for your participation as an evaluator in the ${currentRound === 'screeningRound' ? 'Screening' : 'Pitching'} Round of our startup evaluation process.
 
          **Summary:**
          • Total startups evaluated: [TOTAL_STARTUPS]
-         • Selected startups for Pitching Round
+         • Selected startups for ${currentRound === 'screeningRound' ? 'Pitching Round' : 'Final Selection'}
          • Average evaluation score: [AVERAGE_SCORE]
 
 Please find the detailed results and your contribution report attached.
@@ -232,15 +297,17 @@ The Aurora Team`
     toast.success('Feedback approved');
   };
 
-  const sendCommunications = async (type: 'selected' | 'not-selected' | 'all') => {
+  const sendCommunications = async (type: 'selected' | 'rejected' | 'under-review' | 'all') => {
     setSendingEmails(true);
     try {
       let targetResults = startupResults;
       
       if (type === 'selected') {
-        targetResults = startupResults.filter(r => r.isSelected);
-      } else if (type === 'not-selected') {
-        targetResults = startupResults.filter(r => !r.isSelected);
+        targetResults = startupResults.filter(r => r.roundStatus === 'selected');
+      } else if (type === 'rejected') {
+        targetResults = startupResults.filter(r => r.roundStatus === 'rejected');
+      } else if (type === 'under-review') {
+        targetResults = startupResults.filter(r => r.roundStatus === 'under-review' || r.roundStatus === 'pending');
       }
 
       // Send screening results via edge function
@@ -377,8 +444,9 @@ The Aurora Team`
     );
   }
 
-  const selectedStartups = startupResults.filter(r => r.isSelected);
-  const notSelectedStartups = startupResults.filter(r => !r.isSelected);
+  const selectedStartups = startupResults.filter(r => r.roundStatus === 'selected');
+  const notSelectedStartups = startupResults.filter(r => r.roundStatus === 'rejected');
+  const underReviewStartups = startupResults.filter(r => r.roundStatus === 'under-review' || r.roundStatus === 'pending');
   const approvedFeedback = startupResults.filter(r => r.feedbackStatus === 'approved');
   const sentCommunications = startupResults.filter(r => r.communicationSent);
 
@@ -420,18 +488,18 @@ The Aurora Team`
                 <Button 
                   className="w-full" 
                   variant="outline"
-                  onClick={() => sendCommunications('not-selected')}
+                  onClick={() => sendCommunications('rejected')}
                   disabled={sendingEmails}
                 >
-                  {sendingEmails ? 'Sending...' : `Send to Non-Selected Startups (${notSelectedStartups.length})`}
+                  {sendingEmails ? 'Sending...' : `Send to Rejected Startups (${notSelectedStartups.length})`}
                 </Button>
                 <Button 
                   className="w-full" 
                   variant="secondary"
-                  onClick={() => sendCommunications('all')}
+                  onClick={() => sendCommunications('under-review')}
                   disabled={sendingEmails}
                 >
-                  {sendingEmails ? 'Sending...' : `Send to All Startups (${startupResults.length})`}
+                  {sendingEmails ? 'Sending...' : `Send to Under Review Startups (${underReviewStartups.length})`}
                 </Button>
                 
                 {currentRound === 'screeningRound' && (
@@ -455,14 +523,18 @@ The Aurora Team`
       
       <CardContent>
         {/* Summary Stats */}
-        <div className="grid grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-5 gap-4 mb-6">
           <div className="text-center p-4 bg-success/10 rounded-lg">
             <div className="text-2xl font-bold text-success">{selectedStartups.length}</div>
             <div className="text-sm text-muted-foreground">Selected</div>
           </div>
-          <div className="text-center p-4 bg-muted rounded-lg">
-            <div className="text-2xl font-bold text-foreground">{notSelectedStartups.length}</div>
-            <div className="text-sm text-muted-foreground">Not Selected</div>
+          <div className="text-center p-4 bg-destructive/10 rounded-lg">
+            <div className="text-2xl font-bold text-destructive">{notSelectedStartups.length}</div>
+            <div className="text-sm text-muted-foreground">Rejected</div>
+          </div>
+          <div className="text-center p-4 bg-blue-50 rounded-lg">
+            <div className="text-2xl font-bold text-blue-600">{underReviewStartups.length}</div>
+            <div className="text-sm text-muted-foreground">Under Review</div>
           </div>
           <div className="text-center p-4 bg-primary/10 rounded-lg">
             <div className="text-2xl font-bold text-primary">{approvedFeedback.length}</div>
@@ -478,7 +550,8 @@ The Aurora Team`
           <TabsList>
             <TabsTrigger value="feedback">Feedback Review</TabsTrigger>
             <TabsTrigger value="selected">Selected ({selectedStartups.length})</TabsTrigger>
-            <TabsTrigger value="not-selected">Not Selected ({notSelectedStartups.length})</TabsTrigger>
+            <TabsTrigger value="under-review">Under Review ({underReviewStartups.length})</TabsTrigger>
+            <TabsTrigger value="rejected">Rejected ({notSelectedStartups.length})</TabsTrigger>
             <TabsTrigger value="templates">Templates</TabsTrigger>
           </TabsList>
 
@@ -493,7 +566,10 @@ The Aurora Team`
                         {result.industry} • Score: {result.averageScore.toFixed(1)}
                       </p>
                     </div>
-                    {result.isSelected && <Badge className="bg-success text-success-foreground">Selected</Badge>}
+                    {result.roundStatus === 'selected' && <Badge className="bg-success text-success-foreground">Selected</Badge>}
+                    {result.roundStatus === 'rejected' && <Badge className="bg-destructive text-destructive-foreground">Rejected</Badge>}
+                    {result.roundStatus === 'under-review' && <Badge className="bg-blue-100 text-blue-800">Under Review</Badge>}
+                    {result.roundStatus === 'pending' && <Badge variant="secondary">Pending</Badge>}
                   </div>
                   <div className="flex items-center gap-2">
                     {getFeedbackStatusBadge(result.feedbackStatus)}
@@ -541,7 +617,32 @@ The Aurora Team`
             ))}
           </TabsContent>
 
-          <TabsContent value="not-selected" className="space-y-4">
+          <TabsContent value="under-review" className="space-y-4">
+            {underReviewStartups.map(result => (
+              <div key={result.id} className="border border-border rounded-lg p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="font-semibold text-foreground">{result.name}</h4>
+                    <p className="text-sm text-muted-foreground">
+                      {result.email} • Score: {result.averageScore.toFixed(1)}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {result.communicationSent ? (
+                      <Badge className="bg-accent text-accent-foreground">Email Sent</Badge>
+                    ) : (
+                      <Badge variant="outline">Pending</Badge>
+                    )}
+                    <Button size="sm" variant="outline">
+                      <Eye className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </TabsContent>
+
+          <TabsContent value="rejected" className="space-y-4">
             {notSelectedStartups.map(result => (
               <div key={result.id} className="border border-border rounded-lg p-4">
                 <div className="flex items-center justify-between">

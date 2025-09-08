@@ -44,7 +44,7 @@ interface StartupSelection {
   website: string | null;
   status: string;
   // Round-specific status
-  roundStatus: 'pending' | 'selected' | 'rejected';
+  roundStatus: 'pending' | 'selected' | 'rejected' | 'under-review';
   // Evaluation data
   totalEvaluations: number;
   averageScore: number | null;
@@ -67,7 +67,7 @@ export const Top30Selection = ({ currentRound = 'screening', isReadOnly = false,
   const [loading, setLoading] = useState(true);
   const [sortField, setSortField] = useState<'rank' | 'name' | 'averageScore'>('rank');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'selected' | 'rejected'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'selected' | 'rejected' | 'under-review'>('all');
   const [selectedForDetails, setSelectedForDetails] = useState<StartupSelection | null>(null);
   const [evaluationModalStartup, setEvaluationModalStartup] = useState<any>(null);
 
@@ -193,9 +193,9 @@ export const Top30Selection = ({ currentRound = 'screening', isReadOnly = false,
 
       // Create a lookup for round statuses
       const statusLookup = roundStatusData?.reduce((acc, item) => {
-        acc[item.startup_id] = item.status as 'pending' | 'selected' | 'rejected';
+        acc[item.startup_id] = item.status as 'pending' | 'selected' | 'rejected' | 'under-review';
         return acc;
-      }, {} as Record<string, 'pending' | 'selected' | 'rejected'>) || {};
+      }, {} as Record<string, 'pending' | 'selected' | 'rejected' | 'under-review'>) || {};
 
       // Fetch evaluations for the current round
       const { data: evaluationsData, error: evaluationsError } = await supabase
@@ -405,13 +405,14 @@ export const Top30Selection = ({ currentRound = 'screening', isReadOnly = false,
 
             <div className="flex items-center gap-2">
               <Filter className="w-4 h-4 text-muted-foreground" />
-              <Select value={statusFilter} onValueChange={(value: 'all' | 'pending' | 'selected' | 'rejected') => setStatusFilter(value)}>
+              <Select value={statusFilter} onValueChange={(value: 'all' | 'pending' | 'selected' | 'rejected' | 'under-review') => setStatusFilter(value)}>
                 <SelectTrigger className="w-32">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Status</SelectItem>
                   <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="under-review">Under Review</SelectItem>
                   <SelectItem value="selected">Selected</SelectItem>
                   <SelectItem value="rejected">Rejected</SelectItem>
                 </SelectContent>
