@@ -9,6 +9,7 @@ import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { StartupEvaluationModal } from "@/components/evaluation/StartupEvaluationModal";
+import { StatusBadge } from "@/components/common/StatusBadge";
 import { 
   BarChart3, 
   Search, 
@@ -324,18 +325,7 @@ export const EvaluationProgressView = ({ currentRound = 'screening' }: Evaluatio
   };
 
   const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'rejected':
-        return <Badge className="bg-destructive text-destructive-foreground">Rejected</Badge>;
-      case 'shortlisted':
-        return <Badge className="bg-success text-success-foreground">Selected</Badge>;
-      case 'under-review':
-        return <Badge className="bg-primary text-primary-foreground">Under Review</Badge>;
-      case 'pending':
-        return <Badge className="bg-muted text-muted-foreground">Pending</Badge>;
-      default:
-        return <Badge variant="outline">{status || 'Unknown'}</Badge>;
-    }
+    return <StatusBadge status={status} />;
   };
 
   const viewStartupEvaluations = async (startupId: string) => {
@@ -496,8 +486,8 @@ export const EvaluationProgressView = ({ currentRound = 'screening' }: Evaluatio
               <SelectContent>
                 <SelectItem value="all">All Statuses</SelectItem>
                 <SelectItem value="rejected">Rejected</SelectItem>
-                <SelectItem value="shortlisted">Selected</SelectItem>
-                <SelectItem value="under-review">Under Review</SelectItem>
+                <SelectItem value="selected">Selected</SelectItem>
+                <SelectItem value="under_review">Under Review</SelectItem>
                 <SelectItem value="pending">Pending</SelectItem>
               </SelectContent>
             </Select>

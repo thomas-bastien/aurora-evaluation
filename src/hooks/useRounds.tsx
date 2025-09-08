@@ -93,7 +93,7 @@ export const useRounds = () => {
         const { count } = await supabase
           .from('startups')
           .select('*', { count: 'exact', head: true })
-          .eq('status', 'shortlisted');
+          .eq('status', 'selected');
 
         if (!count || count === 0) {
           return { canComplete: false, reason: 'No startups selected for pitching round' };
@@ -153,7 +153,7 @@ export const useRounds = () => {
         const [assignments, evaluations, startups] = await Promise.all([
           supabase.from('screening_assignments').select('*', { count: 'exact', head: true }),
           supabase.from('screening_evaluations').select('*', { count: 'exact', head: true }).eq('status', 'submitted'),
-          supabase.from('startups').select('*', { count: 'exact', head: true }).eq('status', 'shortlisted')
+          supabase.from('startups').select('*', { count: 'exact', head: true }).eq('status', 'selected')
         ]);
 
         return {
@@ -215,7 +215,7 @@ export const useRounds = () => {
         const { error: revertError } = await supabase
           .from('startups')
           .update({ status: 'pending' })
-          .in('status', ['shortlisted', 'rejected']);
+          .in('status', ['selected', 'rejected']);
 
         if (revertError) {
           console.error('Error reverting startup statuses:', revertError);

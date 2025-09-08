@@ -484,9 +484,9 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
                               Rejected
                             </Badge>
                           )}
-                          {currentRound === 'screeningRound' && startup.status === 'shortlisted' && (
+                          {currentRound === 'screeningRound' && startup.status === 'selected' && (
                             <Badge variant="default" className="bg-green-100 text-green-800 border-green-300">
-                              Semifinalist
+                              Selected
                             </Badge>
                           )}
                           {currentRound === 'pitchingRound' && startup.status === 'pending' && (
@@ -512,7 +512,7 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
                           // Determine if startup should be assignable based on status and round
                           const isScreeningRound = currentRound === 'screeningRound';
                           const isRejected = startup.status === 'rejected';
-                          const isShortlisted = startup.status === 'shortlisted';
+                          const isSelected = startup.status === 'selected';
                           
                           if (isRejected) {
                             return (
@@ -523,7 +523,7 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
                             );
                           }
                           
-                          if (isScreeningRound && isShortlisted) {
+                          if (isScreeningRound && isSelected) {
                             return (
                               <div className="text-center">
                                 <p className="text-sm text-muted-foreground mb-1">Cannot assign jurors</p>

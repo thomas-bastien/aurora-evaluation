@@ -62,7 +62,7 @@ export function generateCSVTemplate(): string {
       'hello@ecomart.io',
       '+1-555-0456',
       'Maria Garcia',
-      'under-review',
+      'under_review',
       'https://linkedin.com/company/ecomart',
       '200000',
       'USD',

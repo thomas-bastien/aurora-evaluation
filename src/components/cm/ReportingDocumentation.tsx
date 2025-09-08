@@ -64,7 +64,7 @@ export const ReportingDocumentation = ({ currentRound }: ReportingDocumentationP
         
         if (assignmentsError) throw assignmentsError;
 
-        const totalStartups = startups?.filter(s => ['under-review', 'shortlisted'].includes(s.status)).length || 0;
+        const totalStartups = startups?.filter(s => ['under_review', 'selected'].includes(s.status)).length || 0;
         const submittedEvaluations = evaluations?.filter(e => e.status === 'submitted').length || 0;
         const totalAssignments = assignments?.length || 0;
         const completionRate = totalAssignments > 0 ? (submittedEvaluations / totalAssignments) * 100 : 0;

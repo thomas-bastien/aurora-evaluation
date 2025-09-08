@@ -1,9 +1,10 @@
 import { Badge } from '@/components/ui/badge';
 import { StatusBadge } from './StatusBadge';
+import { type StatusType } from '@/utils/statusUtils';
 
 interface RoundStatusDisplayProps {
-  screeningStatus?: 'pending' | 'selected' | 'rejected' | 'under-review';
-  pitchingStatus?: 'pending' | 'selected' | 'rejected' | 'under-review';
+  screeningStatus?: StatusType | string;
+  pitchingStatus?: StatusType | string;
   className?: string;
 }
 
@@ -19,12 +20,12 @@ export function RoundStatusDisplay({
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <span className="text-sm text-muted-foreground">Screening Round:</span>
-          <StatusBadge status={screeningStatus} />
+          <StatusBadge status={screeningStatus} roundName="screening" showRoundContext />
         </div>
         
         <div className="flex items-center justify-between">
           <span className="text-sm text-muted-foreground">Pitching Round:</span>
-          <StatusBadge status={pitchingStatus} />
+          <StatusBadge status={pitchingStatus} roundName="pitching" showRoundContext />
         </div>
       </div>
     </div>

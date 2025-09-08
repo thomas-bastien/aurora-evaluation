@@ -1,7 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 
 // Define what constitutes "active" entities for consistent counting
-const ACTIVE_STARTUP_STATUSES = ['under-review', 'shortlisted'];
+const ACTIVE_STARTUP_STATUSES = ['under_review', 'selected'];
 
 /**
  * Get count of active startups (those in evaluation phases)
@@ -61,7 +61,7 @@ export const getRoundStartupsCount = async (round: 'screening' | 'pitching'): Pr
     const { count } = await supabase
       .from('startups')
       .select('*', { count: 'exact', head: true })
-      .eq('status', 'shortlisted');
+      .eq('status', 'selected');
       
     return count || 0;
   }

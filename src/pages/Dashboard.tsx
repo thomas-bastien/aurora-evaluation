@@ -334,9 +334,9 @@ const Dashboard = () => {
               <CardContent>
                 <div className="flex flex-col space-y-4">
                    <FunnelStage
-                     title="Matchmaking (Semifinalists)"
-                     description="Assign jurors to the semifinalists for live pitch calls"
-                     tooltip="Assign jurors to the semifinalists for live pitch calls."
+                      title="Matchmaking (Selected Startups)"
+                      description="Assign jurors to the selected startups for live pitch calls"
+                      tooltip="Assign jurors to the selected startups for live pitch calls."
                      status={
                        dashboardData.pitchingStats.matchmakingProgress === 100 
                          ? 'completed' 

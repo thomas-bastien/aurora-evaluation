@@ -16,6 +16,7 @@ import { DraftModal } from '@/components/startups/DraftModal';
 import { downloadCSVTemplate } from '@/utils/csvTemplate';
 import { useToast } from '@/hooks/use-toast';
 import { getStageColor } from '@/utils/stageUtils';
+import { getStatusColor } from '@/utils/statusUtils';
 import { FilterPanel } from '@/components/common/FilterPanel';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { AURORA_VERTICALS, BUSINESS_MODELS, CURRENCIES } from '@/constants/startupConstants';
@@ -181,16 +182,7 @@ export default function StartupsList() {
     return `${currencySymbol}${amount.toLocaleString()}`;
   };
 
-  const getStatusColor = (status: string | null) => {
-    switch (status) {
-      case 'under-review': return 'bg-yellow-100 text-yellow-800';
-      case 'shortlisted': return 'bg-green-100 text-green-800';
-      case 'pending': return 'bg-gray-100 text-gray-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  // Remove the old getStageColor function as we're using the one from stageUtils
+  // Remove the old getStatusColor function as we're using the one from statusUtils
 
   // Get unique values for filters
   const industries = [...new Set(startups.filter(s => s.industry).map(s => s.industry))];

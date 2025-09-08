@@ -151,7 +151,7 @@ export function DraftModal({ open, onOpenChange, draftData, onImportComplete }: 
 
   const industries = ['Technology', 'Healthcare', 'Finance', 'Education', 'E-commerce', 'SaaS', 'AI/ML', 'Biotech', 'CleanTech', 'Other'];
   const stages = ['Pre-Seed', 'Seed', 'Series A', 'Series B', 'Series C', 'Growth', 'IPO'];
-  const statuses = ['pending', 'under-review', 'shortlisted', 'rejected'];
+  const statuses = ['pending', 'under_review', 'selected', 'rejected'];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
