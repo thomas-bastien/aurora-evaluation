@@ -54,10 +54,10 @@ export const StartupSelection = ({ currentRound, roundInfo, isReadOnly }: Startu
               </CardDescription>
             </div>
             <div className="flex items-center gap-2">
-              <Badge variant={roundInfo?.status === 'active' ? 'default' : 'secondary'}>
+              <Badge variant={roundInfo?.status === 'completed' ? 'secondary' : 'default'}>
                 {roundInfo?.status === 'active' && 'Active Round'}
                 {roundInfo?.status === 'completed' && 'Completed'}
-                {roundInfo?.status === 'pending' && 'Pending'}
+                {roundInfo?.status === 'pending' && 'Ready to Start'}
               </Badge>
               {isReadOnly && (
                 <Badge variant="outline" className="text-muted-foreground">

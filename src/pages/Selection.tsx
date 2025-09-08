@@ -94,7 +94,7 @@ const Selection = () => {
                       >
                         <div className="flex items-center gap-2">
                           {round.status === 'completed' && <CheckCircle className="w-4 h-4 text-success" />}
-                          {round.status === 'pending' && <Lock className="w-4 h-4 text-muted-foreground" />}
+                          {round.status === 'completed' && <Lock className="w-4 h-4 text-muted-foreground" />}
                           {round.name === 'screening' ? 'Screening' : 'Pitching'}
                         </div>
                       </SelectItem>
@@ -104,21 +104,16 @@ const Selection = () => {
                 <div className="flex items-center gap-2">
                   <Badge variant={
                     currentRoundInfo?.status === 'active' ? 'default' : 
-                    currentRoundInfo?.status === 'completed' ? 'secondary' : 'outline'
+                    currentRoundInfo?.status === 'completed' ? 'secondary' : 'default'
                   }>
                     {currentRoundInfo?.status === 'active' && 'Active'}
                     {currentRoundInfo?.status === 'completed' && 'Completed'}
-                    {currentRoundInfo?.status === 'pending' && 'Pending'}
+                    {currentRoundInfo?.status === 'pending' && 'Available'}
                   </Badge>
                   {isReadOnly && (
                     <Badge variant="outline" className="text-muted-foreground">
                       <Lock className="w-3 h-3 mr-1" />
                       View Only
-                    </Badge>
-                  )}
-                  {currentRoundInfo?.status === 'pending' && (
-                    <Badge variant="outline" className="text-amber-600 border-amber-200">
-                      Not Started
                     </Badge>
                   )}
                 </div>
