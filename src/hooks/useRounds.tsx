@@ -62,19 +62,7 @@ export const useRounds = () => {
 
       if (completeError) throw completeError;
 
-      // Activate next round if it exists
-      const nextRound = getNextRound(roundName);
-      if (nextRound) {
-        const { error: activateError } = await supabase
-          .from('rounds')
-          .update({ 
-            status: 'active',
-            started_at: new Date().toISOString()
-          })
-          .eq('name', nextRound);
-
-        if (activateError) throw activateError;
-      }
+      // Note: Removed automatic activation of next round to allow multiple active rounds
 
       await fetchRounds();
       toast.success(`${roundName} round completed successfully`);
@@ -89,10 +77,16 @@ export const useRounds = () => {
   const validateRoundCompletion = async (roundName: string) => {
     try {
       if (roundName === 'screening') {
-        // Check if startup selection is made
+        // Check if startup selection is made using startup_round_statuses
+        const screeningRound = rounds.find(r => r.name === 'screening');
+        if (!screeningRound) {
+          return { canComplete: false, reason: 'Screening round not found' };
+        }
+
         const { count } = await supabase
-          .from('startups')
+          .from('startup_round_statuses')
           .select('*', { count: 'exact', head: true })
+          .eq('round_id', screeningRound.id)
           .eq('status', 'selected');
 
         if (!count || count === 0) {
@@ -118,13 +112,14 @@ export const useRounds = () => {
       }
 
       if (roundName === 'pitching') {
-        // Check pitching round requirements
-        const { count } = await supabase
-          .from('startups')
-          .select('*', { count: 'exact', head: true })
-          .in('status', ['finalist', 'winner']);
+        // Check pitching round requirements using startup_round_statuses  
+        const pitchingRound = rounds.find(r => r.name === 'pitching');
+        if (!pitchingRound) {
+          return { canComplete: false, reason: 'Pitching round not found' };
+        }
 
-        return { canComplete: true, reason: '' }; // Allow completion without strict requirements for now
+        // Allow completion without strict requirements for now
+        return { canComplete: true, reason: '' };
       }
 
       return { canComplete: false, reason: 'Unknown round' };
@@ -144,7 +139,7 @@ export const useRounds = () => {
 
   const canModifyRound = (roundName: string): boolean => {
     const round = rounds.find(r => r.name === roundName);
-    return round?.status === 'active';
+    return round?.status !== 'completed';
   };
 
   const getRoundProgress = async (roundName: string) => {

@@ -668,7 +668,7 @@ export const Top30Selection = ({ currentRound, roundInfo, isReadOnly = false, on
             </Button>
             
             {/* Confirm Selection Button */}
-            {roundInfo?.status === 'active' && !isReadOnly && (
+            {!isReadOnly && (
               <Dialog open={showCompleteDialog} onOpenChange={setShowCompleteDialog}>
                 <DialogTrigger asChild>
                   <Button 
