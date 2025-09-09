@@ -13,6 +13,7 @@ import { CURRENCIES } from '@/constants/startupConstants';
 import { normalizeStage, getStageColor } from '@/utils/stageUtils';
 import { getStatusColor } from '@/utils/statusUtils';
 import { StartupEvaluationsList } from '@/components/startups/StartupEvaluationsList';
+import { useStartupEvaluationStats } from '@/hooks/useStartupEvaluationStats';
 
 interface Startup {
   id: string;
@@ -48,6 +49,9 @@ const StartupProfile = () => {
   const [startup, setStartup] = useState<Startup | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Fetch evaluation statistics
+  const { stats: evalStats, loading: statsLoading } = useStartupEvaluationStats(id || '');
 
   useEffect(() => {
     const fetchStartup = async () => {
@@ -192,8 +196,33 @@ const StartupProfile = () => {
               </div>
             </div>
             <div className="text-right">
-              <div className="text-2xl font-bold text-primary mb-1">N/A</div>
-              <div className="text-sm text-muted-foreground">Avg. Score (0 reviews)</div>
+              <div className="text-2xl font-bold text-primary mb-1">
+                {statsLoading ? (
+                  <Skeleton className="h-8 w-16" />
+                ) : evalStats.overallStats.averageScore ? (
+                  evalStats.overallStats.averageScore.toFixed(1)
+                ) : (
+                  'N/A'
+                )}
+              </div>
+              <div className="text-sm text-muted-foreground">
+                {statsLoading ? (
+                  <Skeleton className="h-4 w-24" />
+                ) : (
+                  `Avg. Score (${evalStats.overallStats.totalReviews} reviews)`
+                )}
+              </div>
+              {!statsLoading && evalStats.overallStats.totalReviews > 0 && (
+                <div className="text-xs text-muted-foreground mt-1">
+                  {evalStats.screeningStats.reviewCount > 0 && (
+                    <span>Screening: {evalStats.screeningStats.averageScore?.toFixed(1)} ({evalStats.screeningStats.reviewCount})</span>
+                  )}
+                  {evalStats.screeningStats.reviewCount > 0 && evalStats.pitchingStats.reviewCount > 0 && ' • '}
+                  {evalStats.pitchingStats.reviewCount > 0 && (
+                    <span>Pitching: {evalStats.pitchingStats.averageScore?.toFixed(1)} ({evalStats.pitchingStats.reviewCount})</span>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>
