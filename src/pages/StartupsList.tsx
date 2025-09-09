@@ -79,36 +79,50 @@ export default function StartupsList() {
   useEffect(() => {
     const fetchStartups = async () => {
       try {
+        // Fetch startups based on round assignments
+        const assignmentTable = selectedRound === 'screening' ? 'screening_assignments' : 'pitching_assignments';
+        const evaluationTable = selectedRound === 'screening' ? 'screening_evaluations' : 'pitching_evaluations';
+        
         const { data, error } = await supabase
           .from('startups')
-          .select('*')
+          .select(`
+            *,
+            ${assignmentTable}!inner(status)
+          `)
           .order('created_at', { ascending: false });
 
         if (error) {
           console.error('Error fetching startups:', error);
+          setStartups([]);
         } else {
           setStartups(data || []);
         }
 
-        // Fetch round-specific statuses
-        const { data: roundStatusData, error: roundError } = await supabase
-          .from('startup_round_statuses')
-          .select(`
-            startup_id,
-            status,
-            rounds!inner(name)
-          `)
-          .eq('rounds.name', selectedRound);
+        // Fetch evaluation statuses for status display
+        const { data: evaluationData, error: evalError } = await supabase
+          .from(evaluationTable)
+          .select('startup_id, status');
 
-        if (!roundError && roundStatusData) {
+        if (!evalError && evaluationData) {
           const statusMap = new Map();
-          roundStatusData.forEach(item => {
-            statusMap.set(item.startup_id, item.status);
+          evaluationData.forEach(item => {
+            const existingStatus = statusMap.get(item.startup_id);
+            // Priority: submitted > draft
+            if (!existingStatus || (item.status === 'submitted' && existingStatus === 'draft')) {
+              statusMap.set(item.startup_id, item.status);
+            }
+          });
+          // Set default status for startups without evaluations
+          (data || []).forEach(startup => {
+            if (!statusMap.has(startup.id)) {
+              statusMap.set(startup.id, 'not_evaluated');
+            }
           });
           setRoundStatuses(statusMap);
         }
       } catch (error) {
         console.error('Error fetching startups:', error);
+        setStartups([]);
       } finally {
         setLoading(false);
       }
@@ -211,7 +225,7 @@ export default function StartupsList() {
   // Get unique values for filters
   const industries = [...new Set(startups.filter(s => s.industry).map(s => s.industry))];
   const stages = [...new Set(startups.filter(s => s.stage).map(s => s.stage))];
-  const statuses = [...new Set(Array.from(roundStatuses.values()))];  // Use round-specific statuses
+  const statuses = ['not_evaluated', 'draft', 'submitted'];  // Use evaluation-based statuses
   const businessModels = [...new Set(startups.filter(s => s.business_model).map(s => s.business_model))];
   const allVerticals = startups.flatMap(s => s.verticals || []);
   const uniqueVerticals = [...new Set(allVerticals)];
