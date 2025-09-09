@@ -18,6 +18,7 @@ import StartupsList from "./pages/StartupsList";
 import VCProfile from "./pages/VCProfile";
 import VCsList from "./pages/VCsList";
 import JurorsList from "./pages/JurorsList";
+import JurorProfile from "./pages/JurorProfile";
 import Selection from "./pages/Selection";
 import SelectionMatchmaking from "./pages/SelectionMatchmaking";
 import SessionManagement from "./pages/SessionManagement";
@@ -89,6 +90,11 @@ const App = () => (
             <Route path="/jurors" element={
               <ProtectedRoute>
                 <JurorsList />
+              </ProtectedRoute>
+            } />
+            <Route path="/juror/:id" element={
+              <ProtectedRoute>
+                <JurorProfile />
               </ProtectedRoute>
             } />
             <Route path="/vc/:id" element={

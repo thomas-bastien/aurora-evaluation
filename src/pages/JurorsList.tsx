@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Link } from 'react-router-dom';
 import { UserCheck, Building, Users, Plus, Search, Filter, Upload, Download, Edit, Trash2, Mail } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
@@ -542,8 +543,12 @@ export default function JurorsList() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredJurors.map((juror) => (
-                  <TableRow key={juror.id} className="hover:bg-muted/50">
+                 {filteredJurors.map((juror) => (
+                  <TableRow 
+                    key={juror.id} 
+                    className="hover:bg-muted/50 cursor-pointer"
+                    onClick={() => window.location.href = `/juror/${juror.id}`}
+                  >
                     <TableCell className="font-medium">{juror.name}</TableCell>
                     <TableCell>{juror.email}</TableCell>
                     <TableCell>{juror.job_title || '-'}</TableCell>
