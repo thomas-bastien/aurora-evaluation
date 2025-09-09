@@ -7,7 +7,7 @@ export function cn(...inputs: ClassValue[]) {
 
 /**
  * Formats evaluation scores consistently across the platform
- * - Integer scores (8.0, 7.0, 10.0) display as "8", "7", "10"
+ * - Integer scores (8.0, 7.0, 10.0) display as "8", "7", "10"  
  * - Fractional scores (8.25, 7.678) display with 2 decimal places: "8.25", "7.68"
  * - Handles null/undefined scores with fallback
  */
