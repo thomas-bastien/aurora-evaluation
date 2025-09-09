@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { StartupEvaluationModal } from "@/components/evaluation/StartupEvaluationModal";
+import { StartupDetailsModal } from "@/components/common/StartupDetailsModal";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { 
   BarChart3, 
@@ -68,9 +68,7 @@ export const EvaluationProgressView = ({ currentRound = 'screening' }: Evaluatio
     completionRate: 0,
     averageScore: 0
   });
-  const [selectedStartupForDetails, setSelectedStartupForDetails] = useState<string | null>(null);
-  const [startupEvaluations, setStartupEvaluations] = useState<any[]>([]);
-  const [selectedJurorEvaluation, setSelectedJurorEvaluation] = useState<any>(null);
+  const [selectedStartupForDetails, setSelectedStartupForDetails] = useState<{ id: string; name: string } | null>(null);
 
   useEffect(() => {
     if (!authLoading && user && session) {
@@ -349,62 +347,8 @@ export const EvaluationProgressView = ({ currentRound = 'screening' }: Evaluatio
     return <StatusBadge status={status} roundName={currentRoundName} />;
   };
 
-  const viewStartupEvaluations = async (startupId: string) => {
-    try {
-      // Fetch all jurors assigned to evaluate this startup based on current round
-      const assignmentTable = currentRound === 'screening' ? 'screening_assignments' : 'pitching_assignments';
-      const { data: assignments, error } = await supabase
-        .from(assignmentTable)
-        .select(`
-          *,
-          jurors (
-            id,
-            name,
-            email,
-            company,
-            job_title,
-            user_id
-          )
-        `)
-        .eq('startup_id', startupId);
-
-      if (error) throw error;
-
-      // Fetch evaluations for this startup to get real status
-      const evaluationTable = currentRound === 'screening' ? 'screening_evaluations' : 'pitching_evaluations';
-      const jurorUserIds = assignments?.filter(a => a.jurors?.user_id).map(a => a.jurors.user_id) || [];
-      
-      let evaluations: any[] = [];
-      if (jurorUserIds.length > 0) {
-        const { data: evalData, error: evalError } = await supabase
-          .from(evaluationTable)
-          .select('evaluator_id, status, id, overall_score, strengths, improvement_areas')
-          .eq('startup_id', startupId)
-          .in('evaluator_id', jurorUserIds);
-
-        if (evalError) throw evalError;
-        evaluations = evalData || [];
-      }
-
-      // Enrich assignments with evaluation data
-      const enrichedAssignments = assignments?.map(assignment => {
-        const evaluation = evaluations?.find(evaluation => evaluation.evaluator_id === assignment.jurors?.user_id);
-        return {
-          ...assignment,
-          evaluation_id: evaluation?.id,
-          evaluation_status: evaluation?.status || 'not_started',
-          overall_score: evaluation?.overall_score,
-          strengths: evaluation?.strengths,
-          improvement_areas: evaluation?.improvement_areas
-        };
-      }) || [];
-
-      setStartupEvaluations(enrichedAssignments);
-      setSelectedStartupForDetails(startupId);
-    } catch (error) {
-      console.error('Error fetching startup evaluations:', error);
-      toast.error('Failed to load startup evaluation details');
-    }
+  const viewStartupDetails = (startup: StartupEvaluation) => {
+    setSelectedStartupForDetails({ id: startup.id, name: startup.name });
   };
 
   const SortableHeader = ({ field, children }: { field: SortField; children: React.ReactNode }) => (
@@ -633,7 +577,7 @@ export const EvaluationProgressView = ({ currentRound = 'screening' }: Evaluatio
                     <Button 
                       size="sm" 
                       variant="outline"
-                      onClick={() => viewStartupEvaluations(startup.id)}
+                      onClick={() => viewStartupDetails(startup)}
                     >
                       <Eye className="w-4 h-4" />
                     </Button>
@@ -656,108 +600,13 @@ export const EvaluationProgressView = ({ currentRound = 'screening' }: Evaluatio
       </CardContent>
     </Card>
 
-      {/* Startup Evaluations Details Modal */}
-      <Dialog open={!!selectedStartupForDetails} onOpenChange={() => setSelectedStartupForDetails(null)}>
-        <DialogContent className="max-w-5xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>
-              Startup Evaluation Details - {startups.find(s => s.id === selectedStartupForDetails)?.name}
-            </DialogTitle>
-          </DialogHeader>
-          
-          <div className="space-y-4">
-            {startupEvaluations.length === 0 ? (
-              <div className="text-center py-8">
-                <AlertCircle className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-semibold mb-2">No Evaluations Found</h3>
-                <p className="text-muted-foreground">This startup has no juror assignments yet.</p>
-              </div>
-            ) : (
-              <div className="grid gap-4">
-                {startupEvaluations.map((assignment) => (
-                  <Card key={assignment.id} className="border-l-4 border-l-primary">
-                    <CardHeader className="pb-3">
-                      <div className="flex items-center justify-between">
-                        <CardTitle className="text-lg">{assignment.jurors?.name || 'Unknown Juror'}</CardTitle>
-                        <Tooltip>
-                          <TooltipTrigger>
-                            <Badge variant={assignment.evaluation_status === 'submitted' ? 'default' : assignment.evaluation_status === 'draft' ? 'secondary' : 'outline'}>
-                              {assignment.evaluation_status === 'submitted' ? 'Evaluation Complete' : assignment.evaluation_status === 'draft' ? 'In Progress' : 'Not Started'}
-                            </Badge>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>
-                              {assignment.evaluation_status === 'submitted' 
-                                ? 'Evaluation has been completed and submitted by the juror' 
-                                : assignment.evaluation_status === 'draft'
-                                ? 'Evaluation is in progress but not yet submitted'
-                                : 'Juror has been assigned to startup but evaluation not started'}
-                            </p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </div>
-                      <CardDescription>
-                        {assignment.jurors?.job_title} at {assignment.jurors?.company} • {assignment.jurors?.email}
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      {assignment.evaluation_status === 'submitted' && assignment.overall_score && (
-                        <div className="mb-3">
-                          <p className="text-sm font-medium">Overall Score: <span className="text-lg font-bold text-primary">{formatScore(assignment.overall_score)}/10</span></p>
-                        </div>
-                      )}
-                      
-                      {assignment.strengths && assignment.strengths.length > 0 && (
-                        <div className="mb-3">
-                          <p className="text-sm font-medium">Key Strengths:</p>
-                          <ul className="text-sm text-muted-foreground list-disc list-inside">
-                            {assignment.strengths.map((strength: string, index: number) => (
-                              <li key={index}>{strength}</li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-                      
-                      <div className="flex gap-2 mt-4">
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          onClick={() => setSelectedJurorEvaluation({
-                            ...startups.find(s => s.id === selectedStartupForDetails),
-                            evaluation_id: assignment.evaluation_id,
-                            evaluation_status: assignment.evaluation_status || 'not_started',
-                            evaluator_id: assignment.jurors?.user_id
-                          })}
-                          disabled={assignment.evaluation_status === 'not_started'}
-                        >
-                          <Eye className="w-4 h-4 mr-2" />
-                          View Evaluation
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Individual Juror Evaluation Modal */}
-      {selectedJurorEvaluation && (
-        <StartupEvaluationModal
-          startup={{
-            ...selectedJurorEvaluation,
-            evaluation_id: selectedJurorEvaluation.evaluation_id,
-            evaluation_status: selectedJurorEvaluation.evaluation_status
-          }}
-          open={!!selectedJurorEvaluation}
-          onClose={() => setSelectedJurorEvaluation(null)}
-          onEvaluationUpdate={() => {}} 
-          mode="view"
-          currentRound="screening"
-        />
-      )}
+      {/* Startup Details Modal */}
+      <StartupDetailsModal
+        startup={selectedStartupForDetails}
+        open={!!selectedStartupForDetails}
+        onClose={() => setSelectedStartupForDetails(null)}
+        currentRound={currentRound as 'screening' | 'pitching'}
+      />
     </TooltipProvider>
   );
 };
