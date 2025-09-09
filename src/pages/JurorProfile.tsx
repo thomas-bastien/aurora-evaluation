@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Building2, Mail, User, MapPin, Target, AlertCircle, Linkedin, ExternalLink } from "lucide-react";
+import { Building2, Mail, User, MapPin, Target, AlertCircle, Linkedin, ExternalLink, ArrowLeft } from "lucide-react";
 import { JurorEvaluationsList } from '@/components/jurors/JurorEvaluationsList';
 
 interface Juror {
@@ -148,32 +148,42 @@ const JurorProfile = () => {
         {/* Header Section */}
         <div className="mb-8">
           <div className="flex items-start justify-between mb-4">
-            <div>
-              <h1 className="text-3xl font-bold text-foreground mb-2">{juror.name}</h1>
-              <p className="text-lg text-muted-foreground mb-4">
-                {juror.job_title ? `${juror.job_title}${juror.company ? ` at ${juror.company}` : ''}` : 'Juror Profile'}
-              </p>
-              <div className="flex items-center gap-4 mb-4">
-                <Badge variant={status.variant} className="capitalize">
-                  {status.text}
-                </Badge>
-                {juror.company && (
-                  <Badge variant="secondary">{juror.company}</Badge>
-                )}
-                {juror.preferred_regions && juror.preferred_regions.length > 0 && (
-                  <div className="flex gap-2">
-                    {juror.preferred_regions.slice(0, 2).map((region, index) => (
-                      <Badge key={index} variant="outline" className="text-xs">
-                        {region}
-                      </Badge>
-                    ))}
-                    {juror.preferred_regions.length > 2 && (
-                      <Badge variant="outline" className="text-xs">
-                        +{juror.preferred_regions.length - 2} more
-                      </Badge>
-                    )}
-                  </div>
-                )}
+            <div className="flex items-start gap-4">
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => navigate(-1)}
+                className="mt-1"
+              >
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+              <div>
+                <h1 className="text-3xl font-bold text-foreground mb-2">{juror.name}</h1>
+                <p className="text-lg text-muted-foreground mb-4">
+                  {juror.job_title ? `${juror.job_title}${juror.company ? ` at ${juror.company}` : ''}` : 'Juror Profile'}
+                </p>
+                <div className="flex items-center gap-4 mb-4">
+                  <Badge variant={status.variant} className="capitalize">
+                    {status.text}
+                  </Badge>
+                  {juror.company && (
+                    <Badge variant="secondary">{juror.company}</Badge>
+                  )}
+                  {juror.preferred_regions && juror.preferred_regions.length > 0 && (
+                    <div className="flex gap-2">
+                      {juror.preferred_regions.slice(0, 2).map((region, index) => (
+                        <Badge key={index} variant="outline" className="text-xs">
+                          {region}
+                        </Badge>
+                      ))}
+                      {juror.preferred_regions.length > 2 && (
+                        <Badge variant="outline" className="text-xs">
+                          +{juror.preferred_regions.length - 2} more
+                        </Badge>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>

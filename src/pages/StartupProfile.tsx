@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Building2, Users, DollarSign, MapPin, Calendar, FileText, Star, MessageSquare, ExternalLink, AlertCircle, Linkedin } from "lucide-react";
+import { Building2, Users, DollarSign, MapPin, Calendar, FileText, Star, MessageSquare, ExternalLink, AlertCircle, Linkedin, ArrowLeft } from "lucide-react";
 import { CURRENCIES } from '@/constants/startupConstants';
 import { normalizeStage, getStageColor } from '@/utils/stageUtils';
 import { getStatusColor } from '@/utils/statusUtils';
@@ -163,37 +163,47 @@ const StartupProfile = () => {
         {/* Header Section */}
         <div className="mb-8">
           <div className="flex items-start justify-between mb-4">
-            <div>
-              <h1 className="text-3xl font-bold text-foreground mb-2">{startup.name}</h1>
-              <p className="text-lg text-muted-foreground mb-4">
-                {startup.description || 'No description available'}
-              </p>
-              <div className="flex items-center gap-4 mb-4">
-                {startup.business_model && (
-                  <Badge variant="secondary">{startup.business_model}</Badge>
-                )}
-                {startup.verticals && startup.verticals.length > 0 && (
-                  <div className="flex gap-2">
-                    {startup.verticals.slice(0, 3).map((vertical, index) => (
-                      <Badge key={index} variant="outline" className="text-xs">
-                        {vertical}
-                      </Badge>
-                    ))}
-                    {startup.verticals.length > 3 && (
-                      <Badge variant="outline" className="text-xs">
-                        +{startup.verticals.length - 3} more
-                      </Badge>
-                    )}
-                  </div>
-                )}
-                {startup.stage && (
-                  <Badge variant="outline" className={getStageColor(normalizeStage(startup.stage))}>
-                    {normalizeStage(startup.stage)}
+            <div className="flex items-start gap-4">
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => navigate(-1)}
+                className="mt-1"
+              >
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+              <div>
+                <h1 className="text-3xl font-bold text-foreground mb-2">{startup.name}</h1>
+                <p className="text-lg text-muted-foreground mb-4">
+                  {startup.description || 'No description available'}
+                </p>
+                <div className="flex items-center gap-4 mb-4">
+                  {startup.business_model && (
+                    <Badge variant="secondary">{startup.business_model}</Badge>
+                  )}
+                  {startup.verticals && startup.verticals.length > 0 && (
+                    <div className="flex gap-2">
+                      {startup.verticals.slice(0, 3).map((vertical, index) => (
+                        <Badge key={index} variant="outline" className="text-xs">
+                          {vertical}
+                        </Badge>
+                      ))}
+                      {startup.verticals.length > 3 && (
+                        <Badge variant="outline" className="text-xs">
+                          +{startup.verticals.length - 3} more
+                        </Badge>
+                      )}
+                    </div>
+                  )}
+                  {startup.stage && (
+                    <Badge variant="outline" className={getStageColor(normalizeStage(startup.stage))}>
+                      {normalizeStage(startup.stage)}
+                    </Badge>
+                  )}
+                  <Badge className={getStatusColorForBadge(startup.status || 'pending')}>
+                    {startup.status?.replace('-', ' ') || 'pending'}
                   </Badge>
-                )}
-                <Badge className={getStatusColorForBadge(startup.status || 'pending')}>
-                  {startup.status?.replace('-', ' ') || 'pending'}
-                </Badge>
+                </div>
               </div>
             </div>
             <div className="text-right">
