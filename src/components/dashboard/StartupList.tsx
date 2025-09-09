@@ -4,7 +4,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Star, TrendingUp, Users, DollarSign, Clock } from "lucide-react";
-import { useUserProfile } from "@/hooks/useUserProfile";
 
 interface Startup {
   id: string;
@@ -19,7 +18,6 @@ interface Startup {
 }
 
 export const StartupList = () => {
-  const { profile } = useUserProfile();
   const [startups, setStartups] = useState<Startup[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -79,12 +77,10 @@ export const StartupList = () => {
         <div className="flex items-center justify-between">
           <div>
             <CardTitle className="text-xl font-semibold text-foreground">
-              {profile?.role === 'vc' ? 'My Assigned Startups' : 'All Ecosystem Startups'}
+              Recent Evaluations
             </CardTitle>
             <p className="text-sm text-muted-foreground">
-              {profile?.role === 'vc' 
-                ? 'Startups assigned to you for evaluation' 
-                : 'Latest startup assessments and scores across all evaluators'}
+              Latest startup assessments and scores
             </p>
           </div>
           <Button variant="outline" size="sm">
