@@ -31,7 +31,7 @@ export const WorkflowGuide = ({ userRole, currentRound }: WorkflowGuideProps) =>
       // Community Manager routes
       if (currentRound === 'screening') {
         switch (stepIndex) {
-          case 0: return `/selection/matchmaking?round=${roundParam}`; // Matchmaking
+          case 0: return `/selection?round=${roundParam}`; // Matchmaking
           case 1: return `/selection?round=${roundParam}&tab=jury-progress`; // Monitor Progress
           case 2: return `/selection?round=${roundParam}&tab=startup-selection`; // Make Selections
           case 3: return `/selection?round=${roundParam}&tab=communication`; // Communication
@@ -40,7 +40,7 @@ export const WorkflowGuide = ({ userRole, currentRound }: WorkflowGuideProps) =>
       } else {
         // Pitching round
         switch (stepIndex) {
-          case 0: return `/selection/matchmaking?round=${roundParam}`; // Re-Matchmaking
+          case 0: return `/selection?round=${roundParam}`; // Re-Matchmaking
           case 1: return `/selection?round=${roundParam}&tab=jury-progress`; // Monitor Pitch Calls
           case 2: return `/selection?round=${roundParam}&tab=startup-selection`; // Final Selections
           case 3: return `/selection?round=${roundParam}&tab=communication`; // Communication
