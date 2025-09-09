@@ -151,7 +151,8 @@ const TextareaWithValidation = ({
     </div>
   );
 };
-const evaluationSections: EvaluationSection[] = [{
+// Screening Round Evaluation Sections (38 detailed criteria)
+const screeningEvaluationSections: EvaluationSection[] = [{
   key: 'problem_statement',
   title: 'Problem Statement',
   guidance: 'Does the startup show a clear, evidence-based problem that is significant to the target customer segment?',
@@ -349,6 +350,54 @@ const evaluationSections: EvaluationSection[] = [{
     description: 'Fund allocation'
   }]
 }];
+
+// Pitching Round Evaluation Sections (5 focused criteria)
+const pitchingEvaluationSections: EvaluationSection[] = [{
+  key: 'founder_team',
+  title: 'Founder & Team',
+  guidance: 'Evaluate the founding team\'s capabilities and track record',
+  criteria: [{
+    key: 'founder_team_score',
+    label: 'Founder & Team Assessment',
+    description: '2: Strong, experienced, proven track record, complementary skills | 1: Relevant experience, limited past successes, some gaps | 0: Limited expertise, no track record, critical skill gaps'
+  }]
+}, {
+  key: 'profitability_market',
+  title: 'Profitability / Market Potential',
+  guidance: 'Assess the market opportunity and growth potential with data-backed projections',
+  criteria: [{
+    key: 'profitability_market_score',
+    label: 'Market Potential & Profitability',
+    description: '2: Clear growth in large/high-demand market; credible projections backed by data | 1: Realistic targets; market sizable; execution unproven | 0: Funding dependent; weak ROI alignment'
+  }]
+}, {
+  key: 'prize_money_usage',
+  title: 'Usage of Prize Money',
+  guidance: 'Evaluate how well the funding request aligns with business goals and stage',
+  criteria: [{
+    key: 'prize_money_usage_score',
+    label: 'Prize Money Allocation',
+    description: '2: Specific allocation; aligned with goals; expected outcomes stated | 1: General allocation; lacks detail | 0: Misaligned or vague; disconnected from stage/goals'
+  }]
+}, {
+  key: 'information_delivery',
+  title: 'Information Delivery (Pitch Quality)',
+  guidance: 'Assess the clarity, structure, and effectiveness of the pitch presentation',
+  criteria: [{
+    key: 'information_delivery_score',
+    label: 'Pitch Quality & Delivery',
+    description: '2: Clear, logical, structured, smooth flow, strong storytelling | 1: Mostly complete, minor flow issues | 0: Disorganized, unclear, missing elements'
+  }]
+}, {
+  key: 'qa_performance',
+  title: 'Q&A Performance',
+  guidance: 'Evaluate the founder\'s ability to handle questions and provide clear answers',
+  criteria: [{
+    key: 'qa_performance_score',
+    label: 'Q&A Session Performance',
+    description: '2: Precise, evidence-based answers | 1: Confident but shallow | 0: Vague, unsupported, off-topic'
+  }]
+}];
 const guidedFeedbackOptions = [{
   id: 1,
   label: 'Overall storytelling in the pitch deck'
@@ -513,7 +562,9 @@ export const StartupEvaluationModal = ({
     setIsEditing(true);
   };
   const calculateOverallScore = () => {
-    const totalCriteria = evaluationSections.reduce((sum, section) => sum + section.criteria.length, 0);
+    // Use appropriate evaluation sections based on current round
+    const currentEvaluationSections = currentRound === 'screening' ? screeningEvaluationSections : pitchingEvaluationSections;
+    const totalCriteria = currentEvaluationSections.reduce((sum, section) => sum + section.criteria.length, 0);
     const totalScore = Object.values(formData.criteria_scores).reduce((sum, score) => sum + score, 0);
     const maxPossibleScore = totalCriteria * 2; // Max 2 points per criterion
     return maxPossibleScore > 0 ? totalScore / maxPossibleScore * 10 : 0;
@@ -565,7 +616,9 @@ export const StartupEvaluationModal = ({
   };
 
   const validateForm = () => {
-    const allCriteriaCovered = evaluationSections.every(section => section.criteria.every(criterion => formData.criteria_scores[criterion.key] !== undefined));
+    // Use appropriate evaluation sections based on current round
+    const currentEvaluationSections = currentRound === 'screening' ? screeningEvaluationSections : pitchingEvaluationSections;
+    const allCriteriaCovered = currentEvaluationSections.every(section => section.criteria.every(criterion => formData.criteria_scores[criterion.key] !== undefined));
     if (!allCriteriaCovered) {
       toast.error('Please score all evaluation criteria');
       return false;
@@ -737,7 +790,7 @@ export const StartupEvaluationModal = ({
             <div className="flex items-center justify-between">
               <DialogTitle className="flex items-center gap-2 text-xl">
                 <Star className="w-5 h-5" />
-                Round 1 Evaluation - {startup.name}
+                {currentRound === 'screening' ? 'Screening' : 'Pitching'} Evaluation - {startup.name}
               </DialogTitle>
               <div className="flex items-center gap-2">
                 {mode === 'view' && (
@@ -837,46 +890,50 @@ export const StartupEvaluationModal = ({
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-8">
-                  {evaluationSections.map((section, sectionIndex) => <div key={section.key} className="space-y-4">
-                      <div className="flex items-center gap-2">
-                        <h3 className="text-lg font-semibold">{sectionIndex + 1}. {section.title}</h3>
-                        <Tooltip>
-                          <TooltipTrigger>
-                            <Info className="w-4 h-4 text-muted-foreground" />
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p className="max-w-xs">{section.guidance}</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </div>
-                      
-                      <div className="space-y-3 ml-4">
-                        {section.criteria.map((criterion, criterionIndex) => <div key={criterion.key} className="space-y-2">
-                            <div className="flex items-center justify-between">
-                              <Label className="text-sm flex-1">{criterion.label}</Label>
-                              <div className="flex items-center gap-2">
-                                 <Select 
-                                   value={formData.criteria_scores[criterion.key]?.toString() || ''} 
-                                   onValueChange={value => updateCriteriaScore(criterion.key, parseInt(value))}
-                                   disabled={!isEditing}
-                                 >
-                                  <SelectTrigger className="w-32">
-                                    <SelectValue placeholder="Score" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="2">Yes (2 pts)</SelectItem>
-                                    <SelectItem value="1">Not Fully (1 pt)</SelectItem>
-                                    <SelectItem value="0">No (0 pts)</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                            </div>
-                            <p className="text-xs text-muted-foreground ml-2">{criterion.description}</p>
-                          </div>)}
-                      </div>
-                      
-                      {sectionIndex < evaluationSections.length - 1 && <Separator />}
-                    </div>)}
+                  {(() => {
+                    // Use appropriate evaluation sections based on current round
+                    const currentEvaluationSections = currentRound === 'screening' ? screeningEvaluationSections : pitchingEvaluationSections;
+                    return currentEvaluationSections.map((section, sectionIndex) => <div key={section.key} className="space-y-4">
+                       <div className="flex items-center gap-2">
+                         <h3 className="text-lg font-semibold">{sectionIndex + 1}. {section.title}</h3>
+                         <Tooltip>
+                           <TooltipTrigger>
+                             <Info className="w-4 h-4 text-muted-foreground" />
+                           </TooltipTrigger>
+                           <TooltipContent>
+                             <p className="max-w-xs">{section.guidance}</p>
+                           </TooltipContent>
+                         </Tooltip>
+                       </div>
+                       
+                       <div className="space-y-3 ml-4">
+                         {section.criteria.map((criterion, criterionIndex) => <div key={criterion.key} className="space-y-2">
+                             <div className="flex items-center justify-between">
+                               <Label className="text-sm flex-1">{criterion.label}</Label>
+                               <div className="flex items-center gap-2">
+                                  <Select 
+                                    value={formData.criteria_scores[criterion.key]?.toString() || ''} 
+                                    onValueChange={value => updateCriteriaScore(criterion.key, parseInt(value))}
+                                    disabled={!isEditing}
+                                  >
+                                   <SelectTrigger className="w-32">
+                                     <SelectValue placeholder="Score" />
+                                   </SelectTrigger>
+                                   <SelectContent>
+                                     <SelectItem value="2">Strong (2 pts)</SelectItem>
+                                     <SelectItem value="1">Moderate (1 pt)</SelectItem>
+                                     <SelectItem value="0">Weak (0 pts)</SelectItem>
+                                   </SelectContent>
+                                 </Select>
+                               </div>
+                             </div>
+                             <p className="text-xs text-muted-foreground ml-2">{criterion.description}</p>
+                           </div>)}
+                       </div>
+                       
+                       {sectionIndex < currentEvaluationSections.length - 1 && <Separator />}
+                     </div>);
+                  })()}
                 </CardContent>
               </Card>
 
