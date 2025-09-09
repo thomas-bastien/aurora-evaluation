@@ -577,7 +577,7 @@ export const JurorProgressMonitoring = ({ currentRound }: JurorProgressMonitorin
           onClose={() => setSelectedStartupForEvaluation(null)}
           onEvaluationUpdate={() => {}} 
           mode="view"
-          currentRound="screening"
+          currentRound={currentRound === 'screeningRound' ? 'screening' : 'pitching'}
         />
       )}
     </TooltipProvider>
