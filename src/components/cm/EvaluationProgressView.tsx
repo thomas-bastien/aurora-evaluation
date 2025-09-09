@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { formatScore } from '@/lib/utils';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -547,7 +548,7 @@ export const EvaluationProgressView = ({ currentRound = 'screening' }: Evaluatio
             <div className="text-sm text-muted-foreground">Total Startups</div>
           </div>
           <div className="text-center p-4 bg-primary/10 rounded-lg">
-            <div className="text-2xl font-bold text-primary">{completionStats.completionRate.toFixed(0)}%</div>
+            <div className="text-2xl font-bold text-primary">{Math.round(completionStats.completionRate)}%</div>
             <div className="text-sm text-muted-foreground">Completion Rate</div>
           </div>
           <div className="text-center p-4 bg-success/10 rounded-lg">
@@ -555,7 +556,7 @@ export const EvaluationProgressView = ({ currentRound = 'screening' }: Evaluatio
             <div className="text-sm text-muted-foreground">Completed Evaluations</div>
           </div>
           <div className="text-center p-4 bg-accent/10 rounded-lg">
-            <div className="text-2xl font-bold text-accent">{completionStats.averageScore.toFixed(1)}</div>
+            <div className="text-2xl font-bold text-accent">{formatScore(completionStats.averageScore)}</div>
             <div className="text-sm text-muted-foreground">Average Score</div>
           </div>
         </div>
@@ -622,7 +623,7 @@ export const EvaluationProgressView = ({ currentRound = 'screening' }: Evaluatio
                   </div>
                   <div className="col-span-1">
                     <span className="font-semibold text-lg">
-                      {startup.averageScore?.toFixed(1) || 'N/A'}
+                      {formatScore(startup.averageScore)}
                     </span>
                   </div>
                   <div className="col-span-2">
@@ -702,7 +703,7 @@ export const EvaluationProgressView = ({ currentRound = 'screening' }: Evaluatio
                     <CardContent>
                       {assignment.evaluation_status === 'submitted' && assignment.overall_score && (
                         <div className="mb-3">
-                          <p className="text-sm font-medium">Overall Score: <span className="text-lg font-bold text-primary">{assignment.overall_score}/10</span></p>
+                          <p className="text-sm font-medium">Overall Score: <span className="text-lg font-bold text-primary">{formatScore(assignment.overall_score)}/10</span></p>
                         </div>
                       )}
                       

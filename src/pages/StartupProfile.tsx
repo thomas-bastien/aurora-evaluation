@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from '@/integrations/supabase/client';
+import { formatScore } from '@/lib/utils';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -199,10 +200,8 @@ const StartupProfile = () => {
               <div className="text-2xl font-bold text-primary mb-1">
                 {statsLoading ? (
                   <Skeleton className="h-8 w-16" />
-                ) : evalStats.overallStats.averageScore ? (
-                  evalStats.overallStats.averageScore.toFixed(1)
                 ) : (
-                  'N/A'
+                  formatScore(evalStats.overallStats.averageScore)
                 )}
               </div>
               <div className="text-sm text-muted-foreground">
@@ -215,11 +214,11 @@ const StartupProfile = () => {
               {!statsLoading && evalStats.overallStats.totalReviews > 0 && (
                 <div className="text-xs text-muted-foreground mt-1">
                   {evalStats.screeningStats.reviewCount > 0 && (
-                    <span>Screening: {evalStats.screeningStats.averageScore?.toFixed(1)} ({evalStats.screeningStats.reviewCount})</span>
+                    <span>Screening: {formatScore(evalStats.screeningStats.averageScore)} ({evalStats.screeningStats.reviewCount})</span>
                   )}
                   {evalStats.screeningStats.reviewCount > 0 && evalStats.pitchingStats.reviewCount > 0 && ' • '}
                   {evalStats.pitchingStats.reviewCount > 0 && (
-                    <span>Pitching: {evalStats.pitchingStats.averageScore?.toFixed(1)} ({evalStats.pitchingStats.reviewCount})</span>
+                    <span>Pitching: {formatScore(evalStats.pitchingStats.averageScore)} ({evalStats.pitchingStats.reviewCount})</span>
                   )}
                 </div>
               )}

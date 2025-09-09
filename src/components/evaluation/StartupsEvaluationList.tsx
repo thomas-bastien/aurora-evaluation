@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { formatScore } from "@/lib/utils";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -153,7 +154,7 @@ export const StartupsEvaluationList = ({ startups, loading, onEvaluationUpdate, 
                     <div className="text-right">
                       <div className="flex items-center gap-1 text-lg font-bold text-primary">
                         <Star className="w-4 h-4" />
-                        {startup.overall_score.toFixed(1)}/10
+                        {formatScore(startup.overall_score)}/10
                       </div>
                       <div className="text-xs text-muted-foreground">Score</div>
                     </div>

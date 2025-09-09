@@ -1,4 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { formatScore } from "@/lib/utils";
 import { 
   CheckCircle, 
   Clock, 
@@ -49,7 +50,7 @@ export const EvaluationStats = ({ stats }: EvaluationStatsProps) => {
     },
     {
       title: "Average Score",
-      value: stats.averageScore > 0 ? stats.averageScore.toFixed(1) : "0.0",
+      value: formatScore(stats.averageScore > 0 ? stats.averageScore : null, "0"),
       subtitle: "Out of 10.0",
       icon: Star,
       color: "text-purple-600"

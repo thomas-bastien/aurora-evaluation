@@ -436,7 +436,7 @@ export const JurorProgressMonitoring = ({ currentRound }: JurorProgressMonitorin
                   <div className="flex-1">
                     <div className="flex justify-between text-sm mb-1">
                       <span>Progress</span>
-                      <span>{juror.completionRate.toFixed(0)}%</span>
+                      <span>{Math.round(juror.completionRate)}%</span>
                     </div>
                     <Progress 
                       value={juror.completionRate} 

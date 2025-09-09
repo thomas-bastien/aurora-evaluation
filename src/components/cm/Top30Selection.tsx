@@ -1,5 +1,6 @@
 // Top30Selection component for startup selection workflow
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { formatScore } from '@/lib/utils';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -728,7 +729,7 @@ export const Top30Selection = ({ currentRound, roundInfo, isReadOnly = false, on
                         </Badge>
                         {startup.averageScore && (
                           <Badge variant="secondary" className="text-xs">
-                            Score: {startup.averageScore.toFixed(1)}/10
+                            Score: {formatScore(startup.averageScore)}/10
                           </Badge>
                         )}
                       </div>
@@ -745,7 +746,7 @@ export const Top30Selection = ({ currentRound, roundInfo, isReadOnly = false, on
                   <div className="col-span-2">
                     <div className="text-center">
                       <div className="text-lg font-semibold">
-                        {startup.averageScore?.toFixed(1) || 'N/A'}
+                        {formatScore(startup.averageScore)}
                       </div>
                       <div className="text-xs text-muted-foreground">
                         {startup.totalEvaluations} evaluations
@@ -839,13 +840,13 @@ export const Top30Selection = ({ currentRound, roundInfo, isReadOnly = false, on
                     <div className="flex items-center justify-between">
                       <span className="text-sm">Average Score:</span>
                       <Badge variant="default" className="font-bold">
-                        {selectedForDetails.averageScore?.toFixed(1) || 'N/A'}/10
+                        {formatScore(selectedForDetails.averageScore)}/10
                       </Badge>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-sm">Total Score:</span>
                       <Badge variant="outline">
-                        {selectedForDetails.totalScore?.toFixed(1) || 'N/A'}
+                        {formatScore(selectedForDetails.totalScore)}
                       </Badge>
                     </div>
                   </div>

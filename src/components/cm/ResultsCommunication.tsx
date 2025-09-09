@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { formatScore } from '@/lib/utils';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -196,7 +197,7 @@ ${strengths.slice(0, 3).map(s => `• ${s}`).join('\n') || '• Strong potential
 ${improvements.slice(0, 2).map(i => `• ${i}`).join('\n') || '• Continue developing your core value proposition'}
 
 **Overall Assessment:**
-Your startup received an average score of ${score.toFixed(1)}/10 from our evaluation panel. ${score >= 7 ? 'This represents strong performance across key criteria.' : 'There are opportunities to strengthen key areas of your business.'}
+Your startup received an average score of ${formatScore(score)}/10 from our evaluation panel. ${score >= 7 ? 'This represents strong performance across key criteria.' : 'There are opportunities to strengthen key areas of your business.'}
 
 ${notes.length > 0 ? `**Additional Notes:**\n${notes[0]}` : ''}
 
@@ -598,7 +599,7 @@ The Aurora Team`
                     <div>
                       <h4 className="font-semibold text-foreground">{result.name}</h4>
                       <p className="text-sm text-muted-foreground">
-                        {result.industry} • Score: {result.averageScore.toFixed(1)}
+                        {result.industry} • Score: {formatScore(result.averageScore)}
                       </p>
                     </div>
                     {result.roundStatus === 'selected' && <Badge className="bg-success text-success-foreground">Selected</Badge>}
@@ -634,7 +635,7 @@ The Aurora Team`
                   <div>
                     <h4 className="font-semibold text-foreground">{result.name}</h4>
                     <p className="text-sm text-muted-foreground">
-                      {result.email} • Score: {result.averageScore.toFixed(1)}
+                       {result.email} • Score: {formatScore(result.averageScore)}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
@@ -659,7 +660,7 @@ The Aurora Team`
                   <div>
                     <h4 className="font-semibold text-foreground">{result.name}</h4>
                     <p className="text-sm text-muted-foreground">
-                      {result.email} • Score: {result.averageScore.toFixed(1)}
+                       {result.email} • Score: {formatScore(result.averageScore)}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
@@ -684,7 +685,7 @@ The Aurora Team`
                   <div>
                     <h4 className="font-semibold text-foreground">{result.name}</h4>
                     <p className="text-sm text-muted-foreground">
-                      {result.email} • Score: {result.averageScore.toFixed(1)}
+                      {result.email} • Score: {formatScore(result.averageScore)}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">

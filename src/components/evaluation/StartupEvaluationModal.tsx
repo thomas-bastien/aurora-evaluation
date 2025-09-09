@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import { formatScore } from "@/lib/utils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -830,7 +831,7 @@ export const StartupEvaluationModal = ({
                     <CardTitle>Evaluation Criteria</CardTitle>
                     <div className="flex items-center gap-2 text-lg font-semibold">
                       <Star className="w-5 h-5 text-primary" />
-                      Overall Score: {calculateOverallScore().toFixed(1)}/10
+                      Overall Score: {formatScore(calculateOverallScore())}/10
                     </div>
                   </div>
                 </CardHeader>

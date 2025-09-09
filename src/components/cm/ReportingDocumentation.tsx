@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { formatScore } from '@/lib/utils';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -215,7 +216,7 @@ export const ReportingDocumentation = ({ currentRound }: ReportingDocumentationP
               </div>
               <div className="text-center p-4 bg-success/10 rounded-lg">
                 <div className="text-2xl font-bold text-success">
-                  {stats.completionRate.toFixed(0)}%
+                  {Math.round(stats.completionRate)}%
                 </div>
                 <div className="text-sm text-muted-foreground">
                   {currentRound === 'screeningRound' ? 'Evaluations Complete' : 'Pitches Completed'}
@@ -223,7 +224,7 @@ export const ReportingDocumentation = ({ currentRound }: ReportingDocumentationP
               </div>
               <div className="text-center p-4 bg-warning/10 rounded-lg">
                 <div className="text-2xl font-bold text-warning">
-                  {stats.averageScore.toFixed(1)}
+                  {formatScore(stats.averageScore)}
                 </div>
                 <div className="text-sm text-muted-foreground">Average Score</div>
               </div>

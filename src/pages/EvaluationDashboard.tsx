@@ -212,7 +212,7 @@ const EvaluationDashboard = () => {
                   </p>
                 </div>
                 <div className="text-right">
-                  <div className="text-2xl font-bold text-primary">{completionRate.toFixed(0)}%</div>
+                  <div className="text-2xl font-bold text-primary">{Math.round(completionRate)}%</div>
                   <div className="text-xs text-muted-foreground">Complete</div>
                 </div>
               </div>

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { supabase } from '@/integrations/supabase/client';
+import { formatScore } from '@/lib/utils';
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -397,7 +398,7 @@ const VCProfile = () => {
               <CardContent>
                 <div className="space-y-4">
                   <div className="text-center">
-                    <div className="text-3xl font-bold text-primary">{completionRate.toFixed(0)}%</div>
+                    <div className="text-3xl font-bold text-primary">{Math.round(completionRate)}%</div>
                     <p className="text-sm text-muted-foreground">Completion Rate</p>
                   </div>
                   <Progress value={completionRate} className="h-2" />
@@ -447,7 +448,7 @@ const VCProfile = () => {
                     <span className="text-sm">Average Score</span>
                   </div>
                   <Badge variant="outline">
-                    {stats.average_score > 0 ? stats.average_score.toFixed(1) : '0.0'}/10
+                    {formatScore(stats.average_score > 0 ? stats.average_score : null, "0")}/10
                   </Badge>
                 </div>
               </CardContent>

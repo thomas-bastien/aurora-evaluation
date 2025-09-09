@@ -302,7 +302,7 @@ export const RoundManagement = ({ roundName, roundInfo, selectedStartupsCount = 
             </div>
             <Progress value={progress.completionRate} className="h-2" />
             <p className="text-xs text-muted-foreground">
-              {progress.evaluationsCompleted} of {progress.assignmentsTotal} completed ({progress.completionRate.toFixed(1)}%)
+              {progress.evaluationsCompleted} of {progress.assignmentsTotal} completed ({Math.round(progress.completionRate * 10) / 10}%)
             </p>
           </div>
 
