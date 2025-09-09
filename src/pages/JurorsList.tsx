@@ -552,6 +552,7 @@ export default function JurorsList() {
                     <TableCell className="font-medium">{juror.name}</TableCell>
                     <TableCell>{juror.email}</TableCell>
                     <TableCell>{juror.job_title || '-'}</TableCell>
+                    <TableCell>{juror.company || '-'}</TableCell>
                     <TableCell>
                       <div className="space-y-1">
                         {juror.preferred_regions && juror.preferred_regions.length > 0 && (
