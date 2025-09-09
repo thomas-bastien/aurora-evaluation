@@ -27,7 +27,7 @@ import {
   AlertTriangle
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { StartupEvaluationModal } from "@/components/evaluation/StartupEvaluationModal";
+import { CMStartupEvaluationsView } from "@/components/cm/CMStartupEvaluationsView";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { RoundStatusDisplay } from "@/components/common/RoundStatusDisplay";
 import { useToast } from "@/hooks/use-toast";
@@ -902,19 +902,17 @@ export const Top30Selection = ({ currentRound, roundInfo, isReadOnly = false, on
         </Dialog>
       )}
 
-      {/* Evaluation Modal */}
+      {/* CM Evaluations View */}
       {evaluationModalStartup && (
-        <StartupEvaluationModal
+        <CMStartupEvaluationsView
           startup={{
-            ...evaluationModalStartup,
-            industry: '',
-            location: evaluationModalStartup.regions?.[0] || '',
-            evaluation_status: 'not_started'
+            id: evaluationModalStartup.id,
+            name: evaluationModalStartup.name,
+            description: evaluationModalStartup.description
           }}
           open={!!evaluationModalStartup}
           onClose={() => setEvaluationModalStartup(null)}
-          onEvaluationUpdate={() => {}}
-          currentRound={currentRound as 'screening' | 'pitching'}
+          currentRound={currentRound}
         />
       )}
     </div>
