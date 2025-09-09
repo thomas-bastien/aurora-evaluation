@@ -9,7 +9,6 @@ import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Building2, Mail, User, MapPin, Target, AlertCircle, Linkedin, ExternalLink, ArrowLeft } from "lucide-react";
 import { JurorEvaluationsList } from '@/components/jurors/JurorEvaluationsList';
-import { JurorStartupsList } from '@/components/jurors/JurorStartupsList';
 
 interface Juror {
   id: string;
@@ -191,11 +190,10 @@ const JurorProfile = () => {
         </div>
 
         <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="preferences">Preferences</TabsTrigger>
             <TabsTrigger value="evaluations">Evaluations</TabsTrigger>
-            <TabsTrigger value="startups">Startups</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6">
@@ -364,10 +362,6 @@ const JurorProfile = () => {
                 <p className="text-muted-foreground">This juror hasn't accepted their invitation yet, so no evaluations are available.</p>
               </div>
             )}
-          </TabsContent>
-
-          <TabsContent value="startups" className="space-y-6">
-            <JurorStartupsList jurorId={juror.id} />
           </TabsContent>
         </Tabs>
       </main>
