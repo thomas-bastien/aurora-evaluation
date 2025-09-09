@@ -79,23 +79,42 @@ export default function StartupsList() {
   useEffect(() => {
     const fetchStartups = async () => {
       try {
-        // Fetch startups based on round assignments
-        const assignmentTable = selectedRound === 'screening' ? 'screening_assignments' : 'pitching_assignments';
         const evaluationTable = selectedRound === 'screening' ? 'screening_evaluations' : 'pitching_evaluations';
-        
-        const { data, error } = await supabase
-          .from('startups')
-          .select(`
-            *,
-            ${assignmentTable}!inner(status)
-          `)
-          .order('created_at', { ascending: false });
+        let startupsData, startupsError;
 
-        if (error) {
-          console.error('Error fetching startups:', error);
+        if (selectedRound === 'pitching') {
+          // For pitching round: ONLY show startups that were SELECTED in screening round
+          const { data, error } = await supabase
+            .from('startups')
+            .select(`
+              *,
+              startup_round_statuses!inner(
+                status,
+                rounds!inner(name)
+              )
+            `)
+            .eq('startup_round_statuses.rounds.name', 'screening')
+            .eq('startup_round_statuses.status', 'selected')
+            .order('created_at', { ascending: false });
+          
+          startupsData = data;
+          startupsError = error;
+        } else {
+          // For screening round: show ALL startups
+          const { data, error } = await supabase
+            .from('startups')
+            .select('*')
+            .order('created_at', { ascending: false });
+          
+          startupsData = data;
+          startupsError = error;
+        }
+
+        if (startupsError) {
+          console.error('Error fetching startups:', startupsError);
           setStartups([]);
         } else {
-          setStartups(data || []);
+          setStartups(startupsData || []);
         }
 
         // Fetch evaluation statuses for status display
@@ -113,7 +132,7 @@ export default function StartupsList() {
             }
           });
           // Set default status for startups without evaluations
-          (data || []).forEach(startup => {
+          (startupsData || []).forEach(startup => {
             if (!statusMap.has(startup.id)) {
               statusMap.set(startup.id, 'not_evaluated');
             }
