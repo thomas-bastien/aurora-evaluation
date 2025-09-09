@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { CMStartupEvaluationsView } from "@/components/cm/CMStartupEvaluationsView";
+import { StartupDetailsModal } from "@/components/common/StartupDetailsModal";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { 
   BarChart3, 
@@ -51,11 +51,6 @@ interface EvaluationProgressViewProps {
 }
 
 export const EvaluationProgressView = ({ currentRound = 'screening' }: EvaluationProgressViewProps) => {
-  // Helper function to convert round naming convention
-  const convertRoundName = (round: string): 'screening' | 'pitching' => {
-    if (round === 'pitchingRound' || round === 'pitching') return 'pitching';
-    return 'screening';
-  };
   const { user, session, loading: authLoading } = useAuth();
   const [startups, setStartups] = useState<StartupEvaluation[]>([]);
   const [filteredStartups, setFilteredStartups] = useState<StartupEvaluation[]>([]);
@@ -748,19 +743,12 @@ export const EvaluationProgressView = ({ currentRound = 'screening' }: Evaluatio
         </DialogContent>
       </Dialog>
 
-      {/* Individual Juror Evaluation Modal */}
-      {selectedJurorEvaluation && (
-        <CMStartupEvaluationsView
-          startup={{
-            id: selectedJurorEvaluation.id,
-            name: selectedJurorEvaluation.name,
-            description: selectedJurorEvaluation.description
-          }}
-          open={!!selectedJurorEvaluation}
-          onClose={() => setSelectedJurorEvaluation(null)}
-          currentRound={convertRoundName(currentRound)}
-        />
-      )}
+      {/* Startup Details Modal */}
+      <StartupDetailsModal
+        startup={selectedJurorEvaluation}
+        open={!!selectedJurorEvaluation}
+        onClose={() => setSelectedJurorEvaluation(null)}
+      />
     </TooltipProvider>
   );
 };
