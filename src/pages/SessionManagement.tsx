@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from '@/integrations/supabase/client';
+import { formatScore } from '@/lib/utils';
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -164,7 +165,7 @@ const SessionManagement = () => {
                       </div>
                       <div className="flex items-center gap-4">
                       {session.status === "completed" && session.avg_score && <div className="text-right">
-                          <div className="text-lg font-bold text-primary">{session.avg_score}/10</div>
+                          <div className="text-lg font-bold text-primary">{formatScore(session.avg_score)}/10</div>
                           <div className="text-xs text-muted-foreground">Avg Score</div>
                         </div>}
                         <Badge variant={getStatusColor(session.status)}>{session.status}</Badge>

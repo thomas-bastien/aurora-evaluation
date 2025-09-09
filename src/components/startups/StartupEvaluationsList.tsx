@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { formatScore } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -135,7 +136,7 @@ export function StartupEvaluationsList({ startupId }: StartupEvaluationsListProp
               <div className="flex items-center gap-1">
                 <Star className="h-4 w-4 text-yellow-500" />
                 <span className={`font-bold ${getScoreColor(evaluation.overall_score)}`}>
-                  {evaluation.overall_score}/10
+                  {formatScore(evaluation.overall_score)}/10
                 </span>
               </div>
             )}
