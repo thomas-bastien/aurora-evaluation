@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { FilterPanel } from "@/components/common/FilterPanel";
-import { StartupEvaluationModal } from "@/components/evaluation/StartupEvaluationModal";
+import { CMStartupEvaluationsView } from "@/components/cm/CMStartupEvaluationsView";
 import { 
   Search, 
   Mail, 
@@ -51,6 +51,11 @@ export const JurorProgressMonitoring = ({ currentRound }: JurorProgressMonitorin
   const [selectedStartupForEvaluation, setSelectedStartupForEvaluation] = useState<any>(null);
 
   const roundTitle = currentRound === 'screeningRound' ? 'Screening Round' : 'Pitching Round';
+  
+  // Helper function to convert round naming convention
+  const convertRoundName = (round: 'screeningRound' | 'pitchingRound'): 'screening' | 'pitching' => {
+    return round === 'screeningRound' ? 'screening' : 'pitching';
+  };
 
   useEffect(() => {
     fetchJurorProgress();
@@ -567,17 +572,15 @@ export const JurorProgressMonitoring = ({ currentRound }: JurorProgressMonitorin
 
       {/* Startup Evaluation Modal */}
       {selectedStartupForEvaluation && (
-        <StartupEvaluationModal
+        <CMStartupEvaluationsView
           startup={{
-            ...selectedStartupForEvaluation,
-            evaluation_id: selectedStartupForEvaluation.evaluation_id,
-            evaluation_status: selectedStartupForEvaluation.evaluation_status
+            id: selectedStartupForEvaluation.id,
+            name: selectedStartupForEvaluation.name,
+            description: selectedStartupForEvaluation.description
           }}
           open={!!selectedStartupForEvaluation}
           onClose={() => setSelectedStartupForEvaluation(null)}
-          onEvaluationUpdate={() => {}} 
-          mode="view"
-          currentRound="screening"
+          currentRound={convertRoundName(currentRound)}
         />
       )}
     </TooltipProvider>
