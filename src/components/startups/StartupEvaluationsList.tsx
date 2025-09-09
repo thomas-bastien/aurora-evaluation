@@ -42,30 +42,56 @@ export function StartupEvaluationsList({ startupId }: StartupEvaluationsListProp
 
       setLoading(true);
       try {
+        // First fetch evaluations
         const [screeningResult, pitchingResult] = await Promise.all([
           supabase
             .from('screening_evaluations')
-            .select(`
-              *,
-              jurors!evaluator_id(id, name, email, company)
-            `)
-            .eq('startup_id', startupId)
-            .eq('status', 'submitted'),
+            .select('*')
+            .eq('startup_id', startupId),
           supabase
             .from('pitching_evaluations')
-            .select(`
-              *,
-              jurors!evaluator_id(id, name, email, company)
-            `)
+            .select('*')
             .eq('startup_id', startupId)
-            .eq('status', 'submitted')
         ]);
 
         if (screeningResult.error) throw screeningResult.error;
         if (pitchingResult.error) throw pitchingResult.error;
 
-        setScreeningEvaluations((screeningResult.data as any) || []);
-        setPitchingEvaluations((pitchingResult.data as any) || []);
+        // Then fetch juror data for each evaluation
+        const screeningEvals = screeningResult.data || [];
+        const pitchingEvals = pitchingResult.data || [];
+
+        // Get unique evaluator IDs
+        const evaluatorIds = [...new Set([
+          ...screeningEvals.map(e => e.evaluator_id),
+          ...pitchingEvals.map(e => e.evaluator_id)
+        ])];
+
+        // Fetch juror data
+        const jurorsResult = await supabase
+          .from('jurors')
+          .select('user_id, id, name, email, company')
+          .in('user_id', evaluatorIds);
+
+        if (jurorsResult.error) throw jurorsResult.error;
+
+        const jurorsMap = new Map(
+          (jurorsResult.data || []).map(juror => [juror.user_id, juror])
+        );
+
+        // Combine evaluations with juror data
+        const enrichedScreeningEvals = screeningEvals.map(evaluation => ({
+          ...evaluation,
+          jurors: jurorsMap.get(evaluation.evaluator_id) || null
+        }));
+
+        const enrichedPitchingEvals = pitchingEvals.map(evaluation => ({
+          ...evaluation,
+          jurors: jurorsMap.get(evaluation.evaluator_id) || null
+        }));
+
+        setScreeningEvaluations(enrichedScreeningEvals as any);
+        setPitchingEvaluations(enrichedPitchingEvals as any);
       } catch (error) {
         console.error('Error fetching evaluations:', error);
       } finally {
@@ -101,6 +127,9 @@ export function StartupEvaluationsList({ startupId }: StartupEvaluationsListProp
           <div className="flex items-center gap-2">
             <Badge variant="outline" className="capitalize">
               {round}
+            </Badge>
+            <Badge variant={evaluation.status === 'submitted' ? 'default' : 'secondary'} className="capitalize">
+              {evaluation.status}
             </Badge>
             {evaluation.overall_score && (
               <div className="flex items-center gap-1">
