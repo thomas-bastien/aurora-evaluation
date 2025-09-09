@@ -131,11 +131,6 @@ const App = () => (
                 <EvaluationDashboard />
               </ProtectedRoute>
             } />
-            <Route path="/session-management" element={
-              <ProtectedRoute>
-                <SessionManagement />
-              </ProtectedRoute>
-            } />
             <Route path="/matchmaking" element={
               <ProtectedRoute>
                 <RoleGuard allowedRoles={['admin']}>

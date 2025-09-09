@@ -1,7 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { useNavigate } from "react-router-dom";
 import { 
   Users, 
   CheckCircle, 
@@ -22,52 +20,6 @@ interface WorkflowGuideProps {
 export const WorkflowGuide = ({ userRole, currentRound }: WorkflowGuideProps) => {
   const isAdmin = userRole === 'admin';
   const isScreening = currentRound === 'screening';
-  const navigate = useNavigate();
-
-  const getRouteForStep = (stepIndex: number) => {
-    const roundParam = currentRound === 'screening' ? 'screening' : 'pitching';
-    
-    if (isAdmin) {
-      // Community Manager routes
-      if (currentRound === 'screening') {
-        switch (stepIndex) {
-          case 0: return `/selection?round=${roundParam}`; // Matchmaking
-          case 1: return `/selection?round=${roundParam}&tab=jury-progress`; // Monitor Progress
-          case 2: return `/selection?round=${roundParam}&tab=startup-selection`; // Make Selections
-          case 3: return `/selection?round=${roundParam}&tab=communication`; // Communication
-          default: return '/selection';
-        }
-      } else {
-        // Pitching round
-        switch (stepIndex) {
-          case 0: return `/selection?round=${roundParam}`; // Re-Matchmaking
-          case 1: return `/selection?round=${roundParam}&tab=jury-progress`; // Monitor Pitch Calls
-          case 2: return `/selection?round=${roundParam}&tab=startup-selection`; // Final Selections
-          case 3: return `/selection?round=${roundParam}&tab=communication`; // Communication
-          default: return '/selection';
-        }
-      }
-    } else {
-      // Juror routes
-      if (currentRound === 'screening') {
-        switch (stepIndex) {
-          case 0: return `/evaluate?round=${roundParam}&view=assigned`; // Review Assignments
-          case 1: return `/evaluate?round=${roundParam}`; // Evaluate Startups
-          case 2: return `/evaluate?round=${roundParam}`; // Submit Evaluations
-          default: return '/evaluate';
-        }
-      } else {
-        // Pitching round
-        switch (stepIndex) {
-          case 0: return '/profile'; // Set Availability (Calendly)
-          case 1: return '/session-management'; // Join Pitch Calls
-          case 2: return `/evaluate?round=${roundParam}`; // Evaluate Pitches
-          case 3: return `/evaluate?round=${roundParam}`; // Final Assessment
-          default: return '/evaluate';
-        }
-      }
-    }
-  };
 
   const workflows = {
     admin: {
@@ -138,18 +90,13 @@ export const WorkflowGuide = ({ userRole, currentRound }: WorkflowGuideProps) =>
       <CardContent>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {currentWorkflow.steps.map((step, index) => (
-            <Button
-              key={index}
-              variant="ghost"
-              className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg h-auto justify-start hover:bg-muted/80 transition-colors"
-              onClick={() => navigate(getRouteForStep(index))}
-            >
+            <div key={index} className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg">
               <step.icon className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
-              <div className="text-left">
+              <div>
                 <h4 className="font-medium text-sm">{step.title}</h4>
                 <p className="text-xs text-muted-foreground mt-1">{step.desc}</p>
               </div>
-            </Button>
+            </div>
           ))}
         </div>
         
