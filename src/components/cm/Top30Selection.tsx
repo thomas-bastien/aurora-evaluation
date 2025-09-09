@@ -27,7 +27,7 @@ import {
   AlertTriangle
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { StartupDetailsModal } from "@/components/common/StartupDetailsModal";
+import { CMStartupEvaluationsView } from "@/components/cm/CMStartupEvaluationsView";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { RoundStatusDisplay } from "@/components/common/RoundStatusDisplay";
 import { useToast } from "@/hooks/use-toast";
@@ -72,6 +72,7 @@ export const Top30Selection = ({ currentRound, roundInfo, isReadOnly = false, on
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'selected' | 'rejected' | 'under-review'>('all');
   const [selectedForDetails, setSelectedForDetails] = useState<StartupSelection | null>(null);
+  const [evaluationModalStartup, setEvaluationModalStartup] = useState<StartupSelection | null>(null);
   const [showCompleteDialog, setShowCompleteDialog] = useState(false);
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const startupsRef = useRef<StartupSelection[]>([]);
@@ -850,6 +851,17 @@ export const Top30Selection = ({ currentRound, roundInfo, isReadOnly = false, on
                     </div>
                   </div>
                   
+                  <div className="mt-4">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setEvaluationModalStartup(selectedForDetails)}
+                      className="w-full"
+                    >
+                      <Eye className="w-4 h-4 mr-2" />
+                      View Individual Evaluations
+                    </Button>
+                  </div>
                 </div>
 
                 <Separator />
@@ -890,6 +902,19 @@ export const Top30Selection = ({ currentRound, roundInfo, isReadOnly = false, on
         </Dialog>
       )}
 
+      {/* CM Evaluations View */}
+      {evaluationModalStartup && (
+        <CMStartupEvaluationsView
+          startup={{
+            id: evaluationModalStartup.id,
+            name: evaluationModalStartup.name,
+            description: evaluationModalStartup.description
+          }}
+          open={!!evaluationModalStartup}
+          onClose={() => setEvaluationModalStartup(null)}
+          currentRound={currentRound}
+        />
+      )}
     </div>
   );
 };

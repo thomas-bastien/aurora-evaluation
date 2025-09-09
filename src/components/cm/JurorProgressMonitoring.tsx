@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { FilterPanel } from "@/components/common/FilterPanel";
-import { StartupDetailsModal } from "@/components/common/StartupDetailsModal";
+import { StartupEvaluationModal } from "@/components/evaluation/StartupEvaluationModal";
 import { 
   Search, 
   Mail, 
@@ -565,12 +565,21 @@ export const JurorProgressMonitoring = ({ currentRound }: JurorProgressMonitorin
         </DialogContent>
       </Dialog>
 
-      {/* Startup Details Modal */}
-      <StartupDetailsModal
-        startup={selectedStartupForEvaluation}
-        open={!!selectedStartupForEvaluation}
-        onClose={() => setSelectedStartupForEvaluation(null)}
-      />
+      {/* Startup Evaluation Modal */}
+      {selectedStartupForEvaluation && (
+        <StartupEvaluationModal
+          startup={{
+            ...selectedStartupForEvaluation,
+            evaluation_id: selectedStartupForEvaluation.evaluation_id,
+            evaluation_status: selectedStartupForEvaluation.evaluation_status
+          }}
+          open={!!selectedStartupForEvaluation}
+          onClose={() => setSelectedStartupForEvaluation(null)}
+          onEvaluationUpdate={() => {}} 
+          mode="view"
+          currentRound="screening"
+        />
+      )}
     </TooltipProvider>
   );
 };

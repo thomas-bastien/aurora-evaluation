@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { StartupDetailsModal } from "@/components/common/StartupDetailsModal";
+import { StartupEvaluationModal } from "@/components/evaluation/StartupEvaluationModal";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { 
   BarChart3, 
@@ -743,12 +743,21 @@ export const EvaluationProgressView = ({ currentRound = 'screening' }: Evaluatio
         </DialogContent>
       </Dialog>
 
-      {/* Startup Details Modal */}
-      <StartupDetailsModal
-        startup={selectedJurorEvaluation}
-        open={!!selectedJurorEvaluation}
-        onClose={() => setSelectedJurorEvaluation(null)}
-      />
+      {/* Individual Juror Evaluation Modal */}
+      {selectedJurorEvaluation && (
+        <StartupEvaluationModal
+          startup={{
+            ...selectedJurorEvaluation,
+            evaluation_id: selectedJurorEvaluation.evaluation_id,
+            evaluation_status: selectedJurorEvaluation.evaluation_status
+          }}
+          open={!!selectedJurorEvaluation}
+          onClose={() => setSelectedJurorEvaluation(null)}
+          onEvaluationUpdate={() => {}} 
+          mode="view"
+          currentRound="screening"
+        />
+      )}
     </TooltipProvider>
   );
 };
