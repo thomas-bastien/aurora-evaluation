@@ -12,6 +12,7 @@ import { Building2, Users, DollarSign, MapPin, Calendar, FileText, Star, Message
 import { CURRENCIES } from '@/constants/startupConstants';
 import { normalizeStage, getStageColor } from '@/utils/stageUtils';
 import { getStatusColor } from '@/utils/statusUtils';
+import { StartupEvaluationsList } from '@/components/startups/StartupEvaluationsList';
 
 interface Startup {
   id: string;
@@ -372,11 +373,7 @@ const StartupProfile = () => {
           </TabsContent>
 
           <TabsContent value="evaluations" className="space-y-6">
-            <div className="text-center py-12">
-              <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-foreground">No evaluations yet</h3>
-              <p className="text-muted-foreground">This startup hasn't been evaluated by any VCs yet.</p>
-            </div>
+            <StartupEvaluationsList startupId={startup.id} />
           </TabsContent>
 
           <TabsContent value="team" className="space-y-6">

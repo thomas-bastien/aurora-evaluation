@@ -232,6 +232,7 @@ export default function StartupsList() {
 
   const getActiveFilters = () => {
     const filters = [];
+    if (selectedRound) filters.push({ label: 'Round', value: selectedRound === 'screening' ? 'Screening' : 'Pitching', onRemove: () => setSelectedRound('screening') });
     if (industryFilter && industryFilter !== 'all') filters.push({ label: 'Industry', value: industryFilter, onRemove: () => setIndustryFilter('') });
     if (stageFilter && stageFilter !== 'all') filters.push({ label: 'Stage', value: stageFilter, onRemove: () => setStageFilter('') });
     if (statusFilter && statusFilter !== 'all') filters.push({ label: 'Status', value: statusFilter, onRemove: () => setStatusFilter('') });
@@ -449,15 +450,6 @@ export default function StartupsList() {
                 className="pl-10"
               />
             </div>
-            <Select value={selectedRound} onValueChange={(value: 'screening' | 'pitching') => setSelectedRound(value)}>
-              <SelectTrigger className="w-40">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="screening">Screening Round</SelectItem>
-                <SelectItem value="pitching">Pitching Round</SelectItem>
-              </SelectContent>
-            </Select>
             <Button variant="outline" onClick={() => setFiltersOpen(!filtersOpen)}>
               <Filter className="h-4 w-4 mr-2" />
               Filters
@@ -470,7 +462,20 @@ export default function StartupsList() {
             onClearAll={clearAllFilters}
             activeFilters={getActiveFilters()}
           >
-            <div className="grid grid-cols-4 gap-4">
+            <div className="grid grid-cols-5 gap-4">
+              <div>
+                <label className="text-sm font-medium mb-2 block">Round</label>
+                <Select value={selectedRound} onValueChange={(value: 'screening' | 'pitching') => setSelectedRound(value)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="screening">Screening Round</SelectItem>
+                    <SelectItem value="pitching">Pitching Round</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
               <div>
                 <label className="text-sm font-medium mb-2 block">Business Model</label>
                 <Select value={businessModelFilter || 'all'} onValueChange={(value) => setBusinessModelFilter(value === 'all' ? '' : value)}>
