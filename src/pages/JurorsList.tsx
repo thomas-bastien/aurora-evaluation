@@ -608,7 +608,7 @@ export default function JurorsList() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => handleSendInvitation(juror)}
+                            onClick={(e) => { e.stopPropagation(); handleSendInvitation(juror); }}
                             disabled={sendingInvitation === juror.id}
                             className="h-8 w-8 p-0"
                             title="Send Invitation"
@@ -618,7 +618,7 @@ export default function JurorsList() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => handleEdit(juror)}
+                            onClick={(e) => { e.stopPropagation(); handleEdit(juror); }}
                             className="h-8 w-8 p-0"
                             title="Edit Juror"
                           >
@@ -627,7 +627,7 @@ export default function JurorsList() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => handleDelete(juror)}
+                            onClick={(e) => { e.stopPropagation(); handleDelete(juror); }}
                             className="h-8 w-8 p-0 text-destructive hover:text-destructive"
                             title="Delete Juror"
                           >
