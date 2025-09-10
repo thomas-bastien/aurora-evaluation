@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -55,7 +55,7 @@ interface EvaluationSection {
   guidance: string;
 }
 interface EvaluationForm {
-  criteria_scores: Record<string, number>; // 0, 1, or 2
+  criteria_scores: Record<string, number>; // 1-5 scale: 1=Poor, 2=Weak, 3=Adequate, 4=Strong, 5=Excellent
   strengths: string[];
   improvement_areas: string;
   pitch_development_aspects: string;
@@ -359,7 +359,7 @@ const pitchingEvaluationSections: EvaluationSection[] = [{
   criteria: [{
     key: 'founder_team_score',
     label: 'Founder & Team Assessment',
-    description: '2: Strong, experienced, proven track record, complementary skills | 1: Relevant experience, limited past successes, some gaps | 0: Limited expertise, no track record, critical skill gaps'
+    description: '5: Exceptional team with outstanding track record and expertise | 4: Strong, experienced team with proven skills | 3: Adequate experience with some relevant background | 2: Limited experience but potential for growth | 1: Significant concerns about team capabilities'
   }]
 }, {
   key: 'profitability_market',
@@ -368,7 +368,7 @@ const pitchingEvaluationSections: EvaluationSection[] = [{
   criteria: [{
     key: 'profitability_market_score',
     label: 'Market Potential & Profitability',
-    description: '2: Clear growth in large/high-demand market; credible projections backed by data | 1: Realistic targets; market sizable; execution unproven | 0: Funding dependent; weak ROI alignment'
+    description: '5: Exceptional market opportunity with outstanding growth potential | 4: Strong growth in large market with credible projections backed by data | 3: Adequate market size with realistic targets | 2: Limited market potential or weak execution plan | 1: Significant concerns about market viability'
   }]
 }, {
   key: 'prize_money_usage',
@@ -377,7 +377,7 @@ const pitchingEvaluationSections: EvaluationSection[] = [{
   criteria: [{
     key: 'prize_money_usage_score',
     label: 'Prize Money Allocation',
-    description: '2: Specific allocation; aligned with goals; expected outcomes stated | 1: General allocation; lacks detail | 0: Misaligned or vague; disconnected from stage/goals'
+    description: '5: Exceptionally detailed allocation with clear ROI expectations | 4: Specific allocation aligned with goals and expected outcomes stated | 3: Adequate planning with general alignment to business stage | 2: Limited detail or minor misalignment with goals | 1: Vague or significantly misaligned with business needs'
   }]
 }, {
   key: 'information_delivery',
@@ -386,7 +386,7 @@ const pitchingEvaluationSections: EvaluationSection[] = [{
   criteria: [{
     key: 'information_delivery_score',
     label: 'Pitch Quality & Delivery',
-    description: '2: Clear, logical, structured, smooth flow, strong storytelling | 1: Mostly complete, minor flow issues | 0: Disorganized, unclear, missing elements'
+    description: '5: Outstanding presentation with exceptional storytelling and flow | 4: Clear, logical, structured with smooth flow and strong storytelling | 3: Adequate presentation with good structure | 2: Some organizational issues or unclear elements | 1: Disorganized, unclear, or missing critical elements'
   }]
 }, {
   key: 'qa_performance',
@@ -395,7 +395,7 @@ const pitchingEvaluationSections: EvaluationSection[] = [{
   criteria: [{
     key: 'qa_performance_score',
     label: 'Q&A Session Performance',
-    description: '2: Precise, evidence-based answers | 1: Confident but shallow | 0: Vague, unsupported, off-topic'
+    description: '5: Exceptional responses with deep insights and evidence | 4: Precise, evidence-based answers with good depth | 3: Adequate responses showing reasonable knowledge | 2: Some uncertainty or shallow responses | 1: Vague, unsupported, or off-topic answers'
   }]
 }];
 const guidedFeedbackOptions = [{
@@ -564,10 +564,20 @@ export const StartupEvaluationModal = ({
   const calculateOverallScore = () => {
     // Use appropriate evaluation sections based on current round
     const currentEvaluationSections = currentRound === 'screening' ? screeningEvaluationSections : pitchingEvaluationSections;
-    const totalCriteria = currentEvaluationSections.reduce((sum, section) => sum + section.criteria.length, 0);
-    const totalScore = Object.values(formData.criteria_scores).reduce((sum, score) => sum + score, 0);
-    const maxPossibleScore = totalCriteria * 2; // Max 2 points per criterion
-    return maxPossibleScore > 0 ? totalScore / maxPossibleScore * 10 : 0;
+    
+    // Calculate section-based scoring with equal weighting
+    const sectionAverages = currentEvaluationSections.map(section => {
+      const sectionScores = section.criteria.map(criterion => 
+        formData.criteria_scores[criterion.key] || 0
+      );
+      return sectionScores.reduce((sum, score) => sum + score, 0) / section.criteria.length;
+    });
+    
+    // Average all section scores (equal weighting per section)
+    const overallAverage = sectionAverages.reduce((sum, avg) => sum + avg, 0) / sectionAverages.length;
+    
+    // Convert from 1-5 scale to 0-10 scale: ((average - 1) / 4) * 10
+    return sectionAverages.length > 0 ? ((overallAverage - 1) / 4) * 10 : 0;
   };
   const validateOpenEndedFields = () => {
     const errors: TextFieldValidation = {};
@@ -910,22 +920,38 @@ export const StartupEvaluationModal = ({
                          {section.criteria.map((criterion, criterionIndex) => <div key={criterion.key} className="space-y-2">
                              <div className="flex items-center justify-between">
                                <Label className="text-sm flex-1">{criterion.label}</Label>
-                               <div className="flex items-center gap-2">
-                                  <Select 
+                                <div className="flex items-center gap-2">
+                                  <RadioGroup 
                                     value={formData.criteria_scores[criterion.key]?.toString() || ''} 
                                     onValueChange={value => updateCriteriaScore(criterion.key, parseInt(value))}
                                     disabled={!isEditing}
+                                    className="flex gap-1"
                                   >
-                                   <SelectTrigger className="w-32">
-                                     <SelectValue placeholder="Score" />
-                                   </SelectTrigger>
-                                   <SelectContent>
-                                     <SelectItem value="2">Strong (2 pts)</SelectItem>
-                                     <SelectItem value="1">Moderate (1 pt)</SelectItem>
-                                     <SelectItem value="0">Weak (0 pts)</SelectItem>
-                                   </SelectContent>
-                                 </Select>
-                               </div>
+                                    <div className="flex gap-2 items-center">
+                                      {[1, 2, 3, 4, 5].map(score => (
+                                        <div key={score} className="flex flex-col items-center gap-1">
+                                          <RadioGroupItem 
+                                            value={score.toString()} 
+                                            id={`${criterion.key}-${score}`}
+                                            className="w-4 h-4"
+                                          />
+                                          <Label 
+                                            htmlFor={`${criterion.key}-${score}`} 
+                                            className="text-xs cursor-pointer"
+                                            title={
+                                              score === 5 ? 'Excellent' :
+                                              score === 4 ? 'Strong' :
+                                              score === 3 ? 'Adequate' :
+                                              score === 2 ? 'Weak' : 'Poor'
+                                            }
+                                          >
+                                            {score}
+                                          </Label>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </RadioGroup>
+                                </div>
                              </div>
                              <p className="text-xs text-muted-foreground ml-2">{criterion.description}</p>
                            </div>)}
