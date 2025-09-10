@@ -1,73 +1,48 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { 
-  Network,
+  Network, 
   Phone, 
-  Star,
-  TrendingUp,
+  Star, 
+  TrendingUp, 
   FileText,
   ArrowRight,
-  RefreshCw,
-  AlertCircle
-} from 'lucide-react';
-import { 
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger
-} from "@/components/ui/tooltip";
-import { getPitchingFunnelData } from "@/utils/pitchingFunnelUtils";
-import { toast } from "sonner";
+  RefreshCw
+} from "lucide-react";
+import { getPitchingFunnelData, type FunnelStepData } from "@/utils/pitchingFunnelUtils";
+import { useToast } from "@/hooks/use-toast";
 
 interface PitchingFunnelViewProps {
   isActive?: boolean;
 }
 
-interface FunnelStepData {
-  title: string;
-  description: string;
-  numerator: number;
-  denominator: number;
-  percentage: number;
-  route: string;
-  status: 'completed' | 'in-progress' | 'pending';
-}
-
-const stepIcons = [Network, Phone, Star, TrendingUp, FileText];
+const STEP_ICONS = [Network, Phone, Star, TrendingUp, FileText];
 
 const getStatusColor = (status: FunnelStepData['status']) => {
   switch (status) {
-    case 'completed': return 'text-green-600';
-    case 'in-progress': return 'text-blue-600';
-    case 'pending': return 'text-gray-400';
-    default: return 'text-gray-400';
+    case 'completed':
+      return 'bg-success text-success-foreground';
+    case 'in-progress':
+      return 'bg-warning text-warning-foreground';
+    case 'pending':
+      return 'bg-muted text-muted-foreground';
+    default:
+      return 'bg-muted text-muted-foreground';
   }
 };
 
-const getProgressColor = (percentage: number) => {
-  if (percentage >= 80) return 'bg-green-600';
-  if (percentage >= 40) return 'bg-blue-600';
-  return 'bg-gray-300';
-};
-
-const stepTooltips = [
-  "Completion rate = proportion of Pitching startups that already have at least 3 evaluations submitted compared to the total Pitching cohort.",
-  "Currently mirrors Pitching Evaluations completion until Pitching Call data is integrated.",
-  "Shows progress of Pitching evaluations submitted compared to the total assigned in Pitching.",
-  "Completion rate = proportion of Pitching startups marked as Finalists compared to the total Pitching cohort.",
-  "Completion rate = proportion of Pitching startups that have been sent their results and feedback compared to the total Pitching cohort."
-];
-
-export function PitchingFunnelView({ isActive = false }: PitchingFunnelViewProps) {
+export const PitchingFunnelView = ({ isActive = true }: PitchingFunnelViewProps) => {
   const [funnelData, setFunnelData] = useState<FunnelStepData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   const fetchFunnelData = async () => {
     try {
@@ -75,10 +50,14 @@ export function PitchingFunnelView({ isActive = false }: PitchingFunnelViewProps
       setError(null);
       const data = await getPitchingFunnelData();
       setFunnelData(data);
-    } catch (error) {
-      console.error('Error fetching pitching funnel data:', error);
+    } catch (error: any) {
+      console.error('Error fetching funnel data:', error);
       setError('Failed to load funnel data');
-      toast.error('Failed to load pitching funnel data');
+      toast({
+        title: "Error",
+        description: "Failed to load pitching funnel data",
+        variant: "destructive"
+      });
     } finally {
       setLoading(false);
     }
@@ -89,9 +68,8 @@ export function PitchingFunnelView({ isActive = false }: PitchingFunnelViewProps
   }, []);
 
   const handleStepClick = (route: string) => {
-    if (isActive) {
-      navigate(route);
-    }
+    if (!isActive) return;
+    navigate(route);
   };
 
   const handleRefresh = () => {
@@ -100,23 +78,22 @@ export function PitchingFunnelView({ isActive = false }: PitchingFunnelViewProps
 
   if (loading) {
     return (
-      <Card className="w-full">
+      <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <div className="space-y-2">
-              <Skeleton className="h-6 w-32" />
-              <Skeleton className="h-4 w-48" />
-            </div>
-            <Skeleton className="h-8 w-8" />
-          </div>
+          <CardTitle className="flex items-center gap-2">
+            <Badge variant="secondary" className="px-3 py-1">Round 2</Badge>
+            Pitching Round
+          </CardTitle>
+          <CardDescription>
+            Final evaluation and selection of startups from shortlisted candidates
+          </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="space-y-2">
-              <Skeleton className="h-4 w-full" />
-              <Skeleton className="h-2 w-full" />
-            </div>
-          ))}
+        <CardContent>
+          <div className="space-y-4">
+            {[...Array(5)].map((_, i) => (
+              <Skeleton key={i} className="h-20 w-full" />
+            ))}
+          </div>
         </CardContent>
       </Card>
     );
@@ -124,104 +101,123 @@ export function PitchingFunnelView({ isActive = false }: PitchingFunnelViewProps
 
   if (error) {
     return (
-      <Card className="w-full">
-        <CardContent className="pt-6">
-          <div className="flex items-center justify-center space-x-2 text-destructive">
-            <AlertCircle className="h-5 w-5" />
-            <span>{error}</span>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={handleRefresh}
-              className="ml-2"
-            >
-              <RefreshCw className="h-4 w-4" />
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Badge variant="secondary" className="px-3 py-1">Round 2</Badge>
+                Pitching Round
+              </CardTitle>
+              <CardDescription className="text-destructive">
+                {error}
+              </CardDescription>
+            </div>
+            <Button variant="outline" size="sm" onClick={handleRefresh}>
+              <RefreshCw className="w-4 h-4" />
             </Button>
           </div>
-        </CardContent>
+        </CardHeader>
       </Card>
     );
   }
 
   return (
     <TooltipProvider>
-      <Card className="w-full">
+      <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="text-lg font-semibold">Round 2</CardTitle>
-              <div className="flex items-center space-x-2 mt-1">
-                <Badge variant="secondary" className="text-xs">
-                  Pitching Round
-                </Badge>
-              </div>
+              <CardTitle className="flex items-center gap-2">
+                <Badge variant="secondary" className="px-3 py-1">Round 2</Badge>
+                Pitching Round
+              </CardTitle>
+              <CardDescription>
+                Final evaluation and selection of startups from shortlisted candidates
+              </CardDescription>
             </div>
-            <Button 
-              variant="ghost" 
-              size="sm"
-              onClick={handleRefresh}
-              className="h-8 w-8 p-0"
-            >
-              <RefreshCw className="h-4 w-4" />
-            </Button>
+            <div className="flex items-center gap-2">
+              <Badge 
+                variant={isActive ? 'default' : 'outline'}
+                className="px-3 py-1"
+              >
+                {isActive ? 'Active' : 'Upcoming'}
+              </Badge>
+              <Button variant="outline" size="sm" onClick={handleRefresh}>
+                <RefreshCw className="w-4 h-4" />
+              </Button>
+            </div>
           </div>
         </CardHeader>
-        <CardContent className="space-y-4">
-          {funnelData.map((step, index) => {
-            const Icon = stepIcons[index];
-            const hasProgress = step.percentage > 0 || step.denominator > 0;
-            
-            return (
-              <div key={index} className="flex items-center space-x-4">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      className={`flex-1 justify-start p-4 h-auto ${
-                        isActive && hasProgress ? 'cursor-pointer hover:bg-accent' : 'cursor-default'
-                      }`}
-                      onClick={() => handleStepClick(step.route)}
-                      disabled={!isActive || !hasProgress}
-                    >
-                      <div className="flex items-center space-x-3 w-full">
-                        <Icon className={`h-5 w-5 flex-shrink-0 ${getStatusColor(step.status)}`} />
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between mb-2">
-                            <h4 className="text-sm font-medium text-left">{step.title}</h4>
-                            <div className="text-right">
-                              <div className="text-sm text-muted-foreground">
-                                {step.numerator}/{step.denominator}
-                              </div>
-                              <div className="text-lg font-semibold">
-                                {step.percentage}%
+        <CardContent>
+          <div className="grid grid-cols-1 gap-4">
+            {funnelData.map((step, index) => {
+              const IconComponent = STEP_ICONS[index];
+              const isClickable = isActive && step.percentage > 0;
+              
+              return (
+                <div key={index} className="flex items-center gap-4">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        className={`flex-1 h-auto p-4 justify-start ${
+                          isClickable 
+                            ? 'hover:bg-accent cursor-pointer' 
+                            : 'cursor-default opacity-75'
+                        }`}
+                        onClick={() => isClickable && handleStepClick(step.route)}
+                        disabled={!isClickable}
+                      >
+                        <div className="flex items-center gap-4 w-full">
+                          {/* Step Icon */}
+                          <div className={`p-2 rounded-full ${getStatusColor(step.status)}`}>
+                            <IconComponent className="w-4 h-4" />
+                          </div>
+                          
+                          {/* Step Content */}
+                          <div className="flex-1 text-left">
+                            <div className="flex items-center justify-between mb-2">
+                              <h4 className="font-medium text-sm">{step.title}</h4>
+                              <Badge variant="outline" className="text-xs">
+                                {step.percentage.toFixed(0)}%
+                              </Badge>
+                            </div>
+                            
+                            <div className="space-y-2">
+                              <p className="text-xs text-muted-foreground">{step.description}</p>
+                              
+                              <div className="flex items-center gap-2">
+                                <Progress 
+                                  value={step.percentage} 
+                                  className="flex-1 h-2"
+                                />
+                                <span className="text-xs text-muted-foreground min-w-fit">
+                                  {step.numerator}/{step.denominator}
+                                </span>
                               </div>
                             </div>
                           </div>
-                          <p className="text-xs text-muted-foreground text-left mb-2">
-                            {step.description}
-                          </p>
-                          <div className="w-full">
-                            <Progress 
-                              value={step.percentage} 
-                              className="h-2"
-                            />
-                          </div>
                         </div>
-                      </div>
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom" className="max-w-xs">
-                    <p>{stepTooltips[index]}</p>
-                  </TooltipContent>
-                </Tooltip>
-                {index < funnelData.length - 1 && (
-                  <ArrowRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                )}
-              </div>
-            );
-          })}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" className="max-w-80">
+                      <p>{step.tooltip}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                  
+                  {/* Arrow between steps (except last step) */}
+                  {index < funnelData.length - 1 && (
+                    <div className="flex items-center">
+                      <ArrowRight className="w-4 h-4 text-muted-foreground" />
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </CardContent>
       </Card>
     </TooltipProvider>
   );
-}
+};

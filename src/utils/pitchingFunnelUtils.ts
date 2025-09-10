@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 /**
  * Interface for pitching funnel step data
  */
-interface FunnelStepData {
+export interface FunnelStepData {
   title: string;
   description: string;
   numerator: number;
@@ -11,11 +11,12 @@ interface FunnelStepData {
   percentage: number;
   route: string;
   status: 'completed' | 'in-progress' | 'pending';
+  tooltip: string;
 }
 
 /**
  * Step 1: Matchmaking (Pitching)
- * Completion % = startups with ≥3 evaluations submitted ÷ total startups in pitching round
+ * C = # startups that have ≥3 assignments OR are rejected ÷ D (total pitching startups including rejected)
  */
 export const getPitchingMatchmakingStepData = async (): Promise<FunnelStepData> => {
   try {
@@ -29,59 +30,69 @@ export const getPitchingMatchmakingStepData = async (): Promise<FunnelStepData> 
     if (!pitchingRound) {
       return {
         title: "Matchmaking",
-        description: "Startups with ≥3 evaluations",
+        description: "Startups with assignments or rejected",
         numerator: 0,
         denominator: 0,
         percentage: 0,
         route: "/selection?round=pitching&tab=matchmaking",
-        status: 'pending'
+        status: 'pending',
+        tooltip: "A startup counts as complete if it has at least 3 juror assignments OR is already rejected in Pitching"
       };
     }
 
-    // Get total startups in pitching round
+    // Get total startups in pitching round (D = 4, including rejected)
     const { count: totalPitchingStartups } = await supabase
       .from('startup_round_statuses')
       .select('*', { count: 'exact', head: true })
       .eq('round_id', pitchingRound.id)
-      .in('status', ['selected', 'under_review']);
+      .in('status', ['selected', 'under_review', 'rejected']);
 
     const denominator = totalPitchingStartups || 0;
 
-    // Count startups with ≥3 pitching evaluations
-    const { data: evaluationCounts } = await supabase
-      .from('pitching_evaluations')
-      .select('startup_id')
-      .eq('status', 'submitted');
+    // Get rejected startups (automatically count as complete)
+    const { count: rejectedStartups } = await supabase
+      .from('startup_round_statuses')
+      .select('*', { count: 'exact', head: true })
+      .eq('round_id', pitchingRound.id)
+      .eq('status', 'rejected');
 
-    // Count evaluations per startup
-    const startupEvaluationCounts: { [key: string]: number } = {};
-    evaluationCounts?.forEach((evaluation) => {
-      const startupId = evaluation.startup_id;
-      startupEvaluationCounts[startupId] = (startupEvaluationCounts[startupId] || 0) + 1;
+    // Count startups with ≥3 pitching assignments
+    const { data: assignmentCounts } = await supabase
+      .from('pitching_assignments')
+      .select('startup_id')
+      .eq('status', 'assigned');
+
+    const startupAssignmentCounts: { [key: string]: number } = {};
+    assignmentCounts?.forEach((assignment) => {
+      const startupId = assignment.startup_id;
+      startupAssignmentCounts[startupId] = (startupAssignmentCounts[startupId] || 0) + 1;
     });
 
-    const numerator = Object.values(startupEvaluationCounts).filter(count => count >= 3).length;
+    const startupsWithAssignments = Object.values(startupAssignmentCounts).filter(count => count >= 3).length;
+    const numerator = startupsWithAssignments + (rejectedStartups || 0);
     const percentage = denominator > 0 ? Math.round((numerator / denominator) * 100) : 0;
 
     return {
       title: "Matchmaking",
-      description: "Startups with ≥3 evaluations",
+      description: "Startups with assignments or rejected",
       numerator,
       denominator,
       percentage,
       route: "/selection?round=pitching&tab=matchmaking",
-      status: percentage >= 80 ? 'completed' : percentage > 0 ? 'in-progress' : 'pending'
+      status: percentage >= 80 ? 'completed' : percentage > 0 ? 'in-progress' : 'pending',
+      tooltip: "A startup counts as complete if it has at least 3 juror assignments OR is already rejected in Pitching"
     };
   } catch (error) {
     console.error('Error fetching pitching matchmaking data:', error);
     return {
       title: "Matchmaking",
-      description: "Startups with ≥3 evaluations",
+      description: "Startups with assignments or rejected",
       numerator: 0,
       denominator: 0,
       percentage: 0,
       route: "/selection?round=pitching&tab=matchmaking",
-      status: 'pending'
+      status: 'pending',
+      tooltip: "A startup counts as complete if it has at least 3 juror assignments OR is already rejected in Pitching"
     };
   }
 };
@@ -116,7 +127,8 @@ export const getPitchingCallsStepData = async (): Promise<FunnelStepData> => {
       denominator,
       percentage,
       route: "/selection?round=pitching&tab=juror-progress",
-      status: percentage >= 80 ? 'completed' : percentage > 0 ? 'in-progress' : 'pending'
+      status: percentage >= 80 ? 'completed' : percentage > 0 ? 'in-progress' : 'pending',
+      tooltip: "Currently mirrors Pitching Evaluations completion until Pitching Call data is integrated"
     };
   } catch (error) {
     console.error('Error fetching pitching calls data:', error);
@@ -127,7 +139,8 @@ export const getPitchingCallsStepData = async (): Promise<FunnelStepData> => {
       denominator: 0,
       percentage: 0,
       route: "/selection?round=pitching&tab=juror-progress",
-      status: 'pending'
+      status: 'pending',
+      tooltip: "Currently mirrors Pitching Evaluations completion until Pitching Call data is integrated"
     };
   }
 };
@@ -162,7 +175,8 @@ export const getPitchingEvaluationsStepData = async (): Promise<FunnelStepData> 
       denominator,
       percentage,
       route: "/selection?round=pitching&tab=juror-progress",
-      status: percentage >= 80 ? 'completed' : percentage > 0 ? 'in-progress' : 'pending'
+      status: percentage >= 80 ? 'completed' : percentage > 0 ? 'in-progress' : 'pending',
+      tooltip: "Shows progress of Pitching evaluations submitted compared to the total assigned in Pitching"
     };
   } catch (error) {
     console.error('Error fetching pitching evaluations data:', error);
@@ -173,7 +187,8 @@ export const getPitchingEvaluationsStepData = async (): Promise<FunnelStepData> 
       denominator: 0,
       percentage: 0,
       route: "/selection?round=pitching&tab=juror-progress",
-      status: 'pending'
+      status: 'pending',
+      tooltip: "Shows progress of Pitching evaluations submitted compared to the total assigned in Pitching"
     };
   }
 };
@@ -192,23 +207,24 @@ export const getPitchingSelectionStepData = async (): Promise<FunnelStepData> =>
       .maybeSingle();
 
     if (!pitchingRound) {
-      return {
-        title: "Selection",
-        description: "Startups marked as Finalists",
-        numerator: 0,
-        denominator: 0,
-        percentage: 0,
-        route: "/selection?round=pitching&tab=startup-selection",
-        status: 'pending'
-      };
+    return {
+      title: "Selection",
+      description: "Startups marked as Finalists",
+      numerator: 0,
+      denominator: 0,
+      percentage: 0,
+      route: "/selection?round=pitching&tab=startup-selection",
+      status: 'pending',
+      tooltip: "Completion rate = proportion of Pitching startups marked as Finalists compared to the total Pitching cohort"
+    };
     }
 
-    // Get total startups in pitching round
+    // Get total startups in pitching round (D = 4, including rejected)
     const { count: totalPitchingStartups } = await supabase
       .from('startup_round_statuses')
       .select('*', { count: 'exact', head: true })
       .eq('round_id', pitchingRound.id)
-      .in('status', ['selected', 'under_review']);
+      .in('status', ['selected', 'under_review', 'rejected']);
 
     const denominator = totalPitchingStartups || 0;
 
@@ -229,7 +245,8 @@ export const getPitchingSelectionStepData = async (): Promise<FunnelStepData> =>
       denominator,
       percentage,
       route: "/selection?round=pitching&tab=startup-selection",
-      status: percentage >= 80 ? 'completed' : percentage > 0 ? 'in-progress' : 'pending'
+      status: percentage >= 80 ? 'completed' : percentage > 0 ? 'in-progress' : 'pending',
+      tooltip: "Completion rate = proportion of Pitching startups marked as Finalists compared to the total Pitching cohort"
     };
   } catch (error) {
     console.error('Error fetching pitching selection data:', error);
@@ -240,7 +257,8 @@ export const getPitchingSelectionStepData = async (): Promise<FunnelStepData> =>
       denominator: 0,
       percentage: 0,
       route: "/selection?round=pitching&tab=startup-selection",
-      status: 'pending'
+      status: 'pending',
+      tooltip: "Completion rate = proportion of Pitching startups marked as Finalists compared to the total Pitching cohort"
     };
   }
 };
@@ -259,23 +277,24 @@ export const getPitchingCommunicationStepData = async (): Promise<FunnelStepData
       .maybeSingle();
 
     if (!pitchingRound) {
-      return {
-        title: "Results & Communication",
-        description: "Startups notified",
-        numerator: 0,
-        denominator: 0,
-        percentage: 0,
-        route: "/selection?round=pitching&tab=communications",
-        status: 'pending'
-      };
+    return {
+      title: "Results & Communication",
+      description: "Startups notified",
+      numerator: 0,
+      denominator: 0,
+      percentage: 0,
+      route: "/selection?round=pitching&tab=communications",
+      status: 'pending',
+      tooltip: "Completion rate = proportion of Pitching startups that have been sent their results and feedback compared to the total Pitching cohort"
+    };
     }
 
-    // Get total startups in pitching round
+    // Get total startups in pitching round (D = 4, including rejected)
     const { count: totalPitchingStartups } = await supabase
       .from('startup_round_statuses')
       .select('*', { count: 'exact', head: true })
       .eq('round_id', pitchingRound.id)
-      .in('status', ['selected', 'under_review']);
+      .in('status', ['selected', 'under_review', 'rejected']);
 
     const denominator = totalPitchingStartups || 0;
 
@@ -297,7 +316,8 @@ export const getPitchingCommunicationStepData = async (): Promise<FunnelStepData
       denominator,
       percentage,
       route: "/selection?round=pitching&tab=communications",
-      status: percentage >= 80 ? 'completed' : percentage > 0 ? 'in-progress' : 'pending'
+      status: percentage >= 80 ? 'completed' : percentage > 0 ? 'in-progress' : 'pending',
+      tooltip: "Completion rate = proportion of Pitching startups that have been sent their results and feedback compared to the total Pitching cohort"
     };
   } catch (error) {
     console.error('Error fetching pitching communication data:', error);
@@ -308,7 +328,8 @@ export const getPitchingCommunicationStepData = async (): Promise<FunnelStepData
       denominator: 0,
       percentage: 0,
       route: "/selection?round=pitching&tab=communications",
-      status: 'pending'
+      status: 'pending',
+      tooltip: "Completion rate = proportion of Pitching startups that have been sent their results and feedback compared to the total Pitching cohort"
     };
   }
 };
