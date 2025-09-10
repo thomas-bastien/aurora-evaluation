@@ -36,6 +36,16 @@ const Dashboard = () => {
     evaluationProgress: 0,
     reminders: 0,
     nextMilestone: 'Loading...',
+    screeningProgress: {
+      assignments: 0,
+      completed: 0,
+      percentage: 0
+    },
+    pitchingProgress: {
+      assignments: 0,
+      completed: 0,
+      percentage: 0
+    },
     screeningStats: {
       startupsUploaded: 0,
       jurorsUploaded: 0,
@@ -86,8 +96,10 @@ const Dashboard = () => {
         const totalAssignments = assignmentsCount || 0;
         
         let evaluationProgress = 0;
+        let screeningProgress = { assignments: 0, completed: 0, percentage: 0 };
+        let pitchingProgress = { assignments: 0, completed: 0, percentage: 0 };
         
-        // For jurors, calculate their personal evaluation progress
+        // For jurors, calculate progress for BOTH rounds
         if (profile?.role === 'vc') {
           // Get juror record first
           const { data: jurorRecord } = await supabase
@@ -97,25 +109,51 @@ const Dashboard = () => {
             .maybeSingle();
             
           if (jurorRecord) {
-            // Get assignments for this juror based on current round
-            const assignmentTable = isScreeningRound ? 'screening_assignments' : 'pitching_assignments';
-            const { count: myAssignmentsCount } = await supabase
-              .from(assignmentTable)
-              .select('*', { count: 'exact', head: true })
-              .eq('juror_id', jurorRecord.id)
-              .eq('status', 'assigned');
+            // Get assignments and evaluations for BOTH rounds in parallel
+            const [
+              { count: screeningAssignmentsCount },
+              { count: pitchingAssignmentsCount },
+              { count: screeningEvaluationsCount },
+              { count: pitchingEvaluationsCount }
+            ] = await Promise.all([
+              supabase.from('screening_assignments')
+                .select('*', { count: 'exact', head: true })
+                .eq('juror_id', jurorRecord.id)
+                .eq('status', 'assigned'),
+              supabase.from('pitching_assignments')
+                .select('*', { count: 'exact', head: true })
+                .eq('juror_id', jurorRecord.id)
+                .eq('status', 'assigned'),
+              supabase.from('screening_evaluations')
+                .select('*', { count: 'exact', head: true })
+                .eq('evaluator_id', profile?.user_id)
+                .eq('status', 'submitted'),
+              supabase.from('pitching_evaluations')
+                .select('*', { count: 'exact', head: true })
+                .eq('evaluator_id', profile?.user_id)
+                .eq('status', 'submitted')
+            ]);
               
-            // Get completed evaluations by this juror based on current round
-            const evaluationTable = isScreeningRound ? 'screening_evaluations' : 'pitching_evaluations';
-            const { count: myEvaluationsCount } = await supabase
-              .from(evaluationTable)
-              .select('*', { count: 'exact', head: true })
-              .eq('evaluator_id', profile?.user_id)
-              .eq('status', 'submitted');
-              
-            const myAssignments = myAssignmentsCount || 0;
-            const myEvaluations = myEvaluationsCount || 0;
-            evaluationProgress = myAssignments > 0 ? Math.round((myEvaluations / myAssignments) * 100) : 0;
+            // Calculate progress for both rounds
+            const screeningAssignments = screeningAssignmentsCount || 0;
+            const screeningEvaluations = screeningEvaluationsCount || 0;
+            const pitchingAssignments = pitchingAssignmentsCount || 0;
+            const pitchingEvaluations = pitchingEvaluationsCount || 0;
+            
+            screeningProgress = {
+              assignments: screeningAssignments,
+              completed: screeningEvaluations,
+              percentage: screeningAssignments > 0 ? Math.round((screeningEvaluations / screeningAssignments) * 100) : 0
+            };
+            
+            pitchingProgress = {
+              assignments: pitchingAssignments,
+              completed: pitchingEvaluations,
+              percentage: pitchingAssignments > 0 ? Math.round((pitchingEvaluations / pitchingAssignments) * 100) : 0
+            };
+            
+            // Set overall progress based on current/active round
+            evaluationProgress = isScreeningRound ? screeningProgress.percentage : pitchingProgress.percentage;
           }
         } else {
           // For admins, calculate overall progress
@@ -130,23 +168,25 @@ const Dashboard = () => {
           activeJurors,
           totalStartups,
           totalJurors,
-          activeRound: 'screening', // TODO: Make this dynamic based on actual round
+          activeRound: (activeRound?.name === 'pitching' ? 'pitching' : 'screening') as 'screening' | 'pitching',
           evaluationProgress,
           reminders: 12, // TODO: Calculate actual reminders sent
           nextMilestone: profile?.role === 'vc' ? 'Complete your startup evaluations' : 'Complete juror matchmaking assignments',
-            screeningStats: {
-              startupsUploaded: activeStartups,
-              jurorsUploaded: activeJurors,
-              matchmakingProgress,
-              evaluationsProgress: evaluationProgress,
-              selectionComplete: false, // TODO: Calculate from actual data
-              resultsComplete: false // TODO: Calculate from actual data
-            },
+          screeningProgress,
+          pitchingProgress,
+          screeningStats: {
+            startupsUploaded: activeStartups,
+            jurorsUploaded: activeJurors,
+            matchmakingProgress,
+            evaluationsProgress: screeningProgress.percentage || evaluationProgress,
+            selectionComplete: false, // TODO: Calculate from actual data
+            resultsComplete: false // TODO: Calculate from actual data
+          },
           pitchingStats: {
             matchmakingProgress: 0, // TODO: Calculate for pitching phase
             pitchCallsScheduled: 0, // TODO: Calculate from pitch_requests
             pitchCallsCompleted: 0, // TODO: Calculate from pitch_requests
-            evaluationsProgress: 0, // TODO: Calculate for pitching evaluations
+            evaluationsProgress: pitchingProgress.percentage,
             finalSelectionComplete: false,
             finalResultsComplete: false
           }
@@ -417,7 +457,7 @@ const Dashboard = () => {
           </div>
         )}
 
-        {/* Juror Funnel Workflow */}
+        {/* VC Funnel Workflow */}
         {profile?.role === 'vc' && (
           <div className="space-y-8 animate-fade-in" style={{ animationDelay: "400ms" }}>
             {/* Role-specific tagline */}
@@ -437,41 +477,61 @@ const Dashboard = () => {
                       Screening Round
                     </CardTitle>
                     <CardDescription>
-                      Initial evaluation of your assigned startups
+                      Evaluate your assigned startups for initial screening
                     </CardDescription>
                   </div>
                   <Badge 
                     variant={dashboardData.activeRound === 'screening' ? 'default' : 'outline'}
                     className="px-3 py-1"
                   >
-                    {dashboardData.activeRound === 'screening' ? 'Active' : 'Upcoming'}
+                    {dashboardData.activeRound === 'screening' ? 'Active' : 'Completed'}
                   </Badge>
                 </div>
               </CardHeader>
               <CardContent>
                 <div className="flex flex-col space-y-4">
                   <FunnelStage
-                    title="Assigned Startups (Screening)"
-                    description="Your allocated startups for the Screening round"
-                    tooltip="Your allocated startups for the Screening round."
-                    status={dashboardData.activeRound === 'screening' ? 'current' : 'upcoming'}
-                    statusText="View your assignments"
+                    title="Profile Setup"
+                    description="Complete your juror profile with expertise and preferences"
+                    tooltip="Complete your profile to receive startup assignments."
+                    status={
+                      profile?.expertise && profile.expertise.length > 0 && 
+                      profile?.investment_stages && profile.investment_stages.length > 0
+                        ? 'completed' : 'current'
+                    }
+                    statusText={
+                      profile?.expertise && profile.expertise.length > 0 && 
+                      profile?.investment_stages && profile.investment_stages.length > 0
+                        ? 'Profile complete' : 'Profile setup required'
+                    }
                     icon={Building2}
-                    onClick={() => navigate('/evaluate?round=screening&view=assigned')}
+                    onClick={() => navigate('/juror-onboarding?onboarding=true')}
+                    role="vc"
                   />
                   <FunnelStage
-                    title="Evaluate (Screening)"
-                    description="Complete the evaluation form for each assigned startup"
-                    tooltip="Complete the evaluation form for each assigned startup."
+                    title="Assigned Startups (Screening)"
+                    description="Score and provide feedback for your assigned startups"
+                    tooltip="Complete evaluations for all assigned startups."
                     status={
-                      dashboardData.screeningStats.evaluationsProgress === 100 
+                      dashboardData.screeningProgress.percentage === 100 
                         ? 'completed' 
-                        : dashboardData.screeningStats.evaluationsProgress > 0 ? 'current' : 'upcoming'
+                        : dashboardData.screeningProgress.percentage > 0 ? 'current' : 'upcoming'
                     }
-                    progress={dashboardData.screeningStats.evaluationsProgress}
-                    statusText={`${dashboardData.screeningStats.evaluationsProgress}% submitted`}
+                    progress={dashboardData.screeningProgress.percentage}
+                    statusText={`${dashboardData.screeningProgress.completed} of ${dashboardData.screeningProgress.assignments} startups evaluated (${dashboardData.screeningProgress.percentage}%)`}
                     icon={Star}
                     onClick={() => navigate('/evaluate?round=screening')}
+                    role="vc"
+                  />
+                  <FunnelStage
+                    title="Results & Next Steps"
+                    description="View evaluation results and prepare for pitch sessions"
+                    tooltip="Review results from the screening round."
+                    status={dashboardData.screeningProgress.percentage === 100 ? 'current' : 'upcoming'}
+                    statusText="Pending evaluation completion"
+                    icon={TrendingUp}
+                    onClick={() => navigate('/selection?round=screening')}
+                    role="vc"
                     isLast
                   />
                 </div>
@@ -485,10 +545,10 @@ const Dashboard = () => {
                   <div>
                     <CardTitle className="flex items-center gap-2">
                       <Badge variant="default" className="px-3 py-1">Round 2</Badge>
-                      Pitching Round (Finalists)
+                      Pitching Round
                     </CardTitle>
                     <CardDescription>
-                      Live pitch sessions and post-pitch evaluations
+                      Participate in pitch sessions and provide final evaluations
                     </CardDescription>
                   </div>
                   <Badge 
@@ -502,40 +562,39 @@ const Dashboard = () => {
               <CardContent>
                 <div className="flex flex-col space-y-4">
                   <FunnelStage
+                    title="Set Up Calendly"
+                    description="Provide your Calendly link for pitch session scheduling"
+                    tooltip="Update your profile with Calendly link for pitch meetings."
+                    status={profile?.calendly_link ? 'completed' : 'upcoming'}
+                    statusText={profile?.calendly_link ? 'Calendly link added' : 'Calendly link needed'}
+                    icon={Calendar}
+                    onClick={() => navigate('/juror-profile')}
+                    role="vc"
+                  />
+                  <FunnelStage
                     title="Assigned Startups (Pitching)"
-                    description="Your allocated semifinalists for the Pitching round"
-                    tooltip="Your allocated semifinalists for the Pitching round."
-                    status={dashboardData.activeRound === 'pitching' ? 'current' : 'upcoming'}
-                    statusText="View your semifinalist assignments"
-                    icon={Building2}
-                    onClick={() => navigate('/evaluate?round=pitching&view=assigned')}
-                  />
-                  <FunnelStage
-                    title="Pitching Calls"
-                    description="Startups will book slots from your scheduling link. Just join the calls when scheduled."
-                    tooltip="Startups will book slots from your scheduling link. Just join the calls when scheduled."
+                    description="Attend scheduled pitch meetings with selected startups"
+                    tooltip="Participate in pitch sessions with assigned startups."
                     status={
-                      dashboardData.pitchingStats.pitchCallsCompleted > 0 
-                        ? 'current' 
-                        : dashboardData.pitchingStats.pitchCallsScheduled > 0 ? 'current' : 'upcoming'
+                      dashboardData.pitchingProgress.assignments > 0 
+                        ? dashboardData.pitchingProgress.percentage === 100 ? 'completed' : 'current'
+                        : 'upcoming'
                     }
-                    statusText={`${dashboardData.pitchingStats.pitchCallsScheduled} scheduled / ${dashboardData.pitchingStats.pitchCallsCompleted} completed`}
+                    progress={dashboardData.pitchingProgress.percentage}
+                    statusText={`${dashboardData.pitchingProgress.completed} of ${dashboardData.pitchingProgress.assignments} startups evaluated (${dashboardData.pitchingProgress.percentage}%)`}
                     icon={Phone}
-                    onClick={() => navigate('/session-management')}
+                    onClick={() => navigate('/evaluate?round=pitching')}
+                    role="vc"
                   />
                   <FunnelStage
-                    title="Evaluate (Pitching)"
-                    description="Submit your post-pitch evaluations after each call"
-                    tooltip="Submit your post-pitch evaluations after each call."
-                    status={
-                      dashboardData.pitchingStats.evaluationsProgress === 100 
-                        ? 'completed' 
-                        : dashboardData.pitchingStats.evaluationsProgress > 0 ? 'current' : 'upcoming'
-                    }
-                    progress={dashboardData.pitchingStats.evaluationsProgress}
-                    statusText={`${dashboardData.pitchingStats.evaluationsProgress}% submitted`}
-                    icon={Star}
+                    title="Pitch Evaluations"
+                    description="Submit evaluations after each pitch session"
+                    tooltip="Complete evaluations for all pitch sessions."
+                    status={dashboardData.pitchingProgress.percentage === 100 ? 'completed' : 'upcoming'}
+                    statusText={dashboardData.pitchingProgress.percentage === 100 ? 'All evaluations complete' : 'Pending pitch completion'}
+                    icon={FileText}
                     onClick={() => navigate('/evaluate?round=pitching')}
+                    role="vc"
                     isLast
                   />
                 </div>
