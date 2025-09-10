@@ -3,46 +3,53 @@
 @tailwind utilities;
 
 /* Aurora Evaluation Platform Design System
-All colors MUST be HSL. Professional, modern, data-driven aesthetic.
+Following Aurora Visual Guidelines with official brand colors and typography.
+All colors MUST be HSL. ZT Bros Oskon 90s for headlines, Raleway for body text.
 */
 
 @layer base {
   :root {
-    /* Base colors - clean professional palette */
-    --background: 218 25% 97%;
-    --foreground: 220 25% 15%;
+    /* Aurora Brand Colors - Official Visual Guidelines */
+    --background: 0 0% 100%;         /* White #FFFFFF */
+    --foreground: 0 0% 8%;           /* Black #141414 */
 
     /* Cards and surfaces */
-    --card: 0 0% 100%;
-    --card-foreground: 220 25% 15%;
+    --card: 0 0% 100%;               /* White #FFFFFF */
+    --card-foreground: 0 0% 8%;      /* Black #141414 */
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 220 25% 15%;
+    --popover: 0 0% 100%;            /* White #FFFFFF */
+    --popover-foreground: 0 0% 8%;   /* Black #141414 */
 
-    /* Primary - Deep Aurora Blue */
-    --primary: 218 75% 25%;
-    --primary-foreground: 218 25% 95%;
-    --primary-glow: 218 85% 35%;
+    /* Primary - Aurora Blue */
+    --primary: 230 100% 70%;         /* Blue #677FFF */
+    --primary-foreground: 0 0% 100%; /* White for contrast */
+    --primary-glow: 230 100% 75%;    /* Lighter Blue variant */
 
-    /* Secondary - Elegant Gray */
-    --secondary: 220 15% 90%;
-    --secondary-foreground: 220 25% 25%;
+    /* Secondary - Aurora Cyan */
+    --secondary: 188 100% 69%;       /* Cyan #5FEAFF */
+    --secondary-foreground: 0 0% 8%; /* Black for contrast */
 
-    /* Muted tones */
-    --muted: 220 12% 94%;
-    --muted-foreground: 220 15% 55%;
+    /* Muted tones - subtle grays */
+    --muted: 0 0% 96%;               /* Very light gray */
+    --muted-foreground: 0 0% 45%;    /* Medium gray */
 
-    /* Accent - Success Green */
-    --accent: 142 70% 45%;
-    --accent-foreground: 0 0% 100%;
+    /* Accent - Aurora Aqua */
+    --accent: 171 100% 42%;          /* Aqua #00D6BB */
+    --accent-foreground: 0 0% 100%;  /* White for contrast */
 
-    /* Status colors */
-    --destructive: 0 75% 55%;
+    /* Status colors - Aurora brand palette */
+    --destructive: 0 84% 60%;        /* Red for errors */
     --destructive-foreground: 0 0% 100%;
-    --warning: 38 90% 50%;
-    --warning-foreground: 0 0% 100%;
-    --success: 142 70% 45%;
+    --warning: 73 89% 49%;           /* Drive Green #C1F11D for warnings */
+    --warning-foreground: 0 0% 8%;   /* Black for contrast */
+    --success: 171 100% 42%;         /* Aqua #00D6BB for success */
     --success-foreground: 0 0% 100%;
+
+    /* Aurora Brand Extended Colors */
+    --aurora-cyan: 188 100% 69%;     /* Cyan #5FEAFF */
+    --aurora-aqua: 171 100% 42%;     /* Aqua #00D6BB */
+    --aurora-yellow-green: 76 100% 70%; /* Yellow Green #D6FF66 */
+    --aurora-drive-green: 73 89% 49%;   /* Drive Green #C1F11D */
 
     /* Interactive elements */
     --border: 220 12% 88%;
@@ -52,16 +59,20 @@ All colors MUST be HSL. Professional, modern, data-driven aesthetic.
     /* Layout */
     --radius: 0.75rem;
 
-    /* Gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-glow)));
-    --gradient-subtle: linear-gradient(180deg, hsl(var(--background)), hsl(220 15% 95%));
-    --gradient-aurora: linear-gradient(135deg, hsl(218 75% 25%), hsl(218 85% 35%), hsl(240 75% 45%));
+    /* Aurora Brand Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--aurora-cyan)));
+    --gradient-secondary: linear-gradient(135deg, hsl(var(--aurora-cyan)), hsl(var(--aurora-aqua)));
+    --gradient-accent: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--aurora-aqua)));
+    --gradient-energy: linear-gradient(135deg, hsl(var(--aurora-drive-green)), hsl(var(--aurora-yellow-green)));
+    --gradient-subtle: linear-gradient(180deg, hsl(var(--background)), hsl(0 0% 98%));
+    --gradient-aurora: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--aurora-cyan)), hsl(var(--aurora-aqua)));
 
-    /* Shadows */
-    --shadow-soft: 0 2px 8px -2px hsl(220 25% 25% / 0.08);
-    --shadow-medium: 0 8px 24px -4px hsl(220 25% 25% / 0.12);
-    --shadow-strong: 0 16px 40px -8px hsl(220 25% 25% / 0.16);
+    /* Aurora Brand Shadows */
+    --shadow-soft: 0 2px 8px -2px hsl(var(--foreground) / 0.08);
+    --shadow-medium: 0 8px 24px -4px hsl(var(--foreground) / 0.12);
+    --shadow-strong: 0 16px 40px -8px hsl(var(--foreground) / 0.16);
     --shadow-aurora: 0 8px 32px -8px hsl(var(--primary) / 0.25);
+    --shadow-brand: 0 4px 20px -4px hsl(var(--aurora-cyan) / 0.3);
 
     /* Animations */
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -129,6 +140,41 @@ All colors MUST be HSL. Professional, modern, data-driven aesthetic.
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-body;
+  }
+}
+
+/* Aurora Brand Typography Utilities */
+@layer utilities {
+  /* Text alignment per Aurora guidelines */
+  .text-aurora-left { text-align: left; }
+  .text-aurora-center { text-align: center; }
+  .text-aurora-headline-right { text-align: right; } /* Headlines only */
+  
+  /* Brand typography styles */
+  .text-headline { 
+    font-family: "ZT Bros Oskon 90s", serif;
+    font-weight: normal;
+  }
+  .text-headline-italic { 
+    font-family: "ZT Bros Oskon 90s", serif;
+    font-style: italic;
+  }
+  .text-body { 
+    font-family: "Raleway", sans-serif;
+  }
+  
+  /* Aurora brand shapes and elements */
+  .aurora-oval {
+    border-radius: 50% / 30%;
+  }
+  .aurora-semi-sphere {
+    border-radius: 50% 50% 0 0;
+  }
+  .aurora-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: hsl(var(--primary));
   }
 }

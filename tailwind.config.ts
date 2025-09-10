@@ -18,6 +18,12 @@ export default {
 			}
 		},
 		extend: {
+			fontFamily: {
+				// Aurora Brand Typography Guidelines
+				'headline': ['"ZT Bros Oskon 90s"', 'serif'], // For headlines and accents
+				'body': ['Raleway', 'sans-serif'], // For body text and long content
+				'sans': ['Raleway', 'sans-serif'], // Default sans-serif
+			},
 			colors: {
 				border: 'hsl(var(--border))',
 				input: 'hsl(var(--input))',
@@ -70,6 +76,13 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
+				},
+				// Aurora Brand Colors - Extended palette
+				aurora: {
+					cyan: 'hsl(var(--aurora-cyan))',
+					aqua: 'hsl(var(--aurora-aqua))',
+					'yellow-green': 'hsl(var(--aurora-yellow-green))',
+					'drive-green': 'hsl(var(--aurora-drive-green))'
 				}
 			},
 			borderRadius: {
@@ -79,6 +92,9 @@ export default {
 			},
 			backgroundImage: {
 				'gradient-primary': 'var(--gradient-primary)',
+				'gradient-secondary': 'var(--gradient-secondary)',  
+				'gradient-accent': 'var(--gradient-accent)',
+				'gradient-energy': 'var(--gradient-energy)',
 				'gradient-subtle': 'var(--gradient-subtle)',
 				'gradient-aurora': 'var(--gradient-aurora)'
 			},
@@ -86,7 +102,8 @@ export default {
 				'soft': 'var(--shadow-soft)',
 				'medium': 'var(--shadow-medium)',
 				'strong': 'var(--shadow-strong)',
-				'aurora': 'var(--shadow-aurora)'
+				'aurora': 'var(--shadow-aurora)',
+				'brand': 'var(--shadow-brand)'
 			},
 			transitionTimingFunction: {
 				'smooth': 'var(--transition-smooth)',

@@ -18,6 +18,9 @@ const buttonVariants = cva(
         success: "bg-success text-success-foreground hover:bg-success/90 shadow-soft",
         warning: "bg-warning text-warning-foreground hover:bg-warning/90 shadow-soft",
         professional: "bg-card text-foreground border border-border hover:bg-muted shadow-soft hover:shadow-medium",
+        aurora: "bg-gradient-aurora text-primary-foreground hover:opacity-90 shadow-brand",
+        aqua: "bg-aurora-aqua text-accent-foreground hover:bg-aurora-aqua/90",
+        cyan: "bg-aurora-cyan text-secondary-foreground hover:bg-aurora-cyan/90",
       },
       size: {
         default: "h-11 px-6 py-2.5",

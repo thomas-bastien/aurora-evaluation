@@ -27,22 +27,22 @@ export const StatsCard = ({
   };
 
   return (
-    <Card className="shadow-soft hover:shadow-medium transition-smooth transform hover:scale-[1.02]">
+    <Card className="shadow-soft hover:shadow-brand transition-smooth transform hover:scale-[1.02]">
       <CardContent className="p-6">
         <div className="flex items-center justify-between">
           <div className="space-y-2">
-            <p className="text-sm font-medium text-muted-foreground">{title}</p>
-            <p className="text-3xl font-bold text-foreground">{value}</p>
+            <p className="text-sm font-medium text-muted-foreground font-body">{title}</p>
+            <p className="text-3xl font-bold text-foreground font-headline">{value}</p>
             {subtitle && (
-              <p className="text-sm text-muted-foreground">{subtitle}</p>
+              <p className="text-sm text-muted-foreground font-body">{subtitle}</p>
             )}
             {trendValue && (
-              <p className={`text-sm font-medium ${getTrendColor()}`}>
+              <p className={`text-sm font-medium font-body ${getTrendColor()}`}>
                 {trend === "up" && "↗"} {trend === "down" && "↘"} {trendValue}
               </p>
             )}
           </div>
-          <div className="w-12 h-12 bg-gradient-primary rounded-lg flex items-center justify-center">
+          <div className="w-12 h-12 bg-gradient-accent rounded-lg flex items-center justify-center shadow-brand">
             <Icon className="w-6 h-6 text-primary-foreground" />
           </div>
         </div>
