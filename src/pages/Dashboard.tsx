@@ -5,6 +5,7 @@ import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { CohortSummaryCard } from "@/components/dashboard/CohortSummaryCard";
 import { FunnelStage } from "@/components/dashboard/FunnelStage";
 import { ScreeningFunnelView } from "@/components/dashboard/ScreeningFunnelView";
+import { PitchingFunnelView } from "@/components/dashboard/PitchingFunnelView";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -262,104 +263,7 @@ const Dashboard = () => {
             />
 
             {/* Round 2 - Pitching */}
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="flex items-center gap-2">
-                      <Badge variant="default" className="px-3 py-1">Round 2</Badge>
-                      Pitching Round
-                    </CardTitle>
-                    <CardDescription>
-                      Final pitch presentations and selection of winners
-                    </CardDescription>
-                  </div>
-                  <Badge 
-                    variant={dashboardData.activeRound === 'pitching' ? 'default' : 'outline'}
-                    className="px-3 py-1"
-                  >
-                    {dashboardData.activeRound === 'pitching' ? 'Active' : 'Upcoming'}
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="flex flex-col space-y-4">
-                   <FunnelStage
-                      title="Matchmaking (Selected Startups)"
-                      description="Assign jurors to the selected startups for live pitch calls"
-                      tooltip="Assign jurors to the selected startups for live pitch calls."
-                     status={
-                       dashboardData.pitchingStats.matchmakingProgress === 100 
-                         ? 'completed' 
-                         : dashboardData.activeRound === 'pitching' ? 'current' : 'upcoming'
-                     }
-                    progress={dashboardData.pitchingStats.matchmakingProgress}
-                    statusText={`${Math.round((dashboardData.pitchingStats.matchmakingProgress / 100) * dashboardData.activeStartups)} startups covered`}
-                    icon={Network}
-                    onClick={() => navigate('/selection/matchmaking?round=pitching')}
-                    role="admin"
-                  />
-                  <FunnelStage
-                    title="Pitch Calls"
-                    description="Jurors and startups meet via Calendly links"
-                    tooltip="Jurors and startups meet via Calendly links."
-                    status={
-                      dashboardData.pitchingStats.pitchCallsCompleted > 0 
-                        ? 'current' 
-                        : dashboardData.pitchingStats.pitchCallsScheduled > 0 ? 'current' : 'upcoming'
-                    }
-                    statusText={`${dashboardData.pitchingStats.pitchCallsScheduled} scheduled / ${dashboardData.pitchingStats.pitchCallsCompleted} completed`}
-                    icon={Phone}
-                    onClick={() => navigate('/selection?round=pitching')}
-                    role="admin"
-                  />
-                  <FunnelStage
-                    title="Evaluations (Pitching)"
-                    description="Jurors submit post-pitch evaluations"
-                    tooltip="Jurors submit post-pitch evaluations."
-                    status={
-                      dashboardData.pitchingStats.evaluationsProgress === 100 
-                        ? 'completed' 
-                        : dashboardData.pitchingStats.evaluationsProgress > 0 ? 'current' : 'upcoming'
-                    }
-                    progress={dashboardData.pitchingStats.evaluationsProgress}
-                    statusText={`${dashboardData.pitchingStats.evaluationsProgress}% submitted`}
-                    icon={Star}
-                    onClick={() => navigate('/selection?round=pitching')}
-                    role="admin"
-                  />
-                  <FunnelStage
-                    title="Selection – Finalists"
-                    description="Confirm the 10 finalists"
-                    tooltip="Confirm the 10 finalists."
-                    status={
-                      dashboardData.pitchingStats.finalSelectionComplete 
-                        ? 'completed' 
-                        : dashboardData.pitchingStats.evaluationsProgress === 100 ? 'current' : 'upcoming'
-                    }
-                    statusText={dashboardData.pitchingStats.finalSelectionComplete ? 'Complete' : 'Pending'}
-                    icon={TrendingUp}
-                    onClick={() => navigate('/selection?round=pitching')}
-                    role="admin"
-                  />
-                  <FunnelStage
-                    title="Results Communication & Final Report"
-                    description="Notify all startups, generate final juror & programme reports"
-                    tooltip="Notify all startups, generate final juror & programme reports."
-                    status={
-                      dashboardData.pitchingStats.finalResultsComplete 
-                        ? 'completed' 
-                        : dashboardData.pitchingStats.finalSelectionComplete ? 'current' : 'upcoming'
-                    }
-                    statusText={dashboardData.pitchingStats.finalResultsComplete ? 'Complete' : 'Pending'}
-                    icon={FileText}
-                    onClick={() => navigate('/selection?round=pitching')}
-                    role="admin"
-                    isLast
-                  />
-                </div>
-              </CardContent>
-            </Card>
+            <PitchingFunnelView isActive={true} />
           </div>
         )}
 
