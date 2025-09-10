@@ -4,6 +4,7 @@ import { getDashboardCounts } from '@/utils/countsUtils';
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { CohortSummaryCard } from "@/components/dashboard/CohortSummaryCard";
 import { FunnelStage } from "@/components/dashboard/FunnelStage";
+import { ScreeningFunnelView } from "@/components/dashboard/ScreeningFunnelView";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -256,104 +257,9 @@ const Dashboard = () => {
         {profile?.role === 'admin' && (
           <div className="space-y-8 animate-fade-in" style={{ animationDelay: "400ms" }}>
             {/* Round 1 - Screening */}
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="flex items-center gap-2">
-                      <Badge variant="secondary" className="px-3 py-1">Round 1</Badge>
-                      Screening Round
-                    </CardTitle>
-                    <CardDescription>
-                      Initial evaluation and selection of startups for pitching round
-                    </CardDescription>
-                  </div>
-                  <Badge 
-                    variant={dashboardData.activeRound === 'screening' ? 'default' : 'outline'}
-                    className="px-3 py-1"
-                  >
-                    {dashboardData.activeRound === 'screening' ? 'Active' : 'Upcoming'}
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="flex flex-col space-y-4">
-                  <FunnelStage
-                    title="Upload Startups & Jury"
-                    description="Upload and review all applicants and jurors for this cohort"
-                    tooltip="Upload and review all applicants and jurors for this cohort."
-                    status={
-                      dashboardData.screeningStats.startupsUploaded > 0 && dashboardData.screeningStats.jurorsUploaded > 0 
-                        ? 'completed' 
-                        : dashboardData.activeRound === 'screening' ? 'current' : 'upcoming'
-                    }
-                    statusText={`${dashboardData.screeningStats.startupsUploaded} active startups, ${dashboardData.screeningStats.jurorsUploaded} active jurors uploaded`}
-                    icon={Upload}
-                    onClick={() => navigate('/startups')}
-                    role="admin"
-                  />
-                  <FunnelStage
-                    title="Matchmaking (Screening)"
-                    description="Assign 3 jurors to each startup"
-                    tooltip="Assign 3 jurors to each startup."
-                    status={
-                      dashboardData.screeningStats.matchmakingProgress === 100 
-                        ? 'completed' 
-                        : dashboardData.screeningStats.matchmakingProgress > 0 ? 'current' : 'upcoming'
-                    }
-                    progress={dashboardData.screeningStats.matchmakingProgress}
-                    statusText={`${Math.round((dashboardData.screeningStats.matchmakingProgress / 100) * dashboardData.activeStartups)}/${dashboardData.activeStartups} startups covered`}
-                    icon={Network}
-                    onClick={() => navigate('/selection/matchmaking?round=screening')}
-                    role="admin"
-                  />
-                  <FunnelStage
-                    title="Evaluations (Screening)"
-                    description="Jurors score their assigned startups"
-                    tooltip="Jurors score their assigned startups."
-                    status={
-                      dashboardData.screeningStats.evaluationsProgress === 100 
-                        ? 'completed' 
-                        : dashboardData.screeningStats.evaluationsProgress > 0 ? 'current' : 'upcoming'
-                    }
-                    progress={dashboardData.screeningStats.evaluationsProgress}
-                    statusText={`${dashboardData.screeningStats.evaluationsProgress}% completed`}
-                    icon={Star}
-                    onClick={() => navigate('/selection?round=screening')}
-                    role="admin"
-                  />
-                   <FunnelStage
-                     title="Selection – Selected Startups"
-                     description="Confirm the startups that progress to Pitching"
-                     tooltip="Confirm the startups that progress to Pitching."
-                    status={
-                      dashboardData.screeningStats.selectionComplete 
-                        ? 'completed' 
-                        : dashboardData.screeningStats.evaluationsProgress === 100 ? 'current' : 'upcoming'
-                    }
-                    statusText={dashboardData.screeningStats.selectionComplete ? 'Complete' : 'Pending'}
-                    icon={CheckCircle}
-                     onClick={() => navigate('/selection?round=screening')}
-                     role="admin"
-                  />
-                  <FunnelStage
-                    title="Results Communication (Screening)"
-                    description="Send outcome emails and feedback to all startups"
-                    tooltip="Send outcome emails and feedback to all startups."
-                    status={
-                      dashboardData.screeningStats.resultsComplete 
-                        ? 'completed' 
-                        : dashboardData.screeningStats.selectionComplete ? 'current' : 'upcoming'
-                    }
-                    statusText={dashboardData.screeningStats.resultsComplete ? 'Complete' : 'Pending'}
-                    icon={MessageSquare}
-                    onClick={() => navigate('/selection?round=screening')}
-                    role="admin"
-                    isLast
-                  />
-                </div>
-              </CardContent>
-            </Card>
+            <ScreeningFunnelView 
+              isActive={dashboardData.activeRound === 'screening'}
+            />
 
             {/* Round 2 - Pitching */}
             <Card>
