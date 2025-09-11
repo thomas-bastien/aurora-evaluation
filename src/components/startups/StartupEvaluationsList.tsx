@@ -5,8 +5,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
-import { MessageSquare, Star, User, Clock } from 'lucide-react';
+import { MessageSquare, Star, User, Clock, Lock } from 'lucide-react';
 import { format } from 'date-fns';
+import { useStartupAssignment } from '@/hooks/useStartupAssignment';
+import { useUserProfile } from '@/hooks/useUserProfile';
 
 interface Evaluation {
   id: string;
@@ -36,6 +38,8 @@ export function StartupEvaluationsList({ startupId }: StartupEvaluationsListProp
   const [screeningEvaluations, setScreeningEvaluations] = useState<Evaluation[]>([]);
   const [pitchingEvaluations, setPitchingEvaluations] = useState<Evaluation[]>([]);
   const [loading, setLoading] = useState(true);
+  const { profile } = useUserProfile();
+  const { isAssigned, loading: assignmentLoading } = useStartupAssignment(startupId);
 
   useEffect(() => {
     const fetchEvaluations = async () => {
@@ -187,7 +191,7 @@ export function StartupEvaluationsList({ startupId }: StartupEvaluationsListProp
     </Card>
   );
 
-  if (loading) {
+  if (loading || assignmentLoading) {
     return (
       <div className="space-y-4">
         {[...Array(3)].map((_, i) => (
@@ -220,12 +224,27 @@ export function StartupEvaluationsList({ startupId }: StartupEvaluationsListProp
 
   const totalEvaluations = screeningEvaluations.length + pitchingEvaluations.length;
 
+  // Show context-aware messages for VCs based on assignment status
+  if (profile?.role === 'vc' && !isAssigned) {
+    return (
+      <div className="text-center py-12">
+        <Lock className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+        <h3 className="text-lg font-medium text-foreground">Evaluations not visible</h3>
+        <p className="text-muted-foreground">Evaluations are not visible because this startup is not assigned to you.</p>
+      </div>
+    );
+  }
+
   if (totalEvaluations === 0) {
+    const message = profile?.role === 'vc' 
+      ? "No evaluations submitted yet"  // VC viewing assigned startup
+      : "This startup hasn't been evaluated by any VCs yet";  // Admin or other view
+    
     return (
       <div className="text-center py-12">
         <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
         <h3 className="text-lg font-medium text-foreground">No evaluations yet</h3>
-        <p className="text-muted-foreground">This startup hasn't been evaluated by any VCs yet.</p>
+        <p className="text-muted-foreground">{message}</p>
       </div>
     );
   }
@@ -276,7 +295,7 @@ export function StartupEvaluationsList({ startupId }: StartupEvaluationsListProp
           ) : (
             <div className="text-center py-8">
               <MessageSquare className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-              <p className="text-muted-foreground">No screening evaluations yet</p>
+              <p className="text-muted-foreground">No screening evaluations submitted yet</p>
             </div>
           )}
         </TabsContent>
@@ -295,7 +314,7 @@ export function StartupEvaluationsList({ startupId }: StartupEvaluationsListProp
           ) : (
             <div className="text-center py-8">
               <MessageSquare className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-              <p className="text-muted-foreground">No pitching evaluations yet</p>
+              <p className="text-muted-foreground">No pitching evaluations submitted yet</p>
             </div>
           )}
         </TabsContent>

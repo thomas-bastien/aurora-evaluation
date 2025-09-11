@@ -8,6 +8,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { MessageSquare, Star, Building, Clock, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { format } from 'date-fns';
+import { useAuth } from '@/hooks/useAuth';
 
 interface Evaluation {
   id: string;
@@ -37,6 +38,7 @@ export function JurorEvaluationsList({ jurorUserId }: JurorEvaluationsListProps)
   const [screeningEvaluations, setScreeningEvaluations] = useState<Evaluation[]>([]);
   const [pitchingEvaluations, setPitchingEvaluations] = useState<Evaluation[]>([]);
   const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
 
   useEffect(() => {
     const fetchEvaluations = async () => {
@@ -234,11 +236,15 @@ export function JurorEvaluationsList({ jurorUserId }: JurorEvaluationsListProps)
   const totalEvaluations = screeningEvaluations.length + pitchingEvaluations.length;
 
   if (totalEvaluations === 0) {
+    const message = user?.id === jurorUserId 
+      ? "You haven't submitted any evaluations yet"
+      : "No evaluations submitted yet";
+    
     return (
       <div className="text-center py-12">
         <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
         <h3 className="text-lg font-medium text-foreground">No evaluations yet</h3>
-        <p className="text-muted-foreground">This juror hasn't submitted any evaluations yet.</p>
+        <p className="text-muted-foreground">{message}</p>
       </div>
     );
   }
@@ -289,7 +295,7 @@ export function JurorEvaluationsList({ jurorUserId }: JurorEvaluationsListProps)
           ) : (
             <div className="text-center py-8">
               <MessageSquare className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-              <p className="text-muted-foreground">No screening evaluations yet</p>
+              <p className="text-muted-foreground">No screening evaluations submitted yet</p>
             </div>
           )}
         </TabsContent>
@@ -308,7 +314,7 @@ export function JurorEvaluationsList({ jurorUserId }: JurorEvaluationsListProps)
           ) : (
             <div className="text-center py-8">
               <MessageSquare className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-              <p className="text-muted-foreground">No pitching evaluations yet</p>
+              <p className="text-muted-foreground">No pitching evaluations submitted yet</p>
             </div>
           )}
         </TabsContent>
