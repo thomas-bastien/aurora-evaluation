@@ -68,8 +68,7 @@ const Dashboard = () => {
       finalResultsComplete: false
     }
   });
-
-  useEffect(() => {
+  
   // Helper function to get deadline information for any round
   const getDeadlineInfo = (roundName: 'screening' | 'pitching'): string => {
     if (!cohortSettings) return 'Loading deadline...';
@@ -84,6 +83,7 @@ const Dashboard = () => {
     return formatDeadlineDisplay(deadlineDate);
   };
 
+  useEffect(() => {
   const fetchDashboardData = async () => {
       try {
         // Fetch consistent counts using utilities
