@@ -145,9 +145,9 @@ export const WorkflowGuide = ({ userRole, currentRound }: WorkflowGuideProps) =>
               onClick={() => navigate(getRouteForStep(index))}
             >
               <step.icon className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
-              <div className="text-left">
-                <h4 className="font-medium text-sm">{step.title}</h4>
-                <p className="text-xs text-muted-foreground mt-1">{step.desc}</p>
+              <div className="text-left break-words">
+                <h4 className="font-medium text-sm break-words">{step.title}</h4>
+                <p className="text-xs text-muted-foreground mt-1 break-words whitespace-normal text-wrap">{step.desc}</p>
               </div>
             </Button>
           ))}
@@ -155,10 +155,10 @@ export const WorkflowGuide = ({ userRole, currentRound }: WorkflowGuideProps) =>
         
         {/* Role-specific notes */}
         <div className="mt-4 p-3 bg-primary/5 border border-primary/20 rounded-lg">
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs text-muted-foreground break-words whitespace-normal">
             <strong>Important:</strong> {isAdmin 
               ? "As a Community Manager, you manage the entire selection process. Jurors only evaluate - they do not make selection decisions."
-              : "As a Juror, you evaluate startups assigned to you. You do not have access to matchmaking or selection decisions - only evaluation tasks."
+              : "As a Juror, you evaluate startups assigned to you. You do not have access to matchmaking or selection decisions - only evaluation tasks. Scoring uses a 1–5 scale: 1 = poor, 5 = excellent."
             }
           </p>
         </div>
