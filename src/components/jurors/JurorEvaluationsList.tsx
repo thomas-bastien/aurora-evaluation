@@ -5,10 +5,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
-import { MessageSquare, Star, Building, Clock, ExternalLink } from 'lucide-react';
+import { MessageSquare, Star, Building, Clock, ExternalLink, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { format } from 'date-fns';
 import { useAuth } from '@/hooks/useAuth';
+import { useUserProfile } from '@/hooks/useUserProfile';
 
 interface Evaluation {
   id: string;
@@ -39,6 +40,7 @@ export function JurorEvaluationsList({ jurorUserId }: JurorEvaluationsListProps)
   const [pitchingEvaluations, setPitchingEvaluations] = useState<Evaluation[]>([]);
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
+  const { profile } = useUserProfile();
 
   useEffect(() => {
     const fetchEvaluations = async () => {
@@ -236,6 +238,20 @@ export function JurorEvaluationsList({ jurorUserId }: JurorEvaluationsListProps)
   const totalEvaluations = screeningEvaluations.length + pitchingEvaluations.length;
 
   if (totalEvaluations === 0) {
+    // For jurors viewing another juror's evaluations
+    if (profile?.role === 'vc' && user?.id !== jurorUserId) {
+      return (
+        <div className="text-center py-12">
+          <Lock className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-foreground">Access Restricted</h3>
+          <p className="text-muted-foreground">
+            Evaluations are not visible because you do not have access to see other jurors' evaluations.
+          </p>
+        </div>
+      );
+    }
+
+    // For users viewing their own evaluations or admins viewing any evaluations
     const message = user?.id === jurorUserId 
       ? "You haven't submitted any evaluations yet"
       : "No evaluations submitted yet";
