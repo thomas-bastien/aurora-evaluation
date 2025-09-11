@@ -579,31 +579,49 @@ export const StartupEvaluationModal = ({
       
       currentEvaluationSections.forEach(section => {
         const sectionWeight = SECTION_WEIGHTS[section.key as keyof typeof SECTION_WEIGHTS] || 0;
-        const sectionScores = section.criteria.map(criterion => 
-          formData.criteria_scores[criterion.key] || 0
-        );
-        const sectionAverage = sectionScores.reduce((sum, score) => sum + score, 0) / section.criteria.length;
         
-        if (sectionAverage > 0) {
+        // Only include scored criteria (1-5) in section average
+        const scoredCriteria = section.criteria
+          .map(criterion => formData.criteria_scores[criterion.key])
+          .filter(score => score && score >= 1 && score <= 5);
+        
+        // Only calculate section average if there are scored criteria
+        if (scoredCriteria.length > 0) {
+          const sectionAverage = scoredCriteria.reduce((sum, score) => sum + score, 0) / scoredCriteria.length;
           weightedSum += sectionAverage * sectionWeight;
           totalWeight += sectionWeight;
         }
       });
       
-      const weightedAverage = totalWeight > 0 ? weightedSum / totalWeight : 0;
+      // Return 0 if no sections have been scored, otherwise calculate weighted average
+      if (totalWeight === 0) return 0;
+      
+      const weightedAverage = weightedSum / totalWeight;
       // Convert from 1-5 scale to 0-10 scale: ((average - 1) / 4) * 10
-      return weightedAverage > 0 ? ((weightedAverage - 1) / 4) * 10 : 0;
+      return ((weightedAverage - 1) / 4) * 10;
     } else {
-      // Keep existing equal weighting for pitching round
-      const sectionAverages = currentEvaluationSections.map(section => {
-        const sectionScores = section.criteria.map(criterion => 
-          formData.criteria_scores[criterion.key] || 0
-        );
-        return sectionScores.reduce((sum, score) => sum + score, 0) / section.criteria.length;
+      // Equal weighting for pitching round with same fix
+      const sectionAverages: number[] = [];
+      
+      currentEvaluationSections.forEach(section => {
+        // Only include scored criteria (1-5) in section average
+        const scoredCriteria = section.criteria
+          .map(criterion => formData.criteria_scores[criterion.key])
+          .filter(score => score && score >= 1 && score <= 5);
+        
+        // Only add section average if there are scored criteria
+        if (scoredCriteria.length > 0) {
+          const sectionAverage = scoredCriteria.reduce((sum, score) => sum + score, 0) / scoredCriteria.length;
+          sectionAverages.push(sectionAverage);
+        }
       });
       
+      // Return 0 if no sections have been scored
+      if (sectionAverages.length === 0) return 0;
+      
       const overallAverage = sectionAverages.reduce((sum, avg) => sum + avg, 0) / sectionAverages.length;
-      return sectionAverages.length > 0 ? ((overallAverage - 1) / 4) * 10 : 0;
+      // Convert from 1-5 scale to 0-10 scale: ((average - 1) / 4) * 10
+      return ((overallAverage - 1) / 4) * 10;
     }
   };
   const validateOpenEndedFields = () => {
