@@ -159,7 +159,7 @@ export function JurorEvaluationsList({ jurorUserId }: JurorEvaluationsListProps)
           <Button variant="outline" size="sm" asChild>
             <a href={`/startup/${evaluation.startup_id}`} target="_blank" rel="noopener noreferrer">
               <ExternalLink className="h-3 w-3 mr-1" />
-              View Startup
+              Startup Profile
             </a>
           </Button>
         </div>

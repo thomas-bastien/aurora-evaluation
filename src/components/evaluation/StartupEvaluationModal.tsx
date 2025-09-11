@@ -16,7 +16,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
-import { Star, Save, Send, Info, Building2, DollarSign, Users, Calendar, Globe, FileText, Video, MapPin, Linkedin, Plus, X, Edit, CheckCircle, AlertTriangle } from "lucide-react";
+import { Star, Save, Send, Info, Building2, DollarSign, Users, Calendar, Globe, FileText, Video, MapPin, Linkedin, Plus, X, Edit, CheckCircle, AlertTriangle, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
 interface StartupEvaluationModalProps {
   startup: {
@@ -876,7 +876,42 @@ export const StartupEvaluationModal = ({
             </div>
           </DialogHeader>
 
-          <ScrollArea className="max-h-[calc(90vh-120px)]">
+          {/* Resources & Links Section */}
+          <div className="border-b pb-4 mb-4">
+            <h3 className="text-sm font-medium mb-3 text-muted-foreground">Resources & Links</h3>
+            <div className="flex gap-2 flex-wrap">
+              <Button variant="outline" size="sm" onClick={() => window.open(`/startup/${startup.id}`, '_blank')}>
+                <ExternalLink className="w-4 h-4 mr-1" />
+                Startup Profile
+              </Button>
+              {startup.linkedin_url && (
+                <Button variant="outline" size="sm" onClick={() => window.open(startup.linkedin_url, '_blank')}>
+                  <Linkedin className="w-4 h-4 mr-1" />
+                  LinkedIn
+                </Button>
+              )}
+              {startup.website && (
+                <Button variant="outline" size="sm" onClick={() => window.open(startup.website, '_blank')}>
+                  <Globe className="w-4 h-4 mr-1" />
+                  Website
+                </Button>
+              )}
+              {startup.pitch_deck_url && (
+                <Button variant="outline" size="sm" onClick={() => window.open(startup.pitch_deck_url, '_blank')}>
+                  <FileText className="w-4 h-4 mr-1" />
+                  Pitch Deck
+                </Button>
+              )}
+              {startup.demo_url && (
+                <Button variant="outline" size="sm" onClick={() => window.open(startup.demo_url, '_blank')}>
+                  <Video className="w-4 h-4 mr-1" />
+                  Demo
+                </Button>
+              )}
+            </div>
+          </div>
+
+          <ScrollArea className="max-h-[calc(90vh-200px)]">
             <div className="space-y-6 pr-6">
               {/* Enhanced Startup Overview */}
               <Card>
@@ -913,6 +948,10 @@ export const StartupEvaluationModal = ({
                     </div>
 
                     <div className="flex gap-2 flex-wrap">
+                      <Button variant="outline" size="sm" onClick={() => window.open(`/startup/${startup.id}`, '_blank')}>
+                        <ExternalLink className="w-4 h-4 mr-1" />
+                        Startup Profile
+                      </Button>
                       {startup.linkedin_url && <Button variant="outline" size="sm" onClick={() => window.open(startup.linkedin_url, '_blank')}>
                           <Linkedin className="w-4 h-4 mr-1" />
                           LinkedIn
@@ -924,6 +963,10 @@ export const StartupEvaluationModal = ({
                       {startup.pitch_deck_url && <Button variant="outline" size="sm" onClick={() => window.open(startup.pitch_deck_url, '_blank')}>
                           <FileText className="w-4 h-4 mr-1" />
                           Pitch Deck
+                        </Button>}
+                      {startup.demo_url && <Button variant="outline" size="sm" onClick={() => window.open(startup.demo_url, '_blank')}>
+                          <Video className="w-4 h-4 mr-1" />
+                          Demo
                         </Button>}
                       <Button variant="outline" size="sm" onClick={() => window.open(`/startup-application/${startup.id}`, '_blank')}>
                         <FileText className="w-4 h-4 mr-1" />
