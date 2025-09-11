@@ -151,7 +151,19 @@ const TextareaWithValidation = ({
     </div>
   );
 };
-// Screening Round Evaluation Sections (38 detailed criteria)
+// Section weights for weighted scoring system
+const SECTION_WEIGHTS = {
+  'problem_statement': 0.15,      // 15%
+  'solution': 0.15,               // 15% 
+  'market': 0.125,                // 12.5% (includes competitive advantage)
+  'business_model': 0.15,         // 15%
+  'traction_scalability': 0.17,   // 17%
+  'team': 0.175,                  // 17.5%
+  'impact': 0.05,                 // 5%
+  'investment': 0.03              // 3%
+};
+
+// Screening Round Evaluation Sections (8 weighted sections)
 const screeningEvaluationSections: EvaluationSection[] = [{
   key: 'problem_statement',
   title: 'Problem Statement',
@@ -212,8 +224,8 @@ const screeningEvaluationSections: EvaluationSection[] = [{
   }]
 }, {
   key: 'market',
-  title: 'Market',
-  guidance: 'Is the market size substantial and well-researched with realistic assumptions?',
+  title: 'Market (incl. Competitive Advantage)',
+  guidance: 'Evaluate the market opportunity and competitive positioning. Consider: Market size, growth potential, realism of estimates. Clear identification of competitors. The startup\'s competitive advantage and differentiation versus alternatives.',
   criteria: [{
     key: 'market_size_presented',
     label: 'Market size is presented',
@@ -238,17 +250,12 @@ const screeningEvaluationSections: EvaluationSection[] = [{
     key: 'competitors_listed',
     label: 'Competitors are listed',
     description: 'Competitive awareness'
-  }]
-}, {
-  key: 'competitive_advantage',
-  title: 'Competitive Advantage',
-  guidance: 'Is there a clear and defensible competitive advantage over existing solutions?',
-  criteria: [{
-    key: 'comparative_analysis',
+  }, {
+    key: 'market_comparative_analysis',
     label: 'A comparative analysis of competitors is conducted',
     description: 'Competition analysis'
   }, {
-    key: 'advantage_clearly_defined',
+    key: 'market_advantage_clearly_defined',
     label: 'Competitive advantage is clearly defined',
     description: 'Differentiation clarity'
   }]
@@ -565,19 +572,39 @@ export const StartupEvaluationModal = ({
     // Use appropriate evaluation sections based on current round
     const currentEvaluationSections = currentRound === 'screening' ? screeningEvaluationSections : pitchingEvaluationSections;
     
-    // Calculate section-based scoring with equal weighting
-    const sectionAverages = currentEvaluationSections.map(section => {
-      const sectionScores = section.criteria.map(criterion => 
-        formData.criteria_scores[criterion.key] || 0
-      );
-      return sectionScores.reduce((sum, score) => sum + score, 0) / section.criteria.length;
-    });
-    
-    // Average all section scores (equal weighting per section)
-    const overallAverage = sectionAverages.reduce((sum, avg) => sum + avg, 0) / sectionAverages.length;
-    
-    // Convert from 1-5 scale to 0-10 scale: ((average - 1) / 4) * 10
-    return sectionAverages.length > 0 ? ((overallAverage - 1) / 4) * 10 : 0;
+    if (currentRound === 'screening') {
+      // Calculate weighted section-based scoring for screening round
+      let weightedSum = 0;
+      let totalWeight = 0;
+      
+      currentEvaluationSections.forEach(section => {
+        const sectionWeight = SECTION_WEIGHTS[section.key as keyof typeof SECTION_WEIGHTS] || 0;
+        const sectionScores = section.criteria.map(criterion => 
+          formData.criteria_scores[criterion.key] || 0
+        );
+        const sectionAverage = sectionScores.reduce((sum, score) => sum + score, 0) / section.criteria.length;
+        
+        if (sectionAverage > 0) {
+          weightedSum += sectionAverage * sectionWeight;
+          totalWeight += sectionWeight;
+        }
+      });
+      
+      const weightedAverage = totalWeight > 0 ? weightedSum / totalWeight : 0;
+      // Convert from 1-5 scale to 0-10 scale: ((average - 1) / 4) * 10
+      return weightedAverage > 0 ? ((weightedAverage - 1) / 4) * 10 : 0;
+    } else {
+      // Keep existing equal weighting for pitching round
+      const sectionAverages = currentEvaluationSections.map(section => {
+        const sectionScores = section.criteria.map(criterion => 
+          formData.criteria_scores[criterion.key] || 0
+        );
+        return sectionScores.reduce((sum, score) => sum + score, 0) / section.criteria.length;
+      });
+      
+      const overallAverage = sectionAverages.reduce((sum, avg) => sum + avg, 0) / sectionAverages.length;
+      return sectionAverages.length > 0 ? ((overallAverage - 1) / 4) * 10 : 0;
+    }
   };
   const validateOpenEndedFields = () => {
     const errors: TextFieldValidation = {};
