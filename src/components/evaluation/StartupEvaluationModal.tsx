@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 // Utility functions
@@ -568,7 +568,8 @@ export const StartupEvaluationModal = ({
   const handleEditEvaluation = () => {
     setIsEditing(true);
   };
-  const calculateOverallScore = () => {
+  // Memoized score calculation that updates in real-time with form changes
+  const overallScore = useMemo(() => {
     // Use appropriate evaluation sections based on current round
     const currentEvaluationSections = currentRound === 'screening' ? screeningEvaluationSections : pitchingEvaluationSections;
     
@@ -623,7 +624,7 @@ export const StartupEvaluationModal = ({
       // Convert from 1-5 scale to 0-10 scale: ((average - 1) / 4) * 10
       return ((overallAverage - 1) / 4) * 10;
     }
-  };
+  }, [formData.criteria_scores, currentRound]);
   const validateOpenEndedFields = () => {
     const errors: TextFieldValidation = {};
     let hasErrors = false;
@@ -739,7 +740,7 @@ export const StartupEvaluationModal = ({
         toast.error('Session expired. Please sign in again.');
         return;
       }
-      const overallScore = calculateOverallScore();
+      const overallScoreValue = overallScore;
 
       // Prepare evaluation data
       const evaluationData: any = {
@@ -753,7 +754,7 @@ export const StartupEvaluationModal = ({
         wants_pitch_session: formData.wants_pitch_session,
         guided_feedback: formData.guided_feedback,
         overall_notes: formData.overall_notes || null,
-        overall_score: overallScore
+        overall_score: overallScoreValue
       };
 
       if (startup.evaluation_id) {
@@ -940,7 +941,7 @@ export const StartupEvaluationModal = ({
                     <CardTitle>Evaluation Criteria</CardTitle>
                     <div className="flex items-center gap-2 text-lg font-semibold">
                       <Star className="w-5 h-5 text-primary" />
-                      Overall Score: {formatScore(calculateOverallScore())}/10
+                      Overall Score: {formatScore(overallScore)}/10
                     </div>
                   </div>
                 </CardHeader>
