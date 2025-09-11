@@ -18,7 +18,8 @@ import {
   Star,
   Clock,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  ExternalLink
 } from "lucide-react";
 
 interface AssignedStartup {
@@ -168,6 +169,15 @@ export const StartupsEvaluationList = ({ startups, loading, onEvaluationUpdate, 
                 <div>
                   <h4 className="text-sm font-medium text-muted-foreground mb-3">Resources & Links</h4>
                   <div className="flex flex-wrap gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => window.open(`/startup/${startup.id}`, '_blank')}
+                      className="flex items-center gap-2"
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                      Startup Profile
+                    </Button>
                     {startup.linkedin_url && (
                       <Button
                         variant="outline"
