@@ -32,19 +32,38 @@ export const useStartupAssignment = (startupId: string): UseStartupAssignmentRet
       }
 
       try {
-        // Check both screening and pitching assignments
+        // First, get the juror record for the current user
+        const { data: jurorData, error: jurorError } = await supabase
+          .from('jurors')
+          .select('id')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        if (jurorError && jurorError.code !== 'PGRST116') {
+          throw jurorError;
+        }
+
+        if (!jurorData) {
+          // User doesn't have a juror record, so they're not assigned to anything
+          setIsAssigned(false);
+          setAssignmentType(null);
+          setLoading(false);
+          return;
+        }
+
+        // Check both screening and pitching assignments using the juror ID
         const [screeningResult, pitchingResult] = await Promise.all([
           supabase
             .from('screening_assignments')
             .select('id')
             .eq('startup_id', startupId)
-            .eq('juror_id', user.id)
+            .eq('juror_id', jurorData.id)
             .maybeSingle(),
           supabase
             .from('pitching_assignments')
             .select('id')
             .eq('startup_id', startupId)
-            .eq('juror_id', user.id)
+            .eq('juror_id', jurorData.id)
             .maybeSingle()
         ]);
 
