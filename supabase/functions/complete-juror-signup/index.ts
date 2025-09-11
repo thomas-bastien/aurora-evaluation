@@ -127,14 +127,30 @@ const handler = async (req: Request): Promise<Response> => {
       }
       console.log("Juror record updated successfully");
 
-      // Update profile with additional data
+      // Update juror record with additional data
+      console.log("Updating juror record with additional data for user:", authData.user.id);
+      const { error: jurorDataUpdateError } = await supabaseAdmin
+        .from('jurors')
+        .update({
+          preferred_regions: expertise && expertise.length > 0 ? expertise : null,
+          preferred_stages: investmentStages && investmentStages.length > 0 ? investmentStages : null
+        })
+        .eq('id', jurorData.id);
+
+      if (jurorDataUpdateError) {
+        console.error("Failed to update juror data:", jurorDataUpdateError);
+        return new Response(
+          JSON.stringify({ error: `Failed to update juror data: ${jurorDataUpdateError.message}` }),
+          { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+      console.log("Juror data updated successfully");
+
+      // Update profile with organization only
       console.log("Creating/updating profile for user:", authData.user.id);
       const { error: profileError } = await supabaseAdmin
         .from('profiles')
         .update({
-          calendly_link: calendlyLink || null,
-          expertise: expertise && expertise.length > 0 ? expertise : null,
-          investment_stages: investmentStages && investmentStages.length > 0 ? investmentStages : null,
           organization: jurorData.company || null
         })
         .eq('user_id', authData.user.id);
