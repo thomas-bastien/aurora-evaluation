@@ -7,6 +7,8 @@ import { FunnelStage } from "@/components/dashboard/FunnelStage";
 import { ScreeningFunnelView } from "@/components/dashboard/ScreeningFunnelView";
 import { PitchingFunnelView } from "@/components/dashboard/PitchingFunnelView";
 import { useUserProfile } from "@/hooks/useUserProfile";
+import { useCohortSettings } from "@/hooks/useCohortSettings";
+import { formatDeadlineDisplay, isDeadlinePassed } from "@/utils/deadlineUtils";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,6 +30,7 @@ import {
 
 const Dashboard = () => {
   const { profile, refreshProfile } = useUserProfile();
+  const { cohortSettings } = useCohortSettings();
   const navigate = useNavigate();
   const [dashboardData, setDashboardData] = useState({
     activeStartups: 0,
@@ -36,7 +39,7 @@ const Dashboard = () => {
     totalJurors: 0,
     activeRound: 'screening' as 'screening' | 'pitching',
     evaluationProgress: 0,
-    reminders: 0,
+    deadlineInfo: 'Loading...',
     nextMilestone: 'Loading...',
     screeningProgress: {
       assignments: 0,
@@ -67,7 +70,21 @@ const Dashboard = () => {
   });
 
   useEffect(() => {
-    const fetchDashboardData = async () => {
+  // Helper function to get deadline information for any round
+  const getDeadlineInfo = (roundName: 'screening' | 'pitching'): string => {
+    if (!cohortSettings) return 'Loading deadline...';
+    
+    const deadline = roundName === 'screening' 
+      ? cohortSettings.screening_deadline 
+      : cohortSettings.pitching_deadline;
+    
+    if (!deadline) return 'No deadline set';
+    
+    const deadlineDate = new Date(deadline);
+    return formatDeadlineDisplay(deadlineDate);
+  };
+
+  const fetchDashboardData = async () => {
       try {
         // Fetch consistent counts using utilities
         const counts = await getDashboardCounts();
@@ -172,7 +189,7 @@ const Dashboard = () => {
           totalJurors,
           activeRound: (activeRound?.name === 'pitching' ? 'pitching' : 'screening') as 'screening' | 'pitching',
           evaluationProgress,
-          reminders: 12, // TODO: Calculate actual reminders sent
+          deadlineInfo: getDeadlineInfo(activeRound?.name as 'screening' | 'pitching' || 'screening'),
           nextMilestone: profile?.role === 'vc' ? 'Complete your startup evaluations' : 'Complete juror matchmaking assignments',
           screeningProgress,
           pitchingProgress,
@@ -249,7 +266,8 @@ const Dashboard = () => {
             activeJurors={dashboardData.activeJurors}
             activeRound={dashboardData.activeRound}
             evaluationProgress={dashboardData.evaluationProgress}
-            reminders={dashboardData.reminders}
+            cohortName={cohortSettings?.cohort_name}
+            deadlineInfo={dashboardData.deadlineInfo}
             nextMilestone={dashboardData.nextMilestone}
           />
         </div>
@@ -260,10 +278,14 @@ const Dashboard = () => {
             {/* Round 1 - Screening */}
             <ScreeningFunnelView 
               isActive={dashboardData.activeRound === 'screening'}
+              deadlineInfo={getDeadlineInfo('screening')}
             />
 
             {/* Round 2 - Pitching */}
-            <PitchingFunnelView isActive={true} />
+            <PitchingFunnelView 
+              isActive={dashboardData.activeRound === 'pitching'} 
+              deadlineInfo={getDeadlineInfo('pitching')}
+            />
           </div>
         )}
 
@@ -280,23 +302,29 @@ const Dashboard = () => {
             {/* Round 1 - Screening */}
             <Card>
               <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="flex items-center gap-2">
-                      <Badge variant="secondary" className="px-3 py-1">Round 1</Badge>
-                      Screening Round
-                    </CardTitle>
-                    <CardDescription>
-                      Evaluate your assigned startups for initial screening
-                    </CardDescription>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="flex items-center gap-2">
+                        <Badge variant="secondary" className="px-3 py-1">Round 1</Badge>
+                        Screening Round
+                      </CardTitle>
+                      <CardDescription>
+                        Evaluate your assigned startups for initial screening
+                      </CardDescription>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="text-sm text-muted-foreground flex items-center gap-1">
+                        <Calendar className="w-4 h-4" />
+                        <span>{getDeadlineInfo('screening')}</span>
+                      </div>
+                      <Badge 
+                        variant={dashboardData.activeRound === 'screening' ? 'default' : 'outline'}
+                        className="px-3 py-1"
+                      >
+                        {dashboardData.activeRound === 'screening' ? 'Active' : 'Completed'}
+                      </Badge>
+                    </div>
                   </div>
-                  <Badge 
-                    variant={dashboardData.activeRound === 'screening' ? 'default' : 'outline'}
-                    className="px-3 py-1"
-                  >
-                    {dashboardData.activeRound === 'screening' ? 'Active' : 'Completed'}
-                  </Badge>
-                </div>
               </CardHeader>
               <CardContent>
                 <div className="flex flex-col space-y-4">
@@ -361,12 +389,18 @@ const Dashboard = () => {
                       Participate in pitch sessions and provide final evaluations
                     </CardDescription>
                   </div>
-                  <Badge 
-                    variant={dashboardData.activeRound === 'pitching' ? 'default' : 'outline'}
-                    className="px-3 py-1"
-                  >
-                    {dashboardData.activeRound === 'pitching' ? 'Active' : 'Upcoming'}
-                  </Badge>
+                  <div className="flex items-center gap-2">
+                    <div className="text-sm text-muted-foreground flex items-center gap-1">
+                      <Calendar className="w-4 h-4" />
+                      <span>{getDeadlineInfo('pitching')}</span>
+                    </div>
+                    <Badge 
+                      variant={dashboardData.activeRound === 'pitching' ? 'default' : 'outline'}
+                      className="px-3 py-1"
+                    >
+                      {dashboardData.activeRound === 'pitching' ? 'Active' : 'Upcoming'}
+                    </Badge>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>

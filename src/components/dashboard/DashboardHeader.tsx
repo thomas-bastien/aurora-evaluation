@@ -147,39 +147,45 @@ export const DashboardHeader = () => {
                   Profile
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="bg-card border border-border shadow-elegant w-64">
-                {/* User Info Section */}
-                <div className="px-3 py-2 border-b border-border">
-                  <div className="flex flex-col space-y-1">
-                    <p className="text-sm font-medium text-foreground">
-                      {profile?.full_name || 'User'}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {user?.email}
-                    </p>
-                    <div className="flex items-center justify-between mt-1">
-                      <span className="text-xs font-medium text-primary">
-                        {profile?.role === 'admin' ? 'CM' : 'Juror'}
-                      </span>
-                      {profile?.organization && (
-                        <span className="text-xs text-muted-foreground">
-                          {profile.organization}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-                
-                {/* Menu Items */}
-                <DropdownMenuItem onClick={() => navigate('/profile')} className="cursor-pointer">
-                  <User className="w-4 h-4 mr-2" />
-                  View Profile
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer text-destructive">
-                  <LogOut className="w-4 h-4 mr-2" />
-                  Sign Out
-                </DropdownMenuItem>
-              </DropdownMenuContent>
+        <DropdownMenuContent align="end" className="bg-card border border-border shadow-elegant w-64">
+          {/* User Info Section */}
+          <div className="px-3 py-2 border-b border-border">
+            <div className="flex flex-col space-y-1">
+              <p className="text-sm font-medium text-foreground">
+                {profile?.full_name || 'User'}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {user?.email}
+              </p>
+              <div className="flex items-center justify-between mt-1">
+                <span className="text-xs font-medium text-primary">
+                  {profile?.role === 'admin' ? 'CM' : 'Juror'}
+                </span>
+                {profile?.organization && (
+                  <span className="text-xs text-muted-foreground">
+                    {profile.organization}
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+          
+          {/* Menu Items */}
+          <DropdownMenuItem onClick={() => navigate('/profile')} className="cursor-pointer">
+            <User className="w-4 h-4 mr-2" />
+            View Profile
+          </DropdownMenuItem>
+          {profile?.role === 'admin' && (
+            <DropdownMenuItem onClick={() => navigate('/cohort-settings')} className="cursor-pointer">
+              <Settings className="w-4 h-4 mr-2" />
+              Cohort Settings
+            </DropdownMenuItem>
+          )}
+          <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer text-destructive">
+            <LogOut className="w-4 h-4 mr-2" />
+            Sign Out
+          </DropdownMenuItem>
+        </DropdownMenuContent>
             </DropdownMenu>
           </div>
         </div>

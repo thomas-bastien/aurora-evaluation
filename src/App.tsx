@@ -24,6 +24,7 @@ import SelectionMatchmaking from "./pages/SelectionMatchmaking";
 import SessionManagement from "./pages/SessionManagement";
 import EvaluationDashboard from "./pages/EvaluationDashboard";
 import Matchmaking from "./pages/Matchmaking";
+import CohortSettings from "./pages/CohortSettings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -140,6 +141,13 @@ const App = () => (
               <ProtectedRoute>
                 <RoleGuard allowedRoles={['admin']}>
                   <Matchmaking />
+                </RoleGuard>
+              </ProtectedRoute>
+            } />
+            <Route path="/cohort-settings" element={
+              <ProtectedRoute>
+                <RoleGuard allowedRoles={['admin']}>
+                  <CohortSettings />
                 </RoleGuard>
               </ProtectedRoute>
             } />

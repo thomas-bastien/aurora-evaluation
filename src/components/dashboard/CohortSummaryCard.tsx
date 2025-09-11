@@ -1,13 +1,14 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Trophy, Users, Building2, TrendingUp } from "lucide-react";
+import { Trophy, Users, Building2, TrendingUp, Calendar } from "lucide-react";
 
 interface CohortSummaryCardProps {
   totalStartups: number;
   activeJurors: number;
   activeRound: 'screening' | 'pitching';
   evaluationProgress: number;
-  reminders: number;
+  cohortName?: string;
+  deadlineInfo?: string;
   nextMilestone: string;
 }
 
@@ -16,7 +17,8 @@ export const CohortSummaryCard = ({
   activeJurors,
   activeRound,
   evaluationProgress,
-  reminders,
+  cohortName = "Aurora Tech Awards 2025 Cohort",
+  deadlineInfo,
   nextMilestone
 }: CohortSummaryCardProps) => {
   return (
@@ -29,7 +31,7 @@ export const CohortSummaryCard = ({
             </div>
             <div>
               <CardTitle className="text-primary-foreground text-xl">
-                Aurora Tech Awards 2025 Cohort
+                {cohortName}
               </CardTitle>
               <p className="text-primary-foreground/80 text-sm">
                 Current Programme Cohort
@@ -74,10 +76,13 @@ export const CohortSummaryCard = ({
             <p className="text-xs text-primary-foreground/70">Evaluations</p>
           </div>
           <div className="text-center">
-            <div className="text-2xl font-bold text-primary-foreground mb-1">
-              {reminders}
+            <div className="flex items-center justify-center gap-2 mb-1">
+              <Calendar className="w-4 h-4 text-primary-foreground/80" />
+              <span className="text-xs font-bold text-primary-foreground break-words whitespace-normal text-center">
+                {deadlineInfo || 'No deadline set'}
+              </span>
             </div>
-            <p className="text-xs text-primary-foreground/70">Reminders Sent</p>
+            <p className="text-xs text-primary-foreground/70">Current Round</p>
           </div>
         </div>
         <div className="mt-4 pt-4 border-t border-primary-foreground/20">

@@ -13,13 +13,15 @@ import {
   Filter, 
   Mail,
   ArrowRight,
-  RefreshCw
+  RefreshCw,
+  Calendar
 } from "lucide-react";
 import { getScreeningFunnelData, type FunnelStepData } from "@/utils/screeningFunnelUtils";
 import { useToast } from "@/hooks/use-toast";
 
 interface ScreeningFunnelViewProps {
   isActive?: boolean;
+  deadlineInfo?: string;
 }
 
 const STEP_ICONS = [Upload, UserCheck, ClipboardList, Filter, Mail];
@@ -44,7 +46,7 @@ const getProgressColor = (percentage: number) => {
   return 'bg-muted';
 };
 
-export const ScreeningFunnelView = ({ isActive = true }: ScreeningFunnelViewProps) => {
+export const ScreeningFunnelView = ({ isActive = true, deadlineInfo }: ScreeningFunnelViewProps) => {
   const [funnelData, setFunnelData] = useState<FunnelStepData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -144,6 +146,12 @@ export const ScreeningFunnelView = ({ isActive = true }: ScreeningFunnelViewProp
               </CardDescription>
             </div>
             <div className="flex items-center gap-2">
+              {deadlineInfo && (
+                <div className="text-sm text-muted-foreground flex items-center gap-1">
+                  <Calendar className="w-4 h-4" />
+                  <span>{deadlineInfo}</span>
+                </div>
+              )}
               <Badge 
                 variant={isActive ? 'default' : 'outline'}
                 className="px-3 py-1"

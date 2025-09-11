@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      cohort_settings: {
+        Row: {
+          cohort_name: string
+          created_at: string
+          created_by: string | null
+          id: string
+          pitching_deadline: string | null
+          screening_deadline: string | null
+          updated_at: string
+        }
+        Insert: {
+          cohort_name?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          pitching_deadline?: string | null
+          screening_deadline?: string | null
+          updated_at?: string
+        }
+        Update: {
+          cohort_name?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          pitching_deadline?: string | null
+          screening_deadline?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       jurors: {
         Row: {
           company: string | null

@@ -13,13 +13,15 @@ import {
   TrendingUp, 
   FileText,
   ArrowRight,
-  RefreshCw
+  RefreshCw,
+  Calendar
 } from "lucide-react";
 import { getPitchingFunnelData, type FunnelStepData } from "@/utils/pitchingFunnelUtils";
 import { useToast } from "@/hooks/use-toast";
 
 interface PitchingFunnelViewProps {
   isActive?: boolean;
+  deadlineInfo?: string;
 }
 
 const STEP_ICONS = [Network, Phone, Star, TrendingUp, FileText];
@@ -37,7 +39,7 @@ const getStatusColor = (status: FunnelStepData['status']) => {
   }
 };
 
-export const PitchingFunnelView = ({ isActive = true }: PitchingFunnelViewProps) => {
+export const PitchingFunnelView = ({ isActive = true, deadlineInfo }: PitchingFunnelViewProps) => {
   const [funnelData, setFunnelData] = useState<FunnelStepData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -137,6 +139,12 @@ export const PitchingFunnelView = ({ isActive = true }: PitchingFunnelViewProps)
               </CardDescription>
             </div>
             <div className="flex items-center gap-2">
+              {deadlineInfo && (
+                <div className="text-sm text-muted-foreground flex items-center gap-1">
+                  <Calendar className="w-4 h-4" />
+                  <span>{deadlineInfo}</span>
+                </div>
+              )}
               <Badge 
                 variant={isActive ? 'default' : 'outline'}
                 className="px-3 py-1"
