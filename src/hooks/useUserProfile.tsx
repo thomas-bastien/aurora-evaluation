@@ -52,7 +52,7 @@ export const useUserProfile = () => {
       if (profileData) {
         const { data: juror, error: jurorError } = await supabase
           .from('jurors')
-          .select('target_verticals, preferred_stages, preferred_regions')
+          .select('target_verticals, preferred_stages, preferred_regions, calendly_link')
           .eq('user_id', user.id)
           .maybeSingle();
 
@@ -69,6 +69,7 @@ export const useUserProfile = () => {
         target_verticals: jurorData?.target_verticals || null,
         preferred_stages: jurorData?.preferred_stages || null,
         preferred_regions: jurorData?.preferred_regions || null,
+        calendly_link: jurorData?.calendly_link || null,
       } : null;
 
       setProfile(mergedProfile);

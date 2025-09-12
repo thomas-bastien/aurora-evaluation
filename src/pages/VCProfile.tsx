@@ -81,7 +81,7 @@ const VCProfile = () => {
     try {
       const { data: jurorData } = await supabase
         .from('jurors')
-        .select('preferred_regions, target_verticals, preferred_stages, linkedin_url')
+        .select('preferred_regions, target_verticals, preferred_stages, linkedin_url, calendly_link')
         .eq('user_id', user.id)
         .maybeSingle();
         
@@ -91,7 +91,8 @@ const VCProfile = () => {
           preferred_regions: jurorData.preferred_regions || [],
           target_verticals: jurorData.target_verticals || [],
           preferred_stages: jurorData.preferred_stages || [],
-          linkedin_url: jurorData.linkedin_url || ''
+          linkedin_url: jurorData.linkedin_url || '',
+          calendly_link: jurorData.calendly_link || ''
         }));
       }
     } catch (error) {
@@ -160,18 +161,18 @@ const VCProfile = () => {
       const { error: profileError } = await supabase.from('profiles').update({
         full_name: formData.full_name,
         organization: formData.organization,
-        calendly_link: formData.calendly_link,
         updated_at: new Date().toISOString()
       }).eq('user_id', user.id);
       
       if (profileError) throw profileError;
       
-      // Update juror preferences (primary storage)
+      // Update juror preferences and calendly_link (primary storage)
       const { error: jurorError } = await supabase.from('jurors').update({
         preferred_regions: formData.preferred_regions,
         target_verticals: formData.target_verticals,
         preferred_stages: formData.preferred_stages,
-        linkedin_url: formData.linkedin_url
+        linkedin_url: formData.linkedin_url,
+        calendly_link: formData.calendly_link
       }).eq('user_id', user.id);
       
       if (jurorError) throw jurorError;

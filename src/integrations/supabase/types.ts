@@ -46,6 +46,7 @@ export type Database = {
       }
       jurors: {
         Row: {
+          calendly_link: string | null
           company: string | null
           created_at: string
           email: string
@@ -63,6 +64,7 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          calendly_link?: string | null
           company?: string | null
           created_at?: string
           email: string
@@ -80,6 +82,7 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          calendly_link?: string | null
           company?: string | null
           created_at?: string
           email?: string
@@ -260,7 +263,6 @@ export type Database = {
       }
       profiles: {
         Row: {
-          calendly_link: string | null
           created_at: string
           expertise: string[] | null
           full_name: string | null
@@ -272,7 +274,6 @@ export type Database = {
           user_id: string
         }
         Insert: {
-          calendly_link?: string | null
           created_at?: string
           expertise?: string[] | null
           full_name?: string | null
@@ -284,7 +285,6 @@ export type Database = {
           user_id: string
         }
         Update: {
-          calendly_link?: string | null
           created_at?: string
           expertise?: string[] | null
           full_name?: string | null

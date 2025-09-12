@@ -50,18 +50,10 @@ const JurorOnboarding = () => {
         .eq('user_id', user.id)
         .single();
       
-      if (data) {
-        setProfile(data);
-        setFormData(prev => ({
-          ...prev,
-          calendlyLink: data.calendly_link || ''
-        }));
-      }
-      
       // Fetch juror data if exists
       const { data: jurorData } = await supabase
         .from('jurors')
-        .select('target_verticals, preferred_stages, preferred_regions, linkedin_url')
+        .select('target_verticals, preferred_stages, preferred_regions, linkedin_url, calendly_link')
         .eq('user_id', user.id)
         .maybeSingle();
         
@@ -71,7 +63,8 @@ const JurorOnboarding = () => {
           targetVerticals: jurorData.target_verticals || [],
           preferredStages: jurorData.preferred_stages || [],
           preferredRegions: jurorData.preferred_regions || [],
-          linkedinUrl: jurorData.linkedin_url || ''
+          linkedinUrl: jurorData.linkedin_url || '',
+          calendlyLink: jurorData.calendly_link || ''
         }));
       }
     };
@@ -112,32 +105,22 @@ const JurorOnboarding = () => {
   };
 
   const handleProfileUpdate = async () => {
-    // Update profile with calendly link
-    const { error: profileError } = await supabase
-      .from('profiles')
-      .update({
-        calendly_link: formData.calendlyLink || null
-      })
-      .eq('user_id', user!.id);
+    if (!user) return false;
 
-    if (profileError) {
-      toast.error('Failed to update profile: ' + profileError.message);
-      return false;
-    }
-
-    // Update or create juror record with all preferences
+    // Update juror record with all preferences and calendly_link
     const { error: jurorError } = await supabase
       .from('jurors')
       .update({
         target_verticals: formData.targetVerticals.length > 0 ? formData.targetVerticals : null,
         preferred_stages: formData.preferredStages.length > 0 ? formData.preferredStages : null,
         preferred_regions: formData.preferredRegions.length > 0 ? formData.preferredRegions : null,
-        linkedin_url: formData.linkedinUrl || null
+        linkedin_url: formData.linkedinUrl || null,
+        calendly_link: formData.calendlyLink || null
       })
-      .eq('user_id', user!.id);
+      .eq('user_id', user.id);
 
     if (jurorError) {
-      toast.error('Failed to update juror preferences: ' + jurorError.message);
+      toast.error('Failed to update profile: ' + jurorError.message);
       return false;
     }
 

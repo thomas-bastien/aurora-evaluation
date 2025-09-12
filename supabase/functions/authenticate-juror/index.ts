@@ -209,18 +209,20 @@ const handler = async (req: Request): Promise<Response> => {
       redirectPath = '/juror-onboarding?onboarding=true';
     } else {
       // Check if existing user needs onboarding
-      const { data: profileData } = await supabaseAdmin
-        .from('profiles')
-        .select('calendly_link, expertise, investment_stages')
+      const { data: jurorData } = await supabaseAdmin
+        .from('jurors')
+        .select('calendly_link, target_verticals, preferred_stages, preferred_regions')
         .eq('user_id', userId)
         .maybeSingle();
         
-      const needsOnboarding = profileData && (
-        !profileData.calendly_link || 
-        !profileData.expertise || 
-        profileData.expertise.length === 0 ||
-        !profileData.investment_stages ||
-        profileData.investment_stages.length === 0
+      const needsOnboarding = jurorData && (
+        !jurorData.calendly_link || 
+        !jurorData.target_verticals || 
+        jurorData.target_verticals.length === 0 ||
+        !jurorData.preferred_stages ||
+        jurorData.preferred_stages.length === 0 ||
+        !jurorData.preferred_regions ||
+        jurorData.preferred_regions.length === 0
       );
       
       if (needsOnboarding) {

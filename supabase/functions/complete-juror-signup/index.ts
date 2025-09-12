@@ -132,8 +132,9 @@ const handler = async (req: Request): Promise<Response> => {
       const { error: jurorDataUpdateError } = await supabaseAdmin
         .from('jurors')
         .update({
-          preferred_regions: expertise && expertise.length > 0 ? expertise : null,
-          preferred_stages: investmentStages && investmentStages.length > 0 ? investmentStages : null
+          target_verticals: expertise && expertise.length > 0 ? expertise : null,
+          preferred_stages: investmentStages && investmentStages.length > 0 ? investmentStages : null,
+          calendly_link: calendlyLink || null
         })
         .eq('id', jurorData.id);
 
