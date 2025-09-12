@@ -264,10 +264,8 @@ export type Database = {
       profiles: {
         Row: {
           created_at: string
-          expertise: string[] | null
           full_name: string | null
           id: string
-          investment_stages: string[] | null
           organization: string | null
           role: Database["public"]["Enums"]["user_role"] | null
           updated_at: string
@@ -275,10 +273,8 @@ export type Database = {
         }
         Insert: {
           created_at?: string
-          expertise?: string[] | null
           full_name?: string | null
           id?: string
-          investment_stages?: string[] | null
           organization?: string | null
           role?: Database["public"]["Enums"]["user_role"] | null
           updated_at?: string
@@ -286,10 +282,8 @@ export type Database = {
         }
         Update: {
           created_at?: string
-          expertise?: string[] | null
           full_name?: string | null
           id?: string
-          investment_stages?: string[] | null
           organization?: string | null
           role?: Database["public"]["Enums"]["user_role"] | null
           updated_at?: string
