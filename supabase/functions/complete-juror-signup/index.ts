@@ -10,8 +10,9 @@ interface JurorSignupRequest {
   token: string;
   password: string;
   calendlyLink?: string;
-  expertise?: string[];
-  investmentStages?: string[];
+  targetVerticals?: string[];
+  preferredStages?: string[];
+  preferredRegions?: string[];
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -20,7 +21,7 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { token, password, calendlyLink, expertise, investmentStages }: JurorSignupRequest = await req.json();
+    const { token, password, calendlyLink, targetVerticals, preferredStages, preferredRegions }: JurorSignupRequest = await req.json();
     
     console.log("Processing juror signup with token:", token);
 
@@ -132,8 +133,9 @@ const handler = async (req: Request): Promise<Response> => {
       const { error: jurorDataUpdateError } = await supabaseAdmin
         .from('jurors')
         .update({
-          target_verticals: expertise && expertise.length > 0 ? expertise : null,
-          preferred_stages: investmentStages && investmentStages.length > 0 ? investmentStages : null,
+          target_verticals: targetVerticals && targetVerticals.length > 0 ? targetVerticals : null,
+          preferred_stages: preferredStages && preferredStages.length > 0 ? preferredStages : null,
+          preferred_regions: preferredRegions && preferredRegions.length > 0 ? preferredRegions : null,
           calendly_link: calendlyLink || null
         })
         .eq('id', jurorData.id);

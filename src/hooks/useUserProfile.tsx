@@ -70,6 +70,9 @@ export const useUserProfile = () => {
         preferred_stages: jurorData?.preferred_stages || null,
         preferred_regions: jurorData?.preferred_regions || null,
         calendly_link: jurorData?.calendly_link || null,
+        // Legacy fields for backwards compatibility
+        expertise: jurorData?.target_verticals || null,
+        investment_stages: jurorData?.preferred_stages || null,
       } : null;
 
       setProfile(mergedProfile);

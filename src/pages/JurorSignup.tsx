@@ -5,9 +5,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Loader2, ArrowLeft } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { REGION_OPTIONS, VERTICAL_OPTIONS, STAGE_OPTIONS } from "@/constants/jurorPreferences";
 
 const JurorSignup = () => {
   const [loading, setLoading] = useState(false);
@@ -15,8 +17,9 @@ const JurorSignup = () => {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [calendlyLink, setCalendlyLink] = useState("");
-  const [expertise, setExpertise] = useState<string[]>([]);
-  const [investmentStages, setInvestmentStages] = useState<string[]>([]);
+  const [targetVerticals, setTargetVerticals] = useState<string[]>([]);
+  const [preferredStages, setPreferredStages] = useState<string[]>([]);
+  const [preferredRegions, setPreferredRegions] = useState<string[]>([]);
   const [error, setError] = useState("");
   const [jurorData, setJurorData] = useState<any>(null);
   const navigate = useNavigate();
@@ -117,8 +120,9 @@ const JurorSignup = () => {
           token,
           password,
           calendlyLink,
-          expertise,
-          investmentStages
+          targetVerticals,
+          preferredStages,
+          preferredRegions
         }
       });
 
@@ -154,14 +158,10 @@ const JurorSignup = () => {
     }
   };
 
-  const handleExpertiseChange = (value: string) => {
-    const areas = value.split(',').map(area => area.trim()).filter(Boolean);
-    setExpertise(areas);
-  };
-
-  const handleStagesChange = (value: string) => {
-    const stages = value.split(',').map(stage => stage.trim()).filter(Boolean);
-    setInvestmentStages(stages);
+  const toggleArrayItem = (array: string[], item: string): string[] => {
+    return array.includes(item)
+      ? array.filter(i => i !== item)
+      : [...array, item];
   };
 
   if (validatingToken) {
@@ -264,23 +264,51 @@ const JurorSignup = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="expertise">Areas of Expertise (Optional)</Label>
-                <Input
-                  id="expertise"
-                  type="text"
-                  placeholder="e.g. FinTech, AI, SaaS (comma-separated)"
-                  onChange={(e) => handleExpertiseChange(e.target.value)}
-                />
+                <Label>Preferred Regions (Optional)</Label>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {REGION_OPTIONS.map(region => (
+                    <Badge 
+                      key={region} 
+                      variant={preferredRegions.includes(region) ? "default" : "outline"} 
+                      className="cursor-pointer" 
+                      onClick={() => setPreferredRegions(toggleArrayItem(preferredRegions, region))}
+                    >
+                      {region}
+                    </Badge>
+                  ))}
+                </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="stages">Investment Stages (Optional)</Label>
-                <Input
-                  id="stages"
-                  type="text"
-                  placeholder="e.g. Seed, Series A, Growth (comma-separated)"
-                  onChange={(e) => handleStagesChange(e.target.value)}
-                />
+                <Label>Target Verticals (Optional)</Label>
+                <div className="flex flex-wrap gap-2 mt-2 max-h-32 overflow-y-auto">
+                  {VERTICAL_OPTIONS.map(vertical => (
+                    <Badge 
+                      key={vertical} 
+                      variant={targetVerticals.includes(vertical) ? "default" : "outline"} 
+                      className="cursor-pointer" 
+                      onClick={() => setTargetVerticals(toggleArrayItem(targetVerticals, vertical))}
+                    >
+                      {vertical}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Preferred Investment Stages (Optional)</Label>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {STAGE_OPTIONS.map(stage => (
+                    <Badge 
+                      key={stage} 
+                      variant={preferredStages.includes(stage) ? "default" : "outline"} 
+                      className="cursor-pointer" 
+                      onClick={() => setPreferredStages(toggleArrayItem(preferredStages, stage))}
+                    >
+                      {stage}
+                    </Badge>
+                  ))}
+                </div>
               </div>
 
               {error && (
