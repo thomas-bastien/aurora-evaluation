@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { Loader2, CheckCircle, X } from 'lucide-react';
-import { VERTICAL_OPTIONS, STAGE_OPTIONS } from '@/constants/jurorPreferences';
+import { REGION_OPTIONS, VERTICAL_OPTIONS, STAGE_OPTIONS } from '@/constants/jurorPreferences';
 
 const JurorOnboarding = () => {
   const [searchParams] = useSearchParams();
@@ -20,8 +20,10 @@ const JurorOnboarding = () => {
   
   const [formData, setFormData] = useState({
     calendlyLink: '',
-    expertise: [] as string[],
-    investmentStages: [] as string[],
+    linkedinUrl: '',
+    targetVerticals: [] as string[],
+    preferredStages: [] as string[],
+    preferredRegions: [] as string[],
     password: '',
     confirmPassword: ''
   });
@@ -52,9 +54,24 @@ const JurorOnboarding = () => {
         setProfile(data);
         setFormData(prev => ({
           ...prev,
-          calendlyLink: data.calendly_link || '',
-          expertise: data.expertise || [],
-          investmentStages: data.investment_stages || []
+          calendlyLink: data.calendly_link || ''
+        }));
+      }
+      
+      // Fetch juror data if exists
+      const { data: jurorData } = await supabase
+        .from('jurors')
+        .select('target_verticals, preferred_stages, preferred_regions, linkedin_url')
+        .eq('user_id', user.id)
+        .maybeSingle();
+        
+      if (jurorData) {
+        setFormData(prev => ({
+          ...prev,
+          targetVerticals: jurorData.target_verticals || [],
+          preferredStages: jurorData.preferred_stages || [],
+          preferredRegions: jurorData.preferred_regions || [],
+          linkedinUrl: jurorData.linkedin_url || ''
         }));
       }
     };
@@ -62,8 +79,6 @@ const JurorOnboarding = () => {
     fetchProfile();
   }, [user, isOnboarding, navigate]);
 
-  const expertiseOptions = VERTICAL_OPTIONS;
-  const stageOptions = STAGE_OPTIONS;
 
   const toggleArrayItem = (array: string[], item: string) => {
     return array.includes(item) 
@@ -110,20 +125,20 @@ const JurorOnboarding = () => {
       return false;
     }
 
-    // Update or create juror record with expertise and stages
-    if (formData.expertise.length > 0 || formData.investmentStages.length > 0) {
-      const { error: jurorError } = await supabase
-        .from('jurors')
-        .update({
-          target_verticals: formData.expertise.length > 0 ? formData.expertise : null,
-          preferred_stages: formData.investmentStages.length > 0 ? formData.investmentStages : null
-        })
-        .eq('user_id', user!.id);
+    // Update or create juror record with all preferences
+    const { error: jurorError } = await supabase
+      .from('jurors')
+      .update({
+        target_verticals: formData.targetVerticals.length > 0 ? formData.targetVerticals : null,
+        preferred_stages: formData.preferredStages.length > 0 ? formData.preferredStages : null,
+        preferred_regions: formData.preferredRegions.length > 0 ? formData.preferredRegions : null,
+        linkedin_url: formData.linkedinUrl || null
+      })
+      .eq('user_id', user!.id);
 
-      if (jurorError) {
-        toast.error('Failed to update juror preferences: ' + jurorError.message);
-        return false;
-      }
+    if (jurorError) {
+      toast.error('Failed to update juror preferences: ' + jurorError.message);
+      return false;
     }
 
     return true;
@@ -226,23 +241,41 @@ const JurorOnboarding = () => {
                 onChange={(e) => setFormData(prev => ({ ...prev, calendlyLink: e.target.value }))}
                 placeholder="https://calendly.com/your-profile"
               />
+              <p className="text-sm text-muted-foreground mt-1">
+                This will be used to schedule pitch meetings with startups
+              </p>
             </div>
 
-            {/* Expertise */}
+            {/* LinkedIn URL */}
             <div>
-              <Label>Areas of Expertise (Optional)</Label>
+              <Label htmlFor="linkedinUrl">LinkedIn Profile (Optional)</Label>
+              <Input
+                type="url"
+                id="linkedinUrl"
+                value={formData.linkedinUrl}
+                onChange={(e) => setFormData(prev => ({ ...prev, linkedinUrl: e.target.value }))}
+                placeholder="https://linkedin.com/in/your-profile"
+              />
+              <p className="text-sm text-muted-foreground mt-1">
+                Your LinkedIn profile for networking and credibility
+              </p>
+            </div>
+
+            {/* Preferred Regions */}
+            <div>
+              <Label>Preferred Regions (Optional)</Label>
               <p className="text-sm text-muted-foreground mb-3">
-                Select the industries you have experience evaluating
+                Select regions you prefer to evaluate startups from
               </p>
               <div className="flex flex-wrap gap-2">
-                {expertiseOptions.map((option) => (
+                {REGION_OPTIONS.map((option) => (
                   <Badge
                     key={option}
-                    variant={formData.expertise.includes(option) ? "default" : "outline"}
+                    variant={formData.preferredRegions.includes(option) ? "default" : "outline"}
                     className="cursor-pointer"
                     onClick={() => setFormData(prev => ({
                       ...prev,
-                      expertise: toggleArrayItem(prev.expertise, option)
+                      preferredRegions: toggleArrayItem(prev.preferredRegions, option)
                     }))}
                   >
                     {option}
@@ -251,21 +284,44 @@ const JurorOnboarding = () => {
               </div>
             </div>
 
-            {/* Investment Stages */}
+            {/* Target Investment Verticals */}
             <div>
-              <Label>Investment Stages (Optional)</Label>
+              <Label>Target Investment Verticals (Optional)</Label>
               <p className="text-sm text-muted-foreground mb-3">
-                Select the funding stages you're most interested in
+                Select industries you specialize in
               </p>
               <div className="flex flex-wrap gap-2">
-                {stageOptions.map((option) => (
+                {VERTICAL_OPTIONS.map((option) => (
                   <Badge
                     key={option}
-                    variant={formData.investmentStages.includes(option) ? "default" : "outline"}
+                    variant={formData.targetVerticals.includes(option) ? "default" : "outline"}
                     className="cursor-pointer"
                     onClick={() => setFormData(prev => ({
                       ...prev,
-                      investmentStages: toggleArrayItem(prev.investmentStages, option)
+                      targetVerticals: toggleArrayItem(prev.targetVerticals, option)
+                    }))}
+                  >
+                    {option}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+
+            {/* Preferred Startup Stages */}
+            <div>
+              <Label>Preferred Startup Stages (Optional)</Label>
+              <p className="text-sm text-muted-foreground mb-3">
+                Select funding stages you prefer to evaluate
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {STAGE_OPTIONS.map((option) => (
+                  <Badge
+                    key={option}
+                    variant={formData.preferredStages.includes(option) ? "default" : "outline"}
+                    className="cursor-pointer"
+                    onClick={() => setFormData(prev => ({
+                      ...prev,
+                      preferredStages: toggleArrayItem(prev.preferredStages, option)
                     }))}
                   >
                     {option}
