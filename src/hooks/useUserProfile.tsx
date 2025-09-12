@@ -11,6 +11,11 @@ interface UserProfile {
   created_at: string;
   updated_at: string;
   calendly_link: string | null;
+  // Juror-specific fields (primary)
+  target_verticals: string[] | null;
+  preferred_stages: string[] | null;
+  preferred_regions: string[] | null;
+  // Legacy fields (for backwards compatibility)
   expertise: string[] | null;
   investment_stages: string[] | null;
 }
@@ -28,18 +33,45 @@ export const useUserProfile = () => {
     }
 
     try {
-      const { data, error } = await supabase
+      // Fetch profile data
+      const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')
         .eq('user_id', user.id)
         .maybeSingle();
 
-      if (error) {
-        console.error('Error fetching profile:', error);
+      if (profileError) {
+        console.error('Error fetching profile:', profileError);
         setProfile(null);
-      } else {
-        setProfile(data);
+        setLoading(false);
+        return;
       }
+
+      // Fetch juror data if profile exists
+      let jurorData = null;
+      if (profileData) {
+        const { data: juror, error: jurorError } = await supabase
+          .from('jurors')
+          .select('target_verticals, preferred_stages, preferred_regions')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        if (jurorError) {
+          console.error('Error fetching juror data:', jurorError);
+        } else {
+          jurorData = juror;
+        }
+      }
+
+      // Merge profile and juror data
+      const mergedProfile = profileData ? {
+        ...profileData,
+        target_verticals: jurorData?.target_verticals || null,
+        preferred_stages: jurorData?.preferred_stages || null,
+        preferred_regions: jurorData?.preferred_regions || null,
+      } : null;
+
+      setProfile(mergedProfile);
     } catch (error) {
       console.error('Error fetching profile:', error);
       setProfile(null);

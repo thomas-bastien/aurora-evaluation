@@ -64,8 +64,8 @@ const VCProfile = () => {
         full_name: profile.full_name || '',
         organization: profile.organization || '',
         calendly_link: profile.calendly_link || '',
-        expertise: profile.expertise || [],
-        investment_stages: profile.investment_stages || [],
+        expertise: profile.target_verticals || [], // Legacy field mapped from juror data
+        investment_stages: profile.preferred_stages || [], // Legacy field mapped from juror data
         preferred_regions: [],
         target_verticals: [],
         preferred_stages: [],
@@ -161,14 +161,12 @@ const VCProfile = () => {
         full_name: formData.full_name,
         organization: formData.organization,
         calendly_link: formData.calendly_link,
-        expertise: formData.expertise,
-        investment_stages: formData.investment_stages,
         updated_at: new Date().toISOString()
       }).eq('user_id', user.id);
       
       if (profileError) throw profileError;
       
-      // Update juror preferences
+      // Update juror preferences (primary storage)
       const { error: jurorError } = await supabase.from('jurors').update({
         preferred_regions: formData.preferred_regions,
         target_verticals: formData.target_verticals,

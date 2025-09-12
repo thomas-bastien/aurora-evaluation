@@ -238,7 +238,7 @@ const Dashboard = () => {
       
       <main className="max-w-7xl mx-auto px-6 py-8">
         {/* Profile Completion Banner for VCs */}
-        {profile?.role === 'vc' && (!profile.expertise || profile.expertise.length === 0 || !profile.investment_stages || profile.investment_stages.length === 0) && (
+        {profile?.role === 'vc' && (!profile.target_verticals || profile.target_verticals.length === 0 || !profile.preferred_stages || profile.preferred_stages.length === 0) && (
           <div className="mb-6 animate-pulse-gentle">
             <Card className="bg-gradient-warning border-warning/20">
               <CardHeader className="pb-4">
@@ -333,13 +333,13 @@ const Dashboard = () => {
                     description="Complete your juror profile with expertise and preferences"
                     tooltip="Complete your profile to receive startup assignments."
                     status={
-                      profile?.expertise && profile.expertise.length > 0 && 
-                      profile?.investment_stages && profile.investment_stages.length > 0
+                      profile?.target_verticals && profile.target_verticals.length > 0 && 
+                      profile?.preferred_stages && profile.preferred_stages.length > 0
                         ? 'completed' : 'current'
                     }
                     statusText={
-                      profile?.expertise && profile.expertise.length > 0 && 
-                      profile?.investment_stages && profile.investment_stages.length > 0
+                      profile?.target_verticals && profile.target_verticals.length > 0 && 
+                      profile?.preferred_stages && profile.preferred_stages.length > 0
                         ? 'Profile complete' : 'Profile setup required'
                     }
                     icon={Building2}

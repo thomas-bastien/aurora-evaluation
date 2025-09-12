@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { Loader2, CheckCircle, X } from 'lucide-react';
+import { VERTICAL_OPTIONS, STAGE_OPTIONS } from '@/constants/jurorPreferences';
 
 const JurorOnboarding = () => {
   const [searchParams] = useSearchParams();
@@ -61,14 +62,8 @@ const JurorOnboarding = () => {
     fetchProfile();
   }, [user, isOnboarding, navigate]);
 
-  const expertiseOptions = [
-    'FinTech', 'HealthTech', 'EdTech', 'CleanTech', 'AI/ML', 'Blockchain',
-    'E-commerce', 'SaaS', 'IoT', 'Cybersecurity', 'PropTech', 'FoodTech'
-  ];
-
-  const stageOptions = [
-    'Pre-seed', 'Seed', 'Series A', 'Series B', 'Series C+', 'Growth', 'Late Stage'
-  ];
+  const expertiseOptions = VERTICAL_OPTIONS;
+  const stageOptions = STAGE_OPTIONS;
 
   const toggleArrayItem = (array: string[], item: string) => {
     return array.includes(item) 
@@ -102,18 +97,33 @@ const JurorOnboarding = () => {
   };
 
   const handleProfileUpdate = async () => {
-    const { error } = await supabase
+    // Update profile with calendly link
+    const { error: profileError } = await supabase
       .from('profiles')
       .update({
-        calendly_link: formData.calendlyLink || null,
-        expertise: formData.expertise.length > 0 ? formData.expertise : null,
-        investment_stages: formData.investmentStages.length > 0 ? formData.investmentStages : null
+        calendly_link: formData.calendlyLink || null
       })
       .eq('user_id', user!.id);
 
-    if (error) {
-      toast.error('Failed to update profile: ' + error.message);
+    if (profileError) {
+      toast.error('Failed to update profile: ' + profileError.message);
       return false;
+    }
+
+    // Update or create juror record with expertise and stages
+    if (formData.expertise.length > 0 || formData.investmentStages.length > 0) {
+      const { error: jurorError } = await supabase
+        .from('jurors')
+        .update({
+          target_verticals: formData.expertise.length > 0 ? formData.expertise : null,
+          preferred_stages: formData.investmentStages.length > 0 ? formData.investmentStages : null
+        })
+        .eq('user_id', user!.id);
+
+      if (jurorError) {
+        toast.error('Failed to update juror preferences: ' + jurorError.message);
+        return false;
+      }
     }
 
     return true;

@@ -32,12 +32,24 @@ const SessionManagement = () => {
           ascending: true
         });
 
-        // Fetch VC members
-        const {
-          data: vcData
-        } = await supabase.from('profiles').select('*').eq('role', 'vc');
+        // Fetch VC members with their juror preferences
+        const { data: vcData } = await supabase
+          .from('profiles')
+          .select(`
+            *,
+            jurors!inner(target_verticals, preferred_stages, preferred_regions)
+          `)
+          .eq('role', 'vc');
+        
+        // Flatten the juror data for easier access
+        const vcMembers = vcData?.map((vc: any) => ({
+          ...vc,
+          target_verticals: vc.jurors?.[0]?.target_verticals || null,
+          preferred_stages: vc.jurors?.[0]?.preferred_stages || null,
+          preferred_regions: vc.jurors?.[0]?.preferred_regions || null
+        })) || [];
         setSessions(sessionsData || []);
-        setVcMembers(vcData || []);
+        setVcMembers(vcMembers);
       } catch (error) {
         console.error('Error fetching session data:', error);
       } finally {
@@ -247,7 +259,7 @@ const SessionManagement = () => {
                           <p className="text-sm text-muted-foreground">{vc.organization || 'No organization'}</p>
                         </div>
                         <div className="flex gap-2">
-                          {vc.expertise?.map((specialty: string) => <Badge key={specialty} variant="secondary">{specialty}</Badge>) || <Badge variant="outline">No expertise listed</Badge>}
+                          {vc.target_verticals?.map((specialty: string) => <Badge key={specialty} variant="secondary">{specialty}</Badge>) || <Badge variant="outline">No expertise listed</Badge>}
                         </div>
                       </div>
                       <div className="flex gap-2">
