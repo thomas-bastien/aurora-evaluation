@@ -20,6 +20,10 @@ interface JurorInvitationRequest {
   jurorEmail: string;
   company?: string;
   jobTitle?: string;
+  preferredRegions?: string[];
+  targetVerticals?: string[];
+  preferredStages?: string[];
+  linkedinUrl?: string;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -29,7 +33,16 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { jurorName, jurorEmail, company, jobTitle }: JurorInvitationRequest = await req.json();
+    const { 
+      jurorName, 
+      jurorEmail, 
+      company, 
+      jobTitle,
+      preferredRegions,
+      targetVerticals,
+      preferredStages,
+      linkedinUrl
+    }: JurorInvitationRequest = await req.json();
 
     console.log(`Sending invitation to juror: ${jurorName} (${jurorEmail})`);
 
@@ -45,16 +58,24 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error("Failed to process invitation");
     }
 
-    // Update invitation timestamps
+    // Update invitation timestamps and preference fields
     const expirationDate = new Date();
     expirationDate.setDate(expirationDate.getDate() + 7); // 7 days expiration
 
+    const updateData: any = {
+      invitation_sent_at: new Date().toISOString(),
+      invitation_expires_at: expirationDate.toISOString()
+    };
+
+    // Include preference fields if provided
+    if (preferredRegions !== undefined) updateData.preferred_regions = preferredRegions;
+    if (targetVerticals !== undefined) updateData.target_verticals = targetVerticals;
+    if (preferredStages !== undefined) updateData.preferred_stages = preferredStages;
+    if (linkedinUrl !== undefined) updateData.linkedin_url = linkedinUrl;
+
     await supabase
       .from('jurors')
-      .update({
-        invitation_sent_at: new Date().toISOString(),
-        invitation_expires_at: expirationDate.toISOString()
-      })
+      .update(updateData)
       .eq('email', jurorEmail);
 
     // Create magic link URL pointing to the authentication edge function

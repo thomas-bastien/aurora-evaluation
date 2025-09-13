@@ -184,7 +184,11 @@ export default function JurorsList() {
                 jurorName: data.name!,
                 jurorEmail: data.email!,
                 company: data.company,
-                jobTitle: data.job_title
+                jobTitle: data.job_title,
+                preferredRegions: data.preferred_regions,
+                targetVerticals: data.target_verticals,
+                preferredStages: data.preferred_stages,
+                linkedinUrl: data.linkedin_url
               }
             });
             
@@ -216,12 +220,16 @@ export default function JurorsList() {
           });
         }
       } else {
-        // Ensure required fields are present
+        // Ensure required fields are present and include preferences
         const insertData = {
           name: data.name!,
           email: data.email!,
           job_title: data.job_title || null,
-          company: data.company || null
+          company: data.company || null,
+          preferred_regions: data.preferred_regions || null,
+          target_verticals: data.target_verticals || null,
+          preferred_stages: data.preferred_stages || null,
+          linkedin_url: data.linkedin_url || null
         };
         
         const { error } = await supabase
@@ -237,7 +245,11 @@ export default function JurorsList() {
               jurorName: insertData.name,
               jurorEmail: insertData.email,
               company: insertData.company,
-              jobTitle: insertData.job_title
+              jobTitle: insertData.job_title,
+              preferredRegions: insertData.preferred_regions,
+              targetVerticals: insertData.target_verticals,
+              preferredStages: insertData.preferred_stages,
+              linkedinUrl: insertData.linkedin_url
             }
           });
           
@@ -343,7 +355,11 @@ export default function JurorsList() {
           jurorName: juror.name,
           jurorEmail: juror.email,
           company: juror.company,
-          jobTitle: juror.job_title
+          jobTitle: juror.job_title,
+          preferredRegions: juror.preferred_regions,
+          targetVerticals: juror.target_verticals,
+          preferredStages: juror.preferred_stages,
+          linkedinUrl: juror.linkedin_url
         }
       });
       
