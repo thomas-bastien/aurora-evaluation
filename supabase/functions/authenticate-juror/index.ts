@@ -232,12 +232,12 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Create a temporary session for the user
     const baseUrl = Deno.env.get('FRONTEND_URL') || req.headers.get('origin') || '';
-    const url = new URL(redirectPath, baseUrl);
+    const redirectUrl = new URL(redirectPath, baseUrl);
     const { data: sessionData, error: sessionError } = await supabaseAdmin.auth.admin.generateLink({
       type: 'magiclink',
       email: jurorData.email,
       options: {
-        redirectTo: url.toString()
+        redirectTo: redirectUrl.toString()
       }
     });
 
