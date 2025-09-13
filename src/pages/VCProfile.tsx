@@ -52,7 +52,7 @@ const VCProfile = () => {
     preferred_stages: [],
     linkedin_url: ''
   });
-  // Legacy variables removed with migration completion
+
   useEffect(() => {
     if (profile) {
       setFormData({
@@ -331,8 +331,6 @@ const VCProfile = () => {
                       )}
                     </div>
                   </div>
-
-                  {/* Legacy sections removed - migration completed */}
 
                   <div className="flex gap-4 pt-6">
                     <Button type="submit" disabled={saving} className="flex items-center gap-2">
