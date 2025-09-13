@@ -51,19 +51,3 @@ export const STAGE_OPTIONS = [
   'Growth',
   'Late Stage'
 ] as const;
-
-// Legacy expertise options for backward compatibility
-export const EXPERTISE_OPTIONS = [
-  'AI/ML',
-  'Fintech', 
-  'Healthcare',
-  'SaaS',
-  'E-commerce',
-  'Blockchain',
-  'IoT',
-  'Cybersecurity',
-  'EdTech',
-  'Climate Tech',
-  'Mobility',
-  'Gaming'
-] as const;

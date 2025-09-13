@@ -18,8 +18,6 @@ interface ProfileForm {
   full_name: string;
   organization: string;
   calendly_link: string;
-  expertise: string[];
-  investment_stages: string[];
   preferred_regions: string[];
   target_verticals: string[];
   preferred_stages: string[];
@@ -49,23 +47,18 @@ const VCProfile = () => {
     full_name: '',
     organization: '',
     calendly_link: '',
-    expertise: [],
-    investment_stages: [],
     preferred_regions: [],
     target_verticals: [],
     preferred_stages: [],
     linkedin_url: ''
   });
-  const expertiseOptions = VERTICAL_OPTIONS;
-  const investmentStageOptions = STAGE_OPTIONS;
+  // Legacy variables removed with migration completion
   useEffect(() => {
     if (profile) {
       setFormData({
         full_name: profile.full_name || '',
         organization: profile.organization || '',
         calendly_link: profile.calendly_link || '',
-        expertise: profile.target_verticals || [], // Legacy field mapped from juror data
-        investment_stages: profile.preferred_stages || [], // Legacy field mapped from juror data
         preferred_regions: [],
         target_verticals: [],
         preferred_stages: [],
@@ -339,39 +332,7 @@ const VCProfile = () => {
                     </div>
                   </div>
 
-                  <Separator />
-
-                  <div>
-                    <Label>Legacy Expertise Areas</Label>
-                    <p className="text-sm text-muted-foreground mb-2">Previous expertise selections (maintained for compatibility)</p>
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      {expertiseOptions.map(expertise => 
-                        <Badge 
-                          key={expertise} 
-                          variant={formData.expertise.includes(expertise) ? "default" : "outline"} 
-                          className="cursor-pointer" 
-                          onClick={() => toggleArrayItem(formData.expertise, expertise, items => setFormData(prev => ({
-                            ...prev,
-                            expertise: items
-                          })))}
-                        >
-                          {expertise}
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-
-                  <div>
-                    <Label>Investment Stages</Label>
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      {investmentStageOptions.map(stage => <Badge key={stage} variant={formData.investment_stages.includes(stage) ? "default" : "outline"} className="cursor-pointer" onClick={() => toggleArrayItem(formData.investment_stages, stage, items => setFormData(prev => ({
-                      ...prev,
-                      investment_stages: items
-                    })))}>
-                          {stage}
-                        </Badge>)}
-                    </div>
-                  </div>
+                  {/* Legacy sections removed - migration completed */}
 
                   <div className="flex gap-4 pt-6">
                     <Button type="submit" disabled={saving} className="flex items-center gap-2">
