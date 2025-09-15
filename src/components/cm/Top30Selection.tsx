@@ -24,7 +24,8 @@ import {
   XCircle,
   Clock,
   Filter,
-  AlertTriangle
+  AlertTriangle,
+  ExternalLink
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { StartupDetailsModal } from "@/components/common/StartupDetailsModal";
@@ -816,11 +817,24 @@ export const Top30Selection = ({ currentRound, roundInfo, isReadOnly = false, on
                           {selectedForDetails.website}
                         </a>
                       </div>
-                    )}
-                  </div>
-                </div>
+                     )}
+                   </div>
+                   
+                   {/* Startup Profile Button */}
+                   <div className="mt-3">
+                     <Button
+                       variant="outline"
+                       size="sm"
+                       onClick={() => window.open(`/startup/${selectedForDetails.id}`, '_blank')}
+                       className="flex items-center gap-2"
+                     >
+                       <ExternalLink className="w-4 h-4" />
+                       Startup Profile
+                     </Button>
+                   </div>
+                 </div>
 
-                <Separator />
+                 <Separator />
 
                 <div>
                   <h4 className="font-semibold mb-2">Description</h4>

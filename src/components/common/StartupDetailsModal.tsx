@@ -2,10 +2,11 @@ import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Building2, MapPin, Globe, Mail, Users, Star, TrendingUp } from "lucide-react";
+import { Building2, MapPin, Globe, Mail, Users, Star, TrendingUp, ExternalLink } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatScore } from "@/lib/utils";
 
@@ -296,10 +297,23 @@ export const StartupDetailsModal = ({
                         {startupDetails.website}
                       </a>
                     </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+                   )}
+                 </div>
+                 
+                 {/* Startup Profile Button */}
+                 <div className="mt-4 pt-4 border-t">
+                   <Button
+                     variant="outline"
+                     size="sm"
+                     onClick={() => window.open(`/startup/${startupDetails.id}`, '_blank')}
+                     className="flex items-center gap-2"
+                   >
+                     <ExternalLink className="w-4 h-4" />
+                     Startup Profile
+                   </Button>
+                 </div>
+               </CardContent>
+             </Card>
 
             {/* Description */}
             {startupDetails.description && (
