@@ -8,6 +8,7 @@ import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { FilterPanel } from "@/components/common/FilterPanel";
 import { StartupEvaluationModal } from "@/components/evaluation/StartupEvaluationModal";
+import { formatScore } from "@/lib/utils";
 import { 
   Search, 
   Mail, 
@@ -230,7 +231,7 @@ export const JurorProgressMonitoring = ({ currentRound }: JurorProgressMonitorin
         const evaluationTable = currentRound === 'screeningRound' ? 'screening_evaluations' : 'pitching_evaluations';
         const { data: evalData, error: evalError } = await supabase
           .from(evaluationTable)
-          .select('startup_id, status, id')
+          .select('startup_id, status, id, overall_score')
           .eq('evaluator_id', jurorData.user_id);
 
         if (evalError) throw evalError;
@@ -243,7 +244,8 @@ export const JurorProgressMonitoring = ({ currentRound }: JurorProgressMonitorin
         return {
           ...assignment,
           evaluation_id: evaluation?.id,
-          evaluation_status: evaluation?.status || 'not_started'
+          evaluation_status: evaluation?.status || 'not_started',
+          evaluation_score: evaluation?.overall_score || null
         };
       }) || [];
 
@@ -492,33 +494,57 @@ export const JurorProgressMonitoring = ({ currentRound }: JurorProgressMonitorin
                 <p className="text-muted-foreground">This juror has no startup assignments yet.</p>
               </div>
             ) : (
-              <div className="grid gap-4">
-                {jurorAssignments.map((assignment) => (
-                  <Card key={assignment.id} className="border-l-4 border-l-primary">
-                    <CardHeader className="pb-3">
-                      <div className="flex items-center justify-between">
-                        <CardTitle className="text-lg">{assignment.startups?.name || 'Unknown Startup'}</CardTitle>
-                        <Tooltip>
-                          <TooltipTrigger>
-                            <Badge variant={assignment.evaluation_status === 'submitted' ? 'default' : assignment.evaluation_status === 'draft' ? 'secondary' : 'outline'}>
-                              {assignment.evaluation_status === 'submitted' ? 'Evaluation Complete' : assignment.evaluation_status === 'draft' ? 'In Progress' : 'Not Started'}
-                            </Badge>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>
-                              {assignment.evaluation_status === 'submitted' 
-                                ? 'Evaluation has been completed and submitted by the juror' 
-                                : assignment.evaluation_status === 'draft'
-                                ? 'Evaluation is in progress but not yet submitted'
-                                : 'Startup has been assigned to juror but evaluation not started'}
-                            </p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </div>
-                      <CardDescription>
-                        {assignment.startups?.industry} • {assignment.startups?.stage} • {assignment.startups?.location}
-                      </CardDescription>
-                    </CardHeader>
+                <div className="grid gap-4">
+                {jurorAssignments.map((assignment) => {
+                  const getScoreColor = (score: number | null) => {
+                    if (!score) return "text-muted-foreground";
+                    if (score >= 8) return "text-success";
+                    if (score >= 6) return "text-primary";
+                    if (score >= 4) return "text-warning";
+                    return "text-destructive";
+                  };
+                  
+                  return (
+                    <Card key={assignment.id} className="border-l-4 border-l-primary">
+                      <CardHeader className="pb-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <CardTitle className="text-lg">{assignment.startups?.name || 'Unknown Startup'}</CardTitle>
+                            {assignment.evaluation_score !== null && (
+                              <div className={`text-2xl font-bold ${getScoreColor(assignment.evaluation_score)}`}>
+                                {formatScore(assignment.evaluation_score)}/10
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {assignment.evaluation_score === null && assignment.evaluation_status === 'submitted' && (
+                              <Badge variant="outline" className="text-muted-foreground">No Score</Badge>
+                            )}
+                            {assignment.evaluation_score === null && assignment.evaluation_status !== 'submitted' && (
+                              <Badge variant="outline" className="text-muted-foreground">Not Scored</Badge>
+                            )}
+                            <Tooltip>
+                              <TooltipTrigger>
+                                <Badge variant={assignment.evaluation_status === 'submitted' ? 'default' : assignment.evaluation_status === 'draft' ? 'secondary' : 'outline'}>
+                                  {assignment.evaluation_status === 'submitted' ? 'Evaluation Complete' : assignment.evaluation_status === 'draft' ? 'In Progress' : 'Not Started'}
+                                </Badge>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>
+                                  {assignment.evaluation_status === 'submitted' 
+                                    ? 'Evaluation has been completed and submitted by the juror' 
+                                    : assignment.evaluation_status === 'draft'
+                                    ? 'Evaluation is in progress but not yet submitted'
+                                    : 'Startup has been assigned to juror but evaluation not started'}
+                                </p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </div>
+                        </div>
+                        <CardDescription>
+                          {assignment.startups?.industry} • {assignment.startups?.stage} • {assignment.startups?.location}
+                        </CardDescription>
+                      </CardHeader>
                     <CardContent>
                       <p className="text-sm text-muted-foreground mb-3">
                         {assignment.startups?.description || 'No description available'}
@@ -558,8 +584,9 @@ export const JurorProgressMonitoring = ({ currentRound }: JurorProgressMonitorin
                       </div>
                     </CardContent>
                   </Card>
-                ))}
-              </div>
+                  );
+                })}
+                </div>
             )}
           </div>
         </DialogContent>
