@@ -1,21 +1,8 @@
 import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Progress } from "@/components/ui/progress";
-import { 
-  Trophy, 
-  Star,
-  BarChart3,
-  Filter,
-  CheckCircle,
-  Clock,
-  AlertCircle,
-  Settings
-} from "lucide-react";
-import { EvaluationProgressView } from "./EvaluationProgressView";
-import { Top30Selection } from "./Top30Selection";
+import { Star } from "lucide-react";
+import { UnifiedSelectionTable } from "./UnifiedSelectionTable";
 import type { Round } from "@/hooks/useRounds";
 
 interface StartupSelectionProps {
@@ -27,9 +14,6 @@ interface StartupSelectionProps {
 export const StartupSelection = ({ currentRound, roundInfo, isReadOnly }: StartupSelectionProps) => {
   const roundName = currentRound === 'screeningRound' ? 'screening' : 'pitching';
   const [selectedStartupsCount, setSelectedStartupsCount] = useState(0);
-  const [selectionCallback, setSelectionCallback] = useState<(() => Promise<void>) | null>(null);
-
-  console.log('StartupSelection render', { selectionCallback: !!selectionCallback, selectedStartupsCount });
 
   return (
     <div className="space-y-6">
@@ -69,31 +53,12 @@ export const StartupSelection = ({ currentRound, roundInfo, isReadOnly }: Startu
         </CardHeader>
         
         <CardContent>
-          <Tabs defaultValue="evaluation-results" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="evaluation-results" className="flex items-center gap-2">
-                <BarChart3 className="w-4 h-4" />
-                Evaluation Results
-              </TabsTrigger>
-              <TabsTrigger value="selected-startups" className="flex items-center gap-2">
-                <Trophy className="w-4 h-4" />
-                {currentRound === 'screeningRound' ? 'Selected' : 'Final Selection'}
-              </TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="evaluation-results" className="space-y-6">
-              <EvaluationProgressView currentRound={roundName} />
-            </TabsContent>
-
-            <TabsContent value="selected-startups" className="space-y-6">
-              <Top30Selection 
-                currentRound={roundName} 
-                isReadOnly={isReadOnly}
-                onSelectionChange={setSelectedStartupsCount}
-                roundInfo={roundInfo}
-              />
-            </TabsContent>
-          </Tabs>
+          <UnifiedSelectionTable 
+            currentRound={roundName} 
+            roundInfo={roundInfo}
+            isReadOnly={isReadOnly}
+            onSelectionChange={setSelectedStartupsCount}
+          />
         </CardContent>
       </Card>
     </div>
