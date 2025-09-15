@@ -135,7 +135,7 @@ const Selection = () => {
             </TabsTrigger>
             <TabsTrigger value="startup-selection" className="flex items-center gap-2">
               <Star className="w-4 h-4" />
-              Selection
+              Round Selection
             </TabsTrigger>
             <TabsTrigger value="communications" className="flex items-center gap-2">
               <MessageSquare className="w-4 h-4" />
