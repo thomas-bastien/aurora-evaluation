@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -27,6 +27,20 @@ interface StartupDetails {
   totalEvaluations?: number;
 }
 
+interface IndividualEvaluation {
+  id: string;
+  juror_name: string;
+  juror_company: string | null;
+  juror_job_title: string | null;
+  overall_score: number | null;
+  strengths: string[] | null;
+  improvement_areas: string | null;
+  overall_notes: string | null;
+  recommendation: string | null;
+  status: string;
+  created_at: string;
+}
+
 interface StartupDetailsModalProps {
   startup: {
     id: string;
@@ -44,6 +58,7 @@ export const StartupDetailsModal = ({
   currentRound = 'screening'
 }: StartupDetailsModalProps) => {
   const [startupDetails, setStartupDetails] = useState<StartupDetails | null>(null);
+  const [individualEvaluations, setIndividualEvaluations] = useState<IndividualEvaluation[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -77,6 +92,58 @@ export const StartupDetailsModal = ({
 
       if (evaluationsError) throw evaluationsError;
 
+      // Fetch individual evaluations with juror information
+      const { data: individualEvals, error: individualEvalsError } = await supabase
+        .from(evaluationTable)
+        .select(`
+          id,
+          overall_score,
+          strengths,
+          improvement_areas,
+          overall_notes,
+          recommendation,
+          status,
+          created_at,
+          evaluator_id
+        `)
+        .eq('startup_id', startup.id)
+        .eq('status', 'submitted')
+        .order('created_at', { ascending: false });
+
+      if (individualEvalsError) throw individualEvalsError;
+
+      // Fetch juror information for each evaluation
+      const evaluatorIds = individualEvals?.map(evaluation => evaluation.evaluator_id).filter(Boolean) || [];
+      let jurorsData: any[] = [];
+      
+      if (evaluatorIds.length > 0) {
+        const { data: jurors, error: jurorsError } = await supabase
+          .from('jurors')
+          .select('user_id, name, company, job_title')
+          .in('user_id', evaluatorIds);
+
+        if (jurorsError) throw jurorsError;
+        jurorsData = jurors || [];
+      }
+
+      // Combine evaluation and juror data
+      const enrichedEvaluations: IndividualEvaluation[] = individualEvals?.map(evaluation => {
+        const juror = jurorsData.find(j => j.user_id === evaluation.evaluator_id);
+        return {
+          id: evaluation.id,
+          juror_name: juror?.name || 'Unknown Juror',
+          juror_company: juror?.company || null,
+          juror_job_title: juror?.job_title || null,
+          overall_score: evaluation.overall_score,
+          strengths: evaluation.strengths,
+          improvement_areas: evaluation.improvement_areas,
+          overall_notes: evaluation.overall_notes,
+          recommendation: evaluation.recommendation,
+          status: evaluation.status,
+          created_at: evaluation.created_at
+        };
+      }) || [];
+
       // Calculate evaluation metrics
       const validScores = evaluationsData?.filter(e => e.overall_score !== null) || [];
       const averageScore = validScores.length > 0 
@@ -103,6 +170,7 @@ export const StartupDetailsModal = ({
       };
 
       setStartupDetails(details);
+      setIndividualEvaluations(enrichedEvaluations);
     } catch (error) {
       console.error('Error fetching startup details:', error);
     } finally {
@@ -112,9 +180,10 @@ export const StartupDetailsModal = ({
 
   const getScoreColor = (score: number | null) => {
     if (score === null) return "text-muted-foreground";
-    if (score >= 8) return "text-green-600";
-    if (score >= 6) return "text-yellow-600";
-    return "text-red-600";
+    if (score >= 8) return "text-success";
+    if (score >= 6) return "text-primary";
+    if (score >= 4) return "text-warning";
+    return "text-destructive";
   };
 
   if (loading) {
@@ -269,6 +338,79 @@ export const StartupDetailsModal = ({
                       <div className="text-sm text-muted-foreground">Total Score</div>
                     </div>
                   </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Individual Evaluations */}
+            {individualEvaluations.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Individual Evaluations</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {individualEvaluations.map(evaluation => (
+                    <Card key={evaluation.id} className="border-l-4 border-l-primary">
+                      <CardHeader className="pb-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <CardTitle className="text-lg">{evaluation.juror_name}</CardTitle>
+                            {evaluation.overall_score !== null && (
+                              <div className={`text-2xl font-bold ${getScoreColor(evaluation.overall_score)}`}>
+                                {formatScore(evaluation.overall_score)}/10
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {evaluation.overall_score === null && (
+                              <Badge variant="outline" className="text-muted-foreground">No Score</Badge>
+                            )}
+                            <Badge variant="default">Evaluation Complete</Badge>
+                          </div>
+                        </div>
+                        <CardDescription>
+                          {[evaluation.juror_job_title, evaluation.juror_company].filter(Boolean).join(' at ')}
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        {evaluation.strengths && evaluation.strengths.length > 0 && (
+                          <div className="mb-3">
+                            <p className="text-sm font-medium mb-1">Strengths:</p>
+                            <ul className="text-sm text-muted-foreground list-disc list-inside">
+                              {evaluation.strengths.map((strength, index) => (
+                                <li key={index}>{strength}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                        
+                        {evaluation.improvement_areas && (
+                          <div className="mb-3">
+                            <p className="text-sm font-medium mb-1">Improvement Areas:</p>
+                            <p className="text-sm text-muted-foreground">{evaluation.improvement_areas}</p>
+                          </div>
+                        )}
+                        
+                        {evaluation.overall_notes && (
+                          <div className="mb-3">
+                            <p className="text-sm font-medium mb-1">Overall Notes:</p>
+                            <p className="text-sm text-muted-foreground">{evaluation.overall_notes}</p>
+                          </div>
+                        )}
+                        
+                        {evaluation.recommendation && (
+                          <div className="mb-3">
+                            <p className="text-sm font-medium mb-1">Recommendation:</p>
+                            <Badge variant="outline">{evaluation.recommendation}</Badge>
+                          </div>
+                        )}
+                        
+                        <div className="text-xs text-muted-foreground">
+                          Submitted: {new Date(evaluation.created_at).toLocaleDateString()}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
                 </CardContent>
               </Card>
             )}
