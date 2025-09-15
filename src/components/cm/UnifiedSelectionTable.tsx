@@ -977,13 +977,12 @@ export const UnifiedSelectionTable = ({
       </Dialog>
 
       {/* Startup Details Modal */}
-      {selectedStartupForDetails && (
-        <StartupDetailsModal
-          startup={selectedStartupForDetails}
-          currentRound={currentRound}
-          onClose={() => setSelectedStartupForDetails(null)}
-        />
-      )}
+      <StartupDetailsModal
+        startup={selectedStartupForDetails}
+        open={!!selectedStartupForDetails}
+        currentRound={currentRound}
+        onClose={() => setSelectedStartupForDetails(null)}
+      />
     </TooltipProvider>
   );
 };
