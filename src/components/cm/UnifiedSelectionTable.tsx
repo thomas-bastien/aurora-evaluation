@@ -283,7 +283,9 @@ export const UnifiedSelectionTable = ({
           industry: startup.industry || 'N/A',
           stage: startup.stage || 'N/A',
           location: startup.location || 'N/A',
-          region: startup.region || 'N/A',
+          region: startup.regions && startup.regions.length > 0 
+            ? startup.regions.join(', ') 
+            : 'N/A',
           verticals: startup.verticals || [],
           regions: startup.regions || [],
           pitch_deck_url: startup.pitch_deck_url,
@@ -360,7 +362,9 @@ export const UnifiedSelectionTable = ({
     }
 
     if (regionFilter !== 'all') {
-      filtered = filtered.filter(startup => startup.region === regionFilter);
+      filtered = filtered.filter(startup => 
+        startup.region.includes(regionFilter) || startup.region === regionFilter
+      );
     }
 
     if (statusFilter !== 'all') {
@@ -631,7 +635,11 @@ export const UnifiedSelectionTable = ({
   }
 
   const uniqueStages = [...new Set(startups.map(s => s.stage))].filter(s => s !== 'N/A');
-  const uniqueRegions = [...new Set(startups.map(s => s.region))].filter(r => r !== 'N/A');
+  const uniqueRegions = [...new Set(
+    startups.flatMap(s => 
+      s.region !== 'N/A' ? s.region.split(', ') : []
+    )
+  )];
   const selectedCount = startups.filter(s => s.isSelected).length;
 
   return (
