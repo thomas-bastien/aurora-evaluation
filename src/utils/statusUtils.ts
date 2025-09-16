@@ -42,9 +42,8 @@ export const STATUS_TEXT_COLORS: Record<StatusType, string> = {
 };
 
 export const JUROR_STATUS_LABELS = {
-  inactive: 'Inactive',
-  pending: 'Not Started', 
-  under_review: 'In Progress',
+  pending: 'Pending', 
+  active: 'In Progress',
   completed: 'Completed',
   not_invited: 'Not Invited'
 } as const;

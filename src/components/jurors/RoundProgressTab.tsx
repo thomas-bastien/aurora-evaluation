@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { StatusBadge } from '@/components/common/StatusBadge';
+import { JurorStatusBadge } from '@/components/common/JuryRoundStatusBadges';
 import { getJuryAssignmentCounts, type ProgressiveJurorStatus } from '@/utils/juryStatusUtils';
 import type { JuryStatusType } from '@/utils/statusUtils';
 import { CheckCircle, Clock, AlertCircle, XCircle } from 'lucide-react';
@@ -115,7 +115,7 @@ export function RoundProgressTab({ jurorId, progressiveStatus }: RoundProgressTa
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
             <span className="text-sm font-medium">Status</span>
-            <StatusBadge status={screeningStatus} isJurorStatus={true} />
+            <JurorStatusBadge jurorId={jurorId} roundName="screening" />
           </div>
           
           {screeningData && screeningData.assigned > 0 ? (
@@ -172,7 +172,7 @@ export function RoundProgressTab({ jurorId, progressiveStatus }: RoundProgressTa
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
             <span className="text-sm font-medium">Status</span>
-            <StatusBadge status={pitchingStatus} isJurorStatus={true} />
+            <JurorStatusBadge jurorId={jurorId} roundName="pitching" />
           </div>
           
           {pitchingData && pitchingData.assigned > 0 && !isPitchingLocked ? (

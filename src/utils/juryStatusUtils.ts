@@ -62,12 +62,12 @@ export async function calculateProgressiveJurorStatus(jurorId: string): Promise<
     }
 
     // Progressive logic: pitching only available after screening completion
-    let status: StatusType = 'inactive';
+    let status: StatusType = 'pending';
     let currentRound: 'screening' | 'pitching' = 'screening';
 
-    // If no assignments in either round, juror is inactive
+    // If no assignments in either round, juror is pending
     if (screeningCounts.assigned === 0 && pitchingCounts.assigned === 0) {
-      return { status: 'inactive', currentRound: 'screening', completedRounds };
+      return { status: 'pending', currentRound: 'screening', completedRounds };
     }
 
     // Check current status based on progression
@@ -101,7 +101,7 @@ export async function calculateProgressiveJurorStatus(jurorId: string): Promise<
     return { status, currentRound, completedRounds };
   } catch (error) {
     console.error('Error calculating progressive jury status:', error);
-    return { status: 'inactive', currentRound: 'screening', completedRounds: [] };
+    return { status: 'pending', currentRound: 'screening', completedRounds: [] };
   }
 }
 
