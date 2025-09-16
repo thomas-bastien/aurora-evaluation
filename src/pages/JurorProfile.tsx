@@ -198,10 +198,8 @@ const JurorProfile = () => {
         </div>
 
         <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="preferences">Preferences</TabsTrigger>
-            <TabsTrigger value="round-progress">Round Progress</TabsTrigger>
             <TabsTrigger value="evaluations">Evaluations</TabsTrigger>
           </TabsList>
 
@@ -245,87 +243,90 @@ const JurorProfile = () => {
                   )}
                 </CardContent>
               </Card>
+
+              {/* Preferences Section */}
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-1 gap-4">
+                  {/* Preferred Regions */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2 text-base">
+                        <MapPin className="w-4 h-4" />
+                        Preferred Regions
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      {juror.preferred_regions && juror.preferred_regions.length > 0 ? (
+                        <div className="flex flex-wrap gap-2">
+                          {juror.preferred_regions.map((region, index) => (
+                            <Badge key={index} variant="outline" className="text-xs">
+                              {region}
+                            </Badge>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">No preferred regions specified</p>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  {/* Target Verticals */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2 text-base">
+                        <Target className="w-4 h-4" />
+                        Target Verticals
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      {juror.target_verticals && juror.target_verticals.length > 0 ? (
+                        <div className="flex flex-wrap gap-2">
+                          {juror.target_verticals.map((vertical, index) => (
+                            <Badge key={index} variant="outline" className="text-xs">
+                              {vertical}
+                            </Badge>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">No target verticals specified</p>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  {/* Preferred Stages */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2 text-base">
+                        <Building2 className="w-4 h-4" />
+                        Preferred Stages
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      {juror.preferred_stages && juror.preferred_stages.length > 0 ? (
+                        <div className="flex flex-wrap gap-2">
+                          {juror.preferred_stages.map((stage, index) => (
+                            <Badge key={index} variant="outline" className="text-xs">
+                              {stage}
+                            </Badge>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">No preferred stages specified</p>
+                      )}
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
             </div>
-          </TabsContent>
-
-          <TabsContent value="preferences" className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* Preferred Regions */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <MapPin className="w-5 h-5" />
-                    Preferred Regions
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {juror.preferred_regions && juror.preferred_regions.length > 0 ? (
-                    <div className="flex flex-wrap gap-2">
-                      {juror.preferred_regions.map((region, index) => (
-                        <Badge key={index} variant="outline">
-                          {region}
-                        </Badge>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">No preferred regions specified</p>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* Target Verticals */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Target className="w-5 h-5" />
-                    Target Verticals
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {juror.target_verticals && juror.target_verticals.length > 0 ? (
-                    <div className="flex flex-wrap gap-2">
-                      {juror.target_verticals.map((vertical, index) => (
-                        <Badge key={index} variant="outline">
-                          {vertical}
-                        </Badge>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">No target verticals specified</p>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* Preferred Stages */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Building2 className="w-5 h-5" />
-                    Preferred Stages
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {juror.preferred_stages && juror.preferred_stages.length > 0 ? (
-                    <div className="flex flex-wrap gap-2">
-                      {juror.preferred_stages.map((stage, index) => (
-                        <Badge key={index} variant="outline">
-                          {stage}
-                        </Badge>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">No preferred stages specified</p>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="round-progress" className="space-y-6">
-            <RoundProgressTab jurorId={juror.id} progressiveStatus={progressiveStatus} />
           </TabsContent>
 
           <TabsContent value="evaluations" className="space-y-6">
+            {/* Round Progress Section */}
+            <div className="mb-8">
+              <RoundProgressTab jurorId={juror.id} progressiveStatus={progressiveStatus} />
+            </div>
+
+            {/* Evaluations Section */}
             {juror.user_id ? (
               <JurorEvaluationsList jurorUserId={juror.user_id} />
             ) : (
