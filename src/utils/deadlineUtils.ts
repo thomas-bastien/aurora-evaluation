@@ -58,6 +58,27 @@ export const getDeadlineStatus = (deadline: Date): 'active' | 'ending-soon' | 'c
 };
 
 /**
+ * Format deadline display with simplified format - shows only days remaining
+ */
+export const formatDeadlineSimple = (deadline: Date, roundClosed?: boolean): string => {
+  if (roundClosed || isDeadlinePassed(deadline)) {
+    return 'Round closed';
+  }
+  
+  const daysRemaining = calculateDaysRemaining(deadline);
+  
+  if (daysRemaining === 0) {
+    return 'Today';
+  } else if (daysRemaining === 1) {
+    return '1 day left';
+  } else if (daysRemaining > 0) {
+    return `${daysRemaining} days left`;
+  } else {
+    return 'Round closed';
+  }
+};
+
+/**
  * Format date for form inputs (YYYY-MM-DD)
  */
 export const formatDateForInput = (date: Date | string): string => {

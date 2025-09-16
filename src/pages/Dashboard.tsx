@@ -8,7 +8,7 @@ import { ScreeningFunnelView } from "@/components/dashboard/ScreeningFunnelView"
 import { PitchingFunnelView } from "@/components/dashboard/PitchingFunnelView";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useCohortSettings } from "@/hooks/useCohortSettings";
-import { formatDeadlineDisplay, isDeadlinePassed } from "@/utils/deadlineUtils";
+import { formatDeadlineDisplay, formatDeadlineSimple, isDeadlinePassed } from "@/utils/deadlineUtils";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -70,7 +70,7 @@ const Dashboard = () => {
   });
   
   // Helper function to get deadline information for any round
-  const getDeadlineInfo = (roundName: 'screening' | 'pitching'): string => {
+  const getDeadlineInfo = (roundName: 'screening' | 'pitching', simplified: boolean = false): string => {
     if (!cohortSettings) return 'Loading deadline...';
     
     const deadline = roundName === 'screening' 
@@ -80,7 +80,7 @@ const Dashboard = () => {
     if (!deadline) return 'No deadline set';
     
     const deadlineDate = new Date(deadline);
-    return formatDeadlineDisplay(deadlineDate);
+    return simplified ? formatDeadlineSimple(deadlineDate) : formatDeadlineDisplay(deadlineDate);
   };
 
   useEffect(() => {
@@ -189,7 +189,7 @@ const Dashboard = () => {
           totalJurors,
           activeRound: (activeRound?.name === 'pitching' ? 'pitching' : 'screening') as 'screening' | 'pitching',
           evaluationProgress,
-          deadlineInfo: getDeadlineInfo(activeRound?.name as 'screening' | 'pitching' || 'screening'),
+          deadlineInfo: getDeadlineInfo(activeRound?.name as 'screening' | 'pitching' || 'screening', true),
           nextMilestone: profile?.role === 'vc' ? 'Complete your startup evaluations' : 'Complete juror matchmaking assignments',
           screeningProgress,
           pitchingProgress,
