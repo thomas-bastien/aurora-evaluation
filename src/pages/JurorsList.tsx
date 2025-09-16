@@ -98,11 +98,10 @@ export default function JurorsList() {
         const jurorIds = jurorsWithStatuses.map(j => j.id);
     const statuses = await calculateMultipleJurorStatuses(jurorIds);
         
-        // Enrich jurors with round statuses
+        // Enrich jurors with unified status
         const enrichedJurors = jurorsWithStatuses.map(juror => ({
           ...juror,
-          screeningStatus: screeningStatuses[juror.id]?.status || 'inactive',
-          pitchingStatus: pitchingStatuses[juror.id]?.status || 'inactive'
+          status: statuses[juror.id]?.status || 'inactive'
         }));
         
         setJurors(enrichedJurors);
@@ -170,13 +169,6 @@ export default function JurorsList() {
       );
     }
 
-    if (screeningStatusFilter && screeningStatusFilter !== 'all') {
-      filtered = filtered.filter(juror => juror.screeningStatus === screeningStatusFilter);
-    }
-
-    if (pitchingStatusFilter && pitchingStatusFilter !== 'all') {
-      filtered = filtered.filter(juror => juror.pitchingStatus === pitchingStatusFilter);
-    }
 
     setFilteredJurors(filtered);
   };
@@ -665,7 +657,7 @@ export default function JurorsList() {
                      <TableCell>
                       <JurorStatusBadge 
                         jurorId={juror.id}
-                        status={jurorStatuses[juror.id]?.status}
+                        status={juror.status as any}
                         showCurrentRound={true}
                       />
                      </TableCell>

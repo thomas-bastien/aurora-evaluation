@@ -11,7 +11,8 @@ import { Building2, Mail, User, MapPin, Target, AlertCircle, Linkedin, ExternalL
 import { JurorEvaluationsList } from '@/components/jurors/JurorEvaluationsList';
 import { JurorStatusBadge } from '@/components/common/JuryRoundStatusBadges';
 import { RoundProgressTab } from '@/components/jurors/RoundProgressTab';
-import { calculateJurorStatus, getJuryAssignmentCounts, type StatusType } from '@/utils/juryStatusUtils';
+import { getJuryAssignmentCounts } from '@/utils/juryStatusUtils';
+import type { JuryStatusType } from '@/utils/statusUtils';
 
 interface Juror {
   id: string;
@@ -68,13 +69,20 @@ const JurorProfile = () => {
         setJuror(data);
         
         // Calculate round-specific statuses
-        const [screening, pitching] = await Promise.all([
-          calculateJuryRoundStatus(data.id, 'screening'),
-          calculateJuryRoundStatus(data.id, 'pitching')
+        const [screeningCounts, pitchingCounts] = await Promise.all([
+          getJuryAssignmentCounts(data.id, 'screening'),
+          getJuryAssignmentCounts(data.id, 'pitching')
         ]);
         
-        setScreeningStatus(screening);
-        setPitchingStatus(pitching);
+        const mapCountsToStatus = (c: { assigned: number; completed: number; inProgress: number }) => {
+          if (!c || c.assigned === 0) return 'inactive' as JuryStatusType;
+          if (c.completed === c.assigned) return 'completed' as JuryStatusType;
+          if (c.completed > 0 || c.inProgress > 0) return 'in_progress' as JuryStatusType;
+          return 'not_started' as JuryStatusType;
+        };
+        
+        setScreeningStatus(mapCountsToStatus(screeningCounts));
+        setPitchingStatus(mapCountsToStatus(pitchingCounts));
       } catch (error) {
         console.error('Error fetching juror:', error);
         setError('An unexpected error occurred');
