@@ -3,8 +3,9 @@
 import { supabase } from '@/integrations/supabase/client';
 import type { StatusType } from './statusUtils';
 
-// Status types for juror progress monitoring
+// Unified status types for all juror displays
 export type JurorProgressStatus = 'completed' | 'active' | 'pending' | 'not_invited';
+export type UnifiedJurorStatus = JurorProgressStatus;
 
 export type { StatusType };
 
@@ -16,7 +17,7 @@ interface JuryAssignmentCounts {
 }
 
 export interface ProgressiveJurorStatus {
-  status: StatusType;
+  status: UnifiedJurorStatus;
   currentRound: 'screening' | 'pitching' | null;
   completedRounds: ('screening' | 'pitching')[];
 }
@@ -32,7 +33,7 @@ export async function calculateProgressiveJurorStatus(jurorId: string): Promise<
 
   if (!juror?.invitation_sent_at) {
     return {
-      status: 'not_invited' as StatusType,
+      status: 'not_invited',
       currentRound: 'screening',
       completedRounds: []
     };
@@ -40,7 +41,7 @@ export async function calculateProgressiveJurorStatus(jurorId: string): Promise<
 
   if (!juror.user_id) {
     return {
-      status: 'pending' as StatusType,
+      status: 'pending',
       currentRound: 'screening', 
       completedRounds: []
     };
@@ -62,7 +63,7 @@ export async function calculateProgressiveJurorStatus(jurorId: string): Promise<
     }
 
     // Progressive logic: pitching only available after screening completion
-    let status: StatusType = 'pending';
+    let status: UnifiedJurorStatus = 'pending';
     let currentRound: 'screening' | 'pitching' = 'screening';
 
     // If no assignments in either round, juror is pending
@@ -75,7 +76,7 @@ export async function calculateProgressiveJurorStatus(jurorId: string): Promise<
       // Still working on screening
       currentRound = 'screening';
       if (screeningCounts.completed > 0 || screeningCounts.inProgress > 0) {
-        status = 'under_review';
+        status = 'active';
       } else {
         status = 'pending';
       }
@@ -88,7 +89,7 @@ export async function calculateProgressiveJurorStatus(jurorId: string): Promise<
         completedRounds.push('pitching');
         status = 'completed';
       } else if (pitchingCounts.completed > 0 || pitchingCounts.inProgress > 0) {
-        status = 'under_review';
+        status = 'active';
       } else {
         status = 'pending';
       }
@@ -106,7 +107,7 @@ export async function calculateProgressiveJurorStatus(jurorId: string): Promise<
 }
 
 // Calculate unified jury status based on current active round (legacy function)
-export async function calculateJurorStatus(jurorId: string): Promise<StatusType> {
+export async function calculateJurorStatus(jurorId: string): Promise<UnifiedJurorStatus> {
   const progressiveStatus = await calculateProgressiveJurorStatus(jurorId);
   return progressiveStatus.status;
 }
@@ -469,7 +470,7 @@ export async function calculateMultipleProgressiveJurorStatuses(
 
       if (!jurorInvite?.invitation_sent_at) {
         results[juror.id] = {
-          status: 'not_invited' as StatusType,
+          status: 'not_invited',
           currentRound: 'screening',
           completedRounds: []
         };
@@ -478,7 +479,7 @@ export async function calculateMultipleProgressiveJurorStatuses(
 
       if (!jurorInvite.user_id) {
         results[juror.id] = {
-          status: 'pending' as StatusType,
+          status: 'pending',
           currentRound: 'screening',
           completedRounds: []
         };
@@ -489,12 +490,12 @@ export async function calculateMultipleProgressiveJurorStatuses(
       const pitchingAssigned = pitchingAssignments?.filter(a => a.juror_id === juror.id).length || 0;
 
       const completedRounds: ('screening' | 'pitching')[] = [];
-      let status: StatusType = 'inactive';
+      let status: UnifiedJurorStatus = 'pending';
       let currentRound: 'screening' | 'pitching' | null = null;
 
       // If no assignments in either round
       if (screeningAssigned === 0 && pitchingAssigned === 0) {
-        results[juror.id] = { status: 'inactive', currentRound: null, completedRounds };
+        results[juror.id] = { status: 'pending', currentRound: null, completedRounds };
         continue;
       }
 
@@ -533,7 +534,7 @@ export async function calculateMultipleProgressiveJurorStatuses(
         // Still working on screening
         currentRound = 'screening';
         if (screeningCompleted > 0 || screeningInProgress > 0) {
-          status = 'under_review';
+          status = 'active';
         } else {
           status = 'pending';
         }
@@ -543,7 +544,7 @@ export async function calculateMultipleProgressiveJurorStatuses(
         if (isPitchingComplete) {
           status = 'completed';
         } else if (pitchingCompleted > 0 || pitchingInProgress > 0) {
-          status = 'under_review';
+          status = 'active';
         } else {
           status = 'pending';
         }

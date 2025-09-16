@@ -8,6 +8,8 @@ import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { FilterPanel } from "@/components/common/FilterPanel";
 import { StartupEvaluationModal } from "@/components/evaluation/StartupEvaluationModal";
+import { JurorStatusBadge } from '@/components/common/JuryRoundStatusBadges';
+import { calculateMultipleJurorRoundStatuses, type UnifiedJurorStatus } from '@/utils/juryStatusUtils';
 import { formatScore } from "@/lib/utils";
 import { 
   Search, 
@@ -33,7 +35,7 @@ interface JurorProgress {
   pendingCount: number;
   completionRate: number;
   lastActivity: string;
-  status: 'completed' | 'active' | 'behind' | 'inactive';
+  status: UnifiedJurorStatus;
 }
 
 interface JurorProgressMonitoringProps {
@@ -63,7 +65,7 @@ export const JurorProgressMonitoring = ({ currentRound }: JurorProgressMonitorin
 
   const fetchJurorProgress = async () => {
     try {
-      // Fetch jurors with their assignments and evaluations based on round
+      // Fetch jurors with their assignments based on round
       const assignmentTable = currentRound === 'screeningRound' ? 'screening_assignments' : 'pitching_assignments';
       const { data: jurorsData, error } = await supabase
         .from('jurors')
@@ -78,8 +80,13 @@ export const JurorProgressMonitoring = ({ currentRound }: JurorProgressMonitorin
 
       if (error) throw error;
 
+      // Calculate unified statuses for all jurors
+      const jurorIds = jurorsData?.map(j => j.id) || [];
+      const roundName = currentRound === 'screeningRound' ? 'screening' : 'pitching';
+      const jurorStatuses = await calculateMultipleJurorRoundStatuses(jurorIds, roundName);
+
       // Fetch all evaluations for these jurors (only those with user_id)
-      const jurorUserIds = jurorsData?.filter(j => j.user_id).map(j => j.user_id) || [];
+      const jurorUserIds = jurorsData?.filter(j => j.user_id).map(j => j.user_id) || [];  
       let evaluationsData: any[] = [];
       
       if (jurorUserIds.length > 0) {
@@ -92,7 +99,6 @@ export const JurorProgressMonitoring = ({ currentRound }: JurorProgressMonitorin
         if (evalError) throw evalError;
         evaluationsData = evals || [];
       }
-
 
       const jurorProgress: JurorProgress[] = jurorsData?.map(juror => {
         const assignmentField = currentRound === 'screeningRound' ? 'screening_assignments' : 'pitching_assignments';
@@ -108,33 +114,13 @@ export const JurorProgressMonitoring = ({ currentRound }: JurorProgressMonitorin
         const pendingCount = assignedCount - completedCount - draftCount;
         const completionRate = assignedCount > 0 ? (completedCount / assignedCount) * 100 : 0;
         
-        // Debug logging
-        console.log(`Juror ${juror.name}:`, {
-          assignedCount,
-          completedCount,
-          draftCount,
-          pendingCount,
-          completionRate,
-          hasUserId: !!juror.user_id,
-          evaluationsFound: jurorEvaluations.length
-        });
-        
         // Get last activity from evaluations
         const lastModified = jurorEvaluations
           .filter(evaluation => evaluation.last_modified_at)
           .sort((a, b) => new Date(b.last_modified_at!).getTime() - new Date(a.last_modified_at!).getTime())[0];
         
-        // Determine status based on actual completion
-        let status: 'completed' | 'active' | 'behind' | 'inactive' = 'inactive';
-        if (assignedCount === 0) {
-          status = 'inactive';
-        } else if (completedCount === assignedCount) {
-          status = 'completed';
-        } else if (completedCount > 0 || draftCount > 0) {
-          status = completedCount >= assignedCount * 0.5 ? 'active' : 'behind';
-        } else {
-          status = 'inactive';
-        }
+        // Use unified status from our calculation
+        const status = jurorStatuses[juror.id] || 'pending';
         
         return {
           id: juror.id,
@@ -271,20 +257,7 @@ export const JurorProgressMonitoring = ({ currentRound }: JurorProgressMonitorin
     }
   };
 
-  const getStatusBadge = (status: string, completionRate: number) => {
-    switch (status) {
-      case 'completed':
-        return <Badge className="bg-success text-success-foreground">Completed</Badge>;
-      case 'active':
-        return <Badge className="bg-primary text-primary-foreground">Active</Badge>;
-      case 'behind':
-        return <Badge className="bg-warning text-warning-foreground">Behind</Badge>;
-      case 'inactive':
-        return <Badge className="bg-muted text-muted-foreground">Inactive</Badge>;
-      default:
-        return <Badge variant="outline">Unknown</Badge>;
-    }
-  };
+  const roundName = currentRound === 'screeningRound' ? 'screening' : 'pitching';
 
   const getProgressColor = (rate: number) => {
     if (rate === 100) return "bg-success";
@@ -371,9 +344,9 @@ export const JurorProgressMonitoring = ({ currentRound }: JurorProgressMonitorin
               >
                 <option value="all">All Statuses</option>
                 <option value="completed">Completed</option>
-                <option value="active">Active</option>
-                <option value="behind">Behind</option>
-                <option value="inactive">Inactive</option>
+                <option value="active">In Progress</option>
+                <option value="pending">Pending</option>
+                <option value="not_invited">Not Invited</option>
               </select>
             </div>
           )}
@@ -392,12 +365,12 @@ export const JurorProgressMonitoring = ({ currentRound }: JurorProgressMonitorin
             <div className="text-sm text-muted-foreground">Completed</div>
           </div>
           <div className="text-center p-4 bg-warning/10 rounded-lg">
-            <div className="text-2xl font-bold text-warning">{jurors.filter(j => j.status === 'behind').length}</div>
-            <div className="text-sm text-muted-foreground">Behind</div>
+            <div className="text-2xl font-bold text-warning">{jurors.filter(j => j.status === 'active').length}</div>
+            <div className="text-sm text-muted-foreground">In Progress</div>
           </div>
           <div className="text-center p-4 bg-muted rounded-lg">
-            <div className="text-2xl font-bold text-muted-foreground">{jurors.filter(j => j.status === 'inactive').length}</div>
-            <div className="text-sm text-muted-foreground">Inactive</div>
+            <div className="text-2xl font-bold text-muted-foreground">{jurors.filter(j => j.status === 'pending').length}</div>
+            <div className="text-sm text-muted-foreground">Pending</div>
           </div>
         </div>
 
@@ -420,7 +393,7 @@ export const JurorProgressMonitoring = ({ currentRound }: JurorProgressMonitorin
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-1">
                       <h4 className="font-semibold text-foreground">{juror.name}</h4>
-                      {getStatusBadge(juror.status, juror.completionRate)}
+                      <JurorStatusBadge jurorId={juror.id} roundName={roundName} />
                     </div>
                     <p className="text-sm text-muted-foreground">
                       {juror.job_title} at {juror.company} • {juror.email}

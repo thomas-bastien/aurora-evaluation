@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
-import { calculateProgressiveJurorStatus, calculateJurorRoundStatus, type ProgressiveJurorStatus, type StatusType, type JurorProgressStatus } from '@/utils/juryStatusUtils';
+import { calculateProgressiveJurorStatus, calculateJurorRoundStatus, type ProgressiveJurorStatus, type UnifiedJurorStatus } from '@/utils/juryStatusUtils';
 
 interface JurorStatusBadgeProps {
   jurorId: string;
@@ -18,7 +18,7 @@ export function JurorStatusBadge({
   className 
 }: JurorStatusBadgeProps) {
   const [internalStatus, setInternalStatus] = useState<ProgressiveJurorStatus | null>(null);
-  const [roundStatus, setRoundStatus] = useState<JurorProgressStatus | null>(null);
+  const [roundStatus, setRoundStatus] = useState<UnifiedJurorStatus | null>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -55,9 +55,9 @@ export function JurorStatusBadge({
     return (
       <Badge 
         variant="outline"
-        className={`${getJurorProgressStatusColor(roundStatus)} ${className || ''}`}
+        className={`${getUnifiedStatusColor(roundStatus)} ${className || ''}`}
       >
-        {getJurorProgressStatusLabel(roundStatus, roundName)}
+        {getUnifiedStatusLabel(roundStatus, roundName)}
       </Badge>
     );
   }
@@ -69,79 +69,41 @@ export function JurorStatusBadge({
   return (
     <Badge 
       variant="outline"
-      className={`${getProgressiveStatusColor(finalStatus.status)} ${className || ''}`}
+      className={`${getUnifiedStatusColor(finalStatus.status)} ${className || ''}`}
     >
-      {getProgressiveStatusLabel(finalStatus)}
+      {getUnifiedStatusLabel(finalStatus.status, finalStatus.currentRound)}
     </Badge>
   );
 }
 
-// Helper functions for status display
-function getJurorProgressStatusLabel(status: JurorProgressStatus, roundName: string): string {
-  const roundTitle = roundName === 'screening' ? 'Screening' : 'Pitching';
+// Unified helper functions for status display
+function getUnifiedStatusLabel(status: UnifiedJurorStatus, roundName?: string): string {
+  const roundContext = roundName ? ` (${roundName === 'screening' ? 'Screening' : 'Pitching'})` : '';
   
   switch (status) {
-    case 'completed':
-      return `Completed (${roundTitle})`;
-    case 'active':
-      return `In Progress (${roundTitle})`;
-    case 'pending':
-      return `Pending (${roundTitle})`;
-    case 'not_invited':
-      return 'Not Invited';
-    default:
-      return 'Unknown';
-  }
-}
-
-function getJurorProgressStatusColor(status: JurorProgressStatus): string {
-  switch (status) {
-    case 'completed':
-      return 'text-success border-success';
-    case 'active':
-      return 'text-primary border-primary';
-    case 'pending':
-      return 'text-warning border-warning';
-    case 'not_invited':
-      return 'text-muted-foreground border-muted-foreground';
-    default:
-      return 'text-foreground border-border';
-  }
-}
-
-function getProgressiveStatusLabel(status: ProgressiveJurorStatus): string {
-  const roundContext = status.currentRound 
-    ? ` (${status.currentRound === 'screening' ? 'Screening' : 'Pitching'})`
-    : '';
-  
-  switch (status.status) {
-    case 'not_invited':
-      return 'Not Invited';
-    case 'pending':
-      return `Pending${roundContext}`;
-    case 'under_review':
-      return `In Progress${roundContext}`;
     case 'completed':
       return `Completed${roundContext}`;
-    case 'inactive':
-      return `Inactive${roundContext}`;
+    case 'active':
+      return `In Progress${roundContext}`;
+    case 'pending':
+      return `Pending${roundContext}`;
+    case 'not_invited':
+      return 'Not Invited';
     default:
       return 'Unknown';
   }
 }
 
-function getProgressiveStatusColor(status: StatusType): string {
+function getUnifiedStatusColor(status: UnifiedJurorStatus): string {
   switch (status) {
-    case 'not_invited':
-      return 'text-muted-foreground border-muted-foreground';
-    case 'pending':
-      return 'text-warning border-warning';
-    case 'under_review':
-      return 'text-primary border-primary';
     case 'completed':
       return 'text-success border-success';
-    case 'inactive':
-      return 'text-muted-foreground border-muted';
+    case 'active':
+      return 'text-primary border-primary';
+    case 'pending':
+      return 'text-warning border-warning';
+    case 'not_invited':
+      return 'text-muted-foreground border-muted-foreground';
     default:
       return 'text-foreground border-border';
   }
