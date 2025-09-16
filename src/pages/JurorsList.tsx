@@ -491,7 +491,7 @@ export default function JurorsList() {
           </div>
           
           {filtersOpen && (
-            <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+            <div className={`grid grid-cols-1 gap-4 ${isAdmin ? 'md:grid-cols-6' : 'md:grid-cols-5'}`}>
               <Select value={companyFilter || 'all'} onValueChange={(value) => setCompanyFilter(value === 'all' ? '' : value)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Filter by company" />
@@ -540,19 +540,21 @@ export default function JurorsList() {
                 </SelectContent>
               </Select>
 
-              <Select value={statusFilter || 'all'} onValueChange={(value) => setStatusFilter(value === 'all' ? '' : value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Filter by status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Statuses</SelectItem>
-                  <SelectItem value="not_invited">Not Invited</SelectItem>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="under_review">In Progress</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
-                  <SelectItem value="inactive">Inactive</SelectItem>
-                </SelectContent>
-              </Select>
+              {isAdmin && (
+                <Select value={statusFilter || 'all'} onValueChange={(value) => setStatusFilter(value === 'all' ? '' : value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Filter by status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Statuses</SelectItem>
+                    <SelectItem value="not_invited">Not Invited</SelectItem>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="under_review">In Progress</SelectItem>
+                    <SelectItem value="completed">Completed</SelectItem>
+                    <SelectItem value="inactive">Inactive</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
 
               {(searchTerm || companyFilter || regionFilter || verticalFilter || stageFilter || statusFilter) && (
                 <Button 
@@ -597,8 +599,8 @@ export default function JurorsList() {
                   <TableHead>Job Title</TableHead>
                   <TableHead>Company</TableHead>
                   <TableHead>Preferences</TableHead>
-                  <TableHead>Status</TableHead>
-                   <TableHead>Member Since</TableHead>
+                  {isAdmin && <TableHead>Status</TableHead>}
+                  <TableHead>Member Since</TableHead>
                   {isAdmin && <TableHead className="w-[140px]">Actions</TableHead>}
                 </TableRow>
               </TableHeader>
@@ -649,13 +651,15 @@ export default function JurorsList() {
                         )}
                       </div>
                     </TableCell>
-                     <TableCell>
-                      <JurorStatusBadge 
-                        jurorId={juror.id}
-                        progressiveStatus={juror.progressiveStatus}
-                        roundName={currentRoundContext}
-                      />
-                     </TableCell>
+                     {isAdmin && (
+                       <TableCell>
+                         <JurorStatusBadge 
+                           jurorId={juror.id}
+                           progressiveStatus={juror.progressiveStatus}
+                           roundName={currentRoundContext}
+                         />
+                       </TableCell>
+                     )}
                     <TableCell className="text-muted-foreground">
                       {new Date(juror.created_at).toLocaleDateString()}
                     </TableCell>
