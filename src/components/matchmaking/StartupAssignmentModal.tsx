@@ -71,7 +71,7 @@ export const StartupAssignmentModal = ({
     juror.job_title.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Calculate fit score between startup and juror
+  // Calculate fit score between startup and juror (10-point scale)
   const calculateFitScore = (juror: Juror) => {
     let score = 0;
     let matches = {
@@ -79,32 +79,47 @@ export const StartupAssignmentModal = ({
       vertical: false,
       stage: false
     };
+    let breakdown = {
+      region: 0,
+      vertical: 0,
+      stage: 0
+    };
 
-    // Region match (+3 points)
+    // Region match (+4 points)
     if (juror.preferred_regions && startup.region) {
       if (juror.preferred_regions.includes(startup.region)) {
-        score += 3;
+        score += 4;
+        breakdown.region = 4;
         matches.region = true;
       }
     }
 
-    // Vertical/Industry match (+2 points)
+    // Vertical/Industry match (+3 points)
     if (juror.target_verticals && startup.industry) {
       if (juror.target_verticals.includes(startup.industry)) {
-        score += 2;
+        score += 3;
+        breakdown.vertical = 3;
         matches.vertical = true;
       }
     }
 
-    // Stage match (+2 points)
+    // Stage match (+3 points)
     if (juror.preferred_stages && startup.stage) {
       if (juror.preferred_stages.includes(startup.stage)) {
-        score += 2;
+        score += 3;
+        breakdown.stage = 3;
         matches.stage = true;
       }
     }
 
-    return { score, matches };
+    return { score, matches, breakdown };
+  };
+
+  // Get score color based on value
+  const getScoreColor = (score: number) => {
+    if (score >= 8) return 'text-green-600 bg-green-50 border-green-200';
+    if (score >= 5) return 'text-yellow-600 bg-yellow-50 border-yellow-200';
+    return 'text-red-600 bg-red-50 border-red-200';
   };
 
   // Sort jurors by fit score (highest first)
@@ -257,7 +272,7 @@ export const StartupAssignmentModal = ({
         <div className="space-y-3 max-h-96 overflow-y-auto">
           {sortedJurors.map((juror) => {
             const isSelected = selectedJurorIds.includes(juror.id);
-            const { score, matches } = calculateFitScore(juror);
+            const { score, matches, breakdown } = calculateFitScore(juror);
             
             return (
               <div
@@ -279,12 +294,10 @@ export const StartupAssignmentModal = ({
                       <div className="flex items-center gap-2">
                         <User className="w-4 h-4 text-muted-foreground" />
                         <span className="font-medium">{juror.name}</span>
-                        {score > 0 && (
-                          <Badge variant="secondary" className="ml-2">
-                            <Star className="w-3 h-3 mr-1" />
-                            Fit Score: {score}
-                          </Badge>
-                        )}
+                      </div>
+                      {/* Prominent Fit Score Badge */}
+                      <div className={`px-3 py-1 rounded-full border font-semibold text-sm ${getScoreColor(score)}`}>
+                        {score}/10
                       </div>
                     </div>
                     
@@ -297,27 +310,31 @@ export const StartupAssignmentModal = ({
                       </div>
                     </div>
 
-                    {/* Fit Badges */}
+                    {/* Score Breakdown */}
                     {score > 0 && (
-                      <div className="flex flex-wrap gap-1 mt-2">
-                        {matches.region && (
-                          <Badge variant="default" className="text-xs">
-                            <MapPin className="w-2 h-2 mr-1" />
-                            Region Match
-                          </Badge>
-                        )}
-                        {matches.vertical && (
-                          <Badge variant="default" className="text-xs">
-                            <Target className="w-2 h-2 mr-1" />
-                            Vertical Match
-                          </Badge>
-                        )}
-                        {matches.stage && (
-                          <Badge variant="default" className="text-xs">
-                            <Building2 className="w-2 h-2 mr-1" />
-                            Stage Match
-                          </Badge>
-                        )}
+                      <div className="mt-3">
+                        <div className="text-xs text-muted-foreground mb-2">Fit Score Breakdown:</div>
+                        <div className="flex flex-wrap gap-2">
+                          <div className={`flex items-center gap-1 px-2 py-1 rounded text-xs ${matches.region ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                            <MapPin className="w-2 h-2" />
+                            Region: {breakdown.region}/4
+                          </div>
+                          <div className={`flex items-center gap-1 px-2 py-1 rounded text-xs ${matches.vertical ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                            <Target className="w-2 h-2" />
+                            Vertical: {breakdown.vertical}/3
+                          </div>
+                          <div className={`flex items-center gap-1 px-2 py-1 rounded text-xs ${matches.stage ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                            <Building2 className="w-2 h-2" />
+                            Stage: {breakdown.stage}/3
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Zero Score Message */}
+                    {score === 0 && (
+                      <div className="mt-2 text-xs text-muted-foreground italic">
+                        No criteria matches found
                       </div>
                     )}
                   </div>
