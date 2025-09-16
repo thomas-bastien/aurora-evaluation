@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useSearchParams, useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -44,10 +45,29 @@ interface JurorWithStatuses extends Juror {
 }
 
 export default function JurorsList() {
+  const [searchParams] = useSearchParams();
+  const location = useLocation();
   const [jurors, setJurors] = useState<JurorWithStatuses[]>([]);
   const [filteredJurors, setFilteredJurors] = useState<JurorWithStatuses[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+
+  // Get current round context from URL if available (e.g., from Selection page)
+  const getCurrentRoundContext = (): 'screening' | 'pitching' | null => {
+    const roundParam = searchParams.get('round');
+    if (roundParam === 'screening' || roundParam === 'pitching') {
+      return roundParam;
+    }
+    
+    // Check if we're coming from selection page context
+    if (location.pathname.includes('selection') || location.state?.fromSelection) {
+      return location.state?.currentRound || null;
+    }
+    
+    return null;
+  };
+
+  const currentRoundContext = getCurrentRoundContext();
   const [companyFilter, setCompanyFilter] = useState('');
   const [regionFilter, setRegionFilter] = useState('');
   const [verticalFilter, setVerticalFilter] = useState('');
@@ -633,6 +653,7 @@ export default function JurorsList() {
                       <JurorStatusBadge 
                         jurorId={juror.id}
                         progressiveStatus={juror.progressiveStatus}
+                        roundName={currentRoundContext}
                       />
                      </TableCell>
                     <TableCell className="text-muted-foreground">

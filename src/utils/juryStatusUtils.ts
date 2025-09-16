@@ -3,6 +3,9 @@
 import { supabase } from '@/integrations/supabase/client';
 import type { StatusType } from './statusUtils';
 
+// Status types for juror progress monitoring
+export type JurorProgressStatus = 'completed' | 'active' | 'behind' | 'inactive' | 'not_invited';
+
 export type { StatusType };
 
 interface JuryAssignmentCounts {
@@ -108,7 +111,187 @@ export async function calculateJurorStatus(jurorId: string): Promise<StatusType>
   return progressiveStatus.status;
 }
 
-// Calculate jury status for a specific round (internal helper)
+// Export the round-specific status calculation function
+export async function calculateJurorRoundStatus(
+  jurorId: string,
+  roundName: 'screening' | 'pitching'
+): Promise<JurorProgressStatus> {
+  try {
+    // First check if juror exists and has invitation status
+    const { data: juror, error: jurorError } = await supabase
+      .from('jurors')
+      .select('id, user_id, invitation_sent_at')
+      .eq('id', jurorId)
+      .single();
+
+    if (jurorError) throw jurorError;
+
+    // Check invitation status first
+    if (!juror.invitation_sent_at) {
+      return 'not_invited';
+    }
+
+    if (!juror.user_id) {
+      return 'inactive'; // Invited but not accepted
+    }
+
+    // Get assignment and evaluation counts using the same logic as JurorProgressMonitoring
+    const assignmentTable = roundName === 'screening' ? 'screening_assignments' : 'pitching_assignments';
+    const evaluationTable = roundName === 'screening' ? 'screening_evaluations' : 'pitching_evaluations';
+
+    // Fetch assignments
+    const { data: assignments, error: assignmentError } = await supabase
+      .from(assignmentTable)
+      .select('id')
+      .eq('juror_id', jurorId);
+
+    if (assignmentError) throw assignmentError;
+
+    const assignedCount = assignments?.length || 0;
+
+    if (assignedCount === 0) {
+      return 'inactive';
+    }
+
+    // Fetch evaluations
+    const { data: evaluations, error: evaluationError } = await supabase
+      .from(evaluationTable)
+      .select('status')
+      .eq('evaluator_id', juror.user_id);
+
+    if (evaluationError) throw evaluationError;
+
+    const completedCount = evaluations?.filter(e => e.status === 'submitted').length || 0;
+    const draftCount = evaluations?.filter(e => e.status === 'draft').length || 0;
+
+    // Use the same logic as JurorProgressMonitoring
+    if (completedCount === assignedCount) {
+      return 'completed';
+    } else if (completedCount > 0 || draftCount > 0) {
+      return completedCount >= assignedCount * 0.5 ? 'active' : 'behind';
+    } else {
+      return 'inactive';
+    }
+  } catch (error) {
+    console.error('Error calculating juror round status:', error);
+    return 'inactive';
+  }
+}
+
+// Calculate round-specific status for multiple jurors efficiently
+export async function calculateMultipleJurorRoundStatuses(
+  jurorIds: string[],
+  roundName: 'screening' | 'pitching'
+): Promise<Record<string, JurorProgressStatus>> {
+  if (jurorIds.length === 0) {
+    return {};
+  }
+
+  try {
+    // Fetch all jurors with invitation status
+    const { data: jurorsData, error: jurorsError } = await supabase
+      .from('jurors')
+      .select('id, user_id, invitation_sent_at')
+      .in('id', jurorIds);
+
+    if (jurorsError) throw jurorsError;
+
+    const results: Record<string, JurorProgressStatus> = {};
+    
+    // Check invitation status first
+    const jurorsLookup = jurorsData?.reduce((acc, juror) => {
+      acc[juror.id] = juror;
+      return acc;
+    }, {} as Record<string, any>) || {};
+
+    // Get user IDs for accepted invitations
+    const userIds = jurorsData?.filter(j => j.user_id).map(j => j.user_id) || [];
+
+    // Determine tables based on round
+    const assignmentTable = roundName === 'screening' ? 'screening_assignments' : 'pitching_assignments';
+    const evaluationTable = roundName === 'screening' ? 'screening_evaluations' : 'pitching_evaluations';
+
+    // Fetch assignments
+    const { data: assignments, error: assignmentError } = await supabase
+      .from(assignmentTable)
+      .select('juror_id')
+      .in('juror_id', jurorIds);
+
+    if (assignmentError) throw assignmentError;
+
+    // Fetch evaluations for users with accepted invitations
+    let evaluations: any[] = [];
+    if (userIds.length > 0) {
+      const { data: evalData, error: evalError } = await supabase
+        .from(evaluationTable)
+        .select('evaluator_id, status')
+        .in('evaluator_id', userIds);
+
+      if (evalError) throw evalError;
+      evaluations = evalData || [];
+    }
+
+    // Create lookup maps
+    const assignmentsLookup = assignments?.reduce((acc, assignment) => {
+      if (!acc[assignment.juror_id]) acc[assignment.juror_id] = 0;
+      acc[assignment.juror_id]++;
+      return acc;
+    }, {} as Record<string, number>) || {};
+
+    const evaluationsLookup = evaluations?.reduce((acc, evaluation) => {
+      // Find the juror for this user_id
+      const juror = jurorsData?.find(j => j.user_id === evaluation.evaluator_id);
+      if (juror) {
+        if (!acc[juror.id]) acc[juror.id] = [];
+        acc[juror.id].push(evaluation);
+      }
+      return acc;
+    }, {} as Record<string, any[]>) || {};
+
+    // Calculate status for each juror
+    for (const jurorId of jurorIds) {
+      const juror = jurorsLookup[jurorId];
+      
+      // Check invitation status
+      if (!juror?.invitation_sent_at) {
+        results[jurorId] = 'not_invited';
+        continue;
+      }
+
+      if (!juror.user_id) {
+        results[jurorId] = 'inactive';
+        continue;
+      }
+
+      const assignedCount = assignmentsLookup[jurorId] || 0;
+      
+      if (assignedCount === 0) {
+        results[jurorId] = 'inactive';
+        continue;
+      }
+
+      const jurorEvaluations = evaluationsLookup[jurorId] || [];
+      const completedCount = jurorEvaluations.filter(e => e.status === 'submitted').length;
+      const draftCount = jurorEvaluations.filter(e => e.status === 'draft').length;
+
+      // Apply the same logic as JurorProgressMonitoring
+      if (completedCount === assignedCount) {
+        results[jurorId] = 'completed';
+      } else if (completedCount > 0 || draftCount > 0) {
+        results[jurorId] = completedCount >= assignedCount * 0.5 ? 'active' : 'behind';
+      } else {
+        results[jurorId] = 'inactive';
+      }
+    }
+
+    return results;
+  } catch (error) {
+    console.error('Error calculating multiple juror round statuses:', error);
+    return {};
+  }
+}
+
+// Keep the internal function for legacy use
 async function calculateJuryRoundStatus(
   jurorId: string, 
   roundName: 'screening' | 'pitching'
