@@ -20,7 +20,7 @@ import { DraftModal } from '@/components/jurors/DraftModal';
 import { JurorFormModal } from '@/components/jurors/JurorFormModal';
 import { downloadJurorsCSVTemplate } from '@/utils/jurorsCsvTemplate';
 import { JurorStatusBadge } from '@/components/common/JuryRoundStatusBadges';
-import { calculateMultipleJurorStatuses, type StatusType } from '@/utils/juryStatusUtils';
+import { calculateMultipleProgressiveJurorStatuses, type ProgressiveJurorStatus } from '@/utils/juryStatusUtils';
 
 interface Juror {
   id: string;
@@ -40,7 +40,7 @@ interface Juror {
 }
 
 interface JurorWithStatuses extends Juror {
-  status?: StatusType;
+  progressiveStatus?: ProgressiveJurorStatus;
 }
 
 export default function JurorsList() {
@@ -94,14 +94,14 @@ export default function JurorsList() {
       } else {
         const jurorsWithStatuses = data || [];
         
-        // Calculate round-specific statuses for all jurors
+        // Calculate progressive statuses for all jurors
         const jurorIds = jurorsWithStatuses.map(j => j.id);
-    const statuses = await calculateMultipleJurorStatuses(jurorIds);
+        const progressiveStatuses = await calculateMultipleProgressiveJurorStatuses(jurorIds);
         
-        // Enrich jurors with unified status
+        // Enrich jurors with progressive status
         const enrichedJurors = jurorsWithStatuses.map(juror => ({
           ...juror,
-          status: statuses[juror.id]?.status || 'inactive'
+          progressiveStatus: progressiveStatuses[juror.id]
         }));
         
         setJurors(enrichedJurors);
@@ -657,8 +657,7 @@ export default function JurorsList() {
                      <TableCell>
                       <JurorStatusBadge 
                         jurorId={juror.id}
-                        status={juror.status as any}
-                        showCurrentRound={true}
+                        progressiveStatus={juror.progressiveStatus}
                       />
                      </TableCell>
                     <TableCell className="text-muted-foreground">

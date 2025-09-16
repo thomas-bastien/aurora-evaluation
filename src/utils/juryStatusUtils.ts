@@ -12,25 +12,77 @@ interface JuryAssignmentCounts {
   notStarted: number;
 }
 
-// Calculate unified jury status based on current active round
-export async function calculateJurorStatus(jurorId: string): Promise<StatusType> {
-  try {
-    // Get current active round
-    const { data: activeRound } = await supabase
-      .from('rounds')
-      .select('name')
-      .eq('status', 'active')
-      .single();
+export interface ProgressiveJurorStatus {
+  status: StatusType;
+  currentRound: 'screening' | 'pitching' | null;
+  completedRounds: ('screening' | 'pitching')[];
+}
 
-    if (!activeRound) {
-      return 'inactive';
+// Calculate progressive jury status - screening must be completed before pitching
+export async function calculateProgressiveJurorStatus(jurorId: string): Promise<ProgressiveJurorStatus> {
+  try {
+    // Get counts for both rounds
+    const [screeningCounts, pitchingCounts] = await Promise.all([
+      getJuryAssignmentCounts(jurorId, 'screening'),
+      getJuryAssignmentCounts(jurorId, 'pitching')
+    ]);
+
+    const completedRounds: ('screening' | 'pitching')[] = [];
+    
+    // Check screening completion
+    const screeningCompleted = screeningCounts.assigned > 0 && screeningCounts.completed === screeningCounts.assigned;
+    if (screeningCompleted) {
+      completedRounds.push('screening');
     }
 
-    return calculateJuryRoundStatus(jurorId, activeRound.name as 'screening' | 'pitching');
+    // Progressive logic: pitching only available after screening completion
+    let status: StatusType = 'inactive';
+    let currentRound: 'screening' | 'pitching' | null = null;
+
+    // If no assignments in either round, juror is inactive
+    if (screeningCounts.assigned === 0 && pitchingCounts.assigned === 0) {
+      return { status: 'inactive', currentRound: null, completedRounds };
+    }
+
+    // Check current status based on progression
+    if (screeningCounts.assigned > 0 && !screeningCompleted) {
+      // Still working on screening
+      currentRound = 'screening';
+      if (screeningCounts.completed > 0 || screeningCounts.inProgress > 0) {
+        status = 'under_review';
+      } else {
+        status = 'pending';
+      }
+    } else if (screeningCompleted && pitchingCounts.assigned > 0) {
+      // Screening complete, working on pitching
+      currentRound = 'pitching';
+      const pitchingCompleted = pitchingCounts.completed === pitchingCounts.assigned;
+      
+      if (pitchingCompleted) {
+        completedRounds.push('pitching');
+        status = 'completed';
+      } else if (pitchingCounts.completed > 0 || pitchingCounts.inProgress > 0) {
+        status = 'under_review';
+      } else {
+        status = 'pending';
+      }
+    } else if (screeningCompleted && pitchingCounts.assigned === 0) {
+      // Screening complete, no pitching assignments
+      status = 'completed';
+      currentRound = 'screening'; // Show as completed screening
+    }
+
+    return { status, currentRound, completedRounds };
   } catch (error) {
-    console.error('Error calculating unified jury status:', error);
-    return 'inactive';
+    console.error('Error calculating progressive jury status:', error);
+    return { status: 'inactive', currentRound: null, completedRounds: [] };
   }
+}
+
+// Calculate unified jury status based on current active round (legacy function)
+export async function calculateJurorStatus(jurorId: string): Promise<StatusType> {
+  const progressiveStatus = await calculateProgressiveJurorStatus(jurorId);
+  return progressiveStatus.status;
 }
 
 // Calculate jury status for a specific round (internal helper)
@@ -146,7 +198,141 @@ export async function getJuryAssignmentCounts(
   }
 }
 
-// Calculate unified status for multiple jurors efficiently
+// Calculate progressive status for multiple jurors efficiently
+export async function calculateMultipleProgressiveJurorStatuses(
+  jurorIds: string[]
+): Promise<Record<string, ProgressiveJurorStatus>> {
+  const results: Record<string, ProgressiveJurorStatus> = {};
+
+  try {
+    // Get all jurors data in one query
+    const { data: jurorsData, error: jurorsError } = await supabase
+      .from('jurors')
+      .select('id, user_id')
+      .in('id', jurorIds);
+
+    if (jurorsError) throw jurorsError;
+
+    // Get all screening assignments
+    const { data: screeningAssignments, error: screeningError } = await supabase
+      .from('screening_assignments')
+      .select('juror_id')
+      .in('juror_id', jurorIds);
+
+    if (screeningError) throw screeningError;
+
+    // Get all pitching assignments
+    const { data: pitchingAssignments, error: pitchingError } = await supabase
+      .from('pitching_assignments')
+      .select('juror_id')
+      .in('juror_id', jurorIds);
+
+    if (pitchingError) throw pitchingError;
+
+    // Get user IDs that have accounts
+    const userIds = jurorsData?.filter(j => j.user_id).map(j => j.user_id!) || [];
+    
+    // Get all screening evaluations
+    let screeningEvaluations: any[] = [];
+    let pitchingEvaluations: any[] = [];
+    
+    if (userIds.length > 0) {
+      const [screeningEvalData, pitchingEvalData] = await Promise.all([
+        supabase
+          .from('screening_evaluations')
+          .select('evaluator_id, status')
+          .in('evaluator_id', userIds),
+        supabase
+          .from('pitching_evaluations')
+          .select('evaluator_id, status')
+          .in('evaluator_id', userIds)
+      ]);
+
+      screeningEvaluations = screeningEvalData.data || [];
+      pitchingEvaluations = pitchingEvalData.data || [];
+    }
+
+    // Process each juror
+    for (const juror of jurorsData || []) {
+      const screeningAssigned = screeningAssignments?.filter(a => a.juror_id === juror.id).length || 0;
+      const pitchingAssigned = pitchingAssignments?.filter(a => a.juror_id === juror.id).length || 0;
+
+      const completedRounds: ('screening' | 'pitching')[] = [];
+      let status: StatusType = 'inactive';
+      let currentRound: 'screening' | 'pitching' | null = null;
+
+      // If no assignments in either round
+      if (screeningAssigned === 0 && pitchingAssigned === 0) {
+        results[juror.id] = { status: 'inactive', currentRound: null, completedRounds };
+        continue;
+      }
+
+      // Calculate screening progress
+      let screeningCompleted = 0;
+      let screeningInProgress = 0;
+      
+      if (juror.user_id && screeningAssigned > 0) {
+        const screeningEvals = screeningEvaluations.filter(e => e.evaluator_id === juror.user_id);
+        screeningCompleted = screeningEvals.filter(e => e.status === 'submitted').length;
+        screeningInProgress = screeningEvals.filter(e => e.status === 'draft').length;
+      }
+
+      const isScreeningComplete = screeningAssigned > 0 && screeningCompleted === screeningAssigned;
+      if (isScreeningComplete) {
+        completedRounds.push('screening');
+      }
+
+      // Calculate pitching progress
+      let pitchingCompleted = 0;
+      let pitchingInProgress = 0;
+      
+      if (juror.user_id && pitchingAssigned > 0) {
+        const pitchingEvals = pitchingEvaluations.filter(e => e.evaluator_id === juror.user_id);
+        pitchingCompleted = pitchingEvals.filter(e => e.status === 'submitted').length;
+        pitchingInProgress = pitchingEvals.filter(e => e.status === 'draft').length;
+      }
+
+      const isPitchingComplete = pitchingAssigned > 0 && pitchingCompleted === pitchingAssigned;
+      if (isPitchingComplete) {
+        completedRounds.push('pitching');
+      }
+
+      // Progressive logic
+      if (screeningAssigned > 0 && !isScreeningComplete) {
+        // Still working on screening
+        currentRound = 'screening';
+        if (screeningCompleted > 0 || screeningInProgress > 0) {
+          status = 'under_review';
+        } else {
+          status = 'pending';
+        }
+      } else if (isScreeningComplete && pitchingAssigned > 0) {
+        // Screening complete, working on pitching
+        currentRound = 'pitching';
+        if (isPitchingComplete) {
+          status = 'completed';
+        } else if (pitchingCompleted > 0 || pitchingInProgress > 0) {
+          status = 'under_review';
+        } else {
+          status = 'pending';
+        }
+      } else if (isScreeningComplete && pitchingAssigned === 0) {
+        // Screening complete, no pitching assignments
+        status = 'completed';
+        currentRound = 'screening';
+      }
+
+      results[juror.id] = { status, currentRound, completedRounds };
+    }
+
+    return results;
+  } catch (error) {
+    console.error('Error calculating multiple progressive jury statuses:', error);
+    return {};
+  }
+}
+
+// Calculate unified status for multiple jurors efficiently (legacy function)
 export async function calculateMultipleJurorStatuses(
   jurorIds: string[]
 ): Promise<Record<string, { status: StatusType; counts: JuryAssignmentCounts }>> {

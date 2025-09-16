@@ -2,66 +2,53 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Skeleton } from '@/components/ui/skeleton';
 import { StatusBadge } from './StatusBadge';
-import { calculateJurorStatus, type StatusType } from '@/utils/juryStatusUtils';
+import { calculateProgressiveJurorStatus, type ProgressiveJurorStatus, type StatusType } from '@/utils/juryStatusUtils';
 
 interface JurorStatusBadgeProps {
   jurorId: string;
-  status?: StatusType;
-  showCurrentRound?: boolean;
+  progressiveStatus?: ProgressiveJurorStatus;
   className?: string;
 }
 
 export function JurorStatusBadge({ 
   jurorId, 
-  status, 
-  showCurrentRound = false, 
+  progressiveStatus, 
   className 
 }: JurorStatusBadgeProps) {
-  const [internalStatus, setInternalStatus] = useState<StatusType | null>(null);
-  const [currentRound, setCurrentRound] = useState<string | null>(null);
+  const [internalStatus, setInternalStatus] = useState<ProgressiveJurorStatus | null>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     const fetchStatus = async () => {
-      if (status) return;
+      if (progressiveStatus) return;
       
       setLoading(true);
       try {
-        // Get current round info if needed
-        if (showCurrentRound) {
-          const { data: activeRound } = await supabase
-            .from('rounds')
-            .select('name')
-            .eq('status', 'active')
-            .single();
-          setCurrentRound(activeRound?.name || null);
-        }
-        
-        const statusResult = await calculateJurorStatus(jurorId);
+        const statusResult = await calculateProgressiveJurorStatus(jurorId);
         setInternalStatus(statusResult);
       } catch (error) {
-        console.error('Error fetching juror status:', error);
+        console.error('Error fetching progressive juror status:', error);
       } finally {
         setLoading(false);
       }
     };
 
     fetchStatus();
-  }, [jurorId, status, showCurrentRound]);
+  }, [jurorId, progressiveStatus]);
 
-  const finalStatus = status || internalStatus;
+  const finalStatus = progressiveStatus || internalStatus;
 
   if (loading && !finalStatus) {
-    return <Skeleton className={`h-6 w-20 ${className || ''}`} />;
+    return <Skeleton className={`h-6 w-24 ${className || ''}`} />;
   }
 
   if (!finalStatus) return null;
 
   return (
     <StatusBadge 
-      status={finalStatus}
-      roundName={showCurrentRound ? currentRound : undefined}
-      showRoundContext={showCurrentRound}
+      status={finalStatus.status}
+      roundName={finalStatus.currentRound}
+      showRoundContext={true}
       className={className}
       isJurorStatus={true}
     />

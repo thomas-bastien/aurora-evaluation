@@ -2,14 +2,13 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { StatusBadge } from '@/components/common/StatusBadge';
-import { getJuryAssignmentCounts } from '@/utils/juryStatusUtils';
+import { getJuryAssignmentCounts, type ProgressiveJurorStatus } from '@/utils/juryStatusUtils';
 import type { JuryStatusType } from '@/utils/statusUtils';
 import { CheckCircle, Clock, AlertCircle, XCircle } from 'lucide-react';
 
 interface RoundProgressTabProps {
   jurorId: string;
-  screeningStatus: JuryStatusType;
-  pitchingStatus: JuryStatusType;
+  progressiveStatus?: ProgressiveJurorStatus | null;
 }
 
 interface RoundProgressData {
@@ -19,7 +18,7 @@ interface RoundProgressData {
   notStarted: number;
 }
 
-export function RoundProgressTab({ jurorId, screeningStatus, pitchingStatus }: RoundProgressTabProps) {
+export function RoundProgressTab({ jurorId, progressiveStatus }: RoundProgressTabProps) {
   const [screeningData, setScreeningData] = useState<RoundProgressData | null>(null);
   const [pitchingData, setPitchingData] = useState<RoundProgressData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -63,6 +62,20 @@ export function RoundProgressTab({ jurorId, screeningStatus, pitchingStatus }: R
         return <AlertCircle className="w-5 h-5 text-gray-600" />;
     }
   };
+
+  const getStatusFromData = (data: RoundProgressData | null): JuryStatusType => {
+    if (!data || data.assigned === 0) return 'inactive';
+    if (data.completed === data.assigned) return 'completed';
+    if (data.completed > 0 || data.inProgress > 0) return 'in_progress';
+    return 'not_started';
+  };
+
+  const screeningStatus = getStatusFromData(screeningData);
+  const pitchingStatus = getStatusFromData(pitchingData);
+
+  // For progressive logic: pitching is locked until screening is complete
+  const isPitchingLocked = progressiveStatus?.currentRound === 'screening' || 
+    (progressiveStatus && !progressiveStatus.completedRounds.includes('screening'));
 
   if (loading) {
     return (
@@ -144,11 +157,16 @@ export function RoundProgressTab({ jurorId, screeningStatus, pitchingStatus }: R
       </Card>
 
       {/* Pitching Round Progress */}
-      <Card>
+      <Card className={isPitchingLocked ? 'opacity-60' : ''}>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             {getStatusIcon(pitchingStatus)}
             Pitching Round
+            {isPitchingLocked && (
+              <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full">
+                Locked - Complete Screening First
+              </span>
+            )}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -157,7 +175,7 @@ export function RoundProgressTab({ jurorId, screeningStatus, pitchingStatus }: R
             <StatusBadge status={pitchingStatus} isJurorStatus={true} />
           </div>
           
-          {pitchingData && pitchingData.assigned > 0 ? (
+          {pitchingData && pitchingData.assigned > 0 && !isPitchingLocked ? (
             <>
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
@@ -189,7 +207,12 @@ export function RoundProgressTab({ jurorId, screeningStatus, pitchingStatus }: R
           ) : (
             <div className="text-center py-4 text-muted-foreground">
               <AlertCircle className="w-8 h-8 mx-auto mb-2" />
-              <p className="text-sm">No assignments in this round</p>
+              <p className="text-sm">
+                {isPitchingLocked 
+                  ? "Complete screening round to unlock pitching"
+                  : "No assignments in this round"
+                }
+              </p>
             </div>
           )}
         </CardContent>

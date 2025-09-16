@@ -11,8 +11,7 @@ import { Building2, Mail, User, MapPin, Target, AlertCircle, Linkedin, ExternalL
 import { JurorEvaluationsList } from '@/components/jurors/JurorEvaluationsList';
 import { JurorStatusBadge } from '@/components/common/JuryRoundStatusBadges';
 import { RoundProgressTab } from '@/components/jurors/RoundProgressTab';
-import { getJuryAssignmentCounts } from '@/utils/juryStatusUtils';
-import type { JuryStatusType } from '@/utils/statusUtils';
+import { calculateProgressiveJurorStatus, type ProgressiveJurorStatus } from '@/utils/juryStatusUtils';
 
 interface Juror {
   id: string;
@@ -35,10 +34,9 @@ const JurorProfile = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [juror, setJuror] = useState<Juror | null>(null);
+  const [progressiveStatus, setProgressiveStatus] = useState<ProgressiveJurorStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [screeningStatus, setScreeningStatus] = useState<JuryStatusType>('inactive');
-  const [pitchingStatus, setPitchingStatus] = useState<JuryStatusType>('inactive');
 
   useEffect(() => {
     const fetchJuror = async () => {
@@ -68,21 +66,9 @@ const JurorProfile = () => {
 
         setJuror(data);
         
-        // Calculate round-specific statuses
-        const [screeningCounts, pitchingCounts] = await Promise.all([
-          getJuryAssignmentCounts(data.id, 'screening'),
-          getJuryAssignmentCounts(data.id, 'pitching')
-        ]);
-        
-        const mapCountsToStatus = (c: { assigned: number; completed: number; inProgress: number }) => {
-          if (!c || c.assigned === 0) return 'inactive' as JuryStatusType;
-          if (c.completed === c.assigned) return 'completed' as JuryStatusType;
-          if (c.completed > 0 || c.inProgress > 0) return 'in_progress' as JuryStatusType;
-          return 'not_started' as JuryStatusType;
-        };
-        
-        setScreeningStatus(mapCountsToStatus(screeningCounts));
-        setPitchingStatus(mapCountsToStatus(pitchingCounts));
+        // Calculate progressive status
+        const status = await calculateProgressiveJurorStatus(data.id);
+        setProgressiveStatus(status);
       } catch (error) {
         console.error('Error fetching juror:', error);
         setError('An unexpected error occurred');
@@ -189,8 +175,8 @@ const JurorProfile = () => {
                      {status.text}
                    </Badge>
               <JurorStatusBadge 
-                jurorId={id}
-                showCurrentRound={true}
+                jurorId={id!}
+                progressiveStatus={progressiveStatus}
                 className="mt-2"
               />
                    {juror.company && (
@@ -381,7 +367,7 @@ const JurorProfile = () => {
           </TabsContent>
 
           <TabsContent value="round-progress" className="space-y-6">
-            <RoundProgressTab jurorId={juror.id} screeningStatus={screeningStatus} pitchingStatus={pitchingStatus} />
+            <RoundProgressTab jurorId={juror.id} progressiveStatus={progressiveStatus} />
           </TabsContent>
 
           <TabsContent value="evaluations" className="space-y-6">
