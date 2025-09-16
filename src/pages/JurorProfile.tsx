@@ -9,10 +9,9 @@ import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Building2, Mail, User, MapPin, Target, AlertCircle, Linkedin, ExternalLink, ArrowLeft } from "lucide-react";
 import { JurorEvaluationsList } from '@/components/jurors/JurorEvaluationsList';
-import { JuryRoundStatusBadges } from '@/components/common/JuryRoundStatusBadges';
+import { JurorStatusBadge } from '@/components/common/JuryRoundStatusBadges';
 import { RoundProgressTab } from '@/components/jurors/RoundProgressTab';
-import { calculateJuryRoundStatus, getJuryAssignmentCounts } from '@/utils/juryStatusUtils';
-import type { JuryStatusType } from '@/utils/statusUtils';
+import { calculateJurorStatus, getJuryAssignmentCounts, type StatusType } from '@/utils/juryStatusUtils';
 
 interface Juror {
   id: string;
@@ -181,12 +180,11 @@ const JurorProfile = () => {
                    <Badge variant={status.variant} className="capitalize">
                      {status.text}
                    </Badge>
-                   <JuryRoundStatusBadges 
-                     jurorId={juror.id}
-                     screeningStatus={screeningStatus}
-                     pitchingStatus={pitchingStatus}
-                     showRoundLabels={true}
-                   />
+              <JurorStatusBadge 
+                jurorId={id}
+                showCurrentRound={true}
+                className="mt-2"
+              />
                    {juror.company && (
                      <Badge variant="secondary">{juror.company}</Badge>
                    )}

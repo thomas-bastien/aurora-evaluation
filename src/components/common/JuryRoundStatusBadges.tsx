@@ -1,86 +1,69 @@
-import { useState, useEffect } from 'react';
-import { StatusBadge } from './StatusBadge';
-import { calculateJuryRoundStatus } from '@/utils/juryStatusUtils';
-import type { JuryStatusType } from '@/utils/statusUtils';
+import React, { useEffect, useState } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 import { Skeleton } from '@/components/ui/skeleton';
+import { StatusBadge } from './StatusBadge';
+import { calculateJurorStatus, type StatusType } from '@/utils/juryStatusUtils';
 
-interface JuryRoundStatusBadgesProps {
+interface JurorStatusBadgeProps {
   jurorId: string;
-  screeningStatus?: JuryStatusType;
-  pitchingStatus?: JuryStatusType;
-  showRoundLabels?: boolean;
+  status?: StatusType;
+  showCurrentRound?: boolean;
   className?: string;
 }
 
-export function JuryRoundStatusBadges({ 
+export function JurorStatusBadge({ 
   jurorId, 
-  screeningStatus, 
-  pitchingStatus, 
-  showRoundLabels = true,
+  status, 
+  showCurrentRound = false, 
   className 
-}: JuryRoundStatusBadgesProps) {
-  const [screeningStatusState, setScreeningStatusState] = useState<JuryStatusType | null>(screeningStatus || null);
-  const [pitchingStatusState, setPitchingStatusState] = useState<JuryStatusType | null>(pitchingStatus || null);
+}: JurorStatusBadgeProps) {
+  const [internalStatus, setInternalStatus] = useState<StatusType | null>(null);
+  const [currentRound, setCurrentRound] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    // If statuses are not provided as props, fetch them
-    if (!screeningStatus || !pitchingStatus) {
-      fetchStatuses();
-    }
-  }, [jurorId, screeningStatus, pitchingStatus]);
+    const fetchStatus = async () => {
+      if (status) return;
+      
+      setLoading(true);
+      try {
+        // Get current round info if needed
+        if (showCurrentRound) {
+          const { data: activeRound } = await supabase
+            .from('rounds')
+            .select('name')
+            .eq('status', 'active')
+            .single();
+          setCurrentRound(activeRound?.name || null);
+        }
+        
+        const statusResult = await calculateJurorStatus(jurorId);
+        setInternalStatus(statusResult);
+      } catch (error) {
+        console.error('Error fetching juror status:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const fetchStatuses = async () => {
-    setLoading(true);
-    try {
-      const [screening, pitching] = await Promise.all([
-        screeningStatus || calculateJuryRoundStatus(jurorId, 'screening'),
-        pitchingStatus || calculateJuryRoundStatus(jurorId, 'pitching')
-      ]);
+    fetchStatus();
+  }, [jurorId, status, showCurrentRound]);
 
-      if (!screeningStatus) setScreeningStatusState(screening);
-      if (!pitchingStatus) setPitchingStatusState(pitching);
-    } catch (error) {
-      console.error('Error fetching jury round statuses:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const finalStatus = status || internalStatus;
 
-  if (loading) {
-    return (
-      <div className={`flex gap-2 ${className || ''}`}>
-        {showRoundLabels ? (
-          <>
-            <Skeleton className="h-6 w-24" />
-            <Skeleton className="h-6 w-24" />
-          </>
-        ) : (
-          <>
-            <Skeleton className="h-6 w-20" />
-            <Skeleton className="h-6 w-20" />
-          </>
-        )}
-      </div>
-    );
+  if (loading && !finalStatus) {
+    return <Skeleton className={`h-6 w-20 ${className || ''}`} />;
   }
 
+  if (!finalStatus) return null;
+
   return (
-    <div className={`flex gap-2 ${className || ''}`}>
-      {screeningStatusState && (
-        <StatusBadge 
-          status={screeningStatusState}
-          roundName={showRoundLabels ? 'screening' : undefined}
-          showRoundContext={showRoundLabels}
-        />
-      )}
-      {pitchingStatusState && (
-        <StatusBadge 
-          status={pitchingStatusState}
-          roundName={showRoundLabels ? 'pitching' : undefined}
-          showRoundContext={showRoundLabels}
-        />
-      )}
-    </div>
+    <StatusBadge 
+      status={finalStatus}
+      roundName={showCurrentRound ? currentRound : undefined}
+      showRoundContext={showCurrentRound}
+      className={className}
+      isJurorStatus={true}
+    />
   );
 }

@@ -1,7 +1,9 @@
-// Utility functions for calculating jury round-specific statuses
+// Utility functions for calculating unified jury status
 
 import { supabase } from '@/integrations/supabase/client';
-import type { JuryStatusType } from './statusUtils';
+import type { StatusType } from './statusUtils';
+
+export type { StatusType };
 
 interface JuryAssignmentCounts {
   assigned: number;
@@ -10,11 +12,32 @@ interface JuryAssignmentCounts {
   notStarted: number;
 }
 
-// Calculate jury status for a specific round
-export async function calculateJuryRoundStatus(
+// Calculate unified jury status based on current active round
+export async function calculateJurorStatus(jurorId: string): Promise<StatusType> {
+  try {
+    // Get current active round
+    const { data: activeRound } = await supabase
+      .from('rounds')
+      .select('name')
+      .eq('status', 'active')
+      .single();
+
+    if (!activeRound) {
+      return 'inactive';
+    }
+
+    return calculateJuryRoundStatus(jurorId, activeRound.name as 'screening' | 'pitching');
+  } catch (error) {
+    console.error('Error calculating unified jury status:', error);
+    return 'inactive';
+  }
+}
+
+// Calculate jury status for a specific round (internal helper)
+async function calculateJuryRoundStatus(
   jurorId: string, 
   roundName: 'screening' | 'pitching'
-): Promise<JuryStatusType> {
+): Promise<StatusType> {
   try {
     // Get juror data first to check if they have a user_id
     const { data: jurorData, error: jurorError } = await supabase
@@ -43,13 +66,13 @@ export async function calculateJuryRoundStatus(
       return 'completed';
     }
 
-    // If some evaluations started (completed or in progress), status is in_progress
+    // If some evaluations started (completed or in progress), status is under_review
     if (counts.completed > 0 || counts.inProgress > 0) {
-      return 'in_progress';
+      return 'under_review';
     }
 
-    // If assignments exist but no evaluations started, status is not_started
-    return 'not_started';
+    // If assignments exist but no evaluations started, status is pending
+    return 'pending';
   } catch (error) {
     console.error('Error calculating jury round status:', error);
     return 'inactive';
@@ -123,12 +146,43 @@ export async function getJuryAssignmentCounts(
   }
 }
 
-// Calculate status for multiple jurors efficiently
-export async function calculateMultipleJuryStatuses(
+// Calculate unified status for multiple jurors efficiently
+export async function calculateMultipleJurorStatuses(
+  jurorIds: string[]
+): Promise<Record<string, { status: StatusType; counts: JuryAssignmentCounts }>> {
+  try {
+    // Get current active round
+    const { data: activeRound } = await supabase
+      .from('rounds')
+      .select('name')
+      .eq('status', 'active')
+      .single();
+
+    if (!activeRound) {
+      // Return inactive status for all jurors if no active round
+      const results: Record<string, { status: StatusType; counts: JuryAssignmentCounts }> = {};
+      jurorIds.forEach(id => {
+        results[id] = {
+          status: 'inactive',
+          counts: { assigned: 0, completed: 0, inProgress: 0, notStarted: 0 }
+        };
+      });
+      return results;
+    }
+
+    return calculateMultipleJuryRoundStatuses(jurorIds, activeRound.name as 'screening' | 'pitching');
+  } catch (error) {
+    console.error('Error calculating multiple unified jury statuses:', error);
+    return {};
+  }
+}
+
+// Calculate status for multiple jurors for a specific round (internal helper)
+async function calculateMultipleJuryRoundStatuses(
   jurorIds: string[],
   roundName: 'screening' | 'pitching'
-): Promise<Record<string, { status: JuryStatusType; counts: JuryAssignmentCounts }>> {
-  const results: Record<string, { status: JuryStatusType; counts: JuryAssignmentCounts }> = {};
+): Promise<Record<string, { status: StatusType; counts: JuryAssignmentCounts }>> {
+  const results: Record<string, { status: StatusType; counts: JuryAssignmentCounts }> = {};
 
   try {
     // Get all jurors data in one query
@@ -171,7 +225,7 @@ export async function calculateMultipleJuryStatuses(
       const assigned = assignments.length;
 
       if (!juror.user_id || assigned === 0) {
-        const status: JuryStatusType = assigned === 0 ? 'inactive' : 'not_started';
+        const status: StatusType = assigned === 0 ? 'inactive' : 'pending';
         results[juror.id] = {
           status,
           counts: {
@@ -189,13 +243,13 @@ export async function calculateMultipleJuryStatuses(
       const inProgress = evaluations.filter(e => e.status === 'draft').length;
       const notStarted = Math.max(0, assigned - completed - inProgress);
 
-      let status: JuryStatusType;
+      let status: StatusType;
       if (completed === assigned) {
         status = 'completed';
       } else if (completed > 0 || inProgress > 0) {
-        status = 'in_progress';
+        status = 'under_review';
       } else {
-        status = 'not_started';
+        status = 'pending';
       }
 
       results[juror.id] = {

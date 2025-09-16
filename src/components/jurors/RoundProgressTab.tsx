@@ -102,7 +102,7 @@ export function RoundProgressTab({ jurorId, screeningStatus, pitchingStatus }: R
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
             <span className="text-sm font-medium">Status</span>
-            <StatusBadge status={screeningStatus} isJuryStatus={true} />
+            <StatusBadge status={screeningStatus} isJurorStatus={true} />
           </div>
           
           {screeningData && screeningData.assigned > 0 ? (
@@ -154,7 +154,7 @@ export function RoundProgressTab({ jurorId, screeningStatus, pitchingStatus }: R
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
             <span className="text-sm font-medium">Status</span>
-            <StatusBadge status={pitchingStatus} isJuryStatus={true} />
+            <StatusBadge status={pitchingStatus} isJurorStatus={true} />
           </div>
           
           {pitchingData && pitchingData.assigned > 0 ? (

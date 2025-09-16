@@ -1,24 +1,21 @@
 import { Badge } from '@/components/ui/badge';
-import { getStatusLabel, getStatusColor, getJuryStatusLabel, getJuryStatusColor, type StatusType, type JuryStatusType } from '@/utils/statusUtils';
+import { getStatusLabel, getStatusColor, getJurorStatusLabel, type StatusType } from '@/utils/statusUtils';
 
 interface StatusBadgeProps {
-  status: StatusType | JuryStatusType | string;
+  status: StatusType | string;
   roundName?: string;
   showRoundContext?: boolean;
   className?: string;
-  isJuryStatus?: boolean;
+  isJurorStatus?: boolean;
 }
 
-export function StatusBadge({ status, roundName, showRoundContext, className, isJuryStatus }: StatusBadgeProps) {
-  // Determine if this is a jury status based on prop or status value
-  const isJury = isJuryStatus || ['inactive', 'not_started', 'in_progress', 'completed'].includes(status);
-  
-  const baseLabel = isJury ? getJuryStatusLabel(status) : getStatusLabel(status);
+export function StatusBadge({ status, roundName, showRoundContext, className, isJurorStatus }: StatusBadgeProps) {
+  const baseLabel = isJurorStatus ? getJurorStatusLabel(status as StatusType) : getStatusLabel(status);
   const label = showRoundContext && roundName 
     ? `${baseLabel} (${roundName === 'screening' ? 'Screening' : 'Pitching'})`
     : baseLabel;
     
-  const colorClasses = isJury ? getJuryStatusColor(status) : getStatusColor(status);
+  const colorClasses = getStatusColor(status);
 
   return (
     <Badge 

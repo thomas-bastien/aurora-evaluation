@@ -19,9 +19,8 @@ import { CSVUploadModal } from '@/components/jurors/CSVUploadModal';
 import { DraftModal } from '@/components/jurors/DraftModal';
 import { JurorFormModal } from '@/components/jurors/JurorFormModal';
 import { downloadJurorsCSVTemplate } from '@/utils/jurorsCsvTemplate';
-import { JuryRoundStatusBadges } from '@/components/common/JuryRoundStatusBadges';
-import { calculateMultipleJuryStatuses } from '@/utils/juryStatusUtils';
-import type { JuryStatusType } from '@/utils/statusUtils';
+import { JurorStatusBadge } from '@/components/common/JuryRoundStatusBadges';
+import { calculateMultipleJurorStatuses, type StatusType } from '@/utils/juryStatusUtils';
 
 interface Juror {
   id: string;
@@ -41,8 +40,7 @@ interface Juror {
 }
 
 interface JurorWithStatuses extends Juror {
-  screeningStatus?: JuryStatusType;
-  pitchingStatus?: JuryStatusType;
+  status?: StatusType;
 }
 
 export default function JurorsList() {
@@ -98,10 +96,7 @@ export default function JurorsList() {
         
         // Calculate round-specific statuses for all jurors
         const jurorIds = jurorsWithStatuses.map(j => j.id);
-        const [screeningStatuses, pitchingStatuses] = await Promise.all([
-          calculateMultipleJuryStatuses(jurorIds, 'screening'),
-          calculateMultipleJuryStatuses(jurorIds, 'pitching')
-        ]);
+    const statuses = await calculateMultipleJurorStatuses(jurorIds);
         
         // Enrich jurors with round statuses
         const enrichedJurors = jurorsWithStatuses.map(juror => ({
@@ -668,20 +663,11 @@ export default function JurorsList() {
                       </div>
                     </TableCell>
                      <TableCell>
-                       <JuryRoundStatusBadges 
-                         jurorId={juror.id}
-                         screeningStatus={juror.screeningStatus}
-                         pitchingStatus={'inactive'}
-                         showRoundLabels={false}
-                       />
-                     </TableCell>
-                     <TableCell>
-                       <JuryRoundStatusBadges 
-                         jurorId={juror.id}
-                         screeningStatus={'inactive'}
-                         pitchingStatus={juror.pitchingStatus}
-                         showRoundLabels={false}
-                       />
+                      <JurorStatusBadge 
+                        jurorId={juror.id}
+                        status={jurorStatuses[juror.id]?.status}
+                        showCurrentRound={true}
+                      />
                      </TableCell>
                     <TableCell className="text-muted-foreground">
                       {new Date(juror.created_at).toLocaleDateString()}
