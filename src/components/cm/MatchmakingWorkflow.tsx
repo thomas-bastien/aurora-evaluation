@@ -4,11 +4,13 @@ import { getMatchmakingCounts } from '@/utils/countsUtils';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle, Building2, Users, CheckCircle2, Eye, Check } from "lucide-react";
+import { AlertCircle, Building2, Users, CheckCircle2, Eye, Check, Wand2 } from "lucide-react";
 import { toast } from "sonner";
 import { StartupAssignmentModal } from "@/components/matchmaking/StartupAssignmentModal";
 import { AssignmentSummary } from "@/components/matchmaking/AssignmentSummary";
+import { AutoAssignmentReviewPanel } from "@/components/matchmaking/AutoAssignmentReviewPanel";
 import { StatusBadge } from "@/components/common/StatusBadge";
+import { generateAutoAssignments, AutoAssignmentProposal, WorkloadDistribution } from '@/utils/autoAssignmentEngine';
 
 interface Startup {
   id: string;
@@ -21,6 +23,9 @@ interface Startup {
   contact_email?: string;
   status?: string;
   roundStatus?: string;
+  region?: string;
+  verticals?: string[];
+  regions?: string[];
 }
 
 interface Juror {
@@ -30,6 +35,9 @@ interface Juror {
   company: string;
   job_title: string;
   calendly_link?: string;
+  preferred_regions?: string[];
+  target_verticals?: string[];
+  preferred_stages?: string[];
 }
 
 interface Assignment {
@@ -50,8 +58,12 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
   const [selectedStartup, setSelectedStartup] = useState<Startup | null>(null);
   const [showAssignmentModal, setShowAssignmentModal] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
+  const [showAutoAssignmentReview, setShowAutoAssignmentReview] = useState(false);
+  const [autoAssignmentProposals, setAutoAssignmentProposals] = useState<AutoAssignmentProposal[]>([]);
+  const [workloadDistribution, setWorkloadDistribution] = useState<WorkloadDistribution[]>([]);
   const [isConfirmed, setIsConfirmed] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [autoAssignLoading, setAutoAssignLoading] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -328,6 +340,83 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
     setShowSummary(true);
   };
 
+  const handleAutoAssign = async () => {
+    try {
+      setAutoAssignLoading(true);
+      
+      // Find unassigned startups
+      const requiredAssignments = currentRound === 'pitchingRound' ? 2 : 3;
+      const unassignedStartups = startups.filter(startup => 
+        startup.roundStatus !== 'rejected' && 
+        getStartupAssignmentCount(startup.id) < requiredAssignments
+      );
+
+      if (unassignedStartups.length === 0) {
+        toast.error('All startups are already fully assigned');
+        return;
+      }
+
+      // Convert data to engine format
+      const engineStartups = unassignedStartups.map(s => ({
+        id: s.id,
+        name: s.name,
+        industry: s.industry || '',
+        stage: s.stage || '',
+        region: s.location || '', // Use location as region fallback
+        verticals: s.industry ? [s.industry] : [],
+        regions: s.location ? [s.location] : []
+      }));
+
+      const engineJurors = jurors.map(j => ({
+        id: j.id,
+        name: j.name,
+        email: j.email,
+        company: j.company,
+        job_title: j.job_title,
+        preferred_regions: j.preferred_regions || [],
+        target_verticals: j.target_verticals || [],
+        preferred_stages: j.preferred_stages || []
+      }));
+
+      // Generate auto-assignment proposals
+      const roundName = currentRound === 'screeningRound' ? 'screening' : 'pitching';
+      const { proposals, workloadDistribution: distribution } = await generateAutoAssignments(
+        engineStartups,
+        engineJurors,
+        assignments,
+        roundName
+      );
+
+      if (proposals.length === 0) {
+        toast.error('No auto-assignments could be generated');
+        return;
+      }
+
+      setAutoAssignmentProposals(proposals);
+      setWorkloadDistribution(distribution);
+      setShowAutoAssignmentReview(true);
+
+      toast.success(`Generated assignments for ${proposals.length} startups`);
+    } catch (error) {
+      console.error('Error generating auto-assignments:', error);
+      toast.error('Failed to generate auto-assignments');
+    } finally {
+      setAutoAssignLoading(false);
+    }
+  };
+
+  const handleAutoAssignmentApprove = (newAssignments: Assignment[]) => {
+    setAssignments(prev => [...prev, ...newAssignments]);
+    setShowAutoAssignmentReview(false);
+    toast.success(`Applied ${newAssignments.length} auto-assignments successfully`);
+  };
+
+  const handleAutoAssignmentCancel = () => {
+    setShowAutoAssignmentReview(false);
+    setAutoAssignmentProposals([]);
+    setWorkloadDistribution([]);
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8">
@@ -438,6 +527,30 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
 
           {/* Action Buttons */}
           <div className="flex gap-4 mb-6">
+            {/* Auto-Assign Button - Only show when there are unassigned startups */}
+            {(() => {
+              const requiredAssignments = currentRound === 'pitchingRound' ? 2 : 3;
+              const unassignedCount = startups.filter(startup => 
+                startup.roundStatus !== 'rejected' && 
+                getStartupAssignmentCount(startup.id) < requiredAssignments
+              ).length;
+              
+              return unassignedCount > 0 && (
+                <Button 
+                  onClick={handleAutoAssign}
+                  variant="outline"
+                  disabled={autoAssignLoading || jurors.length === 0}
+                  className="flex items-center gap-2"
+                >
+                  <Wand2 className="w-4 h-4" />
+                  {autoAssignLoading 
+                    ? 'Generating...' 
+                    : `Auto-Assign Remaining (${unassignedCount})`
+                  }
+                </Button>
+              );
+            })()}
+
             <Button 
               onClick={handleViewSummary}
               variant="outline"
@@ -581,6 +694,16 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
         open={showSummary}
         onOpenChange={setShowSummary}
         isConfirmed={isConfirmed}
+      />
+
+      {/* Auto-Assignment Review Panel */}
+      <AutoAssignmentReviewPanel
+        proposals={autoAssignmentProposals}
+        workloadDistribution={workloadDistribution}
+        open={showAutoAssignmentReview}
+        onOpenChange={setShowAutoAssignmentReview}
+        onApprove={handleAutoAssignmentApprove}
+        onCancel={handleAutoAssignmentCancel}
       />
     </div>
   );
