@@ -52,8 +52,7 @@ export default function JurorsList() {
   const [regionFilter, setRegionFilter] = useState('');
   const [verticalFilter, setVerticalFilter] = useState('');
   const [stageFilter, setStageFilter] = useState('');
-  const [screeningStatusFilter, setScreeningStatusFilter] = useState('');
-  const [pitchingStatusFilter, setPitchingStatusFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
   const [csvModalOpen, setCsvModalOpen] = useState(false);
   const [draftModalOpen, setDraftModalOpen] = useState(false);
   const [formModalOpen, setFormModalOpen] = useState(false);
@@ -75,7 +74,7 @@ export default function JurorsList() {
 
   useEffect(() => {
     filterJurors();
-  }, [jurors, searchTerm, companyFilter, regionFilter, verticalFilter, stageFilter, screeningStatusFilter, pitchingStatusFilter]);
+  }, [jurors, searchTerm, companyFilter, regionFilter, verticalFilter, stageFilter, statusFilter]);
 
   const fetchJurors = async () => {
     try {
@@ -118,22 +117,6 @@ export default function JurorsList() {
     }
   };
 
-  const getJurorStatus = (juror: Juror) => {
-    if (juror.user_id) {
-      return { text: 'Active', variant: 'default' as const, color: 'bg-green-100 text-green-800' };
-    } else if (juror.invitation_sent_at) {
-      const now = new Date();
-      const expiresAt = juror.invitation_expires_at ? new Date(juror.invitation_expires_at) : null;
-      
-      if (expiresAt && now > expiresAt) {
-        return { text: 'Invitation Expired', variant: 'destructive' as const, color: 'bg-red-100 text-red-800' };
-      } else {
-        return { text: 'Invitation Sent', variant: 'secondary' as const, color: 'bg-yellow-100 text-yellow-800' };
-      }
-    } else {
-      return { text: 'Not Invited', variant: 'outline' as const, color: 'bg-gray-100 text-gray-800' };
-    }
-  };
 
   const filterJurors = () => {
     let filtered = jurors;
@@ -169,6 +152,11 @@ export default function JurorsList() {
       );
     }
 
+    if (statusFilter && statusFilter !== 'all') {
+      filtered = filtered.filter(juror =>
+        juror.progressiveStatus?.status === statusFilter
+      );
+    }
 
     setFilteredJurors(filtered);
   };
@@ -532,32 +520,21 @@ export default function JurorsList() {
                 </SelectContent>
               </Select>
 
-              <Select value={screeningStatusFilter || 'all'} onValueChange={(value) => setScreeningStatusFilter(value === 'all' ? '' : value)}>
+              <Select value={statusFilter || 'all'} onValueChange={(value) => setStatusFilter(value === 'all' ? '' : value)}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Screening status" />
+                  <SelectValue placeholder="Filter by status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Screening</SelectItem>
+                  <SelectItem value="all">All Statuses</SelectItem>
+                  <SelectItem value="not_invited">Not Invited</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="under_review">In Progress</SelectItem>
+                  <SelectItem value="completed">Completed</SelectItem>
                   <SelectItem value="inactive">Inactive</SelectItem>
-                  <SelectItem value="not_started">Not Started</SelectItem>
-                  <SelectItem value="in_progress">In Progress</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
                 </SelectContent>
               </Select>
 
-              <Select value={pitchingStatusFilter || 'all'} onValueChange={(value) => setPitchingStatusFilter(value === 'all' ? '' : value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Pitching status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Pitching</SelectItem>
-                  <SelectItem value="not_started">Not Started</SelectItem>
-                  <SelectItem value="in_progress">In Progress</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
-                </SelectContent>
-              </Select>
-
-              {(searchTerm || companyFilter || regionFilter || verticalFilter || stageFilter || screeningStatusFilter || pitchingStatusFilter) && (
+              {(searchTerm || companyFilter || regionFilter || verticalFilter || stageFilter || statusFilter) && (
                 <Button 
                   variant="outline" 
                   onClick={() => {
@@ -566,8 +543,7 @@ export default function JurorsList() {
                     setRegionFilter('');
                     setVerticalFilter('');
                     setStageFilter('');
-                    setScreeningStatusFilter('');
-                    setPitchingStatusFilter('');
+                    setStatusFilter('');
                   }}
                   className="md:col-span-6"
                 >
@@ -601,8 +577,7 @@ export default function JurorsList() {
                   <TableHead>Job Title</TableHead>
                   <TableHead>Company</TableHead>
                   <TableHead>Preferences</TableHead>
-                   <TableHead>Screening Status</TableHead>
-                   <TableHead>Pitching Status</TableHead>
+                  <TableHead>Status</TableHead>
                    <TableHead>Member Since</TableHead>
                   {isAdmin && <TableHead className="w-[140px]">Actions</TableHead>}
                 </TableRow>

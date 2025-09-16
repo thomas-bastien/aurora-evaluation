@@ -146,8 +146,6 @@ const JurorProfile = () => {
     );
   }
 
-  const status = getJurorStatus(juror);
-
   return (
     <div className="min-h-screen bg-background">
       <DashboardHeader />
@@ -170,34 +168,31 @@ const JurorProfile = () => {
                 <p className="text-lg text-muted-foreground mb-4">
                   {juror.job_title ? `${juror.job_title}${juror.company ? ` at ${juror.company}` : ''}` : 'Juror Profile'}
                 </p>
-                 <div className="flex items-center gap-4 mb-4">
-                   <Badge variant={status.variant} className="capitalize">
-                     {status.text}
-                   </Badge>
-              <JurorStatusBadge 
-                jurorId={id!}
-                progressiveStatus={progressiveStatus}
-                className="mt-2"
-              />
-                   {juror.company && (
-                     <Badge variant="secondary">{juror.company}</Badge>
-                   )}
-                   {juror.preferred_regions && juror.preferred_regions.length > 0 && (
-                     <div className="flex gap-2">
-                       {juror.preferred_regions.slice(0, 2).map((region, index) => (
-                         <Badge key={index} variant="outline" className="text-xs">
-                           {region}
-                         </Badge>
-                       ))}
-                       {juror.preferred_regions.length > 2 && (
-                         <Badge variant="outline" className="text-xs">
-                           +{juror.preferred_regions.length - 2} more
-                         </Badge>
-                       )}
-                     </div>
-                   )}
-                 </div>
+                <JurorStatusBadge 
+                  jurorId={id!}
+                  progressiveStatus={progressiveStatus}
+                  className="mb-4"
+                />
               </div>
+            </div>
+            <div className="flex items-center gap-4">
+              {juror.company && (
+                <Badge variant="secondary">{juror.company}</Badge>
+              )}
+              {juror.preferred_regions && juror.preferred_regions.length > 0 && (
+                <div className="flex gap-2">
+                  {juror.preferred_regions.slice(0, 2).map((region, index) => (
+                    <Badge key={index} variant="outline" className="text-xs">
+                      {region}
+                    </Badge>
+                  ))}
+                  {juror.preferred_regions.length > 2 && (
+                    <Badge variant="outline" className="text-xs">
+                      +{juror.preferred_regions.length - 2}
+                    </Badge>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -216,7 +211,7 @@ const JurorProfile = () => {
               <Card>
                 <CardHeader>
                   <CardTitle>Contact Information</CardTitle>
-                  <CardDescription>{status.description}</CardDescription>
+                  <CardDescription>Jury member profile information</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="flex items-center gap-2">
@@ -248,46 +243,6 @@ const JurorProfile = () => {
                       </Button>
                     </div>
                   )}
-                </CardContent>
-              </Card>
-
-              {/* Status Information */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Status</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">Current Status</span>
-                    <Badge variant={status.variant} className="capitalize">
-                      {status.text}
-                    </Badge>
-                  </div>
-                  
-                  {juror.invitation_sent_at && (
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium">Invitation Sent</span>
-                      <span className="text-sm text-muted-foreground">
-                        {new Date(juror.invitation_sent_at).toLocaleDateString()}
-                      </span>
-                    </div>
-                  )}
-                  
-                  {juror.invitation_expires_at && (
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium">Invitation Expires</span>
-                      <span className="text-sm text-muted-foreground">
-                        {new Date(juror.invitation_expires_at).toLocaleDateString()}
-                      </span>
-                    </div>
-                  )}
-                  
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">Added On</span>
-                    <span className="text-sm text-muted-foreground">
-                      {new Date(juror.created_at).toLocaleDateString()}
-                    </span>
-                  </div>
                 </CardContent>
               </Card>
             </div>

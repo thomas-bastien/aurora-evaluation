@@ -1,6 +1,6 @@
 // Centralized status utilities for consistent status handling across the app
 
-export type StatusType = 'pending' | 'under_review' | 'selected' | 'rejected' | 'not_evaluated' | 'draft' | 'submitted' | 'completed' | 'inactive';
+export type StatusType = 'pending' | 'under_review' | 'selected' | 'rejected' | 'not_evaluated' | 'draft' | 'submitted' | 'completed' | 'inactive' | 'not_invited';
 
 export const STATUS_LABELS: Record<StatusType, string> = {
   pending: 'Pending',
@@ -11,7 +11,8 @@ export const STATUS_LABELS: Record<StatusType, string> = {
   draft: 'Draft',
   submitted: 'Evaluated',
   completed: 'Completed',
-  inactive: 'Inactive'
+  inactive: 'Inactive',
+  not_invited: 'Not Invited'
 };
 
 export const STATUS_COLORS: Record<StatusType, string> = {
@@ -23,7 +24,8 @@ export const STATUS_COLORS: Record<StatusType, string> = {
   draft: 'bg-orange-100 text-orange-800 border-orange-200 hover:bg-orange-200',
   submitted: 'bg-emerald-100 text-emerald-800 border-emerald-200 hover:bg-emerald-200',
   completed: 'bg-green-100 text-green-800 border-green-200 hover:bg-green-200',
-  inactive: 'bg-gray-100 text-gray-800 border-gray-200 hover:bg-gray-200'
+  inactive: 'bg-gray-100 text-gray-800 border-gray-200 hover:bg-gray-200',
+  not_invited: 'bg-slate-100 text-slate-800 border-slate-200 hover:bg-slate-200'
 };
 
 export const STATUS_TEXT_COLORS: Record<StatusType, string> = {
@@ -35,14 +37,16 @@ export const STATUS_TEXT_COLORS: Record<StatusType, string> = {
   draft: 'text-orange-600',
   submitted: 'text-emerald-600',
   completed: 'text-green-600',
-  inactive: 'text-gray-600'
+  inactive: 'text-gray-600',
+  not_invited: 'text-slate-600'
 };
 
 export const JUROR_STATUS_LABELS = {
   inactive: 'Inactive',
   pending: 'Not Started', 
   under_review: 'In Progress',
-  completed: 'Completed'
+  completed: 'Completed',
+  not_invited: 'Not Invited'
 } as const;
 export type JuryStatusType = 'inactive' | 'not_started' | 'in_progress' | 'completed';
 

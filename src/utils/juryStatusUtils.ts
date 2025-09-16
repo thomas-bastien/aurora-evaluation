@@ -20,6 +20,29 @@ export interface ProgressiveJurorStatus {
 
 // Calculate progressive jury status - screening must be completed before pitching
 export async function calculateProgressiveJurorStatus(jurorId: string): Promise<ProgressiveJurorStatus> {
+  // First, check if juror has been invited
+  const { data: juror } = await supabase
+    .from('jurors')
+    .select('invitation_sent_at, user_id')
+    .eq('id', jurorId)
+    .single();
+
+  if (!juror?.invitation_sent_at) {
+    return {
+      status: 'not_invited' as StatusType,
+      currentRound: 'screening',
+      completedRounds: []
+    };
+  }
+
+  if (!juror.user_id) {
+    return {
+      status: 'pending' as StatusType,
+      currentRound: 'screening', 
+      completedRounds: []
+    };
+  }
+
   try {
     // Get counts for both rounds
     const [screeningCounts, pitchingCounts] = await Promise.all([
@@ -37,11 +60,11 @@ export async function calculateProgressiveJurorStatus(jurorId: string): Promise<
 
     // Progressive logic: pitching only available after screening completion
     let status: StatusType = 'inactive';
-    let currentRound: 'screening' | 'pitching' | null = null;
+    let currentRound: 'screening' | 'pitching' = 'screening';
 
     // If no assignments in either round, juror is inactive
     if (screeningCounts.assigned === 0 && pitchingCounts.assigned === 0) {
-      return { status: 'inactive', currentRound: null, completedRounds };
+      return { status: 'inactive', currentRound: 'screening', completedRounds };
     }
 
     // Check current status based on progression
@@ -75,7 +98,7 @@ export async function calculateProgressiveJurorStatus(jurorId: string): Promise<
     return { status, currentRound, completedRounds };
   } catch (error) {
     console.error('Error calculating progressive jury status:', error);
-    return { status: 'inactive', currentRound: null, completedRounds: [] };
+    return { status: 'inactive', currentRound: 'screening', completedRounds: [] };
   }
 }
 
@@ -254,6 +277,31 @@ export async function calculateMultipleProgressiveJurorStatuses(
 
     // Process each juror
     for (const juror of jurorsData || []) {
+      // First, check if juror has been invited
+      const { data: jurorInvite } = await supabase
+        .from('jurors')
+        .select('invitation_sent_at, user_id')
+        .eq('id', juror.id)
+        .single();
+
+      if (!jurorInvite?.invitation_sent_at) {
+        results[juror.id] = {
+          status: 'not_invited' as StatusType,
+          currentRound: 'screening',
+          completedRounds: []
+        };
+        continue;
+      }
+
+      if (!jurorInvite.user_id) {
+        results[juror.id] = {
+          status: 'pending' as StatusType,
+          currentRound: 'screening',
+          completedRounds: []
+        };
+        continue;
+      }
+
       const screeningAssigned = screeningAssignments?.filter(a => a.juror_id === juror.id).length || 0;
       const pitchingAssigned = pitchingAssignments?.filter(a => a.juror_id === juror.id).length || 0;
 
