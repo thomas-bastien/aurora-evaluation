@@ -412,7 +412,7 @@ const Dashboard = () => {
                     status={profile?.calendly_link ? 'completed' : 'upcoming'}
                     statusText={profile?.calendly_link ? 'Calendly link added' : 'Calendly link needed'}
                     icon={Calendar}
-                    onClick={() => navigate('/juror-profile')}
+                    onClick={() => navigate('/profile')}
                     role="vc"
                   />
                   <FunnelStage
