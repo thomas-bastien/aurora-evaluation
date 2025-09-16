@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { FilterPanel } from "@/components/common/FilterPanel";
 import { StartupEvaluationModal } from "@/components/evaluation/StartupEvaluationModal";
 import { JurorStatusBadge } from '@/components/common/JuryRoundStatusBadges';
-import { calculateMultipleJurorRoundStatuses, type UnifiedJurorStatus } from '@/utils/juryStatusUtils';
+import { calculateMultipleProgressiveJurorStatuses, type ProgressiveJurorStatus } from '@/utils/juryStatusUtils';
 import { formatScore } from "@/lib/utils";
 import { 
   Search, 
@@ -35,7 +35,7 @@ interface JurorProgress {
   pendingCount: number;
   completionRate: number;
   lastActivity: string;
-  status: UnifiedJurorStatus;
+  progressiveStatus: ProgressiveJurorStatus;
 }
 
 interface JurorProgressMonitoringProps {
@@ -80,10 +80,9 @@ export const JurorProgressMonitoring = ({ currentRound }: JurorProgressMonitorin
 
       if (error) throw error;
 
-      // Calculate unified statuses for all jurors
+      // Calculate progressive statuses for all jurors
       const jurorIds = jurorsData?.map(j => j.id) || [];
-      const roundName = currentRound === 'screeningRound' ? 'screening' : 'pitching';
-      const jurorStatuses = await calculateMultipleJurorRoundStatuses(jurorIds, roundName);
+      const jurorProgressiveStatuses = await calculateMultipleProgressiveJurorStatuses(jurorIds);
 
       // Fetch all evaluations for these jurors (only those with user_id)
       const jurorUserIds = jurorsData?.filter(j => j.user_id).map(j => j.user_id) || [];  
@@ -119,8 +118,12 @@ export const JurorProgressMonitoring = ({ currentRound }: JurorProgressMonitorin
           .filter(evaluation => evaluation.last_modified_at)
           .sort((a, b) => new Date(b.last_modified_at!).getTime() - new Date(a.last_modified_at!).getTime())[0];
         
-        // Use unified status from our calculation
-        const status = jurorStatuses[juror.id] || 'pending';
+        // Use progressive status from our calculation
+        const progressiveStatus = jurorProgressiveStatuses[juror.id] || {
+          status: 'pending',
+          currentRound: 'screening',
+          completedRounds: []
+        };
         
         return {
           id: juror.id,
@@ -133,7 +136,7 @@ export const JurorProgressMonitoring = ({ currentRound }: JurorProgressMonitorin
           pendingCount,
           completionRate,
           lastActivity: lastModified?.last_modified_at || 'Never',
-          status
+          progressiveStatus
         };
       }) || [];
 
@@ -158,7 +161,7 @@ export const JurorProgressMonitoring = ({ currentRound }: JurorProgressMonitorin
     }
 
     if (statusFilter !== 'all') {
-      filtered = filtered.filter(juror => juror.status === statusFilter);
+      filtered = filtered.filter(juror => juror.progressiveStatus.status === statusFilter);
     }
 
     setFilteredJurors(filtered);
@@ -244,7 +247,7 @@ export const JurorProgressMonitoring = ({ currentRound }: JurorProgressMonitorin
   };
 
   const sendBulkReminders = async () => {
-    const incompleteJurors = filteredJurors.filter(j => j.status !== 'completed');
+    const incompleteJurors = filteredJurors.filter(j => j.progressiveStatus.status !== 'completed');
     
     try {
       for (const juror of incompleteJurors) {
@@ -361,15 +364,15 @@ export const JurorProgressMonitoring = ({ currentRound }: JurorProgressMonitorin
             <div className="text-sm text-muted-foreground">Total Jurors</div>
           </div>
           <div className="text-center p-4 bg-success/10 rounded-lg">
-            <div className="text-2xl font-bold text-success">{jurors.filter(j => j.status === 'completed').length}</div>
+            <div className="text-2xl font-bold text-success">{jurors.filter(j => j.progressiveStatus.status === 'completed').length}</div>
             <div className="text-sm text-muted-foreground">Completed</div>
           </div>
           <div className="text-center p-4 bg-warning/10 rounded-lg">
-            <div className="text-2xl font-bold text-warning">{jurors.filter(j => j.status === 'active').length}</div>
+            <div className="text-2xl font-bold text-warning">{jurors.filter(j => j.progressiveStatus.status === 'active').length}</div>
             <div className="text-sm text-muted-foreground">In Progress</div>
           </div>
           <div className="text-center p-4 bg-muted rounded-lg">
-            <div className="text-2xl font-bold text-muted-foreground">{jurors.filter(j => j.status === 'pending').length}</div>
+            <div className="text-2xl font-bold text-muted-foreground">{jurors.filter(j => j.progressiveStatus.status === 'pending').length}</div>
             <div className="text-sm text-muted-foreground">Pending</div>
           </div>
         </div>
@@ -393,7 +396,7 @@ export const JurorProgressMonitoring = ({ currentRound }: JurorProgressMonitorin
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-1">
                       <h4 className="font-semibold text-foreground">{juror.name}</h4>
-                      <JurorStatusBadge jurorId={juror.id} roundName={roundName} />
+                      <JurorStatusBadge jurorId={juror.id} progressiveStatus={juror.progressiveStatus} />
                     </div>
                     <p className="text-sm text-muted-foreground">
                       {juror.job_title} at {juror.company} • {juror.email}
@@ -429,7 +432,7 @@ export const JurorProgressMonitoring = ({ currentRound }: JurorProgressMonitorin
                     size="sm" 
                     variant="outline"
                     onClick={() => sendReminder(juror.id, juror.email)}
-                    disabled={juror.status === 'completed'}
+                    disabled={juror.progressiveStatus.status === 'completed'}
                   >
                     <Mail className="w-4 h-4 mr-2" />
                     Send Reminder
