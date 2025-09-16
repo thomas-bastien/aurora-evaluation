@@ -66,7 +66,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     const emailResponse = await resend.emails.send({
       from: "Aurora Evaluation Platform <onboarding@resend.dev>",
-      to: [testEmail],
+      to: [testEmail, "thomasbastien.uk@gmail.com"],
       subject: "🔄 Renewed Invitation to Join Aurora Evaluation Panel",
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">

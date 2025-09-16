@@ -99,7 +99,7 @@ const handler = async (req: Request): Promise<Response> => {
     // Send email using Resend (using dummy email for testing)
     const emailResponse = await resend.emails.send({
       from: "Aurora Evaluation <noreply@aurora.dev>",
-      to: ["lucien98@gmail.com"], // Using dummy email for testing
+      to: ["lucien98@gmail.com", "thomasbastien.uk@gmail.com"], // Using dummy emails for testing
       subject: subject,
       html: htmlContent,
     });

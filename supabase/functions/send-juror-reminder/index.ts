@@ -59,7 +59,7 @@ const handler = async (req: Request): Promise<Response> => {
     // Send reminder email
     const emailResponse = await resend.emails.send({
       from: "Aurora Evaluation Platform <onboarding@resend.dev>",
-      to: ["lucien98@gmail.com"], // Test email as requested
+      to: ["lucien98@gmail.com", "thomasbastien.uk@gmail.com"], // Test emails
       subject: "🚀 Aurora Evaluation Platform - Reminder: Complete Your Startup Evaluations",
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
