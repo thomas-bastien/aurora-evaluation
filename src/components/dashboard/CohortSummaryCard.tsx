@@ -78,7 +78,7 @@ export const CohortSummaryCard = ({
           <div className="text-center">
             <div className="flex items-center justify-center gap-2 mb-1">
               <Calendar className="w-4 h-4 text-primary-foreground/80" />
-              <span className="text-xs font-bold text-primary-foreground break-words whitespace-normal text-center">
+              <span className="text-2xl font-bold text-primary-foreground">
                 {deadlineInfo || 'No deadline set'}
               </span>
             </div>
