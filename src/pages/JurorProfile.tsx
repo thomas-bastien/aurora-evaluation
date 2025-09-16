@@ -9,6 +9,10 @@ import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Building2, Mail, User, MapPin, Target, AlertCircle, Linkedin, ExternalLink, ArrowLeft } from "lucide-react";
 import { JurorEvaluationsList } from '@/components/jurors/JurorEvaluationsList';
+import { JuryRoundStatusBadges } from '@/components/common/JuryRoundStatusBadges';
+import { RoundProgressTab } from '@/components/jurors/RoundProgressTab';
+import { calculateJuryRoundStatus, getJuryAssignmentCounts } from '@/utils/juryStatusUtils';
+import type { JuryStatusType } from '@/utils/statusUtils';
 
 interface Juror {
   id: string;
@@ -33,6 +37,8 @@ const JurorProfile = () => {
   const [juror, setJuror] = useState<Juror | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [screeningStatus, setScreeningStatus] = useState<JuryStatusType>('inactive');
+  const [pitchingStatus, setPitchingStatus] = useState<JuryStatusType>('inactive');
 
   useEffect(() => {
     const fetchJuror = async () => {
@@ -61,6 +67,15 @@ const JurorProfile = () => {
         }
 
         setJuror(data);
+        
+        // Calculate round-specific statuses
+        const [screening, pitching] = await Promise.all([
+          calculateJuryRoundStatus(data.id, 'screening'),
+          calculateJuryRoundStatus(data.id, 'pitching')
+        ]);
+        
+        setScreeningStatus(screening);
+        setPitchingStatus(pitching);
       } catch (error) {
         console.error('Error fetching juror:', error);
         setError('An unexpected error occurred');
@@ -162,37 +177,44 @@ const JurorProfile = () => {
                 <p className="text-lg text-muted-foreground mb-4">
                   {juror.job_title ? `${juror.job_title}${juror.company ? ` at ${juror.company}` : ''}` : 'Juror Profile'}
                 </p>
-                <div className="flex items-center gap-4 mb-4">
-                  <Badge variant={status.variant} className="capitalize">
-                    {status.text}
-                  </Badge>
-                  {juror.company && (
-                    <Badge variant="secondary">{juror.company}</Badge>
-                  )}
-                  {juror.preferred_regions && juror.preferred_regions.length > 0 && (
-                    <div className="flex gap-2">
-                      {juror.preferred_regions.slice(0, 2).map((region, index) => (
-                        <Badge key={index} variant="outline" className="text-xs">
-                          {region}
-                        </Badge>
-                      ))}
-                      {juror.preferred_regions.length > 2 && (
-                        <Badge variant="outline" className="text-xs">
-                          +{juror.preferred_regions.length - 2} more
-                        </Badge>
-                      )}
-                    </div>
-                  )}
-                </div>
+                 <div className="flex items-center gap-4 mb-4">
+                   <Badge variant={status.variant} className="capitalize">
+                     {status.text}
+                   </Badge>
+                   <JuryRoundStatusBadges 
+                     jurorId={juror.id}
+                     screeningStatus={screeningStatus}
+                     pitchingStatus={pitchingStatus}
+                     showRoundLabels={true}
+                   />
+                   {juror.company && (
+                     <Badge variant="secondary">{juror.company}</Badge>
+                   )}
+                   {juror.preferred_regions && juror.preferred_regions.length > 0 && (
+                     <div className="flex gap-2">
+                       {juror.preferred_regions.slice(0, 2).map((region, index) => (
+                         <Badge key={index} variant="outline" className="text-xs">
+                           {region}
+                         </Badge>
+                       ))}
+                       {juror.preferred_regions.length > 2 && (
+                         <Badge variant="outline" className="text-xs">
+                           +{juror.preferred_regions.length - 2} more
+                         </Badge>
+                       )}
+                     </div>
+                   )}
+                 </div>
               </div>
             </div>
           </div>
         </div>
 
         <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="preferences">Preferences</TabsTrigger>
+            <TabsTrigger value="round-progress">Round Progress</TabsTrigger>
             <TabsTrigger value="evaluations">Evaluations</TabsTrigger>
           </TabsList>
 
@@ -350,6 +372,10 @@ const JurorProfile = () => {
                 </CardContent>
               </Card>
             </div>
+          </TabsContent>
+
+          <TabsContent value="round-progress" className="space-y-6">
+            <RoundProgressTab jurorId={juror.id} screeningStatus={screeningStatus} pitchingStatus={pitchingStatus} />
           </TabsContent>
 
           <TabsContent value="evaluations" className="space-y-6">

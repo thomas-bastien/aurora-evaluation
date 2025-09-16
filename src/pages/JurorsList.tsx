@@ -19,6 +19,9 @@ import { CSVUploadModal } from '@/components/jurors/CSVUploadModal';
 import { DraftModal } from '@/components/jurors/DraftModal';
 import { JurorFormModal } from '@/components/jurors/JurorFormModal';
 import { downloadJurorsCSVTemplate } from '@/utils/jurorsCsvTemplate';
+import { JuryRoundStatusBadges } from '@/components/common/JuryRoundStatusBadges';
+import { calculateMultipleJuryStatuses } from '@/utils/juryStatusUtils';
+import type { JuryStatusType } from '@/utils/statusUtils';
 
 interface Juror {
   id: string;
@@ -37,15 +40,22 @@ interface Juror {
   linkedin_url: string | null;
 }
 
+interface JurorWithStatuses extends Juror {
+  screeningStatus?: JuryStatusType;
+  pitchingStatus?: JuryStatusType;
+}
+
 export default function JurorsList() {
-  const [jurors, setJurors] = useState<Juror[]>([]);
-  const [filteredJurors, setFilteredJurors] = useState<Juror[]>([]);
+  const [jurors, setJurors] = useState<JurorWithStatuses[]>([]);
+  const [filteredJurors, setFilteredJurors] = useState<JurorWithStatuses[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [companyFilter, setCompanyFilter] = useState('');
   const [regionFilter, setRegionFilter] = useState('');
   const [verticalFilter, setVerticalFilter] = useState('');
   const [stageFilter, setStageFilter] = useState('');
+  const [screeningStatusFilter, setScreeningStatusFilter] = useState('');
+  const [pitchingStatusFilter, setPitchingStatusFilter] = useState('');
   const [csvModalOpen, setCsvModalOpen] = useState(false);
   const [draftModalOpen, setDraftModalOpen] = useState(false);
   const [formModalOpen, setFormModalOpen] = useState(false);
@@ -67,7 +77,7 @@ export default function JurorsList() {
 
   useEffect(() => {
     filterJurors();
-  }, [jurors, searchTerm, companyFilter, regionFilter, verticalFilter, stageFilter]);
+  }, [jurors, searchTerm, companyFilter, regionFilter, verticalFilter, stageFilter, screeningStatusFilter, pitchingStatusFilter]);
 
   const fetchJurors = async () => {
     try {
@@ -84,7 +94,23 @@ export default function JurorsList() {
           variant: "destructive"
         });
       } else {
-        setJurors(data || []);
+        const jurorsWithStatuses = data || [];
+        
+        // Calculate round-specific statuses for all jurors
+        const jurorIds = jurorsWithStatuses.map(j => j.id);
+        const [screeningStatuses, pitchingStatuses] = await Promise.all([
+          calculateMultipleJuryStatuses(jurorIds, 'screening'),
+          calculateMultipleJuryStatuses(jurorIds, 'pitching')
+        ]);
+        
+        // Enrich jurors with round statuses
+        const enrichedJurors = jurorsWithStatuses.map(juror => ({
+          ...juror,
+          screeningStatus: screeningStatuses[juror.id]?.status || 'inactive',
+          pitchingStatus: pitchingStatuses[juror.id]?.status || 'inactive'
+        }));
+        
+        setJurors(enrichedJurors);
       }
     } catch (error) {
       console.error('Error fetching jurors:', error);
@@ -147,6 +173,14 @@ export default function JurorsList() {
       filtered = filtered.filter(juror => 
         juror.preferred_stages && juror.preferred_stages.includes(stageFilter)
       );
+    }
+
+    if (screeningStatusFilter && screeningStatusFilter !== 'all') {
+      filtered = filtered.filter(juror => juror.screeningStatus === screeningStatusFilter);
+    }
+
+    if (pitchingStatusFilter && pitchingStatusFilter !== 'all') {
+      filtered = filtered.filter(juror => juror.pitchingStatus === pitchingStatusFilter);
     }
 
     setFilteredJurors(filtered);
@@ -462,7 +496,7 @@ export default function JurorsList() {
           </div>
           
           {filtersOpen && (
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
               <Select value={companyFilter || 'all'} onValueChange={(value) => setCompanyFilter(value === 'all' ? '' : value)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Filter by company" />
@@ -511,7 +545,32 @@ export default function JurorsList() {
                 </SelectContent>
               </Select>
 
-              {(searchTerm || companyFilter || regionFilter || verticalFilter || stageFilter) && (
+              <Select value={screeningStatusFilter || 'all'} onValueChange={(value) => setScreeningStatusFilter(value === 'all' ? '' : value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Screening status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Screening</SelectItem>
+                  <SelectItem value="inactive">Inactive</SelectItem>
+                  <SelectItem value="not_started">Not Started</SelectItem>
+                  <SelectItem value="in_progress">In Progress</SelectItem>
+                  <SelectItem value="completed">Completed</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select value={pitchingStatusFilter || 'all'} onValueChange={(value) => setPitchingStatusFilter(value === 'all' ? '' : value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Pitching status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Pitching</SelectItem>
+                  <SelectItem value="not_started">Not Started</SelectItem>
+                  <SelectItem value="in_progress">In Progress</SelectItem>
+                  <SelectItem value="completed">Completed</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {(searchTerm || companyFilter || regionFilter || verticalFilter || stageFilter || screeningStatusFilter || pitchingStatusFilter) && (
                 <Button 
                   variant="outline" 
                   onClick={() => {
@@ -520,8 +579,10 @@ export default function JurorsList() {
                     setRegionFilter('');
                     setVerticalFilter('');
                     setStageFilter('');
+                    setScreeningStatusFilter('');
+                    setPitchingStatusFilter('');
                   }}
-                  className="md:col-span-4"
+                  className="md:col-span-6"
                 >
                   Clear Filters
                 </Button>
@@ -553,8 +614,9 @@ export default function JurorsList() {
                   <TableHead>Job Title</TableHead>
                   <TableHead>Company</TableHead>
                   <TableHead>Preferences</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Member Since</TableHead>
+                   <TableHead>Screening Status</TableHead>
+                   <TableHead>Pitching Status</TableHead>
+                   <TableHead>Member Since</TableHead>
                   {isAdmin && <TableHead className="w-[140px]">Actions</TableHead>}
                 </TableRow>
               </TableHeader>
@@ -605,17 +667,22 @@ export default function JurorsList() {
                         )}
                       </div>
                     </TableCell>
-                    <TableCell>
-                      {(() => {
-                        const status = getJurorStatus(juror);
-                        return (
-                          <Badge variant={status.variant} className={status.color}>
-                            <UserCheck className="h-3 w-3 mr-1" />
-                            {status.text}
-                          </Badge>
-                        );
-                      })()}
-                    </TableCell>
+                     <TableCell>
+                       <JuryRoundStatusBadges 
+                         jurorId={juror.id}
+                         screeningStatus={juror.screeningStatus}
+                         pitchingStatus={'inactive'}
+                         showRoundLabels={false}
+                       />
+                     </TableCell>
+                     <TableCell>
+                       <JuryRoundStatusBadges 
+                         jurorId={juror.id}
+                         screeningStatus={'inactive'}
+                         pitchingStatus={juror.pitchingStatus}
+                         showRoundLabels={false}
+                       />
+                     </TableCell>
                     <TableCell className="text-muted-foreground">
                       {new Date(juror.created_at).toLocaleDateString()}
                     </TableCell>
