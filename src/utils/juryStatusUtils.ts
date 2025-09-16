@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import type { StatusType } from './statusUtils';
 
 // Status types for juror progress monitoring
-export type JurorProgressStatus = 'completed' | 'active' | 'behind' | 'inactive' | 'not_invited';
+export type JurorProgressStatus = 'completed' | 'active' | 'pending' | 'not_invited';
 
 export type { StatusType };
 
@@ -132,7 +132,7 @@ export async function calculateJurorRoundStatus(
     }
 
     if (!juror.user_id) {
-      return 'inactive'; // Invited but not accepted
+      return 'pending'; // Invited but not accepted
     }
 
     // Get assignment and evaluation counts using the same logic as JurorProgressMonitoring
@@ -150,7 +150,7 @@ export async function calculateJurorRoundStatus(
     const assignedCount = assignments?.length || 0;
 
     if (assignedCount === 0) {
-      return 'inactive';
+      return 'pending';
     }
 
     // Fetch evaluations
@@ -164,17 +164,17 @@ export async function calculateJurorRoundStatus(
     const completedCount = evaluations?.filter(e => e.status === 'submitted').length || 0;
     const draftCount = evaluations?.filter(e => e.status === 'draft').length || 0;
 
-    // Use the same logic as JurorProgressMonitoring
+    // Simplified logic: Not Invited → Pending → In Progress → Completed
     if (completedCount === assignedCount) {
       return 'completed';
     } else if (completedCount > 0 || draftCount > 0) {
-      return completedCount >= assignedCount * 0.5 ? 'active' : 'behind';
+      return 'active'; // In Progress
     } else {
-      return 'inactive';
+      return 'pending'; // Has assignments but no evaluations started
     }
   } catch (error) {
     console.error('Error calculating juror round status:', error);
-    return 'inactive';
+    return 'pending';
   }
 }
 
@@ -259,14 +259,14 @@ export async function calculateMultipleJurorRoundStatuses(
       }
 
       if (!juror.user_id) {
-        results[jurorId] = 'inactive';
+        results[jurorId] = 'pending';
         continue;
       }
 
       const assignedCount = assignmentsLookup[jurorId] || 0;
       
       if (assignedCount === 0) {
-        results[jurorId] = 'inactive';
+        results[jurorId] = 'pending';
         continue;
       }
 
@@ -274,13 +274,13 @@ export async function calculateMultipleJurorRoundStatuses(
       const completedCount = jurorEvaluations.filter(e => e.status === 'submitted').length;
       const draftCount = jurorEvaluations.filter(e => e.status === 'draft').length;
 
-      // Apply the same logic as JurorProgressMonitoring
+      // Simplified logic: Not Invited → Pending → In Progress → Completed
       if (completedCount === assignedCount) {
         results[jurorId] = 'completed';
       } else if (completedCount > 0 || draftCount > 0) {
-        results[jurorId] = completedCount >= assignedCount * 0.5 ? 'active' : 'behind';
+        results[jurorId] = 'active'; // In Progress
       } else {
-        results[jurorId] = 'inactive';
+        results[jurorId] = 'pending'; // Has assignments but no evaluations started
       }
     }
 

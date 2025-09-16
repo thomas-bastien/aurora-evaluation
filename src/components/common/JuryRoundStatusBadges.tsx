@@ -85,10 +85,8 @@ function getJurorProgressStatusLabel(status: JurorProgressStatus, roundName: str
       return `Completed (${roundTitle})`;
     case 'active':
       return `In Progress (${roundTitle})`;
-    case 'behind':
-      return `Behind (${roundTitle})`;
-    case 'inactive':
-      return `Inactive (${roundTitle})`;
+    case 'pending':
+      return `Pending (${roundTitle})`;
     case 'not_invited':
       return 'Not Invited';
     default:
@@ -102,10 +100,8 @@ function getJurorProgressStatusColor(status: JurorProgressStatus): string {
       return 'text-success border-success';
     case 'active':
       return 'text-primary border-primary';
-    case 'behind':
+    case 'pending':
       return 'text-warning border-warning';
-    case 'inactive':
-      return 'text-muted-foreground border-muted';
     case 'not_invited':
       return 'text-muted-foreground border-muted-foreground';
     default:
