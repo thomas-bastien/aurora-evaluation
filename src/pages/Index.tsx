@@ -16,7 +16,7 @@ const Index = () => {
               <span className="bg-gradient-aurora bg-clip-text text-transparent"> Evaluation Process</span>
             </h1>
             
-            <p className="text-xl text-muted-foreground mb-8 max-w-3xl mx-auto leading-relaxed">Manage the complete evaluation journey from 100s of startups to your final investment committee. Centralised scoring, scheduling, and analytics in one AI-driven platform.</p>
+            <p className="text-xl text-muted-foreground mb-8 max-w-3xl mx-auto leading-relaxed">Manage the complete evaluation journey from a list of startups to your final investment committee. Centralised scoring, scheduling, and analytics in one AI-driven platform.</p>
             
             <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-4">
               <Button size="lg" className="shadow-aurora" asChild>
