@@ -1,14 +1,22 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { VideoPlayerModal } from "@/components/ui/video-player-modal";
 import { Shield, Users, Play } from "lucide-react";
 
 const DemoSelection = () => {
+  const [activeModal, setActiveModal] = useState<'admin' | 'vc' | null>(null);
+
   const handleAdminDemo = () => {
-    window.open('https://www.loom.com/share/2a823ca88abe413c99d12c09270ed084', '_blank', 'noopener,noreferrer');
+    setActiveModal('admin');
   };
 
   const handleVCDemo = () => {
-    window.open('https://www.loom.com/share/ac0ae0a3e49e4b17927ed0b729312f2c', '_blank', 'noopener,noreferrer');
+    setActiveModal('vc');
+  };
+
+  const closeModal = () => {
+    setActiveModal(null);
   };
 
   return (
@@ -82,6 +90,20 @@ const DemoSelection = () => {
             These are video demonstrations of the platform in action
           </p>
         </div>
+
+        <VideoPlayerModal
+          open={activeModal === 'admin'}
+          onOpenChange={closeModal}
+          videoUrl="https://www.loom.com/embed/2a823ca88abe413c99d12c09270ed084"
+          title="Community Manager Demo"
+        />
+
+        <VideoPlayerModal
+          open={activeModal === 'vc'}
+          onOpenChange={closeModal}
+          videoUrl="https://www.loom.com/embed/ac0ae0a3e49e4b17927ed0b729312f2c"
+          title="Juror Demo"
+        />
       </div>
     </div>
   );
