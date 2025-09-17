@@ -25,7 +25,9 @@ import SessionManagement from "./pages/SessionManagement";
 import EvaluationDashboard from "./pages/EvaluationDashboard";
 import Matchmaking from "./pages/Matchmaking";
 import CohortSettings from "./pages/CohortSettings";
+import DemoSelection from "./pages/DemoSelection";
 import NotFound from "./pages/NotFound";
+import { DemoProvider } from "@/contexts/DemoContext";
 
 const queryClient = new QueryClient();
 
@@ -62,6 +64,15 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
+            <Route path="/demo/*" element={
+              <DemoProvider>
+                <Routes>
+                  <Route path="/" element={<DemoSelection />} />
+                  <Route path="admin/dashboard" element={<Dashboard />} />
+                  <Route path="vc/dashboard" element={<Dashboard />} />
+                </Routes>
+              </DemoProvider>
+            } />
             <Route path="/juror-onboarding" element={
               <ProtectedRoute>
                 <JurorOnboarding />
