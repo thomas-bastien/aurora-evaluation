@@ -55,7 +55,7 @@ export const VideoPlayerModal = ({
               onClick={handleGetAccess}
               className="bg-primary hover:bg-primary/90 text-primary-foreground"
             >
-              Get Early Access
+              Get Started
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </div>
