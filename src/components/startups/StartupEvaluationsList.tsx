@@ -9,6 +9,7 @@ import { MessageSquare, Star, User, Clock, Lock } from 'lucide-react';
 import { format } from 'date-fns';
 import { useStartupAssignment } from '@/hooks/useStartupAssignment';
 import { useUserProfile } from '@/hooks/useUserProfile';
+import { StartupEvaluationModal } from '@/components/evaluation/StartupEvaluationModal';
 
 interface Evaluation {
   id: string;
@@ -38,6 +39,9 @@ export function StartupEvaluationsList({ startupId }: StartupEvaluationsListProp
   const [screeningEvaluations, setScreeningEvaluations] = useState<Evaluation[]>([]);
   const [pitchingEvaluations, setPitchingEvaluations] = useState<Evaluation[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedStartup, setSelectedStartup] = useState<any | null>(null);
+  const [modalMode, setModalMode] = useState<'view' | 'edit'>('view');
+  const [currentRound, setCurrentRound] = useState<'screening' | 'pitching'>('screening');
   const { profile } = useUserProfile();
   const { isAssigned, loading: assignmentLoading } = useStartupAssignment(startupId);
 
@@ -114,8 +118,39 @@ export function StartupEvaluationsList({ startupId }: StartupEvaluationsListProp
     return 'text-red-600';
   };
 
+  const handleOpenModal = async (evaluation: Evaluation, round: 'screening' | 'pitching') => {
+    try {
+      // Fetch full startup data for the modal
+      const { data: startupData, error } = await supabase
+        .from('startups')
+        .select('*')
+        .eq('id', startupId)
+        .single();
+      
+      if (error) throw error;
+      if (!startupData) return;
+      
+      // Transform startup data to match modal expectations
+      const startupForModal = {
+        ...startupData,
+        evaluation_status: evaluation.status === 'submitted' ? 'completed' : evaluation.status,
+        evaluation_id: evaluation.id,
+        overall_score: evaluation.overall_score
+      };
+      
+      setSelectedStartup(startupForModal);
+      setCurrentRound(round);
+      setModalMode(evaluation.status === 'submitted' ? 'view' : 'edit');
+    } catch (error) {
+      console.error('Error fetching startup data:', error);
+    }
+  };
+
   const EvaluationCard = ({ evaluation, round }: { evaluation: Evaluation; round: string }) => (
-    <Card className="mb-4">
+    <Card 
+      className="mb-4 cursor-pointer hover:shadow-md transition-shadow" 
+      onClick={() => handleOpenModal(evaluation, round as 'screening' | 'pitching')}
+    >
       <CardHeader>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -319,6 +354,50 @@ export function StartupEvaluationsList({ startupId }: StartupEvaluationsListProp
           )}
         </TabsContent>
       </Tabs>
+
+      {/* Evaluation Modal */}
+      {selectedStartup && (
+        <StartupEvaluationModal
+          startup={selectedStartup}
+          open={!!selectedStartup}
+          onClose={() => setSelectedStartup(null)}
+          onEvaluationUpdate={() => {
+            // Refresh evaluations after update
+            const fetchEvaluations = async () => {
+              if (!startupId) return;
+              setLoading(true);
+              try {
+                const [screeningResult, pitchingResult] = await Promise.all([
+                  supabase.from('screening_evaluations').select('*').eq('startup_id', startupId),
+                  supabase.from('pitching_evaluations').select('*').eq('startup_id', startupId)
+                ]);
+                
+                if (screeningResult.error) throw screeningResult.error;
+                if (pitchingResult.error) throw pitchingResult.error;
+                
+                const screeningEvals = screeningResult.data || [];
+                const pitchingEvals = pitchingResult.data || [];
+                const evaluatorIds = [...new Set([...screeningEvals.map(e => e.evaluator_id), ...pitchingEvals.map(e => e.evaluator_id)])];
+                
+                const jurorsResult = await supabase.from('jurors').select('user_id, id, name, email, company').in('user_id', evaluatorIds);
+                if (jurorsResult.error) throw jurorsResult.error;
+                
+                const jurorsMap = new Map((jurorsResult.data || []).map(juror => [juror.user_id, juror]));
+                
+                setScreeningEvaluations(screeningEvals.map(evaluation => ({ ...evaluation, jurors: jurorsMap.get(evaluation.evaluator_id) || null })) as any);
+                setPitchingEvaluations(pitchingEvals.map(evaluation => ({ ...evaluation, jurors: jurorsMap.get(evaluation.evaluator_id) || null })) as any);
+              } catch (error) {
+                console.error('Error refreshing evaluations:', error);
+              } finally {
+                setLoading(false);
+              }
+            };
+            fetchEvaluations();
+          }}
+          mode={modalMode}
+          currentRound={currentRound}
+        />
+      )}
     </div>
   );
 }
