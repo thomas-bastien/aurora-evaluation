@@ -7,7 +7,7 @@ interface Startup {
   name: string;
   verticals?: string[];
   stage?: string;
-  region?: string;
+  regions?: string[];
 }
 
 interface Juror {
@@ -36,9 +36,9 @@ export function MatchmakingCompatibility({ startup, juror }: CompatibilityProps)
   const hasStageMatch = startupStage ? jurorStages.includes(startupStage) : false;
 
   // Check region alignment  
-  const startupRegion = startup.region;
+  const startupRegions = startup.regions || [];
   const jurorRegions = juror.preferred_regions || [];
-  const hasRegionMatch = startupRegion ? jurorRegions.includes(startupRegion) : false;
+  const hasRegionMatch = startupRegions.some(region => jurorRegions.includes(region));
 
   // Calculate overall compatibility score
   const compatibilityScore = [hasVerticalMatch, hasStageMatch, hasRegionMatch].filter(Boolean).length;
@@ -118,7 +118,7 @@ export function MatchmakingCompatibility({ startup, juror }: CompatibilityProps)
               <X className="w-4 h-4 text-destructive" />
             )}
             <span className="text-xs text-muted-foreground">
-              {startupRegion || 'Not specified'}
+              {startupRegions.length > 0 ? startupRegions.join(', ') : 'Not specified'}
             </span>
           </div>
         </div>

@@ -12,12 +12,12 @@ import { useToast } from "@/hooks/use-toast";
 interface Startup {
   id: string;
   name: string;
-  industry: string;
+  verticals?: string[];
   stage: string;
   description: string;
   location: string;
   founder_names: string[];
-  region?: string | null;
+  regions?: string[];
 }
 
 interface Juror {
@@ -86,17 +86,19 @@ export const StartupAssignmentModal = ({
     };
 
     // Region match (+4 points)
-    if (juror.preferred_regions && startup.region) {
-      if (juror.preferred_regions.includes(startup.region)) {
+    if (juror.preferred_regions && startup.regions) {
+      const regionMatches = startup.regions.some(region => juror.preferred_regions!.includes(region));
+      if (regionMatches) {
         score += 4;
         breakdown.region = 4;
         matches.region = true;
       }
     }
 
-    // Vertical/Industry match (+3 points)
-    if (juror.target_verticals && startup.industry) {
-      if (juror.target_verticals.includes(startup.industry)) {
+    // Vertical match (+3 points)
+    if (juror.target_verticals && startup.verticals) {
+      const verticalMatches = startup.verticals.some(vertical => juror.target_verticals!.includes(vertical));
+      if (verticalMatches) {
         score += 3;
         breakdown.vertical = 3;
         matches.vertical = true;
@@ -227,7 +229,9 @@ export const StartupAssignmentModal = ({
             <div className="flex-1">
               <h3 className="font-semibold text-foreground mb-1">{startup.name}</h3>
               <div className="flex items-center gap-2 mb-2">
-                <Badge variant="outline">{startup.industry}</Badge>
+                {startup.verticals && startup.verticals.map(vertical => (
+                  <Badge key={vertical} variant="outline">{vertical}</Badge>
+                ))}
                 <Badge variant="outline">{startup.stage}</Badge>
               </div>
               <p className="text-sm text-muted-foreground mb-2">{startup.description}</p>
