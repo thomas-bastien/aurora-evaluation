@@ -198,9 +198,21 @@ export default function JurorsList() {
       if (editingJuror) {
         const emailChanged = editingJuror.email !== data.email;
         
+        // Sanitize data to only include database columns
+        const updateData = {
+          name: data.name,
+          email: data.email,
+          job_title: data.job_title,
+          company: data.company,
+          preferred_regions: data.preferred_regions,
+          target_verticals: data.target_verticals,
+          preferred_stages: data.preferred_stages,
+          linkedin_url: data.linkedin_url
+        };
+        
         const { error } = await supabase
           .from('jurors')
-          .update(data)
+          .update(updateData)
           .eq('id', editingJuror.id);
         
         if (error) throw error;
@@ -329,7 +341,24 @@ export default function JurorsList() {
   };
 
   const handleEdit = (juror: Juror) => {
-    setEditingJuror(juror);
+    // Sanitize juror data to only include database columns
+    const sanitizedJuror = {
+      id: juror.id,
+      name: juror.name,
+      email: juror.email,
+      job_title: juror.job_title,
+      company: juror.company,
+      preferred_regions: juror.preferred_regions,
+      target_verticals: juror.target_verticals,
+      preferred_stages: juror.preferred_stages,
+      linkedin_url: juror.linkedin_url,
+      created_at: juror.created_at,
+      user_id: juror.user_id,
+      invitation_token: juror.invitation_token,
+      invitation_sent_at: juror.invitation_sent_at,
+      invitation_expires_at: juror.invitation_expires_at
+    };
+    setEditingJuror(sanitizedJuror);
     setFormModalOpen(true);
   };
 
