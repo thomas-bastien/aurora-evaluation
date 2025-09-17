@@ -1,21 +1,14 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { useNavigate } from "react-router-dom";
-import { useDemoContext } from "@/contexts/DemoContext";
-import { Shield, Users } from "lucide-react";
+import { Shield, Users, Play } from "lucide-react";
 
 const DemoSelection = () => {
-  const navigate = useNavigate();
-  const { setDemoRole, demoData } = useDemoContext();
-
   const handleAdminDemo = () => {
-    setDemoRole('admin');
-    navigate('/demo/admin/dashboard');
+    window.open('https://www.loom.com/share/2a823ca88abe413c99d12c09270ed084', '_blank', 'noopener,noreferrer');
   };
 
   const handleVCDemo = () => {
-    setDemoRole('vc', 'demo-juror-1'); // Default to first juror
-    navigate('/demo/vc/dashboard');
+    window.open('https://www.loom.com/share/ac0ae0a3e49e4b17927ed0b729312f2c', '_blank', 'noopener,noreferrer');
   };
 
   return (
@@ -23,14 +16,14 @@ const DemoSelection = () => {
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-8">
           <div className="inline-flex items-center space-x-2 bg-primary/10 text-primary px-4 py-2 rounded-full text-sm font-medium mb-6">
-            <Shield className="w-4 h-4" />
-            <span>DEMO MODE</span>
+            <Play className="w-4 h-4" />
+            <span>VIDEO DEMOS</span>
           </div>
           <h1 className="text-4xl font-bold text-foreground mb-4">
             Choose Your Demo Experience
           </h1>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Explore Aurora's evaluation platform from different perspectives. All data is realistic but completely isolated from live systems.
+            Watch video demonstrations of Aurora's evaluation platform from different user perspectives.
           </p>
         </div>
 
@@ -40,20 +33,21 @@ const DemoSelection = () => {
               <div className="w-16 h-16 bg-gradient-primary rounded-full flex items-center justify-center mx-auto mb-4">
                 <Shield className="w-8 h-8 text-primary-foreground" />
               </div>
-              <CardTitle className="text-xl">Admin View</CardTitle>
+              <CardTitle className="text-xl">Community Manager Demo</CardTitle>
               <CardDescription>
-                Full platform management including startup evaluation, juror assignments, and analytics
+                See how admins manage the full evaluation process, assignments, and analytics
               </CardDescription>
             </CardHeader>
             <CardContent>
               <ul className="text-sm text-muted-foreground space-y-2 mb-6">
-                <li>• Manage {demoData.startups.length} demo startups</li>
-                <li>• Oversee {demoData.jurors.length} VC partners</li>
-                <li>• View evaluation progress and analytics</li>
-                <li>• Control matchmaking and assignments</li>
+                <li>• Platform management overview</li>
+                <li>• Juror assignment workflows</li>
+                <li>• Evaluation progress tracking</li>
+                <li>• Analytics and reporting tools</li>
               </ul>
               <Button className="w-full">
-                Explore Admin Dashboard
+                <Play className="w-4 h-4 mr-2" />
+                Watch Demo Video
               </Button>
             </CardContent>
           </Card>
@@ -63,20 +57,21 @@ const DemoSelection = () => {
               <div className="w-16 h-16 bg-gradient-primary rounded-full flex items-center justify-center mx-auto mb-4">
                 <Users className="w-8 h-8 text-primary-foreground" />
               </div>
-              <CardTitle className="text-xl">VC Partner View</CardTitle>
+              <CardTitle className="text-xl">Juror Demo</CardTitle>
               <CardDescription>
-                Evaluate assigned startups, manage pitch sessions, and track your portfolio
+                Experience the evaluation process from a VC partner's perspective
               </CardDescription>
             </CardHeader>
             <CardContent>
               <ul className="text-sm text-muted-foreground space-y-2 mb-6">
-                <li>• Evaluate assigned startups</li>
-                <li>• Score and provide feedback</li>
-                <li>• Schedule pitch meetings</li>
-                <li>• Track evaluation progress</li>
+                <li>• Startup evaluation workflows</li>
+                <li>• Scoring and feedback forms</li>
+                <li>• Pitch session scheduling</li>
+                <li>• Progress tracking dashboard</li>
               </ul>
               <Button className="w-full">
-                Explore VC Dashboard
+                <Play className="w-4 h-4 mr-2" />
+                Watch Demo Video
               </Button>
             </CardContent>
           </Card>
@@ -84,7 +79,7 @@ const DemoSelection = () => {
 
         <div className="text-center mt-8">
           <p className="text-sm text-muted-foreground">
-            This is a safe demo environment with no impact on live data
+            These are video demonstrations of the platform in action
           </p>
         </div>
       </div>
