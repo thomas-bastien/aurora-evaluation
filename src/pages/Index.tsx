@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Star, TrendingUp, Users, Shield, BarChart3, Calendar } from "lucide-react";
+import { ArrowRight, Star, Users, Shield, BarChart3, Calendar, Zap, Filter, Brain, Target, FileSearch, Mic, Scale } from "lucide-react";
 const Index = () => {
   return <div className="min-h-screen bg-gradient-subtle">
       {/* Hero Section */}
@@ -35,15 +35,15 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Features Grid */}
+      {/* Core Features Section */}
       <section className="py-20 px-6">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16 animate-slide-up">
             <h2 className="text-3xl lg:text-4xl font-bold text-foreground mb-4">
-              Complete Evaluation Management
+              ⚙️ Core Features
             </h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Everything you need to run a professional startup evaluation process
+              Everything you need to run a professional startup evaluation process.
             </p>
           </div>
 
@@ -56,7 +56,7 @@ const Index = () => {
               </div>
               <h3 className="text-xl font-semibold text-foreground mb-3">Structured Scoring</h3>
               <p className="text-muted-foreground">
-                Standardized evaluation criteria with weighted scoring across multiple dimensions for consistent assessment.
+                Standardised criteria and weighted scoring across multiple dimensions for consistent startup assessments.
               </p>
             </div>
 
@@ -68,7 +68,7 @@ const Index = () => {
               </div>
               <h3 className="text-xl font-semibold text-foreground mb-3">Pitch Scheduling</h3>
               <p className="text-muted-foreground">
-                Automated scheduling system for final 30 startups with calendar integration and reminder notifications.
+                Automated scheduling system for final 30 startups with calendar integration, reminders, and notifications.
               </p>
             </div>
 
@@ -92,7 +92,7 @@ const Index = () => {
               </div>
               <h3 className="text-xl font-semibold text-foreground mb-3">Team Collaboration</h3>
               <p className="text-muted-foreground">
-                Multi-reviewer workflows with role-based access and transparent evaluation processes for VC partners.
+                Multi-juror workflows with role-based access, transparent feedback sharing, and streamlined coordination.
               </p>
             </div>
 
@@ -100,11 +100,11 @@ const Index = () => {
             animationDelay: "600ms"
           }}>
               <div className="w-12 h-12 bg-gradient-primary rounded-lg flex items-center justify-center mb-6">
-                <TrendingUp className="w-6 h-6 text-primary-foreground" />
+                <Zap className="w-6 h-6 text-primary-foreground" />
               </div>
-              <h3 className="text-xl font-semibold text-foreground mb-3">Progress Tracking</h3>
+              <h3 className="text-xl font-semibold text-foreground mb-3">Seamless Integrations</h3>
               <p className="text-muted-foreground">
-                Visual pipeline management from initial screening through final selection and pitch sessions.
+                Connects easily with your current tools — CRM, email, and scheduling platforms — so you don't have to change your stack.
               </p>
             </div>
 
@@ -116,7 +116,95 @@ const Index = () => {
               </div>
               <h3 className="text-xl font-semibold text-foreground mb-3">Secure & Reliable</h3>
               <p className="text-muted-foreground">
-                Enterprise-grade security with data backup and role-based permissions for sensitive evaluation data.
+                Enterprise-grade security with role-based permissions and safe handling of sensitive evaluation data.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Advanced Features Section */}
+      <section className="py-20 px-6 bg-muted/30">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-16 animate-slide-up">
+            <h2 className="text-3xl lg:text-4xl font-bold text-foreground mb-4">
+              🤖 Advanced Features
+            </h2>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+              Smarter startup investing, built for tomorrow.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <div className="bg-card p-8 rounded-lg shadow-soft hover:shadow-medium transition-smooth animate-fade-in" style={{
+            animationDelay: "200ms"
+          }}>
+              <div className="w-12 h-12 bg-gradient-accent rounded-lg flex items-center justify-center mb-6">
+                <Filter className="w-6 h-6 text-primary-foreground" />
+              </div>
+              <h3 className="text-xl font-semibold text-foreground mb-3">Dealflow Digest</h3>
+              <p className="text-muted-foreground">
+                AI curates a shortlist of startups most aligned with your thesis.
+              </p>
+            </div>
+
+            <div className="bg-card p-8 rounded-lg shadow-soft hover:shadow-medium transition-smooth animate-fade-in" style={{
+            animationDelay: "300ms"
+          }}>
+              <div className="w-12 h-12 bg-gradient-accent rounded-lg flex items-center justify-center mb-6">
+                <Brain className="w-6 h-6 text-primary-foreground" />
+              </div>
+              <h3 className="text-xl font-semibold text-foreground mb-3">Smart Evaluation Assistant</h3>
+              <p className="text-muted-foreground">
+                Summarises juror feedback into clear strengths, risks, and follow-up questions.
+              </p>
+            </div>
+
+            <div className="bg-card p-8 rounded-lg shadow-soft hover:shadow-medium transition-smooth animate-fade-in" style={{
+            animationDelay: "400ms"
+          }}>
+              <div className="w-12 h-12 bg-gradient-accent rounded-lg flex items-center justify-center mb-6">
+                <Target className="w-6 h-6 text-primary-foreground" />
+              </div>
+              <h3 className="text-xl font-semibold text-foreground mb-3">AI-Driven Matchmaking</h3>
+              <p className="text-muted-foreground">
+                Automatically assigns jurors with explainable scoring, balancing preferences, expertise, and conflicts.
+              </p>
+            </div>
+
+            <div className="bg-card p-8 rounded-lg shadow-soft hover:shadow-medium transition-smooth animate-fade-in" style={{
+            animationDelay: "500ms"
+          }}>
+              <div className="w-12 h-12 bg-gradient-accent rounded-lg flex items-center justify-center mb-6">
+                <FileSearch className="w-6 h-6 text-primary-foreground" />
+              </div>
+              <h3 className="text-xl font-semibold text-foreground mb-3">Due Diligence Copilot</h3>
+              <p className="text-muted-foreground">
+                Benchmarks traction, team experience, and competition, then drafts diligence notes to save hours.
+              </p>
+            </div>
+
+            <div className="bg-card p-8 rounded-lg shadow-soft hover:shadow-medium transition-smooth animate-fade-in" style={{
+            animationDelay: "600ms"
+          }}>
+              <div className="w-12 h-12 bg-gradient-accent rounded-lg flex items-center justify-center mb-6">
+                <Mic className="w-6 h-6 text-primary-foreground" />
+              </div>
+              <h3 className="text-xl font-semibold text-foreground mb-3">Pitch Intelligence</h3>
+              <p className="text-muted-foreground">
+                Real-time pitch call summaries with structured notes and suggested next steps.
+              </p>
+            </div>
+
+            <div className="bg-card p-8 rounded-lg shadow-soft hover:shadow-medium transition-smooth animate-fade-in" style={{
+            animationDelay: "700ms"
+          }}>
+              <div className="w-12 h-12 bg-gradient-accent rounded-lg flex items-center justify-center mb-6">
+                <Scale className="w-6 h-6 text-primary-foreground" />
+              </div>
+              <h3 className="text-xl font-semibold text-foreground mb-3">Bias & Benchmark Checks</h3>
+              <p className="text-muted-foreground">
+                Detects potential bias in evaluations and compares startups to relevant market benchmarks.
               </p>
             </div>
           </div>
