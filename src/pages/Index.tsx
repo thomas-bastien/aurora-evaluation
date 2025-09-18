@@ -218,26 +218,15 @@ const Index = () => {
             <h2 className="text-3xl lg:text-4xl font-bold text-primary-foreground mb-4">
               Ready to Transform Your Evaluation Process?
             </h2>
-            <p className="text-lg text-primary-foreground/90 mb-6 max-w-2xl mx-auto">
-              Trusted by funds and accelerators across EU & LATAM.
+            <p className="text-lg text-primary-foreground/90 mb-8 max-w-2xl mx-auto">
+              Join Aurora's streamlined evaluation platform and eliminate spreadsheets forever.
             </p>
-            
-            {/* Partner Logos Placeholder */}
-            <div className="mb-8 p-4 border border-primary-foreground/20 rounded-lg bg-primary-foreground/5">
-              <p className="text-sm text-primary-foreground/60 italic">Partner logos will be displayed here</p>
-            </div>
-
-            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-              <Button variant="secondary" size="lg" className="shadow-strong" asChild>
-                <a href="/auth">
-                  🚀 Get Started Today
-                  <ArrowRight className="w-5 h-5 ml-2" />
-                </a>
-              </Button>
-              <Button variant="outline" size="lg" className="border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10">
-                ▶ Watch Demo
-              </Button>
-            </div>
+            <Button variant="secondary" size="lg" className="shadow-strong" asChild>
+              <a href="/auth">
+                Get Started Today
+                <ArrowRight className="w-5 h-5 ml-2" />
+              </a>
+            </Button>
           </div>
         </div>
       </section>
