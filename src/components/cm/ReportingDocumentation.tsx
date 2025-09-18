@@ -21,6 +21,17 @@ import {
   RefreshCw
 } from "lucide-react";
 import { toast } from "sonner";
+import { 
+  exportEvaluationSummaryCSV, 
+  exportEvaluationSummaryPDF, 
+  exportJurorContributionCSV, 
+  exportJurorContributionPDF,
+  exportPitchAnalyticsCSV,
+  exportPitchAnalyticsPDF,
+  fetchJurorContributionData,
+  fetchPitchAnalyticsData,
+  type StartupAnalytics as ExportStartupAnalytics
+} from "@/utils/reportExports";
 
 interface ReportingDocumentationProps {
   currentRound: 'screeningRound' | 'pitchingRound';
@@ -43,7 +54,7 @@ interface StartupAnalytics {
 }
 
 export const ReportingDocumentation = ({ currentRound }: ReportingDocumentationProps) => {
-  const [generating, setGenerating] = useState<string | null>(null);
+  const [generatingReport, setGeneratingReport] = useState<string | null>(null);
   const [stats, setStats] = useState<RoundStats>({
     totalStartups: 0,
     completionRate: 0,
@@ -231,17 +242,58 @@ export const ReportingDocumentation = ({ currentRound }: ReportingDocumentationP
     }
   };
 
-  const handleGenerateReport = async (reportType: string) => {
-    setGenerating(reportType);
+  const handleGenerateReport = async (reportType: string, format: 'csv' | 'pdf') => {
+    setGeneratingReport(`${reportType}-${format}`);
+    
     try {
-      // Simulate report generation
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      toast.success(`${reportType} report generated successfully`);
+      switch (reportType) {
+        case 'Evaluation Summary Report':
+          if (format === 'csv') {
+            exportEvaluationSummaryCSV(analyticsData, currentRound.replace('Round', ''));
+          } else {
+            exportEvaluationSummaryPDF(analyticsData, currentRound.replace('Round', ''), stats);
+          }
+          break;
+          
+        case 'Juror Contribution Report':
+          const jurorData = await fetchJurorContributionData(currentRound);
+          if (format === 'csv') {
+            exportJurorContributionCSV(jurorData, currentRound.replace('Round', ''));
+          } else {
+            exportJurorContributionPDF(jurorData, currentRound.replace('Round', ''), stats);
+          }
+          break;
+          
+        case 'Pitch Session Analytics':
+          if (currentRound === 'pitchingRound') {
+            const pitchData = await fetchPitchAnalyticsData();
+            if (format === 'csv') {
+              exportPitchAnalyticsCSV(pitchData, currentRound.replace('Round', ''));
+            } else {
+              exportPitchAnalyticsPDF(pitchData, currentRound.replace('Round', ''), stats);
+            }
+          } else {
+            toast.error('Pitch analytics only available for pitching round');
+            return;
+          }
+          break;
+          
+        default:
+          throw new Error('Unknown report type');
+      }
+      
+      toast.success(`${reportType} ${format.toUpperCase()} exported successfully`);
     } catch (error) {
-      toast.error('Failed to generate report');
+      console.error('Error generating report:', error);
+      toast.error(`Failed to export ${reportType} as ${format.toUpperCase()}`);
     } finally {
-      setGenerating(null);
+      setGeneratingReport(null);
     }
+  };
+
+  const handleExportAllData = () => {
+    exportEvaluationSummaryCSV(analyticsData, currentRound.replace('Round', ''));
+    toast.success('All analytics data exported as CSV');
   };
 
   const reports = [
@@ -444,9 +496,10 @@ export const ReportingDocumentation = ({ currentRound }: ReportingDocumentationP
 
       {/* Reports Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {reports.map(report => {
-          const IconComponent = report.icon;
-          const isGenerating = generating === report.id;
+      {reports.map(report => {
+        const IconComponent = report.icon;
+        const isGeneratingCSV = generatingReport === `${report.title}-csv`;
+        const isGeneratingPDF = generatingReport === `${report.title}-pdf`;
           
           return (
             <Card key={report.id}>
@@ -460,20 +513,38 @@ export const ReportingDocumentation = ({ currentRound }: ReportingDocumentationP
               <CardContent>
                 <div className="flex gap-2">
                   <Button 
-                    className="flex-1"
-                    variant={report.type === 'primary' ? 'default' : 'outline'}
-                    onClick={() => handleGenerateReport(report.title)}
-                    disabled={isGenerating}
+                    className="flex-1" 
+                    variant="outline"
+                    onClick={() => handleGenerateReport(report.title, "csv")}
+                    disabled={isGeneratingCSV || isGeneratingPDF}
                   >
-                    {isGenerating ? (
+                    {isGeneratingCSV ? (
+                      <>
+                        <Clock className="w-4 h-4 mr-2 animate-spin" />
+                        Exporting...
+                      </>
+                    ) : (
+                      <>
+                        <Download className="w-4 h-4 mr-2" />
+                        Export CSV
+                      </>
+                    )}
+                  </Button>
+                  <Button 
+                    className="flex-1"
+                    variant={report.type === 'primary' ? 'default' : 'secondary'}
+                    onClick={() => handleGenerateReport(report.title, "pdf")}
+                    disabled={isGeneratingCSV || isGeneratingPDF}
+                  >
+                    {isGeneratingPDF ? (
                       <>
                         <Clock className="w-4 h-4 mr-2 animate-spin" />
                         Generating...
                       </>
                     ) : (
                       <>
-                        <Download className="w-4 h-4 mr-2" />
-                        Generate
+                        <FileText className="w-4 h-4 mr-2" />
+                        Export PDF
                       </>
                     )}
                   </Button>
@@ -492,7 +563,13 @@ export const ReportingDocumentation = ({ currentRound }: ReportingDocumentationP
         </CardHeader>
         <CardContent>
           <div className="flex flex-wrap gap-2">
-            <Button variant="outline" size="sm">
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={handleExportAllData}
+              className="flex items-center gap-2"
+            >
+              <Download className="w-4 h-4" />
               Export All Scores (CSV)
             </Button>
             <Button variant="outline" size="sm">
