@@ -145,40 +145,17 @@ export const ReportingDocumentation = ({ currentRound }: ReportingDocumentationP
       description: 'Individual juror scoring patterns and participation metrics',
       icon: Users,
       type: 'secondary'
-    },
-    {
-      id: 'startup-rankings',
-      title: 'Startup Rankings Export',
-      description: 'Ranked list of all startups with scores and status',
-      icon: Award,
-      type: 'secondary'
-    },
-    {
-      id: 'round-summary',
-      title: `${currentRound === 'screeningRound' ? 'Screening Round' : 'Pitching Round'} Summary`,
-      description: `Complete ${currentRound === 'screeningRound' ? 'evaluation' : 'pitch'} round documentation`,
-      icon: FileText,
-      type: 'primary'
     }
   ];
 
   if (currentRound === 'pitchingRound') {
-    reports.push(
-      {
-        id: 'pitch-analytics',
-        title: 'Pitch Session Analytics',
-        description: 'Meeting completion rates and scheduling statistics',
-        icon: Calendar,
-        type: 'secondary'
-      },
-      {
-        id: 'final-recommendations',
-        title: 'Final Investment Recommendations',
-        description: 'Consolidated recommendations and deal flow summary',
-        icon: TrendingUp,
-        type: 'primary'
-      }
-    );
+    reports.push({
+      id: 'pitch-analytics',
+      title: 'Pitch Session Analytics',
+      description: 'Meeting completion rates and scheduling statistics',
+      icon: Calendar,
+      type: 'secondary'
+    });
   }
 
   return (
