@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Network, Users, Star, MessageSquare, FileText, Lock, CheckCircle } from "lucide-react";
+import { Network, Users, Star, MessageSquare, FileText, BarChart3, Lock, CheckCircle } from "lucide-react";
 import { MatchmakingWorkflow } from "@/components/cm/MatchmakingWorkflow";
 import { JurorProgressMonitoring } from "@/components/cm/JurorProgressMonitoring";
 import { StartupSelection } from "@/components/cm/StartupSelection";
@@ -141,9 +141,9 @@ const Selection = () => {
               <MessageSquare className="w-4 h-4" />
               Communication
             </TabsTrigger>
-            <TabsTrigger value="reports" className="flex items-center gap-2">
-              <FileText className="w-4 h-4" />
-              Reporting
+            <TabsTrigger value="analytics" className="flex items-center gap-2">
+              <BarChart3 className="w-4 h-4" />
+              Analytics
             </TabsTrigger>
           </TabsList>
 
@@ -167,7 +167,7 @@ const Selection = () => {
             <ResultsCommunication currentRound={currentRound} />
           </TabsContent>
 
-          <TabsContent value="reports" className="space-y-6">
+          <TabsContent value="analytics" className="space-y-6">
             <ReportingDocumentation currentRound={currentRound} />
           </TabsContent>
         </Tabs>

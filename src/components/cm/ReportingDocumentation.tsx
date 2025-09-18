@@ -4,6 +4,9 @@ import { formatScore } from '@/lib/utils';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
   FileText, 
   Download, 
@@ -12,7 +15,10 @@ import {
   Calendar,
   TrendingUp,
   Award,
-  Clock
+  Clock,
+  Search,
+  Filter,
+  RefreshCw
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -26,6 +32,16 @@ interface RoundStats {
   averageScore: number;
 }
 
+interface StartupAnalytics {
+  id: string;
+  name: string;
+  status: string;
+  evaluationsComplete: number;
+  totalEvaluations: number;
+  averageScore: number | null;
+  lastUpdated: string;
+}
+
 export const ReportingDocumentation = ({ currentRound }: ReportingDocumentationProps) => {
   const [generating, setGenerating] = useState<string | null>(null);
   const [stats, setStats] = useState<RoundStats>({
@@ -34,10 +50,35 @@ export const ReportingDocumentation = ({ currentRound }: ReportingDocumentationP
     averageScore: 0
   });
   const [loading, setLoading] = useState(true);
+  const [analyticsData, setAnalyticsData] = useState<StartupAnalytics[]>([]);
+  const [filteredData, setFilteredData] = useState<StartupAnalytics[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
 
   useEffect(() => {
     fetchRoundStats();
+    fetchAnalyticsData();
   }, [currentRound]);
+
+  useEffect(() => {
+    filterAnalyticsData();
+  }, [analyticsData, searchTerm, statusFilter]);
+
+  const filterAnalyticsData = () => {
+    let filtered = analyticsData;
+    
+    if (searchTerm) {
+      filtered = filtered.filter(startup => 
+        startup.name.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+    
+    if (statusFilter !== 'all') {
+      filtered = filtered.filter(startup => startup.status === statusFilter);
+    }
+    
+    setFilteredData(filtered);
+  };
 
   const fetchRoundStats = async () => {
     try {
@@ -118,6 +159,78 @@ export const ReportingDocumentation = ({ currentRound }: ReportingDocumentationP
     }
   };
 
+  const fetchAnalyticsData = async () => {
+    try {
+      const tableName = currentRound === 'screeningRound' ? 'screening_evaluations' : 'pitching_evaluations';
+      const assignmentTable = currentRound === 'screeningRound' ? 'screening_assignments' : 'pitching_assignments';
+      
+      // Get startups with their evaluation status
+      const { data: startups, error: startupsError } = await supabase
+        .from('startups')
+        .select(`
+          id,
+          name,
+          status,
+          created_at
+        `);
+      
+      if (startupsError) throw startupsError;
+      
+      // Get evaluations
+      const { data: evaluations, error: evaluationsError } = await supabase
+        .from(tableName)
+        .select(`
+          startup_id,
+          status,
+          overall_score,
+          updated_at
+        `);
+      
+      if (evaluationsError) throw evaluationsError;
+      
+      // Get assignments to know total expected evaluations
+      const { data: assignments, error: assignmentsError } = await supabase
+        .from(assignmentTable)
+        .select(`
+          startup_id
+        `);
+      
+      if (assignmentsError) throw assignmentsError;
+      
+      // Process analytics data
+      const analyticsMap = new Map<string, StartupAnalytics>();
+      
+      startups?.forEach(startup => {
+        const startupEvaluations = evaluations?.filter(e => e.startup_id === startup.id) || [];
+        const startupAssignments = assignments?.filter(a => a.startup_id === startup.id) || [];
+        const submittedEvaluations = startupEvaluations.filter(e => e.status === 'submitted');
+        
+        const scores = submittedEvaluations
+          .filter(e => e.overall_score !== null)
+          .map(e => e.overall_score);
+        const averageScore = scores.length > 0 ? scores.reduce((sum, score) => sum + score, 0) / scores.length : null;
+        
+        const lastEvaluation = startupEvaluations
+          .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())[0];
+        
+        analyticsMap.set(startup.id, {
+          id: startup.id,
+          name: startup.name,
+          status: startup.status || 'pending',
+          evaluationsComplete: submittedEvaluations.length,
+          totalEvaluations: startupAssignments.length,
+          averageScore,
+          lastUpdated: lastEvaluation?.updated_at || startup.created_at || new Date().toISOString()
+        });
+      });
+      
+      setAnalyticsData(Array.from(analyticsMap.values()));
+    } catch (error) {
+      console.error('Error fetching analytics data:', error);
+      toast.error('Failed to load analytics data');
+    }
+  };
+
   const handleGenerateReport = async (reportType: string) => {
     setGenerating(reportType);
     try {
@@ -164,8 +277,8 @@ export const ReportingDocumentation = ({ currentRound }: ReportingDocumentationP
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <FileText className="w-5 h-5" />
-            Reporting & Documentation - {currentRound === 'screeningRound' ? 'Screening Round' : 'Pitching Round'}
+            <BarChart3 className="w-5 h-5" />
+            Real-Time Analytics & Reports - {currentRound === 'screeningRound' ? 'Screening Round' : 'Pitching Round'}
           </CardTitle>
           <CardDescription>
             Generate comprehensive reports and export data for stakeholders
@@ -207,6 +320,125 @@ export const ReportingDocumentation = ({ currentRound }: ReportingDocumentationP
               </div>
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      {/* Real-Time Analytics Table */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <BarChart3 className="w-5 h-5" />
+              Real-Time Startup Analytics
+            </CardTitle>
+            <Button
+              variant="outline" 
+              size="sm"
+              onClick={fetchAnalyticsData}
+              className="flex items-center gap-2"
+            >
+              <RefreshCw className="w-4 h-4" />
+              Refresh
+            </Button>
+          </div>
+          <CardDescription>
+            Live view of startup evaluation progress and performance metrics
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {/* Filters */}
+          <div className="flex flex-col sm:flex-row gap-4 mb-6">
+            <div className="flex items-center gap-2 flex-1">
+              <Search className="w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="Search startups..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="max-w-sm"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <Filter className="w-4 h-4 text-muted-foreground" />
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-40">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Statuses</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="under_review">Under Review</SelectItem>
+                  <SelectItem value="selected">Selected</SelectItem>
+                  <SelectItem value="rejected">Rejected</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Analytics Table */}
+          <div className="rounded-md border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Startup Name</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-center">Progress</TableHead>
+                  <TableHead className="text-center">Avg Score</TableHead>
+                  <TableHead>Last Updated</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredData.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                      {analyticsData.length === 0 ? 'No data available' : 'No startups match your filters'}
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredData.map((startup) => (
+                    <TableRow key={startup.id}>
+                      <TableCell className="font-medium">{startup.name}</TableCell>
+                      <TableCell>
+                        <Badge variant={
+                          startup.status === 'selected' ? 'default' :
+                          startup.status === 'under_review' ? 'secondary' :
+                          startup.status === 'rejected' ? 'destructive' : 'outline'
+                        }>
+                          {startup.status.replace('_', ' ')}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <div className="flex items-center justify-center gap-2">
+                          <span className="text-sm">
+                            {startup.evaluationsComplete}/{startup.totalEvaluations}
+                          </span>
+                          <div className="w-16 bg-muted rounded-full h-2">
+                            <div 
+                              className="bg-primary h-2 rounded-full transition-all"
+                              style={{ 
+                                width: `${startup.totalEvaluations > 0 ? (startup.evaluationsComplete / startup.totalEvaluations) * 100 : 0}%` 
+                              }}
+                            />
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {startup.averageScore !== null ? (
+                          <Badge variant="outline" className="font-mono">
+                            {formatScore(startup.averageScore)}
+                          </Badge>
+                        ) : (
+                          <span className="text-muted-foreground text-sm">N/A</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground text-sm">
+                        {new Date(startup.lastUpdated).toLocaleDateString()} {new Date(startup.lastUpdated).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
 
