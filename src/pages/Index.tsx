@@ -221,7 +221,7 @@ const Index = () => {
             <p className="text-lg text-primary-foreground/90 mb-8 max-w-2xl mx-auto">
               Join Aurora's streamlined evaluation platform and eliminate spreadsheets forever.
             </p>
-            <Button variant="secondary" size="lg" className="shadow-strong" asChild>
+            <Button variant="secondary" size="lg" className="shadow-strong text-primary-foreground" asChild>
               <a href="/auth">
                 Get Started Today
                 <ArrowRight className="w-5 h-5 ml-2" />
