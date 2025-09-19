@@ -345,7 +345,7 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
       setAutoAssignLoading(true);
       
       // Find unassigned startups
-      const requiredAssignments = currentRound === 'pitchingRound' ? 2 : 3;
+      const requiredAssignments = 3;
       const unassignedStartups = startups.filter(startup => 
         startup.roundStatus !== 'rejected' && 
         getStartupAssignmentCount(startup.id) < requiredAssignments
@@ -432,7 +432,7 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
   const roundTitle = currentRound === 'screeningRound' ? 'Screening Round' : 'Pitching Round';
   const roundDescription = currentRound === 'screeningRound' 
     ? 'Assign 3 jurors to each startup for initial evaluation'
-    : 'Assign 2-3 jurors to selected startups from Screening Round';
+    : 'Assign 3 jurors to selected startups from Screening Round';
 
   return (
     <div className="space-y-6">
@@ -448,7 +448,7 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
               <p className="text-sm">
                 {currentRound === 'screeningRound' 
                   ? 'Assign 3 jurors to each startup. Jurors will evaluate pitch decks and provide scores/feedback.' 
-                  : 'Re-assign 2-3 jurors to each startup selected for Pitching Round. Jurors will join pitch calls and evaluate presentations.'
+                  : 'Re-assign 3 jurors to each startup selected for Pitching Round. Jurors will join pitch calls and evaluate presentations.'
                 }
               </p>
             </div>
@@ -500,7 +500,7 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
                 <div>
                   <p className="text-2xl font-bold">
                     {startups.filter(startup => {
-                      const requiredAssignments = currentRound === 'pitchingRound' ? 2 : 3;
+                      const requiredAssignments = 3;
                       return startup.roundStatus !== 'rejected' && getStartupAssignmentCount(startup.id) >= requiredAssignments;
                     }).length}
                   </p>
@@ -515,7 +515,7 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
                 <div>
                   <p className="text-2xl font-bold">
                     {startups.filter(startup => {
-                      const requiredAssignments = currentRound === 'pitchingRound' ? 2 : 3;
+                      const requiredAssignments = 3;
                       return startup.roundStatus !== 'rejected' && getStartupAssignmentCount(startup.id) < requiredAssignments;
                     }).length}
                   </p>
@@ -529,7 +529,7 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
           <div className="flex gap-4 mb-6">
             {/* Auto-Assign Button - Only show when there are unassigned startups */}
             {(() => {
-              const requiredAssignments = currentRound === 'pitchingRound' ? 2 : 3;
+              const requiredAssignments = 3;
               const unassignedCount = startups.filter(startup => 
                 startup.roundStatus !== 'rejected' && 
                 getStartupAssignmentCount(startup.id) < requiredAssignments
@@ -593,7 +593,7 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
             </h3>
             {startups.map((startup) => {
               const assignmentCount = getStartupAssignmentCount(startup.id);
-              const requiredAssignments = currentRound === 'pitchingRound' ? 2 : 3;
+              const requiredAssignments = 3;
               const isFullyAssigned = assignmentCount >= requiredAssignments;
 
               return (
