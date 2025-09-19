@@ -172,20 +172,66 @@ export const ReportingDocumentation = ({ currentRound }: ReportingDocumentationP
 
   const fetchAnalyticsData = async () => {
     try {
+      const roundName = currentRound === 'screeningRound' ? 'screening' : 'pitching';
       const tableName = currentRound === 'screeningRound' ? 'screening_evaluations' : 'pitching_evaluations';
       const assignmentTable = currentRound === 'screeningRound' ? 'screening_assignments' : 'pitching_assignments';
       
-      // Get startups with their evaluation status
-      const { data: startups, error: startupsError } = await supabase
-        .from('startups')
-        .select(`
-          id,
-          name,
-          status,
-          created_at
-        `);
+      // Apply the same filtering logic as UnifiedSelectionTable
+      let startupsData, startupsError;
+
+      if (currentRound === 'pitchingRound') {
+        // For pitching round: ONLY show startups that were SELECTED in screening round
+        const { data, error } = await supabase
+          .from('startups')
+          .select(`
+            id,
+            name,
+            status,
+            created_at,
+            startup_round_statuses!inner(
+              status,
+              rounds!inner(name)
+            )
+          `)
+          .eq('startup_round_statuses.rounds.name', 'screening')
+          .eq('startup_round_statuses.status', 'selected');
+        
+        startupsData = data;
+        startupsError = error;
+      } else {
+        // For screening round: show ALL startups
+        const { data, error } = await supabase
+          .from('startups')
+          .select(`
+            id,
+            name,
+            status,
+            created_at
+          `);
+        
+        startupsData = data;
+        startupsError = error;
+      }
       
       if (startupsError) throw startupsError;
+
+      // Get round-specific statuses from startup_round_statuses table
+      const { data: roundStatusesData, error: roundStatusError } = await supabase
+        .from('startup_round_statuses')
+        .select(`
+          startup_id,
+          status,
+          rounds!inner(name)
+        `)
+        .eq('rounds.name', roundName);
+
+      if (roundStatusError) throw roundStatusError;
+
+      // Create a map of startup IDs to their round-specific statuses
+      const roundStatusMap = new Map();
+      roundStatusesData?.forEach(rs => {
+        roundStatusMap.set(rs.startup_id, rs.status);
+      });
       
       // Get evaluations
       const { data: evaluations, error: evaluationsError } = await supabase
@@ -208,10 +254,10 @@ export const ReportingDocumentation = ({ currentRound }: ReportingDocumentationP
       
       if (assignmentsError) throw assignmentsError;
       
-      // Process analytics data
+      // Process analytics data with same logic as UnifiedSelectionTable
       const analyticsMap = new Map<string, StartupAnalytics>();
       
-      startups?.forEach(startup => {
+      startupsData?.forEach(startup => {
         const startupEvaluations = evaluations?.filter(e => e.startup_id === startup.id) || [];
         const startupAssignments = assignments?.filter(a => a.startup_id === startup.id) || [];
         const submittedEvaluations = startupEvaluations.filter(e => e.status === 'submitted');
@@ -223,11 +269,14 @@ export const ReportingDocumentation = ({ currentRound }: ReportingDocumentationP
         
         const lastEvaluation = startupEvaluations
           .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())[0];
+
+        // Use round-specific status instead of generic startup status
+        const roundStatus = roundStatusMap.get(startup.id) || 'pending';
         
         analyticsMap.set(startup.id, {
           id: startup.id,
           name: startup.name,
-          status: startup.status || 'pending',
+          status: roundStatus, // Use round-specific status
           evaluationsComplete: submittedEvaluations.length,
           totalEvaluations: startupAssignments.length,
           averageScore,
