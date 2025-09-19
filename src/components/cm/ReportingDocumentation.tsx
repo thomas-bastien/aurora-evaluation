@@ -95,73 +95,95 @@ export const ReportingDocumentation = ({ currentRound }: ReportingDocumentationP
     try {
       setLoading(true);
       
-      if (currentRound === 'screeningRound') {
-        // Get startups under review count
-        const { data: startups, error: startupsError } = await supabase
+      // Use the same round mapping as UnifiedSelectionTable
+      const roundName = currentRound === 'screeningRound' ? 'screening' : 'pitching';
+      const assignmentTable = currentRound === 'screeningRound' ? 'screening_assignments' : 'pitching_assignments';
+      const evaluationTable = currentRound === 'screeningRound' ? 'screening_evaluations' : 'pitching_evaluations';
+
+      // Apply the same filtering logic as UnifiedSelectionTable
+      let startupsData, startupsError;
+
+      if (currentRound === 'pitchingRound') {
+        // For pitching round: ONLY show startups that were SELECTED in screening round
+        const { data, error } = await supabase
           .from('startups')
-          .select('id, status');
+          .select(`
+            *,
+            ${assignmentTable}!startup_id(id, status),
+            ${evaluationTable}!startup_id(
+              id,
+              overall_score,
+              status,
+              updated_at
+            ),
+            startup_round_statuses!inner(
+              status,
+              rounds!inner(name)
+            )
+          `)
+          .eq('startup_round_statuses.rounds.name', 'screening')
+          .eq('startup_round_statuses.status', 'selected');
         
-        if (startupsError) throw startupsError;
-
-        // Get evaluation stats
-        const { data: evaluations, error: evaluationsError } = await supabase
-          .from('screening_evaluations')
-          .select('status, overall_score');
-        
-        if (evaluationsError) throw evaluationsError;
-
-        // Get assignment count for completion rate calculation
-        const { data: assignments, error: assignmentsError } = await supabase
-          .from('screening_assignments')
-          .select('id');
-        
-        if (assignmentsError) throw assignmentsError;
-
-        const totalStartups = startups?.filter(s => ['under_review', 'selected'].includes(s.status)).length || 0;
-        const submittedEvaluations = evaluations?.filter(e => e.status === 'submitted').length || 0;
-        const totalAssignments = assignments?.length || 0;
-        const completionRate = totalAssignments > 0 ? (submittedEvaluations / totalAssignments) * 100 : 0;
-        
-        // Calculate average score
-        const scores = evaluations?.filter(e => e.status === 'submitted' && e.overall_score).map(e => e.overall_score) || [];
-        const averageScore = scores.length > 0 ? scores.reduce((sum, score) => sum + score, 0) / scores.length : 0;
-
-        setStats({
-          totalStartups,
-          completionRate,
-          averageScore
-        });
+        startupsData = data;
+        startupsError = error;
       } else {
-        // Pitching round stats
-        const { data: pitchRequests, error: pitchError } = await supabase
-          .from('pitch_requests')
-          .select('status, startup_id');
+        // For screening round: show ALL startups
+        const { data, error } = await supabase
+          .from('startups')
+          .select(`
+            *,
+            ${assignmentTable}!startup_id(id, status),
+            ${evaluationTable}!startup_id(
+              id,
+              overall_score,
+              status,
+              updated_at
+            )
+          `);
         
-        if (pitchError) throw pitchError;
-
-        // Get unique startups in pitching
-        const uniqueStartups = new Set(pitchRequests?.map(pr => pr.startup_id)).size;
-        const completedPitches = pitchRequests?.filter(pr => pr.status === 'completed').length || 0;
-        const totalPitches = pitchRequests?.length || 0;
-        const completionRate = totalPitches > 0 ? (completedPitches / totalPitches) * 100 : 0;
-
-        // For pitching round, we might want post-pitch evaluation scores
-        const { data: evaluations, error: evalError } = await supabase
-          .from('pitching_evaluations')
-          .select('overall_score')
-          .eq('status', 'submitted');
-        
-        if (evalError) throw evalError;
-
-        const scores = evaluations?.filter(e => e.overall_score).map(e => e.overall_score) || [];
-        const averageScore = scores.length > 0 ? scores.reduce((sum, score) => sum + score, 0) / scores.length : 0;
-
-        setStats({
-          totalStartups: uniqueStartups,
-          completionRate,
-          averageScore
-        });
+        startupsData = data;
+        startupsError = error;
       }
+      
+      if (startupsError) throw startupsError;
+
+      // Calculate statistics using the same methodology as UnifiedSelectionTable
+      let totalEvaluations = 0;
+      let completedEvaluations = 0;
+      let totalScoreSum = 0;
+      let validScoreCount = 0;
+
+      startupsData?.forEach(startup => {
+        const assignmentKey = currentRound === 'screeningRound' ? 'screening_assignments' : 'pitching_assignments';
+        const evaluationKey = currentRound === 'screeningRound' ? 'screening_evaluations' : 'pitching_evaluations';
+        
+        const assignments = startup[assignmentKey] || [];
+        const evaluations = startup[evaluationKey] || [];
+        const submittedEvaluations = evaluations.filter((e: any) => e.status === 'submitted');
+        
+        totalEvaluations += assignments.length;
+        completedEvaluations += submittedEvaluations.length;
+        
+        const scores = submittedEvaluations
+          .map((e: any) => e.overall_score)
+          .filter((score: any) => score !== null) as number[];
+        
+        const averageScore = scores.length > 0 
+          ? scores.reduce((sum, score) => sum + score, 0) / scores.length 
+          : null;
+        
+        if (averageScore !== null) {
+          totalScoreSum += averageScore;
+          validScoreCount++;
+        }
+      });
+
+      setStats({
+        totalStartups: startupsData?.length || 0,
+        completionRate: totalEvaluations > 0 ? (completedEvaluations / totalEvaluations) * 100 : 0,
+        averageScore: validScoreCount > 0 ? totalScoreSum / validScoreCount : 0
+      });
+
     } catch (error) {
       console.error('Error fetching round stats:', error);
       toast.error('Failed to load statistics');
