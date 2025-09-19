@@ -175,9 +175,8 @@ const Dashboard = () => {
             evaluationProgress = isScreeningRound ? screeningProgress.percentage : pitchingProgress.percentage;
           }
         } else {
-          // For admins, calculate overall progress
-          const expectedEvaluations = activeStartups * 3; // 3 jurors per startup in screening
-          evaluationProgress = expectedEvaluations > 0 ? Math.round((totalEvaluations / expectedEvaluations) * 100) : 0;
+          // For admins, calculate overall progress using actual assignments (same as CM Analytics)
+          evaluationProgress = totalAssignments > 0 ? Math.round((totalEvaluations / totalAssignments) * 100) : 0;
         }
         
         const matchmakingProgress = activeStartups > 0 ? Math.round((totalAssignments / (activeStartups * 3)) * 100) : 0;
