@@ -39,7 +39,7 @@ interface ReportingDocumentationProps {
 
 interface RoundStats {
   totalStartups: number;
-  completionRate: number;
+  evaluationsCompleted: number;
   averageScore: number;
 }
 
@@ -57,7 +57,7 @@ export const ReportingDocumentation = ({ currentRound }: ReportingDocumentationP
   const [generatingReport, setGeneratingReport] = useState<string | null>(null);
   const [stats, setStats] = useState<RoundStats>({
     totalStartups: 0,
-    completionRate: 0,
+    evaluationsCompleted: 0,
     averageScore: 0
   });
   const [loading, setLoading] = useState(true);
@@ -180,7 +180,7 @@ export const ReportingDocumentation = ({ currentRound }: ReportingDocumentationP
 
       setStats({
         totalStartups: startupsData?.length || 0,
-        completionRate: totalEvaluations > 0 ? (completedEvaluations / totalEvaluations) * 100 : 0,
+        evaluationsCompleted: completedEvaluations,
         averageScore: validScoreCount > 0 ? totalScoreSum / validScoreCount : 0
       });
 
@@ -436,15 +436,15 @@ export const ReportingDocumentation = ({ currentRound }: ReportingDocumentationP
                   {stats.totalStartups}
                 </div>
                 <div className="text-sm text-muted-foreground">
-                  {currentRound === 'screeningRound' ? 'Startups Evaluated' : 'Startups in Pitching'}
+                  Startups Selected
                 </div>
               </div>
               <div className="text-center p-4 bg-success/10 rounded-lg">
                 <div className="text-2xl font-bold text-success">
-                  {Math.round(stats.completionRate)}%
+                  {stats.evaluationsCompleted}
                 </div>
                 <div className="text-sm text-muted-foreground">
-                  {currentRound === 'screeningRound' ? 'Evaluations Complete' : 'Pitches Completed'}
+                  Evaluations Completed
                 </div>
               </div>
               <div className="text-center p-4 bg-warning/10 rounded-lg">
