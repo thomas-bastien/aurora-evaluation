@@ -724,6 +724,14 @@ export type Database = {
         Args: { new_status: string; round_name: string; startup_uuid: string }
         Returns: undefined
       }
+      validate_evaluation_assignment: {
+        Args: {
+          p_evaluation_type: string
+          p_evaluator_id: string
+          p_startup_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
       user_role: "vc" | "admin"
