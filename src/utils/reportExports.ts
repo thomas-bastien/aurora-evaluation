@@ -237,25 +237,45 @@ export function exportPitchAnalyticsPDF(data: PitchAnalytics[], roundName: strin
 export async function fetchJurorContributionData(roundName: string): Promise<JurorContribution[]> {
   const tableName = roundName === 'screeningRound' ? 'screening_evaluations' : 'pitching_evaluations';
   
+  // Fetch evaluations separately
   const { data: evaluations, error } = await supabase
     .from(tableName)
     .select(`
       evaluator_id,
       overall_score,
-      created_at,
-      jurors:evaluator_id (name, email)
+      created_at
     `)
     .eq('status', 'submitted');
 
   if (error) throw error;
 
+  // Get unique evaluator IDs
+  const evaluatorIds = [...new Set(evaluations.map((e: any) => e.evaluator_id))];
+
+  // Fetch juror details using correct relationship (evaluator_id -> jurors.user_id)
+  const { data: jurors, error: jurorsError } = await supabase
+    .from('jurors')
+    .select('user_id, name, email')
+    .in('user_id', evaluatorIds);
+
+  if (jurorsError) throw jurorsError;
+
+  // Create a lookup map for juror details
+  const jurorLookup = jurors.reduce((acc: any, juror: any) => {
+    acc[juror.user_id] = juror;
+    return acc;
+  }, {});
+
   // Group by juror and calculate metrics
   const jurorMetrics = evaluations.reduce((acc: any, evaluation: any) => {
     const jurorId = evaluation.evaluator_id;
+    const jurorInfo = jurorLookup[jurorId];
+    
     if (!acc[jurorId]) {
       acc[jurorId] = {
         id: jurorId,
-        name: evaluation.jurors?.name || 'Unknown',
+        name: jurorInfo?.name || 'Unknown',
+        email: jurorInfo?.email || 'Unknown',
         evaluationsCompleted: 0,
         totalScore: 0,
         lastActivity: evaluation.created_at
@@ -274,15 +294,19 @@ export async function fetchJurorContributionData(roundName: string): Promise<Jur
     return acc;
   }, {});
 
-  // Get total assignments for participation rate
+  // Get total assignments for participation rate - need to join with jurors table
   const assignmentTable = roundName === 'screeningRound' ? 'screening_assignments' : 'pitching_assignments';
-  const { data: totalAssignments } = await supabase
+  const { data: assignments } = await supabase
     .from(assignmentTable)
-    .select('juror_id')
+    .select(`
+      juror_id,
+      jurors!inner(user_id)
+    `)
     .eq('status', 'assigned');
 
-  const totalAssignmentsByJuror = totalAssignments?.reduce((acc: any, assignment: any) => {
-    acc[assignment.juror_id] = (acc[assignment.juror_id] || 0) + 1;
+  const totalAssignmentsByJuror = assignments?.reduce((acc: any, assignment: any) => {
+    const userId = assignment.jurors.user_id;
+    acc[userId] = (acc[userId] || 0) + 1;
     return acc;
   }, {}) || {};
 
@@ -295,6 +319,7 @@ export async function fetchJurorContributionData(roundName: string): Promise<Jur
 }
 
 export async function fetchPitchAnalyticsData(): Promise<PitchAnalytics[]> {
+  // Fetch pitch requests separately
   const { data: pitchRequests, error } = await supabase
     .from('pitch_requests')
     .select(`
@@ -302,18 +327,45 @@ export async function fetchPitchAnalyticsData(): Promise<PitchAnalytics[]> {
       status,
       pitch_date,
       meeting_notes,
-      startups:startup_id (name),
-      jurors:vc_id (name)
+      startup_id,
+      vc_id
     `);
 
   if (error) throw error;
 
+  // Get unique startup and VC IDs
+  const startupIds = [...new Set(pitchRequests.map((p: any) => p.startup_id).filter(Boolean))];
+  const vcIds = [...new Set(pitchRequests.map((p: any) => p.vc_id).filter(Boolean))];
+
+  // Fetch startup details
+  const { data: startups } = await supabase
+    .from('startups')
+    .select('id, name')
+    .in('id', startupIds);
+
+  // Fetch juror details using correct relationship (vc_id -> jurors.user_id)
+  const { data: jurors } = await supabase
+    .from('jurors')
+    .select('user_id, name')
+    .in('user_id', vcIds);
+
+  // Create lookup maps
+  const startupLookup = startups?.reduce((acc: any, startup: any) => {
+    acc[startup.id] = startup;
+    return acc;
+  }, {}) || {};
+
+  const jurorLookup = jurors?.reduce((acc: any, juror: any) => {
+    acc[juror.user_id] = juror;
+    return acc;
+  }, {}) || {};
+
   return pitchRequests.map((pitch: any) => ({
     id: pitch.id,
-    startupName: pitch.startups?.name || 'Unknown',
+    startupName: startupLookup[pitch.startup_id]?.name || 'Unknown',
     pitchStatus: pitch.status,
     meetingDate: pitch.pitch_date,
-    vcName: pitch.jurors?.name || 'Unknown',
+    vcName: jurorLookup[pitch.vc_id]?.name || 'Unknown',
     outcome: pitch.status === 'completed' ? 'Completed' : pitch.status === 'scheduled' ? 'Scheduled' : null,
     notes: pitch.meeting_notes
   }));
