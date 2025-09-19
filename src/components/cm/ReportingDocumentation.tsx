@@ -374,18 +374,30 @@ export const ReportingDocumentation = ({ currentRound }: ReportingDocumentationP
 
   return (
     <div className="space-y-6">
-      {/* Phase Summary Card */}
+      {/* Real-Time Analytics */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <BarChart3 className="w-5 h-5" />
-            Real-Time Analytics & Reports - {currentRound === 'screeningRound' ? 'Screening Round' : 'Pitching Round'}
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <BarChart3 className="w-5 h-5" />
+              Real-Time Analytics - {currentRound === 'screeningRound' ? 'Screening Round' : 'Pitching Round'}
+            </CardTitle>
+            <Button
+              variant="outline" 
+              size="sm"
+              onClick={fetchAnalyticsData}
+              className="flex items-center gap-2"
+            >
+              <RefreshCw className="w-4 h-4" />
+              Refresh
+            </Button>
+          </div>
           <CardDescription>
-            Generate comprehensive reports and export data for stakeholders
+            Live view of round statistics, startup evaluation progress and performance metrics
           </CardDescription>
         </CardHeader>
         <CardContent>
+          {/* Statistics Grid */}
           {loading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
               {[...Array(3)].map((_, i) => (
@@ -421,32 +433,8 @@ export const ReportingDocumentation = ({ currentRound }: ReportingDocumentationP
               </div>
             </div>
           )}
-        </CardContent>
-      </Card>
-
-      {/* Real-Time Analytics Table */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <BarChart3 className="w-5 h-5" />
-              Real-Time Startup Analytics
-            </CardTitle>
-            <Button
-              variant="outline" 
-              size="sm"
-              onClick={fetchAnalyticsData}
-              className="flex items-center gap-2"
-            >
-              <RefreshCw className="w-4 h-4" />
-              Refresh
-            </Button>
-          </div>
-          <CardDescription>
-            Live view of startup evaluation progress and performance metrics
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+        
+          {/* Search and Filter Controls */}
           {/* Filters */}
           <div className="flex flex-col sm:flex-row gap-4 mb-6">
             <div className="flex items-center gap-2 flex-1">
