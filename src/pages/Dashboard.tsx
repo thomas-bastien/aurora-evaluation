@@ -175,8 +175,47 @@ const Dashboard = () => {
             evaluationProgress = isScreeningRound ? screeningProgress.percentage : pitchingProgress.percentage;
           }
         } else {
-          // For admins, calculate overall progress using actual assignments (same as CM Analytics)
-          evaluationProgress = totalAssignments > 0 ? Math.round((totalEvaluations / totalAssignments) * 100) : 0;
+          // For admins, calculate progress for both rounds (same as VCs)
+          const [
+            { count: screeningAssignmentsCount },
+            { count: pitchingAssignmentsCount },
+            { count: screeningEvaluationsCount },
+            { count: pitchingEvaluationsCount }
+          ] = await Promise.all([
+            supabase.from('screening_assignments')
+              .select('*', { count: 'exact', head: true })
+              .eq('status', 'assigned'),
+            supabase.from('pitching_assignments')
+              .select('*', { count: 'exact', head: true })
+              .eq('status', 'assigned'),
+            supabase.from('screening_evaluations')
+              .select('*', { count: 'exact', head: true })
+              .eq('status', 'submitted'),
+            supabase.from('pitching_evaluations')
+              .select('*', { count: 'exact', head: true })
+              .eq('status', 'submitted')
+          ]);
+            
+          // Calculate progress for both rounds
+          const screeningAssignments = screeningAssignmentsCount || 0;
+          const screeningEvaluations = screeningEvaluationsCount || 0;
+          const pitchingAssignments = pitchingAssignmentsCount || 0;
+          const pitchingEvaluations = pitchingEvaluationsCount || 0;
+          
+          screeningProgress = {
+            assignments: screeningAssignments,
+            completed: screeningEvaluations,
+            percentage: screeningAssignments > 0 ? Math.round((screeningEvaluations / screeningAssignments) * 100) : 0
+          };
+          
+          pitchingProgress = {
+            assignments: pitchingAssignments,
+            completed: pitchingEvaluations,
+            percentage: pitchingAssignments > 0 ? Math.round((pitchingEvaluations / pitchingAssignments) * 100) : 0
+          };
+          
+          // Set overall progress based on current/active round (same as VCs)
+          evaluationProgress = isScreeningRound ? screeningProgress.percentage : pitchingProgress.percentage;
         }
         
         const matchmakingProgress = activeStartups > 0 ? Math.round((totalAssignments / (activeStartups * 3)) * 100) : 0;
