@@ -36,6 +36,10 @@ interface JurorProgress {
   completionRate: number;
   lastActivity: string;
   progressiveStatus: ProgressiveJurorStatus;
+  // Pitching calls data (only populated during pitching round)
+  pitchingAssignedCount?: number;
+  pitchingScheduledCount?: number;
+  pitchingCallsRate?: number;
 }
 
 interface JurorProgressMonitoringProps {
@@ -99,6 +103,30 @@ export const JurorProgressMonitoring = ({ currentRound }: JurorProgressMonitorin
         evaluationsData = evals || [];
       }
 
+      // Fetch pitching calls data if in pitching round
+      let pitchRequestsData: any[] = [];
+      let pitchingAssignmentsData: any[] = [];
+      
+      if (currentRound === 'pitchingRound' && jurorUserIds.length > 0) {
+        const [pitchRequestsResponse, pitchingAssignmentsResponse] = await Promise.all([
+          supabase
+            .from('pitch_requests')
+            .select('vc_id, startup_id, status')
+            .in('vc_id', jurorUserIds),
+          supabase
+            .from('pitching_assignments')
+            .select('juror_id, startup_id, status')
+            .in('juror_id', jurorIds)
+            .eq('status', 'assigned')
+        ]);
+        
+        if (pitchRequestsResponse.error) throw pitchRequestsResponse.error;
+        if (pitchingAssignmentsResponse.error) throw pitchingAssignmentsResponse.error;
+        
+        pitchRequestsData = pitchRequestsResponse.data || [];
+        pitchingAssignmentsData = pitchingAssignmentsResponse.data || [];
+      }
+
       const jurorProgress: JurorProgress[] = jurorsData?.map(juror => {
         const assignmentField = currentRound === 'screeningRound' ? 'screening_assignments' : 'pitching_assignments';
         const assignments = juror[assignmentField] || [];
@@ -124,6 +152,20 @@ export const JurorProgressMonitoring = ({ currentRound }: JurorProgressMonitorin
           currentRound: 'screening',
           completedRounds: []
         };
+
+        // Calculate pitching calls data if in pitching round
+        let pitchingAssignedCount = 0;
+        let pitchingScheduledCount = 0;
+        let pitchingCallsRate = 0;
+
+        if (currentRound === 'pitchingRound' && juror.user_id) {
+          pitchingAssignedCount = pitchingAssignmentsData.filter(pa => pa.juror_id === juror.id).length;
+          pitchingScheduledCount = pitchRequestsData.filter(pr => 
+            pr.vc_id === juror.user_id && 
+            (pr.status === 'scheduled' || pr.status === 'completed')
+          ).length;
+          pitchingCallsRate = pitchingAssignedCount > 0 ? (pitchingScheduledCount / pitchingAssignedCount) * 100 : 0;
+        }
         
         return {
           id: juror.id,
@@ -136,7 +178,10 @@ export const JurorProgressMonitoring = ({ currentRound }: JurorProgressMonitorin
           pendingCount,
           completionRate,
           lastActivity: lastModified?.last_modified_at || 'Never',
-          progressiveStatus
+          progressiveStatus,
+          pitchingAssignedCount,
+          pitchingScheduledCount,
+          pitchingCallsRate
         };
       }) || [];
 
@@ -411,15 +456,35 @@ export const JurorProgressMonitoring = ({ currentRound }: JurorProgressMonitorin
                 </div>
                 
                 <div className="flex items-center gap-4 mb-3">
-                  <div className="flex-1">
-                    <div className="flex justify-between text-sm mb-1">
-                      <span>Progress</span>
-                      <span>{Math.round(juror.completionRate)}%</span>
+                  <div className="flex-1 space-y-3">
+                    {/* Evaluation Progress - Always visible */}
+                    <div>
+                      <div className="flex justify-between text-sm mb-1">
+                        <span>Evaluation Progress</span>
+                        <span>{Math.round(juror.completionRate)}%</span>
+                      </div>
+                      <Progress 
+                        value={juror.completionRate} 
+                        className="h-2"
+                      />
                     </div>
-                    <Progress 
-                      value={juror.completionRate} 
-                      className="h-2"
-                    />
+                    
+                    {/* Pitching Calls Progress - Only visible during pitching round */}
+                    {currentRound === 'pitchingRound' && (
+                      <div>
+                        <div className="flex justify-between text-sm mb-1">
+                          <span>Pitching Calls Progress</span>
+                          <span>{Math.round(juror.pitchingCallsRate || 0)}%</span>
+                        </div>
+                        <Progress 
+                          value={juror.pitchingCallsRate || 0} 
+                          className="h-2"
+                        />
+                        <div className="text-xs text-muted-foreground mt-1">
+                          {juror.pitchingScheduledCount || 0}/{juror.pitchingAssignedCount || 0} calls scheduled
+                        </div>
+                      </div>
+                    )}
                   </div>
                   <div className="text-sm text-muted-foreground">
                     <Clock className="w-4 h-4 inline mr-1" />
