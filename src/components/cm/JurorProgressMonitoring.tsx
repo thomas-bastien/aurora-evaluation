@@ -60,8 +60,9 @@ export const JurorProgressMonitoring = ({ currentRound }: JurorProgressMonitorin
   const roundTitle = currentRound === 'screeningRound' ? 'Screening Round' : 'Pitching Round';
 
   useEffect(() => {
+    setLoading(true);
     fetchJurorProgress();
-  }, []);
+  }, [currentRound]);
 
   useEffect(() => {
     filterJurors();
@@ -96,7 +97,7 @@ export const JurorProgressMonitoring = ({ currentRound }: JurorProgressMonitorin
         const evaluationTable = currentRound === 'screeningRound' ? 'screening_evaluations' : 'pitching_evaluations';
         const { data: evals, error: evalError } = await supabase
           .from(evaluationTable)
-          .select('evaluator_id, status, last_modified_at')
+          .select('evaluator_id, startup_id, status, last_modified_at')
           .in('evaluator_id', jurorUserIds);
           
         if (evalError) throw evalError;
@@ -130,21 +131,23 @@ export const JurorProgressMonitoring = ({ currentRound }: JurorProgressMonitorin
       const jurorProgress: JurorProgress[] = jurorsData?.map(juror => {
         const assignmentField = currentRound === 'screeningRound' ? 'screening_assignments' : 'pitching_assignments';
         const assignments = juror[assignmentField] || [];
-        const assignedCount = assignments.length;
+        const assignedOnly = assignments.filter((a: any) => a.status === 'assigned');
+        const assignedStartupIds = assignedOnly.map((a: any) => a.startup_id);
+        const assignedCount = assignedOnly.length;
         
-        // Get real evaluations for this juror (only if they have a user_id)
+        // Get real evaluations for this juror in this round and only for assigned startups
         const jurorEvaluations = juror.user_id 
-          ? evaluationsData.filter(evaluation => evaluation.evaluator_id === juror.user_id)
+          ? evaluationsData.filter((evaluation: any) => evaluation.evaluator_id === juror.user_id && assignedStartupIds.includes(evaluation.startup_id))
           : [];
-        const completedCount = jurorEvaluations.filter(evaluation => evaluation.status === 'submitted').length;
-        const draftCount = jurorEvaluations.filter(evaluation => evaluation.status === 'draft').length;
-        const pendingCount = assignedCount - completedCount - draftCount;
+        const completedCount = jurorEvaluations.filter((evaluation: any) => evaluation.status === 'submitted').length;
+        const draftCount = jurorEvaluations.filter((evaluation: any) => evaluation.status === 'draft').length;
+        const pendingCount = Math.max(assignedCount - completedCount - draftCount, 0);
         const completionRate = assignedCount > 0 ? (completedCount / assignedCount) * 100 : 0;
         
         // Get last activity from evaluations
         const lastModified = jurorEvaluations
-          .filter(evaluation => evaluation.last_modified_at)
-          .sort((a, b) => new Date(b.last_modified_at!).getTime() - new Date(a.last_modified_at!).getTime())[0];
+          .filter((evaluation: any) => evaluation.last_modified_at)
+          .sort((a: any, b: any) => new Date(b.last_modified_at!).getTime() - new Date(a.last_modified_at!).getTime())[0];
         
         // Use progressive status from our calculation
         const progressiveStatus = jurorProgressiveStatuses[juror.id] || {
@@ -159,11 +162,9 @@ export const JurorProgressMonitoring = ({ currentRound }: JurorProgressMonitorin
         let pitchingCallsRate = 0;
 
         if (currentRound === 'pitchingRound' && juror.user_id) {
-          pitchingAssignedCount = pitchingAssignmentsData.filter(pa => pa.juror_id === juror.id).length;
-          pitchingScheduledCount = pitchRequestsData.filter(pr => 
-            pr.vc_id === juror.user_id && 
-            (pr.status === 'scheduled' || pr.status === 'completed')
-          ).length;
+          pitchingAssignedCount = assignedCount;
+          const scheduledForJuror = pitchRequestsData.filter((pr: any) => pr.vc_id === juror.user_id && (pr.status === 'scheduled' || pr.status === 'completed'));
+          pitchingScheduledCount = scheduledForJuror.filter((pr: any) => assignedStartupIds.includes(pr.startup_id)).length;
           pitchingCallsRate = pitchingAssignedCount > 0 ? (pitchingScheduledCount / pitchingAssignedCount) * 100 : 0;
         }
         
