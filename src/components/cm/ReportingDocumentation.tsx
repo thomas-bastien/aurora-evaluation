@@ -127,7 +127,7 @@ export const ReportingDocumentation = ({ currentRound }: ReportingDocumentationP
         startupsData = data;
         startupsError = error;
       } else {
-        // For screening round: show ALL startups
+        // For screening round: get all startups for evaluation data, but count only selected ones
         const { data, error } = await supabase
           .from('startups')
           .select(`
@@ -138,8 +138,13 @@ export const ReportingDocumentation = ({ currentRound }: ReportingDocumentationP
               overall_score,
               status,
               updated_at
+            ),
+            startup_round_statuses!inner(
+              status,
+              rounds!inner(name)
             )
-          `);
+          `)
+          .eq('startup_round_statuses.rounds.name', 'screening');
         
         startupsData = data;
         startupsError = error;
@@ -178,8 +183,14 @@ export const ReportingDocumentation = ({ currentRound }: ReportingDocumentationP
         }
       });
 
+      // Count only selected startups for both rounds
+      const selectedStartups = startupsData?.filter(startup => {
+        const statusRecord = startup.startup_round_statuses?.[0];
+        return statusRecord?.status === 'selected';
+      }) || [];
+
       setStats({
-        totalStartups: startupsData?.length || 0,
+        totalStartups: selectedStartups.length,
         evaluationsCompleted: completedEvaluations,
         averageScore: validScoreCount > 0 ? totalScoreSum / validScoreCount : 0
       });
