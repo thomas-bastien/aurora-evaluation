@@ -277,14 +277,14 @@ const Dashboard = () => {
       <main className="max-w-7xl mx-auto px-6 py-8">
         {/* Profile Completion Banner for VCs */}
         {profile?.role === 'vc' && (!profile.target_verticals || profile.target_verticals.length === 0 || !profile.preferred_stages || profile.preferred_stages.length === 0) && (
-          <div className="mb-6 animate-pulse-gentle">
-            <Card className="bg-gradient-warning border-warning/20">
+          <div className="mb-8 animate-fade-in">
+            <Card className="bg-gradient-warning border-warning/20 shadow-soft">
               <CardHeader className="pb-4">
-                <CardTitle className="text-foreground flex items-center gap-2">
-                  <Users className="w-5 h-5" />
+                <CardTitle className="text-foreground flex items-center gap-2 font-headline">
+                  <Users className="w-4 h-4" />
                   Complete Your Profile
                 </CardTitle>
-                <CardDescription className="text-black">
+                <CardDescription className="text-black font-body">
                   Finish setting up your profile to start evaluating startups and scheduling pitch sessions.
                 </CardDescription>
               </CardHeader>
@@ -296,6 +296,19 @@ const Dashboard = () => {
             </Card>
           </div>
         )}
+
+        {/* Header Section */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-foreground mb-2 font-headline">
+            Programme Dashboard
+          </h1>
+          <p className="text-lg text-muted-foreground font-body">
+            {profile?.role === 'admin' 
+              ? 'Manage your cohort evaluation workflow across screening and pitching rounds.'
+              : `You are 1 of ${dashboardData.totalJurors} jurors helping evaluate this year's cohort of ${dashboardData.totalStartups} startups.`
+            }
+          </p>
+        </div>
 
         {/* Cohort Summary Card */}
         <div className="mb-8 animate-fade-in">
@@ -312,14 +325,12 @@ const Dashboard = () => {
 
         {/* Community Manager Funnel Workflow */}
         {profile?.role === 'admin' && (
-          <div className="space-y-8 animate-fade-in" style={{ animationDelay: "400ms" }}>
-            {/* Round 1 - Screening */}
+          <div className="space-y-8 animate-fade-in" style={{ animationDelay: "200ms" }}>
             <ScreeningFunnelView 
               isActive={dashboardData.activeRound === 'screening'}
               deadlineInfo={getDeadlineInfo('screening')}
             />
 
-            {/* Round 2 - Pitching */}
             <PitchingFunnelView 
               isActive={dashboardData.activeRound === 'pitching'} 
               deadlineInfo={getDeadlineInfo('pitching')}
@@ -329,43 +340,36 @@ const Dashboard = () => {
 
         {/* VC Funnel Workflow */}
         {profile?.role === 'vc' && (
-          <div className="space-y-8 animate-fade-in" style={{ animationDelay: "400ms" }}>
-            {/* Role-specific tagline */}
-            <div className="text-center py-4">
-              <p className="text-lg text-muted-foreground">
-                You are 1 of {dashboardData.totalJurors} jurors helping evaluate this year's cohort of {dashboardData.totalStartups} startups.
-              </p>
-            </div>
-
+          <div className="space-y-8 animate-fade-in" style={{ animationDelay: "200ms" }}>
             {/* Round 1 - Screening */}
-            <Card>
+            <Card className="shadow-soft hover:shadow-medium transition-smooth">
               <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle className="flex items-center gap-2">
-                        <Badge variant="secondary" className="px-3 py-1">Round 1</Badge>
-                        Screening Round
-                      </CardTitle>
-                      <CardDescription>
-                        Evaluate your assigned startups for initial screening
-                      </CardDescription>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="text-sm text-muted-foreground flex items-center gap-1">
-                        <Calendar className="w-4 h-4" />
-                        <span>{getDeadlineInfo('screening')}</span>
-                      </div>
-                      <Badge 
-                        variant={dashboardData.activeRound === 'screening' ? 'default' : 'outline'}
-                        className="px-3 py-1"
-                      >
-                        {dashboardData.activeRound === 'screening' ? 'Active' : 'Completed'}
-                      </Badge>
-                    </div>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2 font-headline">
+                      <Badge variant="secondary" className="px-3 py-1">Round 1</Badge>
+                      Screening Round
+                    </CardTitle>
+                    <CardDescription className="font-body">
+                      Evaluate your assigned startups for initial screening
+                    </CardDescription>
                   </div>
+                  <div className="flex items-center gap-2">
+                    <div className="text-sm text-muted-foreground flex items-center gap-1 font-body">
+                      <Calendar className="w-4 h-4" />
+                      <span>{getDeadlineInfo('screening')}</span>
+                    </div>
+                    <Badge 
+                      variant={dashboardData.activeRound === 'screening' ? 'default' : 'outline'}
+                      className="px-3 py-1"
+                    >
+                      {dashboardData.activeRound === 'screening' ? 'Active' : 'Completed'}
+                    </Badge>
+                  </div>
+                </div>
               </CardHeader>
-              <CardContent>
-                <div className="flex flex-col space-y-4">
+              <CardContent className="pt-6">
+                <div className="space-y-4">
                   <FunnelStage
                     title="Profile Setup"
                     description="Complete your juror profile with expertise and preferences"
@@ -415,20 +419,20 @@ const Dashboard = () => {
             </Card>
 
             {/* Round 2 - Pitching */}
-            <Card>
+            <Card className="shadow-soft hover:shadow-medium transition-smooth">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle className="flex items-center gap-2">
+                    <CardTitle className="flex items-center gap-2 font-headline">
                       <Badge variant="default" className="px-3 py-1">Round 2</Badge>
                       Pitching Round
                     </CardTitle>
-                    <CardDescription>
+                    <CardDescription className="font-body">
                       Participate in pitch sessions and provide final evaluations
                     </CardDescription>
                   </div>
                   <div className="flex items-center gap-2">
-                    <div className="text-sm text-muted-foreground flex items-center gap-1">
+                    <div className="text-sm text-muted-foreground flex items-center gap-1 font-body">
                       <Calendar className="w-4 h-4" />
                       <span>{getDeadlineInfo('pitching')}</span>
                     </div>
@@ -441,8 +445,8 @@ const Dashboard = () => {
                   </div>
                 </div>
               </CardHeader>
-              <CardContent>
-                <div className="flex flex-col space-y-4">
+              <CardContent className="pt-6">
+                <div className="space-y-4">
                   <FunnelStage
                     title="Set Up Calendly"
                     description="Provide your Calendly link for pitch session scheduling"
