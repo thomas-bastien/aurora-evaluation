@@ -183,14 +183,17 @@ export const ReportingDocumentation = ({ currentRound }: ReportingDocumentationP
         }
       });
 
-      // Count only selected startups for both rounds
-      const selectedStartups = startupsData?.filter(startup => {
-        const statusRecord = startup.startup_round_statuses?.[0];
-        return statusRecord?.status === 'selected';
-      }) || [];
+      // Count selected startups for the current round using startup_round_statuses (authoritative source)
+      const { count: selectedCount, error: selectedCountError } = await supabase
+        .from('startup_round_statuses')
+        .select('id, rounds!inner(name)', { count: 'exact', head: true })
+        .eq('rounds.name', roundName)
+        .eq('status', 'selected');
+
+      if (selectedCountError) throw selectedCountError;
 
       setStats({
-        totalStartups: selectedStartups.length,
+        totalStartups: selectedCount || 0,
         evaluationsCompleted: completedEvaluations,
         averageScore: validScoreCount > 0 ? totalScoreSum / validScoreCount : 0
       });
@@ -418,7 +421,7 @@ export const ReportingDocumentation = ({ currentRound }: ReportingDocumentationP
             <Button
               variant="outline" 
               size="sm"
-              onClick={fetchAnalyticsData}
+              onClick={() => { fetchRoundStats(); fetchAnalyticsData(); }}
               className="flex items-center gap-2"
             >
               <RefreshCw className="w-4 h-4" />
