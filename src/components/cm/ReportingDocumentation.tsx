@@ -144,7 +144,7 @@ export const ReportingDocumentation = ({ currentRound }: ReportingDocumentationP
               rounds!inner(name)
             )
           `)
-          .eq('startup_round_statuses.rounds.name', 'pitching');
+          .eq('startup_round_statuses.rounds.name', 'screening');
         
         startupsData = data;
         startupsError = error;
