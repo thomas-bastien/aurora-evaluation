@@ -27,9 +27,12 @@ export function PitchingCallsList({ jurorId, jurorUserId }: PitchingCallsListPro
   const fetchPitchingCalls = async () => {
     try {
       if (!jurorUserId) {
+        console.log('PitchingCallsList: No jurorUserId provided');
         setPitchingCalls([]);
         return;
       }
+
+      console.log('PitchingCallsList: Fetching data for jurorId:', jurorId, 'jurorUserId:', jurorUserId);
 
       // Fetch pitch requests for this VC/juror
       const { data: pitchRequests, error: pitchError } = await supabase
@@ -47,6 +50,7 @@ export function PitchingCallsList({ jurorId, jurorUserId }: PitchingCallsListPro
         .eq('vc_id', jurorUserId);
 
       if (pitchError) throw pitchError;
+      console.log('PitchingCallsList: Pitch requests:', pitchRequests);
 
       // Also fetch pitching assignments to get assigned startups
       const { data: assignments, error: assignError } = await supabase
@@ -63,6 +67,7 @@ export function PitchingCallsList({ jurorId, jurorUserId }: PitchingCallsListPro
         .eq('juror_id', jurorId);
 
       if (assignError) throw assignError;
+      console.log('PitchingCallsList: Assignments:', assignments);
 
       // Combine data: prioritize pitch_requests, then fill in from assignments
       const callsMap = new Map<string, PitchingCall>();
@@ -78,9 +83,12 @@ export function PitchingCallsList({ jurorId, jurorUserId }: PitchingCallsListPro
         });
       });
 
-      // Add assignments that don't have pitch requests
+      // Add assignments (including ones that don't have pitch requests)
       assignments?.forEach(assignment => {
-        if (!callsMap.has(assignment.startup_id)) {
+        const existingCall = callsMap.get(assignment.startup_id);
+        
+        if (!existingCall) {
+          // No pitch request exists, create from assignment
           let status: 'pending' | 'scheduled' | 'completed' = 'pending';
           let pitch_date = null;
 
@@ -90,6 +98,8 @@ export function PitchingCallsList({ jurorId, jurorUserId }: PitchingCallsListPro
           } else if (assignment.meeting_scheduled_date) {
             status = 'scheduled';
             pitch_date = assignment.meeting_scheduled_date;
+          } else if (assignment.status === 'assigned') {
+            status = 'pending';
           }
 
           callsMap.set(assignment.startup_id, {
@@ -98,10 +108,22 @@ export function PitchingCallsList({ jurorId, jurorUserId }: PitchingCallsListPro
             pitch_date,
             status,
           });
+        } else {
+          // Update existing pitch request with assignment data if needed
+          if (!existingCall.pitch_date && assignment.meeting_scheduled_date) {
+            existingCall.pitch_date = assignment.meeting_scheduled_date;
+            existingCall.status = 'scheduled';
+          }
+          if (assignment.meeting_completed_date) {
+            existingCall.pitch_date = assignment.meeting_completed_date;
+            existingCall.status = 'completed';
+          }
         }
       });
 
-      setPitchingCalls(Array.from(callsMap.values()));
+      const finalCalls = Array.from(callsMap.values());
+      console.log('PitchingCallsList: Final calls:', finalCalls);
+      setPitchingCalls(finalCalls);
     } catch (error) {
       console.error('Error fetching pitching calls:', error);
       setPitchingCalls([]);
