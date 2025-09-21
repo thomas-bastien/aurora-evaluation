@@ -118,9 +118,8 @@ export const JurorProgressMonitoring = ({ currentRound }: JurorProgressMonitorin
             .in('vc_id', jurorUserIds),
           supabase
             .from('pitching_assignments')
-            .select('juror_id, startup_id, status')
+            .select('juror_id, startup_id, status, meeting_scheduled_date, meeting_completed_date')
             .in('juror_id', jurorIds)
-            .eq('status', 'assigned')
         ]);
         
         if (pitchRequestsResponse.error) throw pitchRequestsResponse.error;
@@ -165,8 +164,23 @@ export const JurorProgressMonitoring = ({ currentRound }: JurorProgressMonitorin
 
         if (currentRound === 'pitchingRound' && juror.user_id) {
           pitchingAssignedCount = assignedCount;
-          const scheduledForJuror = pitchRequestsData.filter((pr: any) => pr.vc_id === juror.user_id && (pr.status === 'scheduled' || pr.status === 'completed'));
-          pitchingScheduledCount = scheduledForJuror.filter((pr: any) => assignedStartupIds.includes(pr.startup_id)).length;
+          
+          // Count scheduled calls from pitch_requests
+          const scheduledFromRequests = pitchRequestsData.filter((pr: any) => 
+            pr.vc_id === juror.user_id && 
+            (pr.status === 'scheduled' || pr.status === 'completed') &&
+            assignedStartupIds.includes(pr.startup_id)
+          ).length;
+          
+          // Count scheduled calls from pitching_assignments (primary source)
+          const scheduledFromAssignments = pitchingAssignmentsData.filter((pa: any) => 
+            pa.juror_id === juror.id && 
+            assignedStartupIds.includes(pa.startup_id) &&
+            (pa.meeting_scheduled_date || pa.meeting_completed_date)
+          ).length;
+          
+          // Use the higher count (avoid double counting but ensure we capture all scheduled calls)
+          pitchingScheduledCount = Math.max(scheduledFromRequests, scheduledFromAssignments);
           pitchingCallsRate = pitchingAssignedCount > 0 ? (pitchingScheduledCount / pitchingAssignedCount) * 100 : 0;
         }
         
