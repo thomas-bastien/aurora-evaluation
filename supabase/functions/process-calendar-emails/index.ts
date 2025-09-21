@@ -110,39 +110,41 @@ const handler = async (req: Request): Promise<Response> => {
       });
     }
 
-    // Create or update pitch request
-    const pitchRequestData = {
-      startup_id: startups[0].id,
-      vc_id: jurors[0].user_id,
-      pitch_date: new Date(calendarEvent.dtstart).toISOString(),
+    // Find existing pitching assignment
+    const { data: existingAssignment, error: assignmentError } = await supabase
+      .from('pitching_assignments')
+      .select('id, status')
+      .eq('startup_id', startups[0].id)
+      .eq('juror_id', jurors[0].id)
+      .single();
+
+    if (assignmentError || !existingAssignment) {
+      console.log("Could not find matching pitching assignment", { 
+        startup_id: startups[0].id, 
+        juror_id: jurors[0].id,
+        error: assignmentError 
+      });
+      return new Response(JSON.stringify({ 
+        success: false, 
+        message: "No matching pitching assignment found" 
+      }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Update pitching assignment with meeting details
+    const assignmentUpdateData = {
+      meeting_scheduled_date: new Date(calendarEvent.dtstart).toISOString(),
       status: 'scheduled',
       meeting_notes: calendarEvent.description || '',
       calendly_link: calendarEvent.location || '',
-      request_date: new Date(emailData.date).toISOString(),
     };
 
-    // Check if request already exists for this event
-    const { data: existingRequest } = await supabase
-      .from('pitch_requests')
-      .select('id')
-      .eq('startup_id', pitchRequestData.startup_id)
-      .eq('vc_id', pitchRequestData.vc_id)
-      .eq('pitch_date', pitchRequestData.pitch_date)
-      .single();
-
-    let result;
-    if (existingRequest) {
-      // Update existing request
-      result = await supabase
-        .from('pitch_requests')
-        .update(pitchRequestData)
-        .eq('id', existingRequest.id);
-    } else {
-      // Create new request
-      result = await supabase
-        .from('pitch_requests')
-        .insert([pitchRequestData]);
-    }
+    const result = await supabase
+      .from('pitching_assignments')
+      .update(assignmentUpdateData)
+      .eq('id', existingAssignment.id);
 
     if (result.error) {
       throw result.error;
@@ -152,16 +154,17 @@ const handler = async (req: Request): Promise<Response> => {
       startup: startups[0].name,
       juror: jurors[0].name,
       date: calendarEvent.dtstart,
-      action: existingRequest ? 'updated' : 'created'
+      action: 'updated assignment'
     });
 
     return new Response(JSON.stringify({ 
       success: true, 
-      message: `Pitch request ${existingRequest ? 'updated' : 'created'} successfully`,
+      message: "Pitching assignment updated successfully",
       data: {
         startup: startups[0].name,
         juror: jurors[0].name,
-        date: calendarEvent.dtstart
+        date: calendarEvent.dtstart,
+        status: 'scheduled'
       }
     }), {
       status: 200,
