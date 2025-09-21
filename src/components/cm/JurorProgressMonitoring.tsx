@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { FilterPanel } from "@/components/common/FilterPanel";
 import { StartupEvaluationModal } from "@/components/evaluation/StartupEvaluationModal";
 import { JurorStatusBadge } from '@/components/common/JuryRoundStatusBadges';
+import { PitchingCallsList } from './PitchingCallsList';
 import { calculateMultipleProgressiveJurorStatuses, type ProgressiveJurorStatus } from '@/utils/juryStatusUtils';
 import { formatScore } from "@/lib/utils";
 import { 
@@ -36,6 +37,7 @@ interface JurorProgress {
   completionRate: number;
   lastActivity: string;
   progressiveStatus: ProgressiveJurorStatus;
+  user_id?: string; // Add user_id to interface
   // Pitching calls data (only populated during pitching round)
   pitchingAssignedCount?: number;
   pitchingScheduledCount?: number;
@@ -180,6 +182,7 @@ export const JurorProgressMonitoring = ({ currentRound }: JurorProgressMonitorin
           completionRate,
           lastActivity: lastModified?.last_modified_at || 'Never',
           progressiveStatus,
+          user_id: juror.user_id,
           pitchingAssignedCount,
           pitchingScheduledCount,
           pitchingCallsRate
@@ -484,6 +487,7 @@ export const JurorProgressMonitoring = ({ currentRound }: JurorProgressMonitorin
                         <div className="text-xs text-muted-foreground mt-1">
                           {juror.pitchingScheduledCount || 0}/{juror.pitchingAssignedCount || 0} calls scheduled
                         </div>
+                        <PitchingCallsList jurorId={juror.id} jurorUserId={juror.user_id || ''} />
                       </div>
                     )}
                   </div>
