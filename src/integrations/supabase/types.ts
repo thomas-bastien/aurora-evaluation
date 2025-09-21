@@ -103,40 +103,49 @@ export type Database = {
       }
       pitch_requests: {
         Row: {
+          assignment_status: string | null
+          attendee_emails: Json | null
           calendly_link: string | null
           created_at: string
+          event_title: string | null
           id: string
           meeting_notes: string | null
           pitch_date: string | null
           request_date: string | null
-          startup_id: string
+          startup_id: string | null
           status: string | null
           updated_at: string
-          vc_id: string
+          vc_id: string | null
         }
         Insert: {
+          assignment_status?: string | null
+          attendee_emails?: Json | null
           calendly_link?: string | null
           created_at?: string
+          event_title?: string | null
           id?: string
           meeting_notes?: string | null
           pitch_date?: string | null
           request_date?: string | null
-          startup_id: string
+          startup_id?: string | null
           status?: string | null
           updated_at?: string
-          vc_id: string
+          vc_id?: string | null
         }
         Update: {
+          assignment_status?: string | null
+          attendee_emails?: Json | null
           calendly_link?: string | null
           created_at?: string
+          event_title?: string | null
           id?: string
           meeting_notes?: string | null
           pitch_date?: string | null
           request_date?: string | null
-          startup_id?: string
+          startup_id?: string | null
           status?: string | null
           updated_at?: string
-          vc_id?: string
+          vc_id?: string | null
         }
         Relationships: [
           {
@@ -151,27 +160,39 @@ export type Database = {
       pitching_assignments: {
         Row: {
           assigned_by: string | null
+          calendly_link: string | null
           created_at: string
           id: string
           juror_id: string
+          meeting_completed_date: string | null
+          meeting_notes: string | null
+          meeting_scheduled_date: string | null
           startup_id: string
           status: string | null
           updated_at: string
         }
         Insert: {
           assigned_by?: string | null
+          calendly_link?: string | null
           created_at?: string
           id?: string
           juror_id: string
+          meeting_completed_date?: string | null
+          meeting_notes?: string | null
+          meeting_scheduled_date?: string | null
           startup_id: string
           status?: string | null
           updated_at?: string
         }
         Update: {
           assigned_by?: string | null
+          calendly_link?: string | null
           created_at?: string
           id?: string
           juror_id?: string
+          meeting_completed_date?: string | null
+          meeting_notes?: string | null
+          meeting_scheduled_date?: string | null
           startup_id?: string
           status?: string | null
           updated_at?: string
