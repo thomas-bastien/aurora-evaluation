@@ -6,13 +6,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Network, Users, Star, MessageSquare, FileText, BarChart3, Lock, CheckCircle, Calendar } from "lucide-react";
+import { Network, Users, Star, MessageSquare, FileText, BarChart3, Lock, CheckCircle } from "lucide-react";
 import { MatchmakingWorkflow } from "@/components/cm/MatchmakingWorkflow";
 import { JurorProgressMonitoring } from "@/components/cm/JurorProgressMonitoring";
 import { StartupSelection } from "@/components/cm/StartupSelection";
 import { ResultsCommunication } from "@/components/cm/ResultsCommunication";
 import { ReportingDocumentation } from "@/components/cm/ReportingDocumentation";
-import PitchingCallsView from "@/components/cm/PitchingCallsView";
 import { WorkflowGuide } from "@/components/common/WorkflowGuide";
 import { useRounds } from "@/hooks/useRounds";
 const Selection = () => {
@@ -125,7 +124,7 @@ const Selection = () => {
 
         {/* Selection Tabs */}
         <Tabs defaultValue="matchmaking" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-6">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="matchmaking" className="flex items-center gap-2">
               <Network className="w-4 h-4" />
               Matchmaking
@@ -133,10 +132,6 @@ const Selection = () => {
             <TabsTrigger value="juror-progress" className="flex items-center gap-2">
               <Users className="w-4 h-4" />
               Jury Progress
-            </TabsTrigger>
-            <TabsTrigger value="pitching-calls" className="flex items-center gap-2">
-              <Calendar className="w-4 h-4" />
-              Pitching Calls
             </TabsTrigger>
             <TabsTrigger value="startup-selection" className="flex items-center gap-2">
               <Star className="w-4 h-4" />
@@ -158,10 +153,6 @@ const Selection = () => {
 
           <TabsContent value="juror-progress" className="space-y-6">
             <JurorProgressMonitoring currentRound={currentRound} />
-          </TabsContent>
-
-          <TabsContent value="pitching-calls" className="space-y-6">
-            <PitchingCallsView />
           </TabsContent>
 
           <TabsContent value="startup-selection" className="space-y-6">
