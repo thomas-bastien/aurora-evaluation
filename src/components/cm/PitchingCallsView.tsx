@@ -7,16 +7,20 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Calendar, Clock, ExternalLink, Users, RefreshCw } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
+import ManualAssignmentModal from "./ManualAssignmentModal";
 
 interface PitchRequest {
   id: string;
-  startup_id: string;
-  vc_id: string;
-  pitch_date: string;
+  startup_id: string | null;
+  vc_id: string | null;
+  pitch_date: string | null;
   status: string;
   meeting_notes: string | null;
   calendly_link: string | null;
-  request_date: string;
+  request_date: string | null;
+  event_title: string | null;
+  attendee_emails: string[] | null;
+  assignment_status: string | null;
   startup: {
     name: string;
     contact_email: string;
@@ -31,32 +35,56 @@ const PitchingCallsView = () => {
   const [pitchRequests, setPitchRequests] = useState<PitchRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [selectedPitchRequest, setSelectedPitchRequest] = useState<PitchRequest | null>(null);
+  const [assignmentModalOpen, setAssignmentModalOpen] = useState(false);
 
   const fetchPitchRequests = async () => {
     try {
       const { data: requests, error } = await supabase
         .from('pitch_requests')
         .select('*')
-        .order('pitch_date', { ascending: true });
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
 
-      // Fetch related data separately
-      const startupIds = [...new Set(requests?.map(r => r.startup_id) || [])];
-      const vcIds = [...new Set(requests?.map(r => r.vc_id) || [])];
+      // Fetch related data separately, filtering out null values
+      const startupIds = [...new Set(requests?.map(r => r.startup_id).filter(Boolean) || [])];
+      const vcIds = [...new Set(requests?.map(r => r.vc_id).filter(Boolean) || [])];
 
       const [startupsResult, jurorsResult] = await Promise.all([
-        supabase.from('startups').select('id, name, contact_email').in('id', startupIds),
-        supabase.from('jurors').select('id, name, email, user_id').in('user_id', vcIds)
+        startupIds.length > 0 
+          ? supabase.from('startups').select('id, name, contact_email').in('id', startupIds)
+          : Promise.resolve({ data: [] }),
+        vcIds.length > 0 
+          ? supabase.from('jurors').select('id, name, email, user_id').in('user_id', vcIds)
+          : Promise.resolve({ data: [] })
       ]);
 
-      const startupsMap = new Map(startupsResult.data?.map(s => [s.id, s]) || []);
-      const jurorsMap = new Map(jurorsResult.data?.map(j => [j.user_id, j]) || []);
+      const startupsMap = new Map<string, any>();
+      const jurorsMap = new Map<string, any>();
+      
+      if (startupsResult.data) {
+        startupsResult.data.forEach(s => startupsMap.set(s.id, s));
+      }
+      
+      if (jurorsResult.data) {
+        jurorsResult.data.forEach(j => jurorsMap.set(j.user_id, j));
+      }
 
-      const enrichedRequests = requests?.map(request => ({
-        ...request,
-        startup: startupsMap.get(request.startup_id) || null,
-        juror: jurorsMap.get(request.vc_id) || null
+      const enrichedRequests: PitchRequest[] = requests?.map(request => ({
+        id: request.id,
+        startup_id: request.startup_id || null,
+        vc_id: request.vc_id || null,
+        pitch_date: request.pitch_date || null,
+        status: request.status || 'pending',
+        meeting_notes: request.meeting_notes || null,
+        calendly_link: request.calendly_link || null,
+        request_date: request.request_date || null,
+        event_title: (request as any).event_title || null,
+        attendee_emails: (request as any).attendee_emails || null,
+        assignment_status: (request as any).assignment_status || 'unassigned',
+        startup: request.startup_id ? startupsMap.get(request.startup_id) || null : null,
+        juror: request.vc_id ? jurorsMap.get(request.vc_id) || null : null
       })) || [];
 
       setPitchRequests(enrichedRequests);
@@ -72,6 +100,15 @@ const PitchingCallsView = () => {
   const handleRefresh = async () => {
     setRefreshing(true);
     await fetchPitchRequests();
+  };
+
+  const handleAssignClick = (pitchRequest: PitchRequest) => {
+    setSelectedPitchRequest(pitchRequest);
+    setAssignmentModalOpen(true);
+  };
+
+  const handleAssignmentSuccess = () => {
+    fetchPitchRequests();
   };
 
   useEffect(() => {
@@ -90,11 +127,26 @@ const PitchingCallsView = () => {
     return <Badge variant={config.variant}>{config.label}</Badge>;
   };
 
+  const getAssignmentStatusBadge = (assignmentStatus: string | null) => {
+    const statusConfig = {
+      unassigned: { variant: "destructive" as const, label: "Unassigned" },
+      assigned: { variant: "default" as const, label: "Assigned" },
+      scheduled: { variant: "secondary" as const, label: "Scheduled" },
+      completed: { variant: "default" as const, label: "Completed" },
+    };
+
+    const config = statusConfig[assignmentStatus as keyof typeof statusConfig] || statusConfig.unassigned;
+    return <Badge variant={config.variant}>{config.label}</Badge>;
+  };
+
+  const unassignedCalls = pitchRequests.filter(
+    request => request.assignment_status === 'unassigned'
+  );
   const upcomingCalls = pitchRequests.filter(
-    request => new Date(request.pitch_date) > new Date() && request.status !== 'cancelled'
+    request => request.pitch_date && new Date(request.pitch_date) > new Date() && request.status !== 'cancelled' && request.assignment_status !== 'unassigned'
   );
   const recentCalls = pitchRequests.filter(
-    request => new Date(request.pitch_date) <= new Date() || request.status === 'completed'
+    request => request.pitch_date && (new Date(request.pitch_date) <= new Date() || request.status === 'completed') && request.assignment_status !== 'unassigned'
   );
 
   if (loading) {
@@ -142,15 +194,26 @@ const PitchingCallsView = () => {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Calls</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Events</CardTitle>
             <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{pitchRequests.length}</div>
-            <p className="text-xs text-muted-foreground">All scheduled calls</p>
+            <p className="text-xs text-muted-foreground">All calendar events</p>
+          </CardContent>
+        </Card>
+
+        <Card className={unassignedCalls.length > 0 ? "border-destructive" : ""}>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Unassigned</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-destructive">{unassignedCalls.length}</div>
+            <p className="text-xs text-muted-foreground">Need manual assignment</p>
           </CardContent>
         </Card>
 
@@ -185,14 +248,97 @@ const PitchingCallsView = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {pitchRequests.length > 0 
-                ? Math.round((pitchRequests.filter(r => r.status === 'completed').length / pitchRequests.length) * 100)
+              {pitchRequests.filter(r => r.assignment_status !== 'unassigned').length > 0 
+                ? Math.round((pitchRequests.filter(r => r.status === 'completed').length / pitchRequests.filter(r => r.assignment_status !== 'unassigned').length) * 100)
                 : 0}%
             </div>
             <p className="text-xs text-muted-foreground">Completion rate</p>
           </CardContent>
         </Card>
       </div>
+
+      {/* Unassigned Calendar Events */}
+      {unassignedCalls.length > 0 && (
+        <Card className="border-destructive">
+          <CardHeader>
+            <CardTitle className="text-destructive">Unassigned Calendar Events</CardTitle>
+            <CardDescription>
+              These calendar events need manual assignment to startups and jurors
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Event Title</TableHead>
+                  <TableHead>Date & Time</TableHead>
+                  <TableHead>Attendees</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {unassignedCalls.map((request) => (
+                  <TableRow key={request.id}>
+                    <TableCell>
+                      <div>
+                        <div className="font-medium">{request.event_title || 'Untitled Event'}</div>
+                        <div className="text-sm text-muted-foreground">
+                          ID: {request.id.slice(0, 8)}...
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      {request.pitch_date ? (
+                        <div>
+                          <div className="font-medium">
+                            {format(new Date(request.pitch_date), 'MMM dd, yyyy')}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            {format(new Date(request.pitch_date), 'h:mm a')}
+                          </div>
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">No date</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <div className="text-sm">
+                        {request.attendee_emails && request.attendee_emails.length > 0 ? (
+                          <div className="space-y-1">
+                            {request.attendee_emails.slice(0, 3).map((email, index) => (
+                              <div key={index} className="text-xs text-muted-foreground">
+                                {email}
+                              </div>
+                            ))}
+                            {request.attendee_emails.length > 3 && (
+                              <div className="text-xs text-muted-foreground">
+                                +{request.attendee_emails.length - 3} more
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground">No attendees</span>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>{getAssignmentStatusBadge(request.assignment_status)}</TableCell>
+                    <TableCell>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => handleAssignClick(request)}
+                      >
+                        Assign
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Upcoming Calls */}
       {upcomingCalls.length > 0 && (
@@ -210,6 +356,7 @@ const PitchingCallsView = () => {
                   <TableHead>Startup</TableHead>
                   <TableHead>Juror</TableHead>
                   <TableHead>Date & Time</TableHead>
+                  <TableHead>Assignment</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
@@ -234,15 +381,20 @@ const PitchingCallsView = () => {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <div>
-                        <div className="font-medium">
-                          {format(new Date(request.pitch_date), 'MMM dd, yyyy')}
+                      {request.pitch_date ? (
+                        <div>
+                          <div className="font-medium">
+                            {format(new Date(request.pitch_date), 'MMM dd, yyyy')}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            {format(new Date(request.pitch_date), 'h:mm a')}
+                          </div>
                         </div>
-                        <div className="text-sm text-muted-foreground">
-                          {format(new Date(request.pitch_date), 'h:mm a')}
-                        </div>
-                      </div>
+                      ) : (
+                        <span className="text-muted-foreground">No date</span>
+                      )}
                     </TableCell>
+                    <TableCell>{getAssignmentStatusBadge(request.assignment_status)}</TableCell>
                     <TableCell>{getStatusBadge(request.status)}</TableCell>
                     <TableCell>
                       {request.calendly_link && (
@@ -282,6 +434,7 @@ const PitchingCallsView = () => {
                   <TableHead>Startup</TableHead>
                   <TableHead>Juror</TableHead>
                   <TableHead>Date & Time</TableHead>
+                  <TableHead>Assignment</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Notes</TableHead>
                 </TableRow>
@@ -306,15 +459,20 @@ const PitchingCallsView = () => {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <div>
-                        <div className="font-medium">
-                          {format(new Date(request.pitch_date), 'MMM dd, yyyy')}
+                      {request.pitch_date ? (
+                        <div>
+                          <div className="font-medium">
+                            {format(new Date(request.pitch_date), 'MMM dd, yyyy')}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            {format(new Date(request.pitch_date), 'h:mm a')}
+                          </div>
                         </div>
-                        <div className="text-sm text-muted-foreground">
-                          {format(new Date(request.pitch_date), 'h:mm a')}
-                        </div>
-                      </div>
+                      ) : (
+                        <span className="text-muted-foreground">No date</span>
+                      )}
                     </TableCell>
+                    <TableCell>{getAssignmentStatusBadge(request.assignment_status)}</TableCell>
                     <TableCell>{getStatusBadge(request.status)}</TableCell>
                     <TableCell>
                       <div className="text-sm text-muted-foreground max-w-48 truncate">
@@ -344,6 +502,13 @@ const PitchingCallsView = () => {
           </CardContent>
         </Card>
       )}
+
+      <ManualAssignmentModal
+        pitchRequest={selectedPitchRequest}
+        isOpen={assignmentModalOpen}
+        onClose={() => setAssignmentModalOpen(false)}
+        onSuccess={handleAssignmentSuccess}
+      />
     </div>
   );
 };
