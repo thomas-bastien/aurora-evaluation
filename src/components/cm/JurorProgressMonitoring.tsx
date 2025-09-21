@@ -132,9 +132,15 @@ export const JurorProgressMonitoring = ({ currentRound }: JurorProgressMonitorin
       const jurorProgress: JurorProgress[] = jurorsData?.map(juror => {
         const assignmentField = currentRound === 'screeningRound' ? 'screening_assignments' : 'pitching_assignments';
         const assignments = juror[assignmentField] || [];
-        const assignedOnly = assignments.filter((a: any) => a.status === 'assigned');
-        const assignedStartupIds = assignedOnly.map((a: any) => a.startup_id);
-        const assignedCount = assignedOnly.length;
+        
+        // For pitching round, count all assignments regardless of status
+        // For screening round, only count 'assigned' status
+        const relevantAssignments = currentRound === 'pitchingRound' 
+          ? assignments 
+          : assignments.filter((a: any) => a.status === 'assigned');
+          
+        const assignedStartupIds = relevantAssignments.map((a: any) => a.startup_id);
+        const assignedCount = relevantAssignments.length;
         
         // Get real evaluations for this juror in this round and only for assigned startups
         const jurorEvaluations = juror.user_id 
