@@ -125,18 +125,20 @@ const Selection = () => {
 
         {/* Selection Tabs */}
         <Tabs defaultValue="matchmaking" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-6">
+          <TabsList className={`grid w-full ${currentRound === 'pitchingRound' ? 'grid-cols-6' : 'grid-cols-5'}`}>
             <TabsTrigger value="matchmaking" className="flex items-center gap-2">
               <Network className="w-4 h-4" />
               Matchmaking
             </TabsTrigger>
+            {currentRound === 'pitchingRound' && (
+              <TabsTrigger value="pitching-calls" className="flex items-center gap-2">
+                <Calendar className="w-4 h-4" />
+                Pitching Calls
+              </TabsTrigger>
+            )}
             <TabsTrigger value="juror-progress" className="flex items-center gap-2">
               <Users className="w-4 h-4" />
               Jury Progress
-            </TabsTrigger>
-            <TabsTrigger value="pitching-calls" className="flex items-center gap-2">
-              <Calendar className="w-4 h-4" />
-              Pitching Calls
             </TabsTrigger>
             <TabsTrigger value="startup-selection" className="flex items-center gap-2">
               <Star className="w-4 h-4" />
@@ -156,12 +158,14 @@ const Selection = () => {
             <MatchmakingWorkflow currentRound={currentRound} />
           </TabsContent>
 
+          {currentRound === 'pitchingRound' && (
+            <TabsContent value="pitching-calls" className="space-y-6">
+              <PitchingCallsView />
+            </TabsContent>
+          )}
+
           <TabsContent value="juror-progress" className="space-y-6">
             <JurorProgressMonitoring currentRound={currentRound} />
-          </TabsContent>
-
-          <TabsContent value="pitching-calls" className="space-y-6">
-            <PitchingCallsView />
           </TabsContent>
 
           <TabsContent value="startup-selection" className="space-y-6">
