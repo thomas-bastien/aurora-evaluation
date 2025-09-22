@@ -72,6 +72,7 @@ const PitchingCallsView = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedAssignment, setSelectedAssignment] = useState<PitchingAssignment | null>(null);
+  const [selectedInvitation, setSelectedInvitation] = useState<CMCalendarInvitation | null>(null);
   const [meetingModalOpen, setMeetingModalOpen] = useState(false);
   const [newAssignmentModalOpen, setNewAssignmentModalOpen] = useState(false);
 
@@ -295,6 +296,13 @@ const PitchingCallsView = () => {
 
   const handleScheduleMeeting = (assignment: PitchingAssignment) => {
     setSelectedAssignment(assignment);
+    setSelectedInvitation(null);
+    setMeetingModalOpen(true);
+  };
+
+  const handleEditInvitation = (invitation: CMCalendarInvitation) => {
+    setSelectedInvitation(invitation);
+    setSelectedAssignment(null);
     setMeetingModalOpen(true);
   };
 
@@ -1268,6 +1276,13 @@ const PitchingCallsView = () => {
                             <Button 
                               variant="outline" 
                               size="sm"
+                              onClick={() => handleEditInvitation(invitation)}
+                            >
+                              Edit
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              size="sm"
                               onClick={() => updateCMInvitationStatus(invitation.id, 'completed')}
                             >
                               <CheckCircle className="h-4 w-4 mr-1" />
@@ -1402,9 +1417,17 @@ const PitchingCallsView = () => {
       {/* Modals */}
       <MeetingManagementModal
         assignment={selectedAssignment}
+        invitation={selectedInvitation}
         isOpen={meetingModalOpen}
-        onClose={() => setMeetingModalOpen(false)}
-        onSuccess={handleMeetingUpdate}
+        onClose={() => {
+          setMeetingModalOpen(false);
+          setSelectedAssignment(null);
+          setSelectedInvitation(null);
+        }}
+        onSuccess={() => {
+          handleMeetingUpdate();
+          fetchCMInvitations();
+        }}
       />
 
       <NewAssignmentModal

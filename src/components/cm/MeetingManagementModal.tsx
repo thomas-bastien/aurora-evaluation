@@ -32,8 +32,29 @@ interface PitchingAssignment {
   };
 }
 
+interface CMCalendarInvitation {
+  id: string;
+  startup_id: string | null;
+  juror_id: string | null;
+  status: string;
+  event_start_date: string | null;
+  event_end_date: string | null;
+  event_summary: string | null;
+  event_description: string | null;
+  event_location: string | null;
+  startup?: {
+    name: string;
+    contact_email: string;
+  } | null;
+  juror?: {
+    name: string;
+    email: string;
+  } | null;
+}
+
 interface MeetingManagementModalProps {
-  assignment: PitchingAssignment | null;
+  assignment?: PitchingAssignment | null;
+  invitation?: CMCalendarInvitation | null;
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
@@ -41,6 +62,7 @@ interface MeetingManagementModalProps {
 
 const MeetingManagementModal = ({ 
   assignment, 
+  invitation,
   isOpen, 
   onClose, 
   onSuccess 
@@ -52,10 +74,14 @@ const MeetingManagementModal = ({
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (assignment && isOpen) {
+    if ((assignment || invitation) && isOpen) {
       // Initialize form with existing data
-      if (assignment.meeting_scheduled_date) {
+      if (assignment?.meeting_scheduled_date) {
         const date = new Date(assignment.meeting_scheduled_date);
+        setScheduledDate(date);
+        setScheduledTime(format(date, 'HH:mm'));
+      } else if (invitation?.event_start_date) {
+        const date = new Date(invitation.event_start_date);
         setScheduledDate(date);
         setScheduledTime(format(date, 'HH:mm'));
       } else {
@@ -63,42 +89,65 @@ const MeetingManagementModal = ({
         setScheduledTime("");
       }
       
-      setMeetingNotes(assignment.meeting_notes || "");
-      setCalendlyLink(assignment.calendly_link || "");
+      setMeetingNotes(assignment?.meeting_notes || invitation?.event_description || "");
+      setCalendlyLink(assignment?.calendly_link || invitation?.event_location || "");
     }
-  }, [assignment, isOpen]);
+  }, [assignment, invitation, isOpen]);
 
   const handleSave = async () => {
-    if (!assignment) return;
+    if (!assignment && !invitation) return;
 
     setLoading(true);
     try {
-      let meeting_scheduled_date = null;
+      let dateTime = null;
       
       if (scheduledDate && scheduledTime) {
         const [hours, minutes] = scheduledTime.split(':');
-        const dateTime = new Date(scheduledDate);
-        dateTime.setHours(parseInt(hours), parseInt(minutes));
-        meeting_scheduled_date = dateTime.toISOString();
+        const scheduleDateTime = new Date(scheduledDate);
+        scheduleDateTime.setHours(parseInt(hours), parseInt(minutes));
+        dateTime = scheduleDateTime.toISOString();
       }
 
-      const updates: any = {
-        meeting_notes: meetingNotes || null,
-        calendly_link: calendlyLink || null,
-      };
+      if (assignment) {
+        // Handle pitching assignment update
+        const updates: any = {
+          meeting_notes: meetingNotes || null,
+          calendly_link: calendlyLink || null,
+        };
 
-      // Only update scheduled date if it's provided
-      if (meeting_scheduled_date) {
-        updates.meeting_scheduled_date = meeting_scheduled_date;
-        updates.status = 'scheduled';
+        if (dateTime) {
+          updates.meeting_scheduled_date = dateTime;
+          updates.status = 'scheduled';
+        }
+
+        const { error } = await supabase
+          .from('pitching_assignments')
+          .update(updates)
+          .eq('id', assignment.id);
+
+        if (error) throw error;
+      } else if (invitation) {
+        // Handle CM calendar invitation update
+        const updates: any = {
+          event_description: meetingNotes || null,
+          event_location: calendlyLink || null,
+        };
+
+        if (dateTime) {
+          updates.event_start_date = dateTime;
+          // Set end date to 1 hour later if not provided
+          const endDateTime = new Date(dateTime);
+          endDateTime.setHours(endDateTime.getHours() + 1);
+          updates.event_end_date = invitation.event_end_date || endDateTime.toISOString();
+        }
+
+        const { error } = await supabase
+          .from('cm_calendar_invitations')
+          .update(updates)
+          .eq('id', invitation.id);
+
+        if (error) throw error;
       }
-
-      const { error } = await supabase
-        .from('pitching_assignments')
-        .update(updates)
-        .eq('id', assignment.id);
-
-      if (error) throw error;
 
       toast.success('Meeting details updated successfully');
       onSuccess();
@@ -112,21 +161,34 @@ const MeetingManagementModal = ({
   };
 
   const getStatusBadge = () => {
-    if (!assignment) return null;
+    if (assignment) {
+      if (assignment.meeting_completed_date) {
+        return <Badge variant="default" className="bg-green-100 text-green-800 border-green-200">Completed</Badge>;
+      }
+      if (assignment.status === 'cancelled') {
+        return <Badge variant="destructive">Cancelled</Badge>;
+      }
+      if (assignment.meeting_scheduled_date) {
+        return <Badge variant="secondary">Scheduled</Badge>;
+      }
+      return <Badge variant="outline">Pending</Badge>;
+    }
     
-    if (assignment.meeting_completed_date) {
-      return <Badge variant="default" className="bg-green-100 text-green-800 border-green-200">Completed</Badge>;
+    if (invitation) {
+      if (invitation.status === 'completed') {
+        return <Badge variant="default" className="bg-blue-100 text-blue-800 border-blue-200">Scheduled</Badge>;
+      }
+      if (invitation.status === 'cancelled') {
+        return <Badge variant="destructive">Cancelled</Badge>;
+      }
+      return <Badge variant="outline">Pending</Badge>;
     }
-    if (assignment.status === 'cancelled') {
-      return <Badge variant="destructive">Cancelled</Badge>;
-    }
-    if (assignment.meeting_scheduled_date) {
-      return <Badge variant="secondary">Scheduled</Badge>;
-    }
-    return <Badge variant="outline">Pending</Badge>;
+    
+    return null;
   };
 
-  if (!assignment) return null;
+  const currentEntity = assignment || invitation;
+  if (!currentEntity) return null;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -148,13 +210,21 @@ const MeetingManagementModal = ({
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
                 <Label className="text-xs text-muted-foreground">Startup</Label>
-                <div className="font-medium">{assignment.startup.name}</div>
-                <div className="text-xs text-muted-foreground">{assignment.startup.contact_email}</div>
+                <div className="font-medium">
+                  {assignment?.startup.name || invitation?.startup?.name || 'Unknown Startup'}
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  {assignment?.startup.contact_email || invitation?.startup?.contact_email || 'No email'}
+                </div>
               </div>
               <div>
                 <Label className="text-xs text-muted-foreground">Juror</Label>
-                <div className="font-medium">{assignment.juror.name}</div>
-                <div className="text-xs text-muted-foreground">{assignment.juror.email}</div>
+                <div className="font-medium">
+                  {assignment?.juror.name || invitation?.juror?.name || 'Unknown Juror'}
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  {assignment?.juror.email || invitation?.juror?.email || 'No email'}
+                </div>
               </div>
             </div>
           </div>
@@ -231,16 +301,16 @@ const MeetingManagementModal = ({
           </div>
 
           {/* Existing Meeting Info */}
-          {assignment.meeting_scheduled_date && (
+          {(assignment?.meeting_scheduled_date || invitation?.event_start_date) && (
             <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
               <h5 className="font-medium text-blue-900 mb-2">Current Schedule</h5>
               <p className="text-sm text-blue-800">
-                Scheduled for {format(new Date(assignment.meeting_scheduled_date), 'PPPP')} at {format(new Date(assignment.meeting_scheduled_date), 'p')}
+                Scheduled for {format(new Date(assignment?.meeting_scheduled_date || invitation?.event_start_date || ''), 'PPPP')} at {format(new Date(assignment?.meeting_scheduled_date || invitation?.event_start_date || ''), 'p')}
               </p>
             </div>
           )}
 
-          {assignment.meeting_completed_date && (
+          {assignment?.meeting_completed_date && (
             <div className="bg-green-50 border border-green-200 p-4 rounded-lg">
               <h5 className="font-medium text-green-900 mb-2">Meeting Completed</h5>
               <p className="text-sm text-green-800">
