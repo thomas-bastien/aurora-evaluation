@@ -379,12 +379,37 @@ const PitchingCallsView = () => {
   const pendingAssignments = assignments.filter(
     a => a.status === 'assigned' && !a.meeting_scheduled_date && !a.meeting_completed_date
   );
-  const scheduledMeetings = assignments.filter(
+  const baseScheduledMeetings = assignments.filter(
     a => a.meeting_scheduled_date && !a.meeting_completed_date && a.status !== 'cancelled'
   );
   
-  // Add completed CM invitations to scheduled meetings
+  // Get completed CM invitations
   const completedInvitations = cmInvitations.filter(inv => inv.status === 'completed');
+  
+  // Deduplicate scheduled meetings by startup-juror pair, prioritizing CM invitations (more recent)
+  const scheduledMeetingsMap = new Map();
+  
+  // First add pitching assignments
+  baseScheduledMeetings.forEach(assignment => {
+    const key = `${assignment.startup_id}-${assignment.juror_id}`;
+    scheduledMeetingsMap.set(key, { type: 'assignment', data: assignment });
+  });
+  
+  // Then add/override with CM invitations (they take priority as they're more recent)
+  completedInvitations.forEach(invitation => {
+    const key = `${invitation.startup_id}-${invitation.juror_id}`;
+    scheduledMeetingsMap.set(key, { type: 'invitation', data: invitation });
+  });
+  
+  // Extract the deduplicated scheduled meetings
+  const scheduledMeetings = Array.from(scheduledMeetingsMap.values())
+    .filter(item => item.type === 'assignment')
+    .map(item => item.data);
+  
+  // Extract the deduplicated completed invitations
+  const deduplicatedCompletedInvitations = Array.from(scheduledMeetingsMap.values())
+    .filter(item => item.type === 'invitation')
+    .map(item => item.data);
   const completedMeetings = assignments.filter(
     a => a.meeting_completed_date || a.status === 'completed'
   );
@@ -1092,7 +1117,7 @@ const PitchingCallsView = () => {
       )}
 
       {/* Scheduled Meetings */}
-      {(scheduledMeetings.length > 0 || completedInvitations.length > 0) && (
+      {(scheduledMeetings.length > 0 || deduplicatedCompletedInvitations.length > 0) && (
         <Collapsible open={!sectionCollapseState.scheduledMeetings} onOpenChange={() => toggleSection('scheduledMeetings')}>
           <Card>
             <CollapsibleTrigger asChild>
@@ -1100,7 +1125,7 @@ const PitchingCallsView = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <CardTitle className="flex items-center gap-2">
-                      Scheduled Meetings ({scheduledMeetings.length + completedInvitations.length} items)
+                      Scheduled Meetings ({scheduledMeetings.length + deduplicatedCompletedInvitations.length} items)
                       {sectionCollapseState.scheduledMeetings ? 
                         <ChevronDown className="h-4 w-4" /> : 
                         <ChevronUp className="h-4 w-4" />
@@ -1188,7 +1213,7 @@ const PitchingCallsView = () => {
                         </TableCell>
                       </TableRow>
                     ))}
-                    {completedInvitations.map((invitation) => (
+                    {deduplicatedCompletedInvitations.map((invitation) => (
                       <TableRow key={`invitation-${invitation.id}`}>
                         <TableCell>
                           <div>
