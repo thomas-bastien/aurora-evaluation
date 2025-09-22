@@ -4,7 +4,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Calendar, Clock, Users, RefreshCw, Plus, CheckCircle, XCircle, Calendar as CalendarIcon } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Calendar, Clock, Users, RefreshCw, Plus, CheckCircle, XCircle, Calendar as CalendarIcon, ChevronDown, ChevronUp } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import MeetingManagementModal from "./MeetingManagementModal";
@@ -74,6 +75,56 @@ const PitchingCallsView = () => {
   const [meetingModalOpen, setMeetingModalOpen] = useState(false);
   const [newAssignmentModalOpen, setNewAssignmentModalOpen] = useState(false);
 
+  // Collapsible sections state with localStorage persistence
+  const [sectionCollapseState, setSectionCollapseState] = useState(() => {
+    try {
+      const saved = localStorage.getItem('cm-pitching-calls-collapse-state');
+      return saved ? JSON.parse(saved) : {
+        calendarInvitations: true,        // Collapsed by default (renamed section)
+        unmatchedInvitations: false,      // Always expanded
+        rescheduledInvitations: false,    // Expanded if items exist
+        cancelledInvitations: true,       // Collapsed by default
+        pendingAssignments: false,        // Expanded if items exist
+        scheduledMeetings: true,          // Collapsed by default
+        completedMeetings: true           // Collapsed by default
+      };
+    } catch {
+      return {
+        calendarInvitations: true,
+        unmatchedInvitations: false,
+        rescheduledInvitations: false,
+        cancelledInvitations: true,
+        pendingAssignments: false,
+        scheduledMeetings: true,
+        completedMeetings: true
+      };
+    }
+  });
+
+  // Update localStorage when collapse state changes
+  useEffect(() => {
+    localStorage.setItem('cm-pitching-calls-collapse-state', JSON.stringify(sectionCollapseState));
+  }, [sectionCollapseState]);
+
+  const toggleSection = (sectionKey: string) => {
+    setSectionCollapseState(prev => ({
+      ...prev,
+      [sectionKey]: !prev[sectionKey]
+    }));
+  };
+
+  const expandAll = () => {
+    setSectionCollapseState(prev => 
+      Object.keys(prev).reduce((acc, key) => ({ ...acc, [key]: false }), {})
+    );
+  };
+
+  const collapseAll = () => {
+    setSectionCollapseState(prev => 
+      Object.keys(prev).reduce((acc, key) => ({ ...acc, [key]: true }), {})
+    );
+  };
+
   const fetchAssignments = async () => {
     try {
       const { data: assignmentsData, error } = await supabase
@@ -136,6 +187,11 @@ const PitchingCallsView = () => {
 
   const updateCMInvitationStatus = async (invitationId: string, newStatus: string) => {
     try {
+      // Optimistically update the local state for immediate UI feedback
+      setCmInvitations(prev => prev.map(inv => 
+        inv.id === invitationId ? { ...inv, status: newStatus } : inv
+      ));
+
       const { error } = await supabase
         .from('cm_calendar_invitations')
         .update({ status: newStatus })
@@ -144,10 +200,13 @@ const PitchingCallsView = () => {
       if (error) throw error;
 
       toast.success(`Meeting marked as ${newStatus}`);
+      // Refresh to get the latest data from server
       fetchCMInvitations();
     } catch (error: any) {
       console.error('Error updating CM invitation status:', error);
       toast.error('Failed to update meeting status');
+      // Revert optimistic update on error
+      fetchCMInvitations();
     }
   };
 
@@ -219,6 +278,15 @@ const PitchingCallsView = () => {
 
   const handleMarkCompleted = async (assignmentId: string) => {
     try {
+      // Optimistically update the local state
+      setAssignments(prev => prev.map(assignment => 
+        assignment.id === assignmentId ? { 
+          ...assignment, 
+          status: 'completed',
+          meeting_completed_date: new Date().toISOString()
+        } : assignment
+      ));
+
       const { error } = await supabase
         .from('pitching_assignments')
         .update({
@@ -234,11 +302,20 @@ const PitchingCallsView = () => {
     } catch (error: any) {
       console.error('Error marking meeting as completed:', error);
       toast.error('Failed to mark meeting as completed');
+      fetchAssignments(); // Revert on error
     }
   };
 
   const handleMarkCancelled = async (assignmentId: string) => {
     try {
+      // Optimistically update the local state
+      setAssignments(prev => prev.map(assignment => 
+        assignment.id === assignmentId ? { 
+          ...assignment, 
+          status: 'cancelled'
+        } : assignment
+      ));
+
       const { error } = await supabase
         .from('pitching_assignments')
         .update({
@@ -253,6 +330,7 @@ const PitchingCallsView = () => {
     } catch (error: any) {
       console.error('Error marking meeting as cancelled:', error);
       toast.error('Failed to mark meeting as cancelled');
+      fetchAssignments(); // Revert on error
     }
   };
 
@@ -344,6 +422,22 @@ const PitchingCallsView = () => {
           </p>
         </div>
         <div className="flex gap-2">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={expandAll}
+          >
+            <ChevronDown className="h-4 w-4 mr-2" />
+            Expand All
+          </Button>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={collapseAll}
+          >
+            <ChevronUp className="h-4 w-4 mr-2" />
+            Collapse All
+          </Button>
           <Button 
             onClick={() => setNewAssignmentModalOpen(true)}
             size="sm"
@@ -520,136 +614,152 @@ const PitchingCallsView = () => {
         </Card>
       )}
 
-      {/* CM Calendar Invitations - Successfully Matched */}
+      {/* Calendar Invitations */}
       {matchedInvitations.length > 0 && (
-        <Card className="border-blue-200">
-          <CardHeader>
-            <CardTitle className="text-blue-700">Successfully Matched Calendar Invitations</CardTitle>
-            <CardDescription>
-              Pitch meeting invitations that were automatically or manually matched
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Event</TableHead>
-                  <TableHead>Startup</TableHead>
-                  <TableHead>Juror</TableHead>
-                  <TableHead>Event Date</TableHead>
-                  <TableHead>Match Type</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {matchedInvitations.map((invitation) => (
-                  <TableRow key={invitation.id}>
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">{invitation.event_summary || 'Pitch Meeting'}</div>
-                        {invitation.event_location && (
-                          <div className="text-sm text-muted-foreground">
-                            📍 {invitation.event_location}
+        <Collapsible open={!sectionCollapseState.calendarInvitations} onOpenChange={() => toggleSection('calendarInvitations')}>
+          <Card className="border-blue-200">
+            <CollapsibleTrigger asChild>
+              <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-blue-700 flex items-center gap-2">
+                      Calendar Invitations ({matchedInvitations.length} items)
+                      {sectionCollapseState.calendarInvitations ? 
+                        <ChevronDown className="h-4 w-4" /> : 
+                        <ChevronUp className="h-4 w-4" />
+                      }
+                    </CardTitle>
+                    <CardDescription>
+                      Pitch meeting invitations that were automatically or manually matched
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Event</TableHead>
+                      <TableHead>Startup</TableHead>
+                      <TableHead>Juror</TableHead>
+                      <TableHead>Event Date</TableHead>
+                      <TableHead>Match Type</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {matchedInvitations.map((invitation) => (
+                      <TableRow key={invitation.id}>
+                        <TableCell>
+                          <div>
+                            <div className="font-medium">{invitation.event_summary || 'Pitch Meeting'}</div>
+                            {invitation.event_location && (
+                              <div className="text-sm text-muted-foreground">
+                                📍 {invitation.event_location}
+                              </div>
+                            )}
                           </div>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">{invitation.startup?.name || 'Unknown'}</div>
-                        <div className="text-sm text-muted-foreground">
-                          {invitation.startup?.contact_email || 'No email'}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">{invitation.juror?.name || 'Unknown'}</div>
-                        <div className="text-sm text-muted-foreground">
-                          {invitation.juror?.email || 'No email'}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {invitation.event_start_date ? (
-                        <div>
-                          <div className="font-medium">
-                            {format(new Date(invitation.event_start_date), 'MMM dd, yyyy')}
+                        </TableCell>
+                        <TableCell>
+                          <div>
+                            <div className="font-medium">{invitation.startup?.name || 'Unknown'}</div>
+                            <div className="text-sm text-muted-foreground">
+                              {invitation.startup?.contact_email || 'No email'}
+                            </div>
                           </div>
-                          <div className="text-sm text-muted-foreground">
-                            {format(new Date(invitation.event_start_date), 'h:mm a')}
+                        </TableCell>
+                        <TableCell>
+                          <div>
+                            <div className="font-medium">{invitation.juror?.name || 'Unknown'}</div>
+                            <div className="text-sm text-muted-foreground">
+                              {invitation.juror?.email || 'No email'}
+                            </div>
                           </div>
-                        </div>
-                      ) : (
-                        <span className="text-muted-foreground">No date</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <Badge 
-                        variant="outline"
-                        className={
-                          invitation.matching_status === 'auto_matched' ? 'bg-green-100 text-green-800 border-green-200' :
-                          invitation.matching_status === 'manual_matched' ? 'bg-blue-100 text-blue-800 border-blue-200' : ''
-                        }
-                      >
-                        {invitation.matching_status === 'auto_matched' ? 'Auto' : 'Manual'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge 
-                        variant={
-                          invitation.status === 'completed' ? 'default' :
-                          invitation.status === 'cancelled' ? 'destructive' :
-                          invitation.status === 'rescheduled' ? 'secondary' : 'outline'
-                        }
-                        className={
-                          invitation.status === 'completed' ? 'bg-green-100 text-green-800 border-green-200' :
-                          invitation.status === 'scheduled' ? 'bg-blue-100 text-blue-800 border-blue-200' :
-                          invitation.status === 'rescheduled' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' : ''
-                        }
-                      >
-                        {invitation.status.charAt(0).toUpperCase() + invitation.status.slice(1)}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex gap-1">
-                        {invitation.status !== 'completed' && invitation.status !== 'cancelled' && (
-                          <>
-                            <Button 
-                              variant="outline" 
-                              size="sm"
-                              onClick={() => updateCMInvitationStatus(invitation.id, 'completed')}
-                            >
-                              <CheckCircle className="h-3 w-3 mr-1" />
-                              Complete
-                            </Button>
-                            <Button 
-                              variant="outline" 
-                              size="sm"
-                              onClick={() => updateCMInvitationStatus(invitation.id, 'rescheduled')}
-                            >
-                              <Calendar className="h-3 w-3 mr-1" />
-                              Reschedule
-                            </Button>
-                            <Button 
-                              variant="outline" 
-                              size="sm"
-                              onClick={() => updateCMInvitationStatus(invitation.id, 'cancelled')}
-                            >
-                              <XCircle className="h-3 w-3 mr-1" />
-                              Cancel
-                            </Button>
-                          </>
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
+                        </TableCell>
+                        <TableCell>
+                          {invitation.event_start_date ? (
+                            <div>
+                              <div className="font-medium">
+                                {format(new Date(invitation.event_start_date), 'MMM dd, yyyy')}
+                              </div>
+                              <div className="text-sm text-muted-foreground">
+                                {format(new Date(invitation.event_start_date), 'h:mm a')}
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground">No date</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <Badge 
+                            variant="outline"
+                            className={
+                              invitation.matching_status === 'auto_matched' ? 'bg-green-100 text-green-800 border-green-200' :
+                              invitation.matching_status === 'manual_matched' ? 'bg-blue-100 text-blue-800 border-blue-200' : ''
+                            }
+                          >
+                            {invitation.matching_status === 'auto_matched' ? 'Auto' : 'Manual'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge 
+                            variant={
+                              invitation.status === 'completed' ? 'default' :
+                              invitation.status === 'cancelled' ? 'destructive' :
+                              invitation.status === 'rescheduled' ? 'secondary' : 'outline'
+                            }
+                            className={
+                              invitation.status === 'completed' ? 'bg-green-100 text-green-800 border-green-200' :
+                              invitation.status === 'scheduled' ? 'bg-blue-100 text-blue-800 border-blue-200' :
+                              invitation.status === 'rescheduled' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' : ''
+                            }
+                          >
+                            {invitation.status.charAt(0).toUpperCase() + invitation.status.slice(1)}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex gap-1">
+                            {invitation.status !== 'completed' && invitation.status !== 'cancelled' && (
+                              <>
+                                <Button 
+                                  variant="outline" 
+                                  size="sm"
+                                  onClick={() => updateCMInvitationStatus(invitation.id, 'completed')}
+                                >
+                                  <CheckCircle className="h-3 w-3 mr-1" />
+                                  Complete
+                                </Button>
+                                <Button 
+                                  variant="outline" 
+                                  size="sm"
+                                  onClick={() => updateCMInvitationStatus(invitation.id, 'rescheduled')}
+                                >
+                                  <Calendar className="h-3 w-3 mr-1" />
+                                  Reschedule
+                                </Button>
+                                <Button 
+                                  variant="outline" 
+                                  size="sm"
+                                  onClick={() => updateCMInvitationStatus(invitation.id, 'cancelled')}
+                                >
+                                  <XCircle className="h-3 w-3 mr-1" />
+                                  Cancel
+                                </Button>
+                              </>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </CollapsibleContent>
+          </Card>
+        </Collapsible>
       )}
 
       {/* Rescheduled Calendar Meetings - Need Approval */}
@@ -778,318 +888,382 @@ const PitchingCallsView = () => {
 
       {/* Cancelled Calendar Meetings */}
       {cancelledInvitations.length > 0 && (
-        <Card className="border-gray-200">
-          <CardHeader>
-            <CardTitle className="text-gray-700">Cancelled Calendar Meetings</CardTitle>
-            <CardDescription>
-              Meetings that have been cancelled by participants
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Event</TableHead>
-                  <TableHead>Startup</TableHead>
-                  <TableHead>Juror</TableHead>
-                  <TableHead>Original Date</TableHead>
-                  <TableHead>Cancelled Date</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {cancelledInvitations.map((invitation) => (
-                  <TableRow key={invitation.id} className="opacity-75">
-                    <TableCell>
-                      <div>
-                        <div className="font-medium line-through">{invitation.event_summary || 'Pitch Meeting'}</div>
-                        <Badge variant="destructive" className="mt-1">
-                          Cancelled
-                        </Badge>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">{invitation.startup?.name || 'Unknown'}</div>
-                        <div className="text-sm text-muted-foreground">
-                          {invitation.startup?.contact_email || 'No email'}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">{invitation.juror?.name || 'Unknown'}</div>
-                        <div className="text-sm text-muted-foreground">
-                          {invitation.juror?.email || 'No email'}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {invitation.event_start_date ? (
-                        <div>
-                          <div className="font-medium line-through">
-                            {format(new Date(invitation.event_start_date), 'MMM dd, yyyy')}
+        <Collapsible open={!sectionCollapseState.cancelledInvitations} onOpenChange={() => toggleSection('cancelledInvitations')}>
+          <Card className="border-gray-200">
+            <CollapsibleTrigger asChild>
+              <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-gray-700 flex items-center gap-2">
+                      Cancelled Calendar Meetings ({cancelledInvitations.length} items)
+                      {sectionCollapseState.cancelledInvitations ? 
+                        <ChevronDown className="h-4 w-4" /> : 
+                        <ChevronUp className="h-4 w-4" />
+                      }
+                    </CardTitle>
+                    <CardDescription>
+                      Meetings that have been cancelled by participants
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Event</TableHead>
+                      <TableHead>Startup</TableHead>
+                      <TableHead>Juror</TableHead>
+                      <TableHead>Original Date</TableHead>
+                      <TableHead>Cancelled Date</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {cancelledInvitations.map((invitation) => (
+                      <TableRow key={invitation.id} className="opacity-75">
+                        <TableCell>
+                          <div>
+                            <div className="font-medium line-through">{invitation.event_summary || 'Pitch Meeting'}</div>
+                            <Badge variant="destructive" className="mt-1">
+                              Cancelled
+                            </Badge>
                           </div>
-                          <div className="text-sm text-muted-foreground line-through">
-                            {format(new Date(invitation.event_start_date), 'h:mm a')}
+                        </TableCell>
+                        <TableCell>
+                          <div>
+                            <div className="font-medium">{invitation.startup?.name || 'Unknown'}</div>
+                            <div className="text-sm text-muted-foreground">
+                              {invitation.startup?.contact_email || 'No email'}
+                            </div>
                           </div>
-                        </div>
-                      ) : (
-                        <span className="text-muted-foreground">No date</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {invitation.updated_at ? (
-                        <div>
-                          <div className="font-medium">
-                            {format(new Date(invitation.updated_at), 'MMM dd, yyyy')}
+                        </TableCell>
+                        <TableCell>
+                          <div>
+                            <div className="font-medium">{invitation.juror?.name || 'Unknown'}</div>
+                            <div className="text-sm text-muted-foreground">
+                              {invitation.juror?.email || 'No email'}
+                            </div>
                           </div>
-                          <div className="text-sm text-muted-foreground">
-                            {format(new Date(invitation.updated_at), 'h:mm a')}
-                          </div>
-                        </div>
-                      ) : (
-                        <span className="text-muted-foreground">Unknown</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => updateCMInvitationStatus(invitation.id, 'scheduled')}
-                      >
-                        Reschedule
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
+                        </TableCell>
+                        <TableCell>
+                          {invitation.event_start_date ? (
+                            <div>
+                              <div className="font-medium line-through">
+                                {format(new Date(invitation.event_start_date), 'MMM dd, yyyy')}
+                              </div>
+                              <div className="text-sm text-muted-foreground line-through">
+                                {format(new Date(invitation.event_start_date), 'h:mm a')}
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground">No date</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {invitation.updated_at ? (
+                            <div>
+                              <div className="font-medium">
+                                {format(new Date(invitation.updated_at), 'MMM dd, yyyy')}
+                              </div>
+                              <div className="text-sm text-muted-foreground">
+                                {format(new Date(invitation.updated_at), 'h:mm a')}
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground">Unknown</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => updateCMInvitationStatus(invitation.id, 'scheduled')}
+                          >
+                            Reschedule
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </CollapsibleContent>
+          </Card>
+        </Collapsible>
       )}
 
       {/* Pending Assignments */}
       {pendingAssignments.length > 0 && (
-        <Card className="border-orange-200">
-          <CardHeader>
-            <CardTitle className="text-orange-700">Pending Assignments</CardTitle>
-            <CardDescription>
-              These assignments need meeting scheduling
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Startup</TableHead>
-                  <TableHead>Juror</TableHead>
-                  <TableHead>Assigned Date</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {pendingAssignments.map((assignment) => (
-                  <TableRow key={assignment.id}>
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">{assignment.startup.name}</div>
-                        <div className="text-sm text-muted-foreground">
-                          {assignment.startup.contact_email}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">{assignment.juror.name}</div>
-                        <div className="text-sm text-muted-foreground">
-                          {assignment.juror.email}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {format(new Date(assignment.created_at), 'MMM dd, yyyy')}
-                    </TableCell>
-                    <TableCell>{getStatusBadge(assignment)}</TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => handleScheduleMeeting(assignment)}
-                        >
-                          <CalendarIcon className="h-4 w-4 mr-1" />
-                          Schedule
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
+        <Collapsible open={!sectionCollapseState.pendingAssignments} onOpenChange={() => toggleSection('pendingAssignments')}>
+          <Card className="border-orange-200">
+            <CollapsibleTrigger asChild>
+              <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-orange-700 flex items-center gap-2">
+                      Pending Assignments ({pendingAssignments.length} items)
+                      {sectionCollapseState.pendingAssignments ? 
+                        <ChevronDown className="h-4 w-4" /> : 
+                        <ChevronUp className="h-4 w-4" />
+                      }
+                    </CardTitle>
+                    <CardDescription>
+                      These assignments need meeting scheduling
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Startup</TableHead>
+                      <TableHead>Juror</TableHead>
+                      <TableHead>Assigned Date</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {pendingAssignments.map((assignment) => (
+                      <TableRow key={assignment.id}>
+                        <TableCell>
+                          <div>
+                            <div className="font-medium">{assignment.startup.name}</div>
+                            <div className="text-sm text-muted-foreground">
+                              {assignment.startup.contact_email}
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div>
+                            <div className="font-medium">{assignment.juror.name}</div>
+                            <div className="text-sm text-muted-foreground">
+                              {assignment.juror.email}
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {format(new Date(assignment.created_at), 'MMM dd, yyyy')}
+                        </TableCell>
+                        <TableCell>{getStatusBadge(assignment)}</TableCell>
+                        <TableCell>
+                          <div className="flex gap-2">
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => handleScheduleMeeting(assignment)}
+                            >
+                              <CalendarIcon className="h-4 w-4 mr-1" />
+                              Schedule
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </CollapsibleContent>
+          </Card>
+        </Collapsible>
       )}
 
       {/* Scheduled Meetings */}
       {scheduledMeetings.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Scheduled Meetings</CardTitle>
-            <CardDescription>
-              Upcoming meetings between jurors and startups
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Startup</TableHead>
-                  <TableHead>Juror</TableHead>
-                  <TableHead>Scheduled Date</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {scheduledMeetings.map((assignment) => (
-                  <TableRow key={assignment.id}>
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">{assignment.startup.name}</div>
-                        <div className="text-sm text-muted-foreground">
-                          {assignment.startup.contact_email}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">{assignment.juror.name}</div>
-                        <div className="text-sm text-muted-foreground">
-                          {assignment.juror.email}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {assignment.meeting_scheduled_date ? (
-                        <div>
-                          <div className="font-medium">
-                            {format(new Date(assignment.meeting_scheduled_date), 'MMM dd, yyyy')}
+        <Collapsible open={!sectionCollapseState.scheduledMeetings} onOpenChange={() => toggleSection('scheduledMeetings')}>
+          <Card>
+            <CollapsibleTrigger asChild>
+              <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      Scheduled Meetings ({scheduledMeetings.length} items)
+                      {sectionCollapseState.scheduledMeetings ? 
+                        <ChevronDown className="h-4 w-4" /> : 
+                        <ChevronUp className="h-4 w-4" />
+                      }
+                    </CardTitle>
+                    <CardDescription>
+                      Upcoming meetings between jurors and startups
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Startup</TableHead>
+                      <TableHead>Juror</TableHead>
+                      <TableHead>Scheduled Date</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {scheduledMeetings.map((assignment) => (
+                      <TableRow key={assignment.id}>
+                        <TableCell>
+                          <div>
+                            <div className="font-medium">{assignment.startup.name}</div>
+                            <div className="text-sm text-muted-foreground">
+                              {assignment.startup.contact_email}
+                            </div>
                           </div>
-                          <div className="text-sm text-muted-foreground">
-                            {format(new Date(assignment.meeting_scheduled_date), 'h:mm a')}
+                        </TableCell>
+                        <TableCell>
+                          <div>
+                            <div className="font-medium">{assignment.juror.name}</div>
+                            <div className="text-sm text-muted-foreground">
+                              {assignment.juror.email}
+                            </div>
                           </div>
-                        </div>
-                      ) : (
-                        <span className="text-muted-foreground">No date</span>
-                      )}
-                    </TableCell>
-                    <TableCell>{getStatusBadge(assignment)}</TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => handleScheduleMeeting(assignment)}
-                        >
-                          Edit
-                        </Button>
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => handleMarkCompleted(assignment.id)}
-                        >
-                          <CheckCircle className="h-4 w-4 mr-1" />
-                          Complete
-                        </Button>
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => handleMarkCancelled(assignment.id)}
-                        >
-                          <XCircle className="h-4 w-4 mr-1" />
-                          Cancel
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
+                        </TableCell>
+                        <TableCell>
+                          {assignment.meeting_scheduled_date ? (
+                            <div>
+                              <div className="font-medium">
+                                {format(new Date(assignment.meeting_scheduled_date), 'MMM dd, yyyy')}
+                              </div>
+                              <div className="text-sm text-muted-foreground">
+                                {format(new Date(assignment.meeting_scheduled_date), 'h:mm a')}
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground">No date</span>
+                          )}
+                        </TableCell>
+                        <TableCell>{getStatusBadge(assignment)}</TableCell>
+                        <TableCell>
+                          <div className="flex gap-2">
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => handleScheduleMeeting(assignment)}
+                            >
+                              Edit
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => handleMarkCompleted(assignment.id)}
+                            >
+                              <CheckCircle className="h-4 w-4 mr-1" />
+                              Complete
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => handleMarkCancelled(assignment.id)}
+                            >
+                              <XCircle className="h-4 w-4 mr-1" />
+                              Cancel
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </CollapsibleContent>
+          </Card>
+        </Collapsible>
       )}
 
       {/* Completed Meetings */}
       {completedMeetings.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Completed Meetings</CardTitle>
-            <CardDescription>
-              Finished meetings with outcomes
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Startup</TableHead>
-                  <TableHead>Juror</TableHead>
-                  <TableHead>Completed Date</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {completedMeetings.map((assignment) => (
-                  <TableRow key={assignment.id}>
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">{assignment.startup.name}</div>
-                        <div className="text-sm text-muted-foreground">
-                          {assignment.startup.contact_email}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">{assignment.juror.name}</div>
-                        <div className="text-sm text-muted-foreground">
-                          {assignment.juror.email}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {assignment.meeting_completed_date ? (
-                        <div>
-                          <div className="font-medium">
-                            {format(new Date(assignment.meeting_completed_date), 'MMM dd, yyyy')}
+        <Collapsible open={!sectionCollapseState.completedMeetings} onOpenChange={() => toggleSection('completedMeetings')}>
+          <Card>
+            <CollapsibleTrigger asChild>
+              <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      Completed Meetings ({completedMeetings.length} items)
+                      {sectionCollapseState.completedMeetings ? 
+                        <ChevronDown className="h-4 w-4" /> : 
+                        <ChevronUp className="h-4 w-4" />
+                      }
+                    </CardTitle>
+                    <CardDescription>
+                      Finished meetings with outcomes
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Startup</TableHead>
+                      <TableHead>Juror</TableHead>
+                      <TableHead>Completed Date</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {completedMeetings.map((assignment) => (
+                      <TableRow key={assignment.id}>
+                        <TableCell>
+                          <div>
+                            <div className="font-medium">{assignment.startup.name}</div>
+                            <div className="text-sm text-muted-foreground">
+                              {assignment.startup.contact_email}
+                            </div>
                           </div>
-                          <div className="text-sm text-muted-foreground">
-                            {format(new Date(assignment.meeting_completed_date), 'h:mm a')}
+                        </TableCell>
+                        <TableCell>
+                          <div>
+                            <div className="font-medium">{assignment.juror.name}</div>
+                            <div className="text-sm text-muted-foreground">
+                              {assignment.juror.email}
+                            </div>
                           </div>
-                        </div>
-                      ) : (
-                        <span className="text-muted-foreground">No date</span>
-                      )}
-                    </TableCell>
-                    <TableCell>{getStatusBadge(assignment)}</TableCell>
-                    <TableCell>
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => handleScheduleMeeting(assignment)}
-                      >
-                        View Details
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
+                        </TableCell>
+                        <TableCell>
+                          {assignment.meeting_completed_date ? (
+                            <div>
+                              <div className="font-medium">
+                                {format(new Date(assignment.meeting_completed_date), 'MMM dd, yyyy')}
+                              </div>
+                              <div className="text-sm text-muted-foreground">
+                                {format(new Date(assignment.meeting_completed_date), 'h:mm a')}
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground">No date</span>
+                          )}
+                        </TableCell>
+                        <TableCell>{getStatusBadge(assignment)}</TableCell>
+                        <TableCell>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => handleScheduleMeeting(assignment)}
+                          >
+                            View Details
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </CollapsibleContent>
+          </Card>
+        </Collapsible>
       )}
 
       {/* No assignments message */}
