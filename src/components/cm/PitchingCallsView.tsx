@@ -161,6 +161,14 @@ const PitchingCallsView = () => {
     return statusMap[status] || status.charAt(0).toUpperCase() + status.slice(1);
   };
 
+  // Context-aware status function for scheduled meetings section
+  const getScheduledDisplayStatus = (status: string): string => {
+    if (status === 'completed') {
+      return 'Scheduled'; // Accepted invitations show as "Scheduled" in the scheduled section
+    }
+    return getDisplayStatus(status);
+  };
+
   const fetchCMInvitations = async () => {
     try {
       const { data: invitationsData, error } = await supabase
@@ -1246,8 +1254,13 @@ const PitchingCallsView = () => {
                           )}
                         </TableCell>
                         <TableCell>
-                          <Badge variant="default" className="bg-green-100 text-green-800 border-green-200">
-                            {getDisplayStatus(invitation.status)}
+                          <Badge 
+                            variant="default" 
+                            className={
+                              invitation.status === 'completed' ? 'bg-blue-100 text-blue-800 border-blue-200' : 'bg-green-100 text-green-800 border-green-200'
+                            }
+                          >
+                            {getScheduledDisplayStatus(invitation.status)}
                           </Badge>
                         </TableCell>
                         <TableCell>
