@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Calendar, Clock, Users, RefreshCw, Plus, CheckCircle, XCircle, Calendar as CalendarIcon, ChevronDown, ChevronUp } from "lucide-react";
+import { Calendar, Clock, Users, RefreshCw, Plus, CheckCircle, XCircle, Calendar as CalendarIcon, ChevronDown, ChevronUp, Check } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import MeetingManagementModal from "./MeetingManagementModal";
@@ -199,7 +199,8 @@ const PitchingCallsView = () => {
 
       if (error) throw error;
 
-      toast.success(`Meeting marked as ${newStatus}`);
+      const message = newStatus === 'scheduled' ? 'Meeting invitation accepted' : `Meeting marked as ${newStatus}`;
+      toast.success(message);
       // Refresh to get the latest data from server
       fetchCMInvitations();
     } catch (error: any) {
@@ -375,7 +376,7 @@ const PitchingCallsView = () => {
   // Filter invitations by matching status and lifecycle
   const matchedInvitations = cmInvitations.filter(inv => 
     (inv.matching_status === 'auto_matched' || inv.matching_status === 'manual_matched') && 
-    inv.status !== 'cancelled'
+    inv.status !== 'cancelled' && inv.status !== 'scheduled'
   );
   const unmatchedInvitations = cmInvitations.filter(inv => inv.manual_assignment_needed);
   const rescheduledInvitations = cmInvitations.filter(inv => 
@@ -727,10 +728,10 @@ const PitchingCallsView = () => {
                                 <Button 
                                   variant="outline" 
                                   size="sm"
-                                  onClick={() => updateCMInvitationStatus(invitation.id, 'completed')}
+                                  onClick={() => updateCMInvitationStatus(invitation.id, 'scheduled')}
                                 >
-                                  <CheckCircle className="h-3 w-3 mr-1" />
-                                  Complete
+                                  <Check className="h-3 w-3 mr-1" />
+                                  Accept
                                 </Button>
                                 <Button 
                                   variant="outline" 
