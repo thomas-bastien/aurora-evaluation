@@ -30,8 +30,34 @@ interface PitchingAssignment {
   };
 }
 
+interface CMCalendarInvitation {
+  id: string;
+  startup_id: string;
+  juror_id: string;
+  pitching_assignment_id: string;
+  calendar_uid: string;
+  event_summary: string | null;
+  event_description: string | null;
+  event_location: string | null;
+  event_start_date: string | null;
+  event_end_date: string | null;
+  attendee_emails: any;
+  status: string;
+  created_at: string;
+  updated_at: string;
+  startup: {
+    name: string;
+    contact_email: string;
+  };
+  juror: {
+    name: string;
+    email: string;
+  };
+}
+
 const PitchingCallsView = () => {
   const [assignments, setAssignments] = useState<PitchingAssignment[]>([]);
+  const [cmInvitations, setCmInvitations] = useState<CMCalendarInvitation[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedAssignment, setSelectedAssignment] = useState<PitchingAssignment | null>(null);
@@ -61,9 +87,46 @@ const PitchingCallsView = () => {
     }
   };
 
+  const fetchCMInvitations = async () => {
+    try {
+      const { data: invitationsData, error } = await supabase
+        .from('cm_calendar_invitations')
+        .select(`
+          *,
+          startup:startups!inner(name, contact_email),
+          juror:jurors!inner(name, email)
+        `)
+        .order('event_start_date', { ascending: false });
+
+      if (error) throw error;
+
+      setCmInvitations(invitationsData || []);
+    } catch (error: any) {
+      console.error('Error fetching CM calendar invitations:', error);
+      toast.error('Failed to fetch CM calendar invitations');
+    }
+  };
+
+  const updateCMInvitationStatus = async (invitationId: string, newStatus: string) => {
+    try {
+      const { error } = await supabase
+        .from('cm_calendar_invitations')
+        .update({ status: newStatus })
+        .eq('id', invitationId);
+
+      if (error) throw error;
+
+      toast.success(`Meeting marked as ${newStatus}`);
+      fetchCMInvitations();
+    } catch (error: any) {
+      console.error('Error updating CM invitation status:', error);
+      toast.error('Failed to update meeting status');
+    }
+  };
+
   const handleRefresh = async () => {
     setRefreshing(true);
-    await fetchAssignments();
+    await Promise.all([fetchAssignments(), fetchCMInvitations()]);
   };
 
   const handleScheduleMeeting = (assignment: PitchingAssignment) => {
@@ -120,6 +183,7 @@ const PitchingCallsView = () => {
 
   useEffect(() => {
     fetchAssignments();
+    fetchCMInvitations();
   }, []);
 
   const getStatusBadge = (assignment: PitchingAssignment) => {
@@ -200,7 +264,7 @@ const PitchingCallsView = () => {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Assignments</CardTitle>
@@ -209,6 +273,17 @@ const PitchingCallsView = () => {
           <CardContent>
             <div className="text-2xl font-bold">{assignments.length}</div>
             <p className="text-xs text-muted-foreground">All juror-startup pairs</p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-blue-200">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">CM Invitations</CardTitle>
+            <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-blue-600">{cmInvitations.length}</div>
+            <p className="text-xs text-muted-foreground">Calendar events received</p>
           </CardContent>
         </Card>
 
@@ -245,6 +320,126 @@ const PitchingCallsView = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* CM Calendar Invitations */}
+      {cmInvitations.length > 0 && (
+        <Card className="border-blue-200">
+          <CardHeader>
+            <CardTitle className="text-blue-700">Community Manager Calendar Invitations</CardTitle>
+            <CardDescription>
+              All pitch meeting invitations received from calendar system
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Event</TableHead>
+                  <TableHead>Startup</TableHead>
+                  <TableHead>Juror</TableHead>
+                  <TableHead>Event Date</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {cmInvitations.map((invitation) => (
+                  <TableRow key={invitation.id}>
+                    <TableCell>
+                      <div>
+                        <div className="font-medium">{invitation.event_summary || 'Pitch Meeting'}</div>
+                        {invitation.event_location && (
+                          <div className="text-sm text-muted-foreground">
+                            📍 {invitation.event_location}
+                          </div>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div>
+                        <div className="font-medium">{invitation.startup.name}</div>
+                        <div className="text-sm text-muted-foreground">
+                          {invitation.startup.contact_email}
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div>
+                        <div className="font-medium">{invitation.juror.name}</div>
+                        <div className="text-sm text-muted-foreground">
+                          {invitation.juror.email}
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      {invitation.event_start_date ? (
+                        <div>
+                          <div className="font-medium">
+                            {format(new Date(invitation.event_start_date), 'MMM dd, yyyy')}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            {format(new Date(invitation.event_start_date), 'h:mm a')}
+                          </div>
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">No date</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <Badge 
+                        variant={
+                          invitation.status === 'completed' ? 'default' :
+                          invitation.status === 'cancelled' ? 'destructive' :
+                          invitation.status === 'rescheduled' ? 'secondary' : 'outline'
+                        }
+                        className={
+                          invitation.status === 'completed' ? 'bg-green-100 text-green-800 border-green-200' :
+                          invitation.status === 'scheduled' ? 'bg-blue-100 text-blue-800 border-blue-200' :
+                          invitation.status === 'rescheduled' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' : ''
+                        }
+                      >
+                        {invitation.status.charAt(0).toUpperCase() + invitation.status.slice(1)}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex gap-1">
+                        {invitation.status !== 'completed' && invitation.status !== 'cancelled' && (
+                          <>
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => updateCMInvitationStatus(invitation.id, 'completed')}
+                            >
+                              <CheckCircle className="h-3 w-3 mr-1" />
+                              Complete
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => updateCMInvitationStatus(invitation.id, 'rescheduled')}
+                            >
+                              <Calendar className="h-3 w-3 mr-1" />
+                              Reschedule
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => updateCMInvitationStatus(invitation.id, 'cancelled')}
+                            >
+                              <XCircle className="h-3 w-3 mr-1" />
+                              Cancel
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Pending Assignments */}
       {pendingAssignments.length > 0 && (

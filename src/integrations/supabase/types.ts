@@ -14,6 +14,79 @@ export type Database = {
   }
   public: {
     Tables: {
+      cm_calendar_invitations: {
+        Row: {
+          attendee_emails: Json | null
+          calendar_uid: string | null
+          created_at: string
+          event_description: string | null
+          event_end_date: string | null
+          event_location: string | null
+          event_start_date: string | null
+          event_summary: string | null
+          id: string
+          juror_id: string | null
+          pitching_assignment_id: string | null
+          startup_id: string | null
+          status: string | null
+          updated_at: string
+        }
+        Insert: {
+          attendee_emails?: Json | null
+          calendar_uid?: string | null
+          created_at?: string
+          event_description?: string | null
+          event_end_date?: string | null
+          event_location?: string | null
+          event_start_date?: string | null
+          event_summary?: string | null
+          id?: string
+          juror_id?: string | null
+          pitching_assignment_id?: string | null
+          startup_id?: string | null
+          status?: string | null
+          updated_at?: string
+        }
+        Update: {
+          attendee_emails?: Json | null
+          calendar_uid?: string | null
+          created_at?: string
+          event_description?: string | null
+          event_end_date?: string | null
+          event_location?: string | null
+          event_start_date?: string | null
+          event_summary?: string | null
+          id?: string
+          juror_id?: string | null
+          pitching_assignment_id?: string | null
+          startup_id?: string | null
+          status?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cm_calendar_invitations_juror_id_fkey"
+            columns: ["juror_id"]
+            isOneToOne: false
+            referencedRelation: "jurors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cm_calendar_invitations_pitching_assignment_id_fkey"
+            columns: ["pitching_assignment_id"]
+            isOneToOne: false
+            referencedRelation: "pitching_assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cm_calendar_invitations_startup_id_fkey"
+            columns: ["startup_id"]
+            isOneToOne: false
+            referencedRelation: "startups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cohort_settings: {
         Row: {
           cohort_name: string

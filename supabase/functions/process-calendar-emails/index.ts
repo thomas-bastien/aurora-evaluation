@@ -150,6 +150,40 @@ const handler = async (req: Request): Promise<Response> => {
       throw result.error;
     }
 
+    // Always create/update CM calendar invitation for every processed calendar event
+    const cmInvitationData = {
+      startup_id: startups[0].id,
+      juror_id: jurors[0].id,
+      pitching_assignment_id: existingAssignment.id,
+      calendar_uid: calendarEvent.uid,
+      event_summary: calendarEvent.summary,
+      event_description: calendarEvent.description,
+      event_location: calendarEvent.location,
+      event_start_date: new Date(calendarEvent.dtstart).toISOString(),
+      event_end_date: calendarEvent.dtend ? new Date(calendarEvent.dtend).toISOString() : null,
+      attendee_emails: calendarEvent.attendees || [],
+      status: 'scheduled'
+    };
+
+    // Upsert CM calendar invitation (insert or update if exists based on calendar_uid)
+    const cmResult = await supabase
+      .from('cm_calendar_invitations')
+      .upsert(cmInvitationData, { 
+        onConflict: 'calendar_uid',
+        ignoreDuplicates: false 
+      });
+
+    if (cmResult.error) {
+      console.error("Error creating/updating CM calendar invitation:", cmResult.error);
+      // Don't throw error for CM invitation failures to avoid breaking main workflow
+    } else {
+      console.log("CM calendar invitation created/updated successfully for:", {
+        startup: startups[0].name,
+        juror: jurors[0].name,
+        calendar_uid: calendarEvent.uid
+      });
+    }
+
     console.log("Successfully processed calendar event:", {
       startup: startups[0].name,
       juror: jurors[0].name,
