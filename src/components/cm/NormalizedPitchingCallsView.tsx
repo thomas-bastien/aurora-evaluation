@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { MeetingSection } from "./meeting-sections/MeetingSection";
 import { UnmatchedMeetingsTable } from "./meeting-sections/UnmatchedMeetingsTable";
 import { MeetingTable } from "./meeting-sections/MeetingTable";
+import { InReviewTable } from "./InReviewTable";
 import MeetingManagementModal from "./MeetingManagementModal";
 import NewAssignmentModal from "./NewAssignmentModal";
 
@@ -17,11 +18,13 @@ const NormalizedPitchingCallsView = () => {
     loading,
     needsAssignmentMeetings,
     pendingMeetings,
+    inReviewMeetings,
     scheduledMeetings,
     completedMeetings,
     refetch,
     updateMeetingStatus,
-    createAssignment
+    createAssignment,
+    approveInReview
   } = useMeetingsData();
 
   const [allStartups, setAllStartups] = useState<any[]>([]);
@@ -38,6 +41,7 @@ const NormalizedPitchingCallsView = () => {
       return saved ? JSON.parse(saved) : {
         needsAssignment: false,  // Always expanded for urgent items
         pending: false,          // Expanded by default
+        inReview: false,         // Always expanded for CM review
         scheduled: true,         // Collapsed by default
         completed: true          // Collapsed by default
       };
@@ -45,6 +49,7 @@ const NormalizedPitchingCallsView = () => {
       return {
         needsAssignment: false,
         pending: false,
+        inReview: false,
         scheduled: true,
         completed: true
       };
@@ -66,6 +71,7 @@ const NormalizedPitchingCallsView = () => {
     setSectionCollapseState({
       needsAssignment: false,
       pending: false,
+      inReview: false,
       scheduled: false,
       completed: false
     });
@@ -75,6 +81,7 @@ const NormalizedPitchingCallsView = () => {
     setSectionCollapseState({
       needsAssignment: true,
       pending: true,
+      inReview: true,
       scheduled: true,
       completed: true
     });
@@ -158,6 +165,14 @@ const NormalizedPitchingCallsView = () => {
     setNewAssignmentModalOpen(false);
   };
 
+  const handleApproveInReview = async (meetingId: string, sourceType: 'assignment' | 'calendar_invitation') => {
+    await approveInReview(meetingId, true, sourceType);
+  };
+
+  const handleRejectInReview = async (meetingId: string, sourceType: 'assignment' | 'calendar_invitation') => {
+    await approveInReview(meetingId, false, sourceType);
+  };
+
   useEffect(() => {
     fetchStartupsAndJurors();
   }, []);
@@ -232,7 +247,7 @@ const NormalizedPitchingCallsView = () => {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
         <Card className={needsAssignmentMeetings.length > 0 ? "border-red-200" : ""}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Needs Assignment</CardTitle>
@@ -252,6 +267,17 @@ const NormalizedPitchingCallsView = () => {
           <CardContent>
             <div className="text-2xl font-bold text-orange-600">{pendingMeetings.length}</div>
             <p className="text-xs text-muted-foreground">Need scheduling</p>
+          </CardContent>
+        </Card>
+
+        <Card className={inReviewMeetings.length > 0 ? "border-purple-200" : ""}>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">In Review</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-purple-600">{inReviewMeetings.length}</div>
+            <p className="text-xs text-muted-foreground">Awaiting CM approval</p>
           </CardContent>
         </Card>
 
@@ -312,6 +338,22 @@ const NormalizedPitchingCallsView = () => {
           onSchedule={handleScheduleMeeting}
           onCancel={handleCancelMeeting}
           emptyMessage="No pending meetings"
+        />
+      </MeetingSection>
+
+      {/* In Review Section */}
+      <MeetingSection
+        title="In Review"
+        description="Pending meetings with calendar invites awaiting CM approval"
+        count={inReviewMeetings.length}
+        isOpen={!sectionCollapseState.inReview}
+        onToggle={() => toggleSection('inReview')}
+        variant="warning"
+      >
+        <InReviewTable
+          meetings={inReviewMeetings}
+          onApprove={handleApproveInReview}
+          onReject={handleRejectInReview}
         />
       </MeetingSection>
 

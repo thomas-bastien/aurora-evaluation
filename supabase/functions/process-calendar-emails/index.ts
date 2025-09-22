@@ -210,6 +210,31 @@ const handler = async (req: Request): Promise<Response> => {
     let juror = null;
     let assignment = null;
 
+    // Check for existing pending assignment for this startup-juror pair
+    let existingPendingAssignment = null;
+    if (startups?.length && jurors?.length) {
+      startup = startups[0];
+      juror = jurors[0];
+
+      // Look for existing pending assignments
+      const { data: pendingAssignment } = await supabase
+        .from('pitching_assignments')
+        .select('id, status')
+        .eq('startup_id', startup.id)
+        .eq('juror_id', juror.id)
+        .eq('status', 'pending')
+        .single();
+
+      if (pendingAssignment) {
+        existingPendingAssignment = pendingAssignment;
+        console.log("Found existing pending assignment - setting to in_review:", {
+          startup: startup.name,
+          juror: juror.name,
+          assignmentId: pendingAssignment.id
+        });
+      }
+    }
+
     // Only update matching if this is a new invitation or if we don't have existing matching data
     if (!existingInvitation || (!existingInvitation.startup_id && !existingInvitation.juror_id)) {
       if (startups?.length && jurors?.length) {
@@ -217,59 +242,83 @@ const handler = async (req: Request): Promise<Response> => {
         juror = jurors[0];
         
         if (lifecycleStatus !== 'cancelled') {
-          matchingStatus = 'auto_matched';
-        }
-        
-        // Try to find existing pitching assignment
-        const { data: existingAssignment, error: assignmentError } = await supabase
-          .from('pitching_assignments')
-          .select('id, status')
-          .eq('startup_id', startup.id)
-          .eq('juror_id', juror.id)
-          .single();
+          // If there's an existing pending assignment, set status to in_review
+          if (existingPendingAssignment) {
+            matchingStatus = 'pending_cm_review';
+            lifecycleStatus = 'in_review';
+            
+            // Update the existing assignment status to in_review
+            const { error: updateError } = await supabase
+              .from('pitching_assignments')
+              .update({
+                meeting_scheduled_date: new Date(calendarEvent.dtstart).toISOString(),
+                calendly_link: calendarEvent.location,
+                meeting_notes: calendarEvent.description,
+                status: 'in_review'
+              })
+              .eq('id', existingPendingAssignment.id);
 
-        if (existingAssignment) {
-          assignment = existingAssignment;
-          
-          // Update the pitching assignment with meeting details
-          const { error: updateError } = await supabase
-            .from('pitching_assignments')
-            .update({
-              meeting_scheduled_date: new Date(calendarEvent.dtstart).toISOString(),
-              calendly_link: calendarEvent.location,
-              meeting_notes: calendarEvent.description,
-              status: lifecycleStatus === 'cancelled' ? 'cancelled' : 'scheduled'
-            })
-            .eq('id', assignment.id);
-
-          if (updateError) {
-            console.error('Error updating pitching assignment:', updateError);
-            matchingErrors.push('Failed to update pitching assignment');
-          }
-        } else if (lifecycleStatus !== 'cancelled') {
-          // Auto-create pitching assignment if startup and juror found but no assignment exists
-          const { data: newAssignment, error: createError } = await supabase
-            .from('pitching_assignments')
-            .insert({
-              startup_id: startup.id,
-              juror_id: juror.id,
-              meeting_scheduled_date: new Date(calendarEvent.dtstart).toISOString(),
-              calendly_link: calendarEvent.location,
-              meeting_notes: calendarEvent.description,
-              status: 'scheduled'
-            })
-            .select('id')
-            .single();
-
-          if (newAssignment) {
-            assignment = newAssignment;
-            console.log("Auto-created pitching assignment for:", {
-              startup: startup.name,
-              juror: juror.name
-            });
+            if (updateError) {
+              console.error('Error updating pending assignment to in_review:', updateError);
+              matchingErrors.push('Failed to update pending assignment');
+            } else {
+              assignment = existingPendingAssignment;
+            }
           } else {
-            console.error('Error creating pitching assignment:', createError);
-            matchingErrors.push('Failed to create pitching assignment');
+            matchingStatus = 'auto_matched';
+            
+            // Try to find existing pitching assignment
+            const { data: existingAssignment, error: assignmentError } = await supabase
+              .from('pitching_assignments')
+              .select('id, status')
+              .eq('startup_id', startup.id)
+              .eq('juror_id', juror.id)
+              .single();
+
+            if (existingAssignment && existingAssignment.status !== 'pending') {
+              assignment = existingAssignment;
+              
+              // Update the pitching assignment with meeting details
+              const { error: updateError } = await supabase
+                .from('pitching_assignments')
+                .update({
+                  meeting_scheduled_date: new Date(calendarEvent.dtstart).toISOString(),
+                  calendly_link: calendarEvent.location,
+                  meeting_notes: calendarEvent.description,
+                  status: lifecycleStatus === 'cancelled' ? 'cancelled' : 'scheduled'
+                })
+                .eq('id', assignment.id);
+
+              if (updateError) {
+                console.error('Error updating pitching assignment:', updateError);
+                matchingErrors.push('Failed to update pitching assignment');
+              }
+            } else if (lifecycleStatus !== 'cancelled' && !existingAssignment) {
+              // Auto-create pitching assignment if startup and juror found but no assignment exists
+              const { data: newAssignment, error: createError } = await supabase
+                .from('pitching_assignments')
+                .insert({
+                  startup_id: startup.id,
+                  juror_id: juror.id,
+                  meeting_scheduled_date: new Date(calendarEvent.dtstart).toISOString(),
+                  calendly_link: calendarEvent.location,
+                  meeting_notes: calendarEvent.description,
+                  status: 'scheduled'
+                })
+                .select('id')
+                .single();
+
+              if (newAssignment) {
+                assignment = newAssignment;
+                console.log("Auto-created pitching assignment for:", {
+                  startup: startup.name,
+                  juror: juror.name
+                });
+              } else {
+                console.error('Error creating pitching assignment:', createError);
+                matchingErrors.push('Failed to create pitching assignment');
+              }
+            }
           }
         }
       } else {

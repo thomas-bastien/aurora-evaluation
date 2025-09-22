@@ -26,6 +26,7 @@ export interface UnifiedMeeting {
 export type MeetingStatus = 
   | 'needs_assignment'  // Unmatched calendar events
   | 'pending'           // Assigned but not scheduled
+  | 'in_review'         // Pending meetings with calendar invites awaiting CM approval
   | 'scheduled'         // Confirmed meetings with dates
   | 'completed'         // Finished meetings
   | 'cancelled';        // Cancelled meetings
@@ -46,6 +47,11 @@ export const MEETING_STATUS_CONFIG: Record<MeetingStatus, MeetingStatusConfig> =
     label: 'Pending',
     variant: 'outline',
     className: 'bg-orange-100 text-orange-800 border-orange-200'
+  },
+  in_review: {
+    label: 'In Review',
+    variant: 'secondary',
+    className: 'bg-purple-100 text-purple-800 border-purple-200'
   },
   scheduled: {
     label: 'Scheduled',

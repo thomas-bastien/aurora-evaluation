@@ -60,7 +60,7 @@ export const useMeetingsData = () => {
         });
       });
 
-      // Process calendar invitations (only unmatched ones)
+      // Process calendar invitations (only unmatched ones or those in review)
       invitations?.forEach(invitation => {
         if (invitation.manual_assignment_needed && !invitation.startup_id && !invitation.juror_id) {
           normalizedMeetings.push({
@@ -72,6 +72,30 @@ export const useMeetingsData = () => {
             juror_name: 'Unassigned',
             juror_email: '',
             status: 'needs_assignment',
+            scheduled_date: invitation.event_start_date,
+            completed_date: null,
+            meeting_notes: invitation.event_description,
+            meeting_link: invitation.event_location,
+            created_at: invitation.created_at,
+            source_type: 'calendar_invitation',
+            source_id: invitation.id,
+            event_details: {
+              summary: invitation.event_summary,
+              description: invitation.event_description,
+              location: invitation.event_location
+            }
+          });
+        } else if (invitation.startup_id && invitation.juror_id && invitation.status === 'in_review') {
+          // Handle calendar invitations that are in review
+          normalizedMeetings.push({
+            id: invitation.id,
+            startup_id: invitation.startup_id,
+            juror_id: invitation.juror_id,
+            startup_name: invitation.startup?.name || 'Unknown',
+            startup_email: invitation.startup?.contact_email || '',
+            juror_name: invitation.juror?.name || 'Unknown',
+            juror_email: invitation.juror?.email || '',
+            status: 'in_review',
             scheduled_date: invitation.event_start_date,
             completed_date: null,
             meeting_notes: invitation.event_description,
@@ -178,20 +202,34 @@ export const useMeetingsData = () => {
   // Filter meetings by status
   const needsAssignmentMeetings = meetings.filter(m => m.status === 'needs_assignment');
   const pendingMeetings = meetings.filter(m => m.status === 'pending');
+  const inReviewMeetings = meetings.filter(m => m.status === 'in_review');
   const scheduledMeetings = meetings.filter(m => m.status === 'scheduled');
   const completedMeetings = meetings.filter(m => m.status === 'completed');
+
+  const approveInReview = async (meetingId: string, approved: boolean, sourceType: 'assignment' | 'calendar_invitation') => {
+    try {
+      const newStatus = approved ? 'scheduled' : 'pending';
+      await updateMeetingStatus(meetingId, newStatus, sourceType);
+      toast.success(`Meeting ${approved ? 'approved and scheduled' : 'returned to pending'}`);
+    } catch (error: any) {
+      console.error('Error approving in-review meeting:', error);
+      toast.error('Failed to process review decision');
+    }
+  };
 
   return {
     meetings,
     loading,
     needsAssignmentMeetings,
     pendingMeetings,
+    inReviewMeetings,
     scheduledMeetings,
     completedMeetings,
     refetch: fetchMeetings,
     updateMeetingStatus,
     scheduleMeeting,
-    createAssignment
+    createAssignment,
+    approveInReview
   };
 };
 
@@ -202,6 +240,9 @@ const determineAssignmentStatus = (assignment: any): MeetingStatus => {
   }
   if (assignment.status === 'cancelled') {
     return 'cancelled';
+  }
+  if (assignment.status === 'in_review') {
+    return 'in_review';
   }
   if (assignment.meeting_scheduled_date) {
     return 'scheduled';
