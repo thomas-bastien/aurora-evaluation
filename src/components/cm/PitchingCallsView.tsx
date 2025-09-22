@@ -152,7 +152,8 @@ const PitchingCallsView = () => {
   const getDisplayStatus = (status: string): string => {
     const statusMap: Record<string, string> = {
       'scheduled': 'Invited',     // Calendar invitation sent, pending acceptance
-      'completed': 'Confirmed',   // Invitation accepted/confirmed
+      'confirmed': 'Confirmed',   // Invitation accepted/confirmed
+      'completed': 'Completed',   // Meeting completed
       'cancelled': 'Cancelled',   // Invitation cancelled
       'rescheduled': 'Rescheduled', // Invitation rescheduled
       'pending': 'Pending'        // Default pending state
@@ -211,7 +212,7 @@ const PitchingCallsView = () => {
 
       if (error) throw error;
 
-      const message = newStatus === 'scheduled' ? 'Meeting invitation accepted' : `Meeting marked as ${newStatus}`;
+      const message = newStatus === 'confirmed' ? 'Meeting invitation accepted' : `Meeting marked as ${newStatus}`;
       toast.success(message);
       // Refresh to get the latest data from server
       fetchCMInvitations();
@@ -381,6 +382,9 @@ const PitchingCallsView = () => {
   const scheduledMeetings = assignments.filter(
     a => a.meeting_scheduled_date && !a.meeting_completed_date && a.status !== 'cancelled'
   );
+  
+  // Add confirmed CM invitations to scheduled meetings
+  const confirmedInvitations = cmInvitations.filter(inv => inv.status === 'confirmed');
   const completedMeetings = assignments.filter(
     a => a.meeting_completed_date || a.status === 'completed'
   );
@@ -388,7 +392,7 @@ const PitchingCallsView = () => {
   // Filter invitations by matching status and lifecycle
   const matchedInvitations = cmInvitations.filter(inv => 
     (inv.matching_status === 'auto_matched' || inv.matching_status === 'manual_matched') && 
-    inv.status !== 'cancelled' && inv.status !== 'scheduled'
+    inv.status !== 'cancelled' && inv.status !== 'confirmed'
   );
   const unmatchedInvitations = cmInvitations.filter(inv => inv.manual_assignment_needed);
   const rescheduledInvitations = cmInvitations.filter(inv => 
@@ -740,7 +744,7 @@ const PitchingCallsView = () => {
                                 <Button 
                                   variant="outline" 
                                   size="sm"
-                                  onClick={() => updateCMInvitationStatus(invitation.id, 'scheduled')}
+                                  onClick={() => updateCMInvitationStatus(invitation.id, 'confirmed')}
                                 >
                                   <Check className="h-3 w-3 mr-1" />
                                   Accept
@@ -1088,7 +1092,7 @@ const PitchingCallsView = () => {
       )}
 
       {/* Scheduled Meetings */}
-      {scheduledMeetings.length > 0 && (
+      {(scheduledMeetings.length > 0 || confirmedInvitations.length > 0) && (
         <Collapsible open={!sectionCollapseState.scheduledMeetings} onOpenChange={() => toggleSection('scheduledMeetings')}>
           <Card>
             <CollapsibleTrigger asChild>
@@ -1096,7 +1100,7 @@ const PitchingCallsView = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <CardTitle className="flex items-center gap-2">
-                      Scheduled Meetings ({scheduledMeetings.length} items)
+                      Scheduled Meetings ({scheduledMeetings.length + confirmedInvitations.length} items)
                       {sectionCollapseState.scheduledMeetings ? 
                         <ChevronDown className="h-4 w-4" /> : 
                         <ChevronUp className="h-4 w-4" />
@@ -1123,7 +1127,7 @@ const PitchingCallsView = () => {
                   </TableHeader>
                   <TableBody>
                     {scheduledMeetings.map((assignment) => (
-                      <TableRow key={assignment.id}>
+                      <TableRow key={`assignment-${assignment.id}`}>
                         <TableCell>
                           <div>
                             <div className="font-medium">{assignment.startup.name}</div>
@@ -1176,6 +1180,65 @@ const PitchingCallsView = () => {
                               variant="outline" 
                               size="sm"
                               onClick={() => handleMarkCancelled(assignment.id)}
+                            >
+                              <XCircle className="h-4 w-4 mr-1" />
+                              Cancel
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {confirmedInvitations.map((invitation) => (
+                      <TableRow key={`invitation-${invitation.id}`}>
+                        <TableCell>
+                          <div>
+                            <div className="font-medium">{invitation.startup?.name || 'Unknown Startup'}</div>
+                            <div className="text-sm text-muted-foreground">
+                              {invitation.startup?.contact_email || 'No email'}
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div>
+                            <div className="font-medium">{invitation.juror?.name || 'Unknown Juror'}</div>
+                            <div className="text-sm text-muted-foreground">
+                              {invitation.juror?.email || 'No email'}
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {invitation.event_start_date ? (
+                            <div>
+                              <div className="font-medium">
+                                {format(new Date(invitation.event_start_date), 'MMM dd, yyyy')}
+                              </div>
+                              <div className="text-sm text-muted-foreground">
+                                {format(new Date(invitation.event_start_date), 'h:mm a')}
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground">No date</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="default" className="bg-green-100 text-green-800 border-green-200">
+                            {getDisplayStatus(invitation.status)}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex gap-2">
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => updateCMInvitationStatus(invitation.id, 'completed')}
+                            >
+                              <CheckCircle className="h-4 w-4 mr-1" />
+                              Complete
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => updateCMInvitationStatus(invitation.id, 'cancelled')}
                             >
                               <XCircle className="h-4 w-4 mr-1" />
                               Cancel
