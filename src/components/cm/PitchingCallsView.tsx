@@ -9,6 +9,7 @@ import { format } from "date-fns";
 import { toast } from "sonner";
 import MeetingManagementModal from "./MeetingManagementModal";
 import NewAssignmentModal from "./NewAssignmentModal";
+import ManualMatchingDropdowns from "./ManualMatchingDropdowns";
 
 interface PitchingAssignment {
   id: string;
@@ -32,9 +33,9 @@ interface PitchingAssignment {
 
 interface CMCalendarInvitation {
   id: string;
-  startup_id: string;
-  juror_id: string;
-  pitching_assignment_id: string;
+  startup_id: string | null;
+  juror_id: string | null;
+  pitching_assignment_id: string | null;
   calendar_uid: string;
   event_summary: string | null;
   event_description: string | null;
@@ -43,21 +44,26 @@ interface CMCalendarInvitation {
   event_end_date: string | null;
   attendee_emails: any;
   status: string;
+  matching_status: string;
+  matching_errors: any;
+  manual_assignment_needed: boolean;
   created_at: string;
   updated_at: string;
-  startup: {
+  startup?: {
     name: string;
     contact_email: string;
-  };
-  juror: {
+  } | null;
+  juror?: {
     name: string;
     email: string;
-  };
+  } | null;
 }
 
 const PitchingCallsView = () => {
   const [assignments, setAssignments] = useState<PitchingAssignment[]>([]);
   const [cmInvitations, setCmInvitations] = useState<CMCalendarInvitation[]>([]);
+  const [allStartups, setAllStartups] = useState<any[]>([]);
+  const [allJurors, setAllJurors] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedAssignment, setSelectedAssignment] = useState<PitchingAssignment | null>(null);
@@ -93,8 +99,8 @@ const PitchingCallsView = () => {
         .from('cm_calendar_invitations')
         .select(`
           *,
-          startup:startups!inner(name, contact_email),
-          juror:jurors!inner(name, email)
+          startup:startups(name, contact_email),
+          juror:jurors(name, email)
         `)
         .order('event_start_date', { ascending: false });
 
@@ -104,6 +110,23 @@ const PitchingCallsView = () => {
     } catch (error: any) {
       console.error('Error fetching CM calendar invitations:', error);
       toast.error('Failed to fetch CM calendar invitations');
+    }
+  };
+
+  const fetchAllStartupsAndJurors = async () => {
+    try {
+      const [startupsResponse, jurorsResponse] = await Promise.all([
+        supabase.from('startups').select('id, name, contact_email').order('name'),
+        supabase.from('jurors').select('id, name, email').order('name')
+      ]);
+
+      if (startupsResponse.error) throw startupsResponse.error;
+      if (jurorsResponse.error) throw jurorsResponse.error;
+
+      setAllStartups(startupsResponse.data || []);
+      setAllJurors(jurorsResponse.data || []);
+    } catch (error: any) {
+      console.error('Error fetching startups and jurors:', error);
     }
   };
 
@@ -126,7 +149,63 @@ const PitchingCallsView = () => {
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    await Promise.all([fetchAssignments(), fetchCMInvitations()]);
+    await Promise.all([fetchAssignments(), fetchCMInvitations(), fetchAllStartupsAndJurors()]);
+  };
+
+  const handleManualMatch = async (invitationId: string, startupId: string, jurorId: string) => {
+    try {
+      // Create pitching assignment if one doesn't exist
+      const { data: existingAssignment } = await supabase
+        .from('pitching_assignments')
+        .select('id')
+        .eq('startup_id', startupId)
+        .eq('juror_id', jurorId)
+        .maybeSingle();
+
+      let assignmentId = existingAssignment?.id;
+
+      if (!assignmentId) {
+        // Get the invitation details for the assignment
+        const invitation = cmInvitations.find(inv => inv.id === invitationId);
+        
+        const { data: newAssignment, error: createError } = await supabase
+          .from('pitching_assignments')
+          .insert({
+            startup_id: startupId,
+            juror_id: jurorId,
+            meeting_scheduled_date: invitation?.event_start_date,
+            calendly_link: invitation?.event_location,
+            meeting_notes: invitation?.event_description,
+            status: 'scheduled'
+          })
+          .select('id')
+          .single();
+
+        if (createError) throw createError;
+        assignmentId = newAssignment.id;
+      }
+
+      // Update the CM calendar invitation
+      const { error: updateError } = await supabase
+        .from('cm_calendar_invitations')
+        .update({
+          startup_id: startupId,
+          juror_id: jurorId,
+          pitching_assignment_id: assignmentId,
+          matching_status: 'manual_matched',
+          manual_assignment_needed: false,
+          status: 'scheduled'
+        })
+        .eq('id', invitationId);
+
+      if (updateError) throw updateError;
+
+      toast.success('Meeting manually matched successfully');
+      handleRefresh();
+    } catch (error: any) {
+      console.error('Error manually matching meeting:', error);
+      toast.error('Failed to manually match meeting');
+    }
   };
 
   const handleScheduleMeeting = (assignment: PitchingAssignment) => {
@@ -184,6 +263,7 @@ const PitchingCallsView = () => {
   useEffect(() => {
     fetchAssignments();
     fetchCMInvitations();
+    fetchAllStartupsAndJurors();
   }, []);
 
   const getStatusBadge = (assignment: PitchingAssignment) => {
@@ -209,6 +289,10 @@ const PitchingCallsView = () => {
   const completedMeetings = assignments.filter(
     a => a.meeting_completed_date || a.status === 'completed'
   );
+
+  // Filter invitations by matching status
+  const matchedInvitations = cmInvitations.filter(inv => inv.matching_status === 'auto_matched' || inv.matching_status === 'manual_matched');
+  const unmatchedInvitations = cmInvitations.filter(inv => inv.manual_assignment_needed);
 
   if (loading) {
     return (
@@ -276,14 +360,14 @@ const PitchingCallsView = () => {
           </CardContent>
         </Card>
 
-        <Card className="border-blue-200">
+        <Card className={unmatchedInvitations.length > 0 ? "border-red-200" : ""}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">CM Invitations</CardTitle>
-            <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Unmatched</CardTitle>
+            <XCircle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-600">{cmInvitations.length}</div>
-            <p className="text-xs text-muted-foreground">Calendar events received</p>
+            <div className="text-2xl font-bold text-red-600">{unmatchedInvitations.length}</div>
+            <p className="text-xs text-muted-foreground">Need manual match</p>
           </CardContent>
         </Card>
 
@@ -321,13 +405,101 @@ const PitchingCallsView = () => {
         </Card>
       </div>
 
-      {/* CM Calendar Invitations */}
-      {cmInvitations.length > 0 && (
+      {/* Unmatched Calendar Meetings - Manual Matching Required */}
+      {unmatchedInvitations.length > 0 && (
+        <Card className="border-red-200">
+          <CardHeader>
+            <CardTitle className="text-red-700">Unmatched Calendar Meetings</CardTitle>
+            <CardDescription>
+              These meetings need manual matching to startups and jurors
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Event Details</TableHead>
+                  <TableHead>Attendee Emails</TableHead>
+                  <TableHead>Event Date</TableHead>
+                  <TableHead>Matching Errors</TableHead>
+                  <TableHead>Manual Match</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {unmatchedInvitations.map((invitation) => (
+                  <TableRow key={invitation.id}>
+                    <TableCell>
+                      <div>
+                        <div className="font-medium">{invitation.event_summary || 'Pitch Meeting'}</div>
+                        {invitation.event_location && (
+                          <div className="text-sm text-muted-foreground">
+                            📍 {invitation.event_location}
+                          </div>
+                        )}
+                        {invitation.event_description && (
+                          <div className="text-sm text-muted-foreground">
+                            {invitation.event_description}
+                          </div>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="text-sm">
+                        {Array.isArray(invitation.attendee_emails) ? 
+                          invitation.attendee_emails.map((email: string, i: number) => (
+                            <div key={i} className="text-muted-foreground">{email}</div>
+                          )) :
+                          <div className="text-muted-foreground">No attendees</div>
+                        }
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      {invitation.event_start_date ? (
+                        <div>
+                          <div className="font-medium">
+                            {format(new Date(invitation.event_start_date), 'MMM dd, yyyy')}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            {format(new Date(invitation.event_start_date), 'h:mm a')}
+                          </div>
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">No date</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <div className="text-sm">
+                        {Array.isArray(invitation.matching_errors) && invitation.matching_errors.length > 0 ? 
+                          invitation.matching_errors.map((error: string, i: number) => (
+                            <div key={i} className="text-red-600">{error}</div>
+                          )) :
+                          <div className="text-muted-foreground">No errors</div>
+                        }
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <ManualMatchingDropdowns
+                        invitationId={invitation.id}
+                        allStartups={allStartups}
+                        allJurors={allJurors}
+                        onMatch={handleManualMatch}
+                      />
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* CM Calendar Invitations - Successfully Matched */}
+      {matchedInvitations.length > 0 && (
         <Card className="border-blue-200">
           <CardHeader>
-            <CardTitle className="text-blue-700">Community Manager Calendar Invitations</CardTitle>
+            <CardTitle className="text-blue-700">Successfully Matched Calendar Invitations</CardTitle>
             <CardDescription>
-              All pitch meeting invitations received from calendar system
+              Pitch meeting invitations that were automatically or manually matched
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -338,12 +510,13 @@ const PitchingCallsView = () => {
                   <TableHead>Startup</TableHead>
                   <TableHead>Juror</TableHead>
                   <TableHead>Event Date</TableHead>
+                  <TableHead>Match Type</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {cmInvitations.map((invitation) => (
+                {matchedInvitations.map((invitation) => (
                   <TableRow key={invitation.id}>
                     <TableCell>
                       <div>
@@ -357,17 +530,17 @@ const PitchingCallsView = () => {
                     </TableCell>
                     <TableCell>
                       <div>
-                        <div className="font-medium">{invitation.startup.name}</div>
+                        <div className="font-medium">{invitation.startup?.name || 'Unknown'}</div>
                         <div className="text-sm text-muted-foreground">
-                          {invitation.startup.contact_email}
+                          {invitation.startup?.contact_email || 'No email'}
                         </div>
                       </div>
                     </TableCell>
                     <TableCell>
                       <div>
-                        <div className="font-medium">{invitation.juror.name}</div>
+                        <div className="font-medium">{invitation.juror?.name || 'Unknown'}</div>
                         <div className="text-sm text-muted-foreground">
-                          {invitation.juror.email}
+                          {invitation.juror?.email || 'No email'}
                         </div>
                       </div>
                     </TableCell>
@@ -384,6 +557,17 @@ const PitchingCallsView = () => {
                       ) : (
                         <span className="text-muted-foreground">No date</span>
                       )}
+                    </TableCell>
+                    <TableCell>
+                      <Badge 
+                        variant="outline"
+                        className={
+                          invitation.matching_status === 'auto_matched' ? 'bg-green-100 text-green-800 border-green-200' :
+                          invitation.matching_status === 'manual_matched' ? 'bg-blue-100 text-blue-800 border-blue-200' : ''
+                        }
+                      >
+                        {invitation.matching_status === 'auto_matched' ? 'Auto' : 'Manual'}
+                      </Badge>
                     </TableCell>
                     <TableCell>
                       <Badge 

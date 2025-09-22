@@ -106,77 +106,103 @@ const handler = async (req: Request): Promise<Response> => {
       .select('id, email, name, user_id')
       .in('email', attendeeEmails);
 
-    if (!startups?.length || !jurors?.length) {
-      console.log("Could not match attendees to startups/jurors", { 
-        attendeeEmails, 
-        startupsFound: startups?.length, 
-        jurorsFound: jurors?.length 
-      });
-      return new Response(JSON.stringify({ 
-        success: false, 
-        message: "Could not match attendees to database records" 
-      }), {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    console.log("Found attendees:", {
+      attendeeEmails,
+      startupsFound: startups?.length || 0,
+      jurorsFound: jurors?.length || 0
+    });
+
+    let matchingStatus = 'unmatched';
+    let matchingErrors: string[] = [];
+    let startup = null;
+    let juror = null;
+    let assignment = null;
+
+    // Always create CM calendar invitation, regardless of matching success
+    if (startups?.length && jurors?.length) {
+      startup = startups[0];
+      juror = jurors[0];
+      
+      // Try to find existing pitching assignment
+      const { data: existingAssignment, error: assignmentError } = await supabase
+        .from('pitching_assignments')
+        .select('id, status')
+        .eq('startup_id', startup.id)
+        .eq('juror_id', juror.id)
+        .single();
+
+      if (existingAssignment) {
+        assignment = existingAssignment;
+        matchingStatus = 'auto_matched';
+        
+        // Update the pitching assignment with meeting details
+        const { error: updateError } = await supabase
+          .from('pitching_assignments')
+          .update({
+            meeting_scheduled_date: new Date(calendarEvent.dtstart).toISOString(),
+            calendly_link: calendarEvent.location,
+            meeting_notes: calendarEvent.description,
+            status: 'scheduled'
+          })
+          .eq('id', assignment.id);
+
+        if (updateError) {
+          console.error('Error updating pitching assignment:', updateError);
+          matchingErrors.push('Failed to update pitching assignment');
+          matchingStatus = 'partial_match';
+        }
+      } else {
+        // Auto-create pitching assignment if startup and juror found but no assignment exists
+        const { data: newAssignment, error: createError } = await supabase
+          .from('pitching_assignments')
+          .insert({
+            startup_id: startup.id,
+            juror_id: juror.id,
+            meeting_scheduled_date: new Date(calendarEvent.dtstart).toISOString(),
+            calendly_link: calendarEvent.location,
+            meeting_notes: calendarEvent.description,
+            status: 'scheduled'
+          })
+          .select('id')
+          .single();
+
+        if (newAssignment) {
+          assignment = newAssignment;
+          matchingStatus = 'auto_matched';
+          console.log("Auto-created pitching assignment for:", {
+            startup: startup.name,
+            juror: juror.name
+          });
+        } else {
+          console.error('Error creating pitching assignment:', createError);
+          matchingErrors.push('Failed to create pitching assignment');
+          matchingStatus = 'partial_match';
+        }
+      }
+    } else {
+      // No matching startup/juror found
+      if (!startups?.length) matchingErrors.push('No matching startup found in attendees');
+      if (!jurors?.length) matchingErrors.push('No matching juror found in attendees');
     }
 
-    // Find existing pitching assignment
-    const { data: existingAssignment, error: assignmentError } = await supabase
-      .from('pitching_assignments')
-      .select('id, status')
-      .eq('startup_id', startups[0].id)
-      .eq('juror_id', jurors[0].id)
-      .single();
-
-    if (assignmentError || !existingAssignment) {
-      console.log("Could not find matching pitching assignment", { 
-        startup_id: startups[0].id, 
-        juror_id: jurors[0].id,
-        error: assignmentError 
-      });
-      return new Response(JSON.stringify({ 
-        success: false, 
-        message: "No matching pitching assignment found" 
-      }), {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    // Update pitching assignment with meeting details
-    const assignmentUpdateData = {
-      meeting_scheduled_date: new Date(calendarEvent.dtstart).toISOString(),
-      status: 'scheduled',
-      meeting_notes: calendarEvent.description || '',
-      calendly_link: calendarEvent.location || '',
-    };
-
-    const result = await supabase
-      .from('pitching_assignments')
-      .update(assignmentUpdateData)
-      .eq('id', existingAssignment.id);
-
-    if (result.error) {
-      throw result.error;
-    }
-
-    // Always create/update CM calendar invitation for every processed calendar event
+    // Create or update CM calendar invitation (always, regardless of matching success)
     const cmInvitationData = {
-      startup_id: startups[0].id,
-      juror_id: jurors[0].id,
-      pitching_assignment_id: existingAssignment.id,
       calendar_uid: calendarEvent.uid,
+      startup_id: startup?.id || null,
+      juror_id: juror?.id || null,
+      pitching_assignment_id: assignment?.id || null,
       event_summary: calendarEvent.summary,
       event_description: calendarEvent.description,
       event_location: calendarEvent.location,
       event_start_date: new Date(calendarEvent.dtstart).toISOString(),
       event_end_date: calendarEvent.dtend ? new Date(calendarEvent.dtend).toISOString() : null,
-      attendee_emails: calendarEvent.attendees || [],
-      status: 'scheduled'
+      attendee_emails: attendeeEmails,
+      status: matchingStatus === 'auto_matched' ? 'scheduled' : 'unmatched',
+      matching_status: matchingStatus,
+      matching_errors: matchingErrors,
+      manual_assignment_needed: matchingStatus !== 'auto_matched'
     };
 
-    // Upsert CM calendar invitation (insert or update if exists based on calendar_uid)
     const cmResult = await supabase
       .from('cm_calendar_invitations')
       .upsert(cmInvitationData, { 
@@ -185,31 +211,34 @@ const handler = async (req: Request): Promise<Response> => {
       });
 
     if (cmResult.error) {
-      console.error("Error creating/updating CM calendar invitation:", cmResult.error);
-      // Don't throw error for CM invitation failures to avoid breaking main workflow
+      console.error('Error creating/updating CM calendar invitation:', cmResult.error);
+      throw cmResult.error;
+    }
+
+    if (matchingStatus === 'auto_matched') {
+      console.log("Successfully auto-matched calendar event:", {
+        startup: startup.name,
+        juror: juror.name,
+        date: calendarEvent.dtstart,
+        assignment_id: assignment.id
+      });
     } else {
-      console.log("CM calendar invitation created/updated successfully for:", {
-        startup: startups[0].name,
-        juror: jurors[0].name,
-        calendar_uid: calendarEvent.uid
+      console.log("Calendar event saved but requires manual matching:", {
+        calendar_uid: calendarEvent.uid,
+        matching_errors: matchingErrors,
+        attendee_emails: attendeeEmails
       });
     }
 
-    console.log("Successfully processed calendar event:", {
-      startup: startups[0].name,
-      juror: jurors[0].name,
-      date: calendarEvent.dtstart,
-      action: 'updated assignment'
-    });
-
     return new Response(JSON.stringify({ 
       success: true, 
-      message: "Pitching assignment updated successfully",
+      message: matchingStatus === 'auto_matched' ? "Calendar event processed successfully" : "Calendar event saved, manual matching required",
       data: {
-        startup: startups[0].name,
-        juror: jurors[0].name,
+        startup: startup?.name || 'Unknown',
+        juror: juror?.name || 'Unknown',
         date: calendarEvent.dtstart,
-        status: 'scheduled'
+        matching_status: matchingStatus,
+        matching_errors: matchingErrors
       }
     }), {
       status: 200,

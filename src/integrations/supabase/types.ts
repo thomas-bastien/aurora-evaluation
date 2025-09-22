@@ -26,6 +26,9 @@ export type Database = {
           event_summary: string | null
           id: string
           juror_id: string | null
+          manual_assignment_needed: boolean | null
+          matching_errors: Json | null
+          matching_status: string | null
           pitching_assignment_id: string | null
           startup_id: string | null
           status: string | null
@@ -42,6 +45,9 @@ export type Database = {
           event_summary?: string | null
           id?: string
           juror_id?: string | null
+          manual_assignment_needed?: boolean | null
+          matching_errors?: Json | null
+          matching_status?: string | null
           pitching_assignment_id?: string | null
           startup_id?: string | null
           status?: string | null
@@ -58,6 +64,9 @@ export type Database = {
           event_summary?: string | null
           id?: string
           juror_id?: string | null
+          manual_assignment_needed?: boolean | null
+          matching_errors?: Json | null
+          matching_status?: string | null
           pitching_assignment_id?: string | null
           startup_id?: string | null
           status?: string | null
