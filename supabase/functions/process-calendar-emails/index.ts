@@ -52,17 +52,23 @@ const handler = async (req: Request): Promise<Response> => {
     // Parse .ics attachments
     let calendarEvent: CalendarEvent | null = null;
     
-    if (emailData.attachments) {
-      for (const attachment of emailData.attachments) {
-        if (attachment.filename.endsWith('.ics') || attachment.contentType === 'text/calendar') {
-          calendarEvent = parseIcsContent(attachment.content);
-          break;
-        }
+    const attachments = Array.isArray(emailData.attachments) ? emailData.attachments : [];
+    for (const attachment of attachments) {
+      const filename = (attachment as any)?.filename ?? '';
+      const contentType = (attachment as any)?.contentType ?? '';
+      const content = (attachment as any)?.content ?? '';
+      const isIcsByName = typeof filename === 'string' && filename.toLowerCase().endsWith('.ics');
+      const isIcsByType = typeof contentType === 'string' && contentType.toLowerCase().includes('calendar');
+      const isIcsByContent = typeof content === 'string' && content.includes('BEGIN:VCALENDAR');
+      if (isIcsByName || isIcsByType || isIcsByContent) {
+        console.log('Found ICS candidate attachment:', { filename, contentType, length: (content?.length ?? 0) });
+        calendarEvent = parseIcsContent(content);
+        if (calendarEvent) break;
       }
     }
 
     // If no .ics attachment, try parsing from email body
-    if (!calendarEvent && emailData.body.includes('BEGIN:VCALENDAR')) {
+    if (!calendarEvent && (emailData.body?.includes?.('BEGIN:VCALENDAR'))) {
       calendarEvent = parseIcsContent(emailData.body);
     }
 
@@ -77,12 +83,17 @@ const handler = async (req: Request): Promise<Response> => {
     console.log("Parsed calendar event:", calendarEvent);
 
     // Extract attendee emails
+    const toList = Array.isArray(emailData.to) ? emailData.to : (emailData.to ? [emailData.to as unknown as string] : []);
+    const ccList = Array.isArray(emailData.cc) ? emailData.cc : [];
+    const calAttendees = Array.isArray(calendarEvent.attendees) ? calendarEvent.attendees : [];
     const attendeeEmails = [
       emailData.from,
-      ...emailData.to,
-      ...(emailData.cc || []),
-      ...calendarEvent.attendees
-    ].map(email => email.toLowerCase().trim());
+      ...toList,
+      ...ccList,
+      ...calAttendees
+    ]
+      .filter((e): e is string => typeof e === 'string' && e)
+      .map(e => e.toLowerCase().trim());
 
     // Find matching startup and juror
     const { data: startups } = await supabase
@@ -219,7 +230,10 @@ const handler = async (req: Request): Promise<Response> => {
 
 function parseIcsContent(icsContent: string): CalendarEvent | null {
   try {
-    const lines = icsContent.split(/\r\n|\n|\r/);
+    const unfolded = icsContent
+      .replace(/\r\n[ \t]/g, '')
+      .replace(/\n[ \t]/g, '');
+    const lines = unfolded.split(/\r\n|\n|\r/);
     const event: Partial<CalendarEvent> = { attendees: [] };
     
     for (let i = 0; i < lines.length; i++) {
@@ -263,25 +277,28 @@ function parseIcsContent(icsContent: string): CalendarEvent | null {
 }
 
 function parseIcsDate(dateString: string): string {
-  // Handle YYYYMMDDTHHMMSSZ format
-  if (dateString.includes('T')) {
-    const cleanDate = dateString.replace(/[TZ]/g, '');
-    const year = cleanDate.substring(0, 4);
-    const month = cleanDate.substring(4, 6);
-    const day = cleanDate.substring(6, 8);
-    const hour = cleanDate.substring(8, 10) || '00';
-    const minute = cleanDate.substring(10, 12) || '00';
-    const second = cleanDate.substring(12, 14) || '00';
-    
-    return new Date(`${year}-${month}-${day}T${hour}:${minute}:${second}Z`).toISOString();
+  try {
+    if (!dateString) return '';
+    const ds = String(dateString).trim();
+    // Handle YYYYMMDDTHHMMSSZ or similar
+    if (ds.includes('T')) {
+      const cleanDate = ds.replace(/[TZ]/g, '');
+      const year = cleanDate.substring(0, 4);
+      const month = cleanDate.substring(4, 6);
+      const day = cleanDate.substring(6, 8);
+      const hour = cleanDate.substring(8, 10) || '00';
+      const minute = cleanDate.substring(10, 12) || '00';
+      const second = cleanDate.substring(12, 14) || '00';
+      return new Date(`${year}-${month}-${day}T${hour}:${minute}:${second}Z`).toISOString();
+    }
+    // Handle YYYYMMDD format (all-day events)
+    const year = ds.substring(0, 4);
+    const month = ds.substring(4, 6);
+    const day = ds.substring(6, 8);
+    return new Date(`${year}-${month}-${day}T00:00:00Z`).toISOString();
+  } catch (_) {
+    return '';
   }
-  
-  // Handle YYYYMMDD format (all-day events)
-  const year = dateString.substring(0, 4);
-  const month = dateString.substring(4, 6);
-  const day = dateString.substring(6, 8);
-  
-  return new Date(`${year}-${month}-${day}T00:00:00Z`).toISOString();
 }
 
 serve(handler);
