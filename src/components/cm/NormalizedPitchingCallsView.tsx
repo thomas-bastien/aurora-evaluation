@@ -350,8 +350,7 @@ const NormalizedPitchingCallsView = () => {
 
       {/* Modals */}
       <MeetingManagementModal
-        assignment={selectedMeeting?.source_type === 'assignment' ? selectedMeeting : null}
-        invitation={selectedMeeting?.source_type === 'calendar_invitation' ? selectedMeeting : null}
+        meeting={selectedMeeting}
         isOpen={meetingModalOpen}
         onClose={() => {
           setMeetingModalOpen(false);
