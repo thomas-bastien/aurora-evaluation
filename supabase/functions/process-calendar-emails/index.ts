@@ -18,6 +18,16 @@ interface EmailWebhookPayload {
     contentType: string;
   }>;
   date: string;
+  // New field for pre-parsed calendar data from Zapier
+  parsed_calendar_event?: {
+    summary: string;
+    start_time: string;
+    end_time: string;
+    attendees: string[];
+    location?: string;
+    description?: string;
+    uid?: string;
+  };
 }
 
 interface CalendarEvent {
@@ -46,35 +56,59 @@ const handler = async (req: Request): Promise<Response> => {
     console.log("Received email webhook:", { 
       from: emailData.from, 
       subject: emailData.subject,
-      attachmentCount: emailData.attachments?.length || 0
+      attachmentCount: emailData.attachments?.length || 0,
+      hasParsedEvent: !!emailData.parsed_calendar_event
     });
 
-    // Parse .ics attachments
+    // Check for pre-parsed calendar event from Zapier first
     let calendarEvent: CalendarEvent | null = null;
     
-    const attachments = Array.isArray(emailData.attachments) ? emailData.attachments : [];
-    for (const attachment of attachments) {
-      const filename = (attachment as any)?.filename ?? '';
-      const contentType = (attachment as any)?.contentType ?? '';
-      const content = (attachment as any)?.content ?? '';
-      const isIcsByName = typeof filename === 'string' && filename.toLowerCase().endsWith('.ics');
-      const isIcsByType = typeof contentType === 'string' && contentType.toLowerCase().includes('calendar');
-      const isIcsByContent = typeof content === 'string' && content.includes('BEGIN:VCALENDAR');
-      if (isIcsByName || isIcsByType || isIcsByContent) {
-        console.log('Found ICS candidate attachment:', { filename, contentType, length: (content?.length ?? 0) });
-        calendarEvent = parseIcsContent(content);
-        if (calendarEvent) break;
+    if (emailData.parsed_calendar_event) {
+      console.log("Using pre-parsed calendar event from Zapier:", emailData.parsed_calendar_event);
+      
+      // Convert Zapier format to internal format
+      calendarEvent = {
+        summary: emailData.parsed_calendar_event.summary,
+        dtstart: emailData.parsed_calendar_event.start_time,
+        dtend: emailData.parsed_calendar_event.end_time,
+        attendees: emailData.parsed_calendar_event.attendees || [],
+        location: emailData.parsed_calendar_event.location,
+        description: emailData.parsed_calendar_event.description,
+        uid: emailData.parsed_calendar_event.uid || `zapier-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+      };
+      
+      console.log("Converted to internal calendar event format:", calendarEvent);
+    } else {
+      console.log("No pre-parsed calendar event found, attempting ICS parsing...");
+      
+      // Fallback to existing ICS parsing logic
+      const attachments = Array.isArray(emailData.attachments) ? emailData.attachments : [];
+      for (const attachment of attachments) {
+        const filename = (attachment as any)?.filename ?? '';
+        const contentType = (attachment as any)?.contentType ?? '';
+        const content = (attachment as any)?.content ?? '';
+        const isIcsByName = typeof filename === 'string' && filename.toLowerCase().endsWith('.ics');
+        const isIcsByType = typeof contentType === 'string' && contentType.toLowerCase().includes('calendar');
+        const isIcsByContent = typeof content === 'string' && content.includes('BEGIN:VCALENDAR');
+        if (isIcsByName || isIcsByType || isIcsByContent) {
+          console.log('Found ICS candidate attachment:', { filename, contentType, length: (content?.length ?? 0) });
+          calendarEvent = parseIcsContent(content);
+          if (calendarEvent) break;
+        }
+      }
+
+      // If no .ics attachment, try parsing from email body
+      if (!calendarEvent && (emailData.body?.includes?.('BEGIN:VCALENDAR'))) {
+        calendarEvent = parseIcsContent(emailData.body);
       }
     }
 
-    // If no .ics attachment, try parsing from email body
-    if (!calendarEvent && (emailData.body?.includes?.('BEGIN:VCALENDAR'))) {
-      calendarEvent = parseIcsContent(emailData.body);
-    }
-
     if (!calendarEvent) {
-      console.log("No calendar event found in email");
-      return new Response(JSON.stringify({ success: false, message: "No calendar event found" }), {
+      console.log("No calendar event found - neither pre-parsed from Zapier nor ICS data in email");
+      return new Response(JSON.stringify({ 
+        success: false, 
+        message: "No calendar event found - ensure Zapier is configured to send parsed calendar data or include ICS attachments" 
+      }), {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
