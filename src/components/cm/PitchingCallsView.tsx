@@ -148,6 +148,18 @@ const PitchingCallsView = () => {
     }
   };
 
+  // Helper function to map internal statuses to user-friendly display labels
+  const getDisplayStatus = (status: string): string => {
+    const statusMap: Record<string, string> = {
+      'scheduled': 'Invited',     // Calendar invitation sent, pending acceptance
+      'completed': 'Confirmed',   // Invitation accepted/confirmed
+      'cancelled': 'Cancelled',   // Invitation cancelled
+      'rescheduled': 'Rescheduled', // Invitation rescheduled
+      'pending': 'Pending'        // Default pending state
+    };
+    return statusMap[status] || status.charAt(0).toUpperCase() + status.slice(1);
+  };
+
   const fetchCMInvitations = async () => {
     try {
       const { data: invitationsData, error } = await supabase
@@ -718,7 +730,7 @@ const PitchingCallsView = () => {
                               invitation.status === 'rescheduled' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' : ''
                             }
                           >
-                            {invitation.status.charAt(0).toUpperCase() + invitation.status.slice(1)}
+                            {getDisplayStatus(invitation.status)}
                           </Badge>
                         </TableCell>
                         <TableCell>
