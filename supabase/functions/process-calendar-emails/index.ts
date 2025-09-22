@@ -38,6 +38,8 @@ interface CalendarEvent {
   location?: string;
   description?: string;
   uid: string;
+  method?: string;
+  sequence?: number;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -146,77 +148,142 @@ const handler = async (req: Request): Promise<Response> => {
       jurorsFound: jurors?.length || 0
     });
 
+    // Check for existing calendar invitation to detect lifecycle changes
+    const { data: existingInvitation } = await supabase
+      .from('cm_calendar_invitations')
+      .select('*')
+      .eq('calendar_uid', calendarEvent.uid)
+      .maybeSingle();
+
+    // Detect lifecycle changes
+    const eventMethod = calendarEvent.method || 'REQUEST';
+    const sequenceNumber = calendarEvent.sequence || 0;
+    let lifecycleStatus = 'scheduled';
     let matchingStatus = 'unmatched';
+    const lifecycleHistory = existingInvitation?.lifecycle_history || [];
+
+    if (existingInvitation) {
+      const previousEventDate = existingInvitation.event_start_date;
+      const newEventDate = new Date(calendarEvent.dtstart).toISOString();
+      
+      // Determine lifecycle status based on changes
+      if (eventMethod === 'CANCEL') {
+        lifecycleStatus = 'cancelled';
+        matchingStatus = 'cancelled';
+      } else if (previousEventDate !== newEventDate) {
+        lifecycleStatus = 'rescheduled';
+        matchingStatus = 'rescheduled';
+      } else if (sequenceNumber > (existingInvitation.sequence_number || 0)) {
+        lifecycleStatus = 'updated';
+        matchingStatus = existingInvitation.matching_status || 'unmatched';
+      } else {
+        lifecycleStatus = existingInvitation.status || 'scheduled';
+        matchingStatus = existingInvitation.matching_status || 'unmatched';
+      }
+
+      // Add to lifecycle history
+      lifecycleHistory.push({
+        timestamp: new Date().toISOString(),
+        action: eventMethod,
+        sequence: sequenceNumber,
+        previous_date: previousEventDate,
+        new_date: newEventDate,
+        status_change: `${existingInvitation.status} -> ${lifecycleStatus}`
+      });
+    } else {
+      // New invitation
+      if (eventMethod === 'CANCEL') {
+        lifecycleStatus = 'cancelled';
+        matchingStatus = 'cancelled';
+      }
+      
+      lifecycleHistory.push({
+        timestamp: new Date().toISOString(),
+        action: 'CREATED',
+        sequence: sequenceNumber,
+        status: lifecycleStatus
+      });
+    }
+
     let matchingErrors: string[] = [];
     let startup = null;
     let juror = null;
     let assignment = null;
 
-    // Always create CM calendar invitation, regardless of matching success
-    if (startups?.length && jurors?.length) {
-      startup = startups[0];
-      juror = jurors[0];
-      
-      // Try to find existing pitching assignment
-      const { data: existingAssignment, error: assignmentError } = await supabase
-        .from('pitching_assignments')
-        .select('id, status')
-        .eq('startup_id', startup.id)
-        .eq('juror_id', juror.id)
-        .single();
-
-      if (existingAssignment) {
-        assignment = existingAssignment;
-        matchingStatus = 'auto_matched';
+    // Only update matching if this is a new invitation or if we don't have existing matching data
+    if (!existingInvitation || (!existingInvitation.startup_id && !existingInvitation.juror_id)) {
+      if (startups?.length && jurors?.length) {
+        startup = startups[0];
+        juror = jurors[0];
         
-        // Update the pitching assignment with meeting details
-        const { error: updateError } = await supabase
-          .from('pitching_assignments')
-          .update({
-            meeting_scheduled_date: new Date(calendarEvent.dtstart).toISOString(),
-            calendly_link: calendarEvent.location,
-            meeting_notes: calendarEvent.description,
-            status: 'scheduled'
-          })
-          .eq('id', assignment.id);
-
-        if (updateError) {
-          console.error('Error updating pitching assignment:', updateError);
-          matchingErrors.push('Failed to update pitching assignment');
-          matchingStatus = 'partial_match';
+        if (lifecycleStatus !== 'cancelled') {
+          matchingStatus = 'auto_matched';
         }
-      } else {
-        // Auto-create pitching assignment if startup and juror found but no assignment exists
-        const { data: newAssignment, error: createError } = await supabase
+        
+        // Try to find existing pitching assignment
+        const { data: existingAssignment, error: assignmentError } = await supabase
           .from('pitching_assignments')
-          .insert({
-            startup_id: startup.id,
-            juror_id: juror.id,
-            meeting_scheduled_date: new Date(calendarEvent.dtstart).toISOString(),
-            calendly_link: calendarEvent.location,
-            meeting_notes: calendarEvent.description,
-            status: 'scheduled'
-          })
-          .select('id')
+          .select('id, status')
+          .eq('startup_id', startup.id)
+          .eq('juror_id', juror.id)
           .single();
 
-        if (newAssignment) {
-          assignment = newAssignment;
-          matchingStatus = 'auto_matched';
-          console.log("Auto-created pitching assignment for:", {
-            startup: startup.name,
-            juror: juror.name
-          });
-        } else {
-          console.error('Error creating pitching assignment:', createError);
-          matchingErrors.push('Failed to create pitching assignment');
-          matchingStatus = 'partial_match';
+        if (existingAssignment) {
+          assignment = existingAssignment;
+          
+          // Update the pitching assignment with meeting details
+          const { error: updateError } = await supabase
+            .from('pitching_assignments')
+            .update({
+              meeting_scheduled_date: new Date(calendarEvent.dtstart).toISOString(),
+              calendly_link: calendarEvent.location,
+              meeting_notes: calendarEvent.description,
+              status: lifecycleStatus === 'cancelled' ? 'cancelled' : 'scheduled'
+            })
+            .eq('id', assignment.id);
+
+          if (updateError) {
+            console.error('Error updating pitching assignment:', updateError);
+            matchingErrors.push('Failed to update pitching assignment');
+          }
+        } else if (lifecycleStatus !== 'cancelled') {
+          // Auto-create pitching assignment if startup and juror found but no assignment exists
+          const { data: newAssignment, error: createError } = await supabase
+            .from('pitching_assignments')
+            .insert({
+              startup_id: startup.id,
+              juror_id: juror.id,
+              meeting_scheduled_date: new Date(calendarEvent.dtstart).toISOString(),
+              calendly_link: calendarEvent.location,
+              meeting_notes: calendarEvent.description,
+              status: 'scheduled'
+            })
+            .select('id')
+            .single();
+
+          if (newAssignment) {
+            assignment = newAssignment;
+            console.log("Auto-created pitching assignment for:", {
+              startup: startup.name,
+              juror: juror.name
+            });
+          } else {
+            console.error('Error creating pitching assignment:', createError);
+            matchingErrors.push('Failed to create pitching assignment');
+          }
         }
+      } else {
+        // No matching startup/juror found
+        if (!startups?.length) matchingErrors.push('No matching startup found in attendees');
+        if (!jurors?.length) matchingErrors.push('No matching juror found in attendees');
       }
     } else {
-      // No matching startup/juror found
-      if (!startups?.length) matchingErrors.push('No matching startup found in attendees');
-      if (!jurors?.length) matchingErrors.push('No matching juror found in attendees');
+      // Keep existing matching but update status appropriately  
+      startup = { id: existingInvitation.startup_id };
+      juror = { id: existingInvitation.juror_id };
+      if (existingInvitation.pitching_assignment_id) {
+        assignment = { id: existingInvitation.pitching_assignment_id };
+      }
     }
 
     // Create or update CM calendar invitation (always, regardless of matching success)
@@ -231,10 +298,14 @@ const handler = async (req: Request): Promise<Response> => {
       event_start_date: new Date(calendarEvent.dtstart).toISOString(),
       event_end_date: calendarEvent.dtend ? new Date(calendarEvent.dtend).toISOString() : null,
       attendee_emails: attendeeEmails,
-      status: matchingStatus === 'auto_matched' ? 'scheduled' : 'cancelled',
+      status: lifecycleStatus,
       matching_status: matchingStatus,
       matching_errors: matchingErrors,
-      manual_assignment_needed: matchingStatus !== 'auto_matched'
+      manual_assignment_needed: matchingStatus === 'unmatched',
+      event_method: eventMethod,
+      sequence_number: sequenceNumber,
+      previous_event_date: existingInvitation?.event_start_date || null,
+      lifecycle_history: lifecycleHistory
     };
 
     const cmResult = await supabase

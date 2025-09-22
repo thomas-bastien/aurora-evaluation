@@ -47,6 +47,10 @@ interface CMCalendarInvitation {
   matching_status: string;
   matching_errors: any;
   manual_assignment_needed: boolean;
+  event_method: string | null;
+  sequence_number: number | null;
+  previous_event_date: string | null;
+  lifecycle_history: any;
   created_at: string;
   updated_at: string;
   startup?: {
@@ -290,9 +294,21 @@ const PitchingCallsView = () => {
     a => a.meeting_completed_date || a.status === 'completed'
   );
 
-  // Filter invitations by matching status
-  const matchedInvitations = cmInvitations.filter(inv => inv.matching_status === 'auto_matched' || inv.matching_status === 'manual_matched');
+  // Filter invitations by matching status and lifecycle
+  const matchedInvitations = cmInvitations.filter(inv => 
+    (inv.matching_status === 'auto_matched' || inv.matching_status === 'manual_matched') && 
+    inv.status !== 'cancelled'
+  );
   const unmatchedInvitations = cmInvitations.filter(inv => inv.manual_assignment_needed);
+  const rescheduledInvitations = cmInvitations.filter(inv => 
+    inv.matching_status === 'rescheduled' || inv.status === 'rescheduled'
+  );
+  const cancelledInvitations = cmInvitations.filter(inv => 
+    inv.matching_status === 'cancelled' || inv.status === 'cancelled'
+  );
+  const conflictInvitations = cmInvitations.filter(inv => 
+    inv.matching_status === 'conflict' || inv.status === 'conflict'
+  );
 
   if (loading) {
     return (
@@ -348,7 +364,7 @@ const PitchingCallsView = () => {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Assignments</CardTitle>
@@ -357,6 +373,17 @@ const PitchingCallsView = () => {
           <CardContent>
             <div className="text-2xl font-bold">{assignments.length}</div>
             <p className="text-xs text-muted-foreground">All juror-startup pairs</p>
+          </CardContent>
+        </Card>
+
+        <Card className={rescheduledInvitations.length > 0 ? "border-yellow-200" : ""}>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Rescheduled</CardTitle>
+            <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-yellow-600">{rescheduledInvitations.length}</div>
+            <p className="text-xs text-muted-foreground">Need approval</p>
           </CardContent>
         </Card>
 
@@ -616,6 +643,223 @@ const PitchingCallsView = () => {
                           </>
                         )}
                       </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Rescheduled Calendar Meetings - Need Approval */}
+      {rescheduledInvitations.length > 0 && (
+        <Card className="border-yellow-200">
+          <CardHeader>
+            <CardTitle className="text-yellow-700">Rescheduled Calendar Meetings</CardTitle>
+            <CardDescription>
+              These meetings have been rescheduled and may need approval
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Event</TableHead>
+                  <TableHead>Startup</TableHead>
+                  <TableHead>Juror</TableHead>
+                  <TableHead>Previous Date</TableHead>
+                  <TableHead>New Date</TableHead>
+                  <TableHead>Lifecycle History</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {rescheduledInvitations.map((invitation) => (
+                  <TableRow key={invitation.id}>
+                    <TableCell>
+                      <div>
+                        <div className="font-medium">{invitation.event_summary || 'Pitch Meeting'}</div>
+                        <div className="flex gap-1 mt-1">
+                          <Badge variant="outline" className="bg-yellow-100 text-yellow-800 border-yellow-200">
+                            Rescheduled
+                          </Badge>
+                          {invitation.event_method && (
+                            <Badge variant="secondary" className="text-xs">
+                              {invitation.event_method}
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div>
+                        <div className="font-medium">{invitation.startup?.name || 'Unknown'}</div>
+                        <div className="text-sm text-muted-foreground">
+                          {invitation.startup?.contact_email || 'No email'}
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div>
+                        <div className="font-medium">{invitation.juror?.name || 'Unknown'}</div>
+                        <div className="text-sm text-muted-foreground">
+                          {invitation.juror?.email || 'No email'}
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      {invitation.previous_event_date ? (
+                        <div>
+                          <div className="font-medium">
+                            {format(new Date(invitation.previous_event_date), 'MMM dd, yyyy')}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            {format(new Date(invitation.previous_event_date), 'h:mm a')}
+                          </div>
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">Unknown</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {invitation.event_start_date ? (
+                        <div>
+                          <div className="font-medium">
+                            {format(new Date(invitation.event_start_date), 'MMM dd, yyyy')}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            {format(new Date(invitation.event_start_date), 'h:mm a')}
+                          </div>
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">No date</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <div className="text-sm">
+                        {Array.isArray(invitation.lifecycle_history) && invitation.lifecycle_history.length > 0 ? 
+                          <div className="max-h-16 overflow-y-auto">
+                            {invitation.lifecycle_history.slice(-3).map((entry: any, i: number) => (
+                              <div key={i} className="text-xs text-muted-foreground mb-1">
+                                {entry.action} - {entry.timestamp ? format(new Date(entry.timestamp), 'MMM dd HH:mm') : 'Unknown time'}
+                              </div>
+                            ))}
+                          </div> :
+                          <div className="text-muted-foreground">No history</div>
+                        }
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex gap-1">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => updateCMInvitationStatus(invitation.id, 'scheduled')}
+                        >
+                          Approve
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => updateCMInvitationStatus(invitation.id, 'cancelled')}
+                        >
+                          Reject
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Cancelled Calendar Meetings */}
+      {cancelledInvitations.length > 0 && (
+        <Card className="border-gray-200">
+          <CardHeader>
+            <CardTitle className="text-gray-700">Cancelled Calendar Meetings</CardTitle>
+            <CardDescription>
+              Meetings that have been cancelled by participants
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Event</TableHead>
+                  <TableHead>Startup</TableHead>
+                  <TableHead>Juror</TableHead>
+                  <TableHead>Original Date</TableHead>
+                  <TableHead>Cancelled Date</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {cancelledInvitations.map((invitation) => (
+                  <TableRow key={invitation.id} className="opacity-75">
+                    <TableCell>
+                      <div>
+                        <div className="font-medium line-through">{invitation.event_summary || 'Pitch Meeting'}</div>
+                        <Badge variant="destructive" className="mt-1">
+                          Cancelled
+                        </Badge>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div>
+                        <div className="font-medium">{invitation.startup?.name || 'Unknown'}</div>
+                        <div className="text-sm text-muted-foreground">
+                          {invitation.startup?.contact_email || 'No email'}
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div>
+                        <div className="font-medium">{invitation.juror?.name || 'Unknown'}</div>
+                        <div className="text-sm text-muted-foreground">
+                          {invitation.juror?.email || 'No email'}
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      {invitation.event_start_date ? (
+                        <div>
+                          <div className="font-medium line-through">
+                            {format(new Date(invitation.event_start_date), 'MMM dd, yyyy')}
+                          </div>
+                          <div className="text-sm text-muted-foreground line-through">
+                            {format(new Date(invitation.event_start_date), 'h:mm a')}
+                          </div>
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">No date</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {invitation.updated_at ? (
+                        <div>
+                          <div className="font-medium">
+                            {format(new Date(invitation.updated_at), 'MMM dd, yyyy')}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            {format(new Date(invitation.updated_at), 'h:mm a')}
+                          </div>
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">Unknown</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => updateCMInvitationStatus(invitation.id, 'scheduled')}
+                      >
+                        Reschedule
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))}

@@ -22,14 +22,18 @@ export type Database = {
           event_description: string | null
           event_end_date: string | null
           event_location: string | null
+          event_method: string | null
           event_start_date: string | null
           event_summary: string | null
           id: string
           juror_id: string | null
+          lifecycle_history: Json | null
           manual_assignment_needed: boolean | null
           matching_errors: Json | null
           matching_status: string | null
           pitching_assignment_id: string | null
+          previous_event_date: string | null
+          sequence_number: number | null
           startup_id: string | null
           status: string | null
           updated_at: string
@@ -41,14 +45,18 @@ export type Database = {
           event_description?: string | null
           event_end_date?: string | null
           event_location?: string | null
+          event_method?: string | null
           event_start_date?: string | null
           event_summary?: string | null
           id?: string
           juror_id?: string | null
+          lifecycle_history?: Json | null
           manual_assignment_needed?: boolean | null
           matching_errors?: Json | null
           matching_status?: string | null
           pitching_assignment_id?: string | null
+          previous_event_date?: string | null
+          sequence_number?: number | null
           startup_id?: string | null
           status?: string | null
           updated_at?: string
@@ -60,14 +68,18 @@ export type Database = {
           event_description?: string | null
           event_end_date?: string | null
           event_location?: string | null
+          event_method?: string | null
           event_start_date?: string | null
           event_summary?: string | null
           id?: string
           juror_id?: string | null
+          lifecycle_history?: Json | null
           manual_assignment_needed?: boolean | null
           matching_errors?: Json | null
           matching_status?: string | null
           pitching_assignment_id?: string | null
+          previous_event_date?: string | null
+          sequence_number?: number | null
           startup_id?: string | null
           status?: string | null
           updated_at?: string
