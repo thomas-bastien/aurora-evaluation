@@ -231,7 +231,7 @@ const handler = async (req: Request): Promise<Response> => {
       event_start_date: new Date(calendarEvent.dtstart).toISOString(),
       event_end_date: calendarEvent.dtend ? new Date(calendarEvent.dtend).toISOString() : null,
       attendee_emails: attendeeEmails,
-      status: matchingStatus === 'auto_matched' ? 'scheduled' : 'unmatched',
+      status: matchingStatus === 'auto_matched' ? 'scheduled' : 'cancelled',
       matching_status: matchingStatus,
       matching_errors: matchingErrors,
       manual_assignment_needed: matchingStatus !== 'auto_matched'
