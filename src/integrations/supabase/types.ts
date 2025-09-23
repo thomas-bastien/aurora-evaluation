@@ -138,6 +138,102 @@ export type Database = {
         }
         Relationships: []
       }
+      communication_attempts: {
+        Row: {
+          attempt_number: number
+          attempt_status: string
+          attempted_at: string | null
+          communication_id: string | null
+          created_at: string
+          error_message: string | null
+          id: string
+          scheduled_at: string | null
+          updated_at: string
+          workflow_id: string
+        }
+        Insert: {
+          attempt_number?: number
+          attempt_status?: string
+          attempted_at?: string | null
+          communication_id?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          scheduled_at?: string | null
+          updated_at?: string
+          workflow_id: string
+        }
+        Update: {
+          attempt_number?: number
+          attempt_status?: string
+          attempted_at?: string | null
+          communication_id?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          scheduled_at?: string | null
+          updated_at?: string
+          workflow_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "communication_attempts_communication_id_fkey"
+            columns: ["communication_id"]
+            isOneToOne: false
+            referencedRelation: "email_communications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "communication_attempts_workflow_id_fkey"
+            columns: ["workflow_id"]
+            isOneToOne: false
+            referencedRelation: "communication_workflows"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      communication_workflows: {
+        Row: {
+          created_at: string
+          current_stage: Database["public"]["Enums"]["communication_stage"]
+          id: string
+          next_action_due: string | null
+          participant_id: string
+          participant_type: string
+          stage_completed_at: string | null
+          stage_data: Json | null
+          stage_entered_at: string
+          stage_status: Database["public"]["Enums"]["workflow_status"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          current_stage?: Database["public"]["Enums"]["communication_stage"]
+          id?: string
+          next_action_due?: string | null
+          participant_id: string
+          participant_type: string
+          stage_completed_at?: string | null
+          stage_data?: Json | null
+          stage_entered_at?: string
+          stage_status?: Database["public"]["Enums"]["workflow_status"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          current_stage?: Database["public"]["Enums"]["communication_stage"]
+          id?: string
+          next_action_due?: string | null
+          participant_id?: string
+          participant_type?: string
+          stage_completed_at?: string | null
+          stage_data?: Json | null
+          stage_entered_at?: string
+          stage_status?: Database["public"]["Enums"]["workflow_status"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
       email_communications: {
         Row: {
           body: string
@@ -968,13 +1064,64 @@ export type Database = {
           },
         ]
       }
+      workflow_triggers: {
+        Row: {
+          created_at: string
+          delay_hours: number | null
+          email_template_category: string | null
+          id: string
+          is_active: boolean
+          max_attempts: number | null
+          participant_type: string
+          stage: Database["public"]["Enums"]["communication_stage"]
+          trigger_condition: Json
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          delay_hours?: number | null
+          email_template_category?: string | null
+          id?: string
+          is_active?: boolean
+          max_attempts?: number | null
+          participant_type: string
+          stage: Database["public"]["Enums"]["communication_stage"]
+          trigger_condition: Json
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          delay_hours?: number | null
+          email_template_category?: string | null
+          id?: string
+          is_active?: boolean
+          max_attempts?: number | null
+          participant_type?: string
+          stage?: Database["public"]["Enums"]["communication_stage"]
+          trigger_condition?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      advance_workflow_stage: {
+        Args: {
+          p_new_stage: Database["public"]["Enums"]["communication_stage"]
+          p_stage_data?: Json
+          p_workflow_id: string
+        }
+        Returns: boolean
+      }
       can_modify_round: {
         Args: { round_name: string }
+        Returns: boolean
+      }
+      complete_workflow_stage: {
+        Args: { p_completion_data?: Json; p_workflow_id: string }
         Returns: boolean
       }
       get_current_round: {
@@ -984,6 +1131,17 @@ export type Database = {
       get_current_user_role: {
         Args: Record<PropertyKey, never>
         Returns: string
+      }
+      get_participant_workflow_status: {
+        Args: { p_participant_id: string; p_participant_type: string }
+        Returns: {
+          current_stage: string
+          next_action_due: string
+          stage_completed_at: string
+          stage_entered_at: string
+          stage_status: string
+          workflow_id: string
+        }[]
       }
       get_startup_status_for_round: {
         Args: { round_name: string; startup_uuid: string }
@@ -1003,7 +1161,21 @@ export type Database = {
       }
     }
     Enums: {
+      communication_stage:
+        | "juror_onboarding"
+        | "assignment_notification"
+        | "evaluation_reminders"
+        | "screening_results"
+        | "pitching_assignment"
+        | "pitch_reminders"
+        | "final_results"
       user_role: "vc" | "admin"
+      workflow_status:
+        | "pending"
+        | "in_progress"
+        | "completed"
+        | "skipped"
+        | "failed"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1131,7 +1303,23 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      communication_stage: [
+        "juror_onboarding",
+        "assignment_notification",
+        "evaluation_reminders",
+        "screening_results",
+        "pitching_assignment",
+        "pitch_reminders",
+        "final_results",
+      ],
       user_role: ["vc", "admin"],
+      workflow_status: [
+        "pending",
+        "in_progress",
+        "completed",
+        "skipped",
+        "failed",
+      ],
     },
   },
 } as const

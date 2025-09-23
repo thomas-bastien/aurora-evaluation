@@ -12,6 +12,8 @@ import { JurorEvaluationsList } from '@/components/jurors/JurorEvaluationsList';
 import { JurorStatusBadge } from '@/components/common/JuryRoundStatusBadges';
 import { RoundProgressTab } from '@/components/jurors/RoundProgressTab';
 import { calculateProgressiveJurorStatus, type ProgressiveJurorStatus } from '@/utils/juryStatusUtils';
+import { EmailHistorySection } from '@/components/communication/EmailHistorySection';
+import { CommunicationWorkflowView } from '@/components/communication/CommunicationWorkflowView';
 
 interface Juror {
   id: string;
@@ -198,9 +200,10 @@ const JurorProfile = () => {
         </div>
 
         <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="evaluations">Evaluations</TabsTrigger>
+            <TabsTrigger value="communications">Communications</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6">
@@ -336,6 +339,21 @@ const JurorProfile = () => {
                 <p className="text-muted-foreground">This juror hasn't accepted their invitation yet, so no evaluations are available.</p>
               </div>
             )}
+          </TabsContent>
+
+          <TabsContent value="communications" className="space-y-6">
+            {/* Communication Workflow */}
+            <CommunicationWorkflowView 
+              participantId={juror.id} 
+              participantType="juror" 
+            />
+            
+            {/* Email History */}
+            <EmailHistorySection 
+              participantId={juror.id}
+              participantType="juror"
+              participantName={juror.name}
+            />
           </TabsContent>
         </Tabs>
       </main>
