@@ -4,11 +4,12 @@ import { getMatchmakingCounts } from '@/utils/countsUtils';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle, Building2, Users, CheckCircle2, Eye, Check, Wand2, Mail } from "lucide-react";
+import { AlertCircle, Building2, Users, CheckCircle2, Eye, Check, Wand2, Mail, Send, Calendar } from "lucide-react";
 import { toast } from "sonner";
 import { StartupAssignmentModal } from "@/components/matchmaking/StartupAssignmentModal";
 import { AssignmentSummary } from "@/components/matchmaking/AssignmentSummary";
 import { AutoAssignmentReviewPanel } from "@/components/matchmaking/AutoAssignmentReviewPanel";
+import { SendSchedulingEmailsModal } from "@/components/cm/SendSchedulingEmailsModal";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { generateAutoAssignments, AutoAssignmentProposal, WorkloadDistribution } from '@/utils/autoAssignmentEngine';
 
@@ -62,8 +63,11 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
   const [autoAssignmentProposals, setAutoAssignmentProposals] = useState<AutoAssignmentProposal[]>([]);
   const [workloadDistribution, setWorkloadDistribution] = useState<WorkloadDistribution[]>([]);
   const [isConfirmed, setIsConfirmed] = useState(false);
+  const [isEmailsSent, setIsEmailsSent] = useState(false);
   const [loading, setLoading] = useState(true);
   const [autoAssignLoading, setAutoAssignLoading] = useState(false);
+  const [showSchedulingEmailModal, setShowSchedulingEmailModal] = useState(false);
+  const [sendingEmails, setSendingEmails] = useState(false);
   
   // Communication tracking state
   const [communicationStats, setCommunicationStats] = useState({
@@ -281,11 +285,6 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
 
       setIsConfirmed(true);
       toast.success('All assignments have been confirmed successfully!');
-      
-      // If this is pitching round, send scheduling emails to selected startups
-      if (currentRound === 'pitchingRound') {
-        await sendPitchSchedulingEmails();
-      }
 
     } catch (error) {
       console.error('Error saving assignments:', error);
@@ -293,9 +292,15 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
     }
   };
 
-  // New function to send pitch scheduling emails after pitching assignments are confirmed
-  const sendPitchSchedulingEmails = async () => {
+  const handleSendSchedulingEmails = (filters: { onlyConfirmed: boolean; excludeAlreadyEmailed: boolean }) => {
+    setShowSchedulingEmailModal(false);
+    return sendPitchSchedulingEmails(filters);
+  };
+
+  // Function to send pitch scheduling emails with filtering options
+  const sendPitchSchedulingEmails = async (filters?: { onlyConfirmed: boolean; excludeAlreadyEmailed: boolean }) => {
     try {
+      setSendingEmails(true);
       console.log('Sending pitch scheduling emails...');
       
       // Group assignments by startup
@@ -307,9 +312,26 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
         startupAssignments.get(assignment.startup_id)!.push(assignment);
       });
 
+      // Filter startups based on options
+      let eligibleStartupIds = Array.from(startupAssignments.keys());
+
+      // Apply excludeAlreadyEmailed filter
+      if (filters?.excludeAlreadyEmailed) {
+        const { data: emailedStartups } = await supabase
+          .from('email_communications')
+          .select('recipient_id')
+          .eq('recipient_type', 'startup')
+          .or('subject.ilike.%scheduling%,subject.ilike.%pitch%')
+          .eq('status', 'sent');
+
+        const emailedStartupIds = new Set(emailedStartups?.map(e => e.recipient_id) || []);
+        eligibleStartupIds = eligibleStartupIds.filter(startupId => !emailedStartupIds.has(startupId));
+      }
+
       let successCount = 0;
       
-      for (const [startupId, startupAssignmentList] of startupAssignments) {
+      for (const startupId of eligibleStartupIds) {
+        const startupAssignmentList = startupAssignments.get(startupId)!;
         try {
           const startup = startups.find(s => s.id === startupId);
           if (!startup || !startup.contact_email) {
@@ -361,6 +383,7 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
 
       if (successCount > 0) {
         toast.success(`Sent pitch scheduling emails to ${successCount} startups with investor calendar links!`);
+        setIsEmailsSent(true);
       } else {
         toast.error('No scheduling emails were sent successfully');
       }
@@ -368,6 +391,8 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
     } catch (error) {
       console.error('Error in sendPitchSchedulingEmails:', error);
       toast.error('Failed to send pitch scheduling emails');
+    } finally {
+      setSendingEmails(false);
     }
   };
 
@@ -686,6 +711,7 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
               <Eye className="w-4 h-4" />
               View Assignment Summary
             </Button>
+            
             <Button 
               onClick={handleConfirmAssignments}
               disabled={assignments.length === 0 || isConfirmed}
@@ -693,13 +719,35 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
               className="flex items-center gap-2"
             >
               <Check className="w-4 h-4" />
-              {isConfirmed 
-                ? "Assignments Confirmed" 
-                : currentRound === 'pitchingRound' 
-                  ? 'Confirm Assignments & Send Scheduling Emails'
-                  : 'Confirm All Assignments'
-              }
+              {isConfirmed ? "Assignments Confirmed" : "Confirm Assignments"}
             </Button>
+
+            {/* Send Scheduling Emails Button - Only for pitching round */}
+            {currentRound === 'pitchingRound' && (
+              <Button 
+                onClick={() => setShowSchedulingEmailModal(true)}
+                disabled={!isConfirmed || sendingEmails}
+                variant={isEmailsSent ? "secondary" : "default"}
+                className="flex items-center gap-2"
+              >
+                {sendingEmails ? (
+                  <>
+                    <Mail className="w-4 h-4 animate-pulse" />
+                    Sending Emails...
+                  </>
+                ) : isEmailsSent ? (
+                  <>
+                    <CheckCircle2 className="w-4 h-4" />
+                    Emails Sent
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-4 h-4" />
+                    Send Scheduling Emails
+                  </>
+                )}
+              </Button>
+            )}
           </div>
 
           {/* Startups List */}
@@ -830,6 +878,15 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
         onOpenChange={setShowAutoAssignmentReview}
         onApprove={handleAutoAssignmentApprove}
         onCancel={handleAutoAssignmentCancel}
+      />
+
+      {/* Send Scheduling Emails Modal */}
+      <SendSchedulingEmailsModal
+        open={showSchedulingEmailModal}
+        onClose={() => setShowSchedulingEmailModal(false)}
+        currentRound={currentRound}
+        assignments={assignments}
+        onSendEmails={handleSendSchedulingEmails}
       />
     </div>
   );
