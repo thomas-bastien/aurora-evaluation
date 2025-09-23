@@ -158,8 +158,8 @@ const handler = async (req: Request): Promise<Response> => {
     // Detect lifecycle changes
     const eventMethod = calendarEvent.method || 'REQUEST';
     const sequenceNumber = calendarEvent.sequence || 0;
-    let lifecycleStatus = 'scheduled';
-    let matchingStatus = 'unmatched';
+    let lifecycleStatus = 'in_review'; // Default all new invitations to in_review
+    let matchingStatus = 'pending_cm_review'; // Default matching status for new invitations
     const lifecycleHistory = existingInvitation?.lifecycle_history || [];
 
     if (existingInvitation) {
@@ -191,10 +191,13 @@ const handler = async (req: Request): Promise<Response> => {
         status_change: `${existingInvitation.status} -> ${lifecycleStatus}`
       });
     } else {
-      // New invitation
+      // New invitation - all go to in_review except cancelled
       if (eventMethod === 'CANCEL') {
         lifecycleStatus = 'cancelled';
         matchingStatus = 'cancelled';
+      } else {
+        lifecycleStatus = 'in_review';
+        matchingStatus = 'pending_cm_review';
       }
       
       lifecycleHistory.push({
@@ -265,7 +268,9 @@ const handler = async (req: Request): Promise<Response> => {
               assignment = existingPendingAssignment;
             }
           } else {
-            matchingStatus = 'auto_matched';
+            // All new invitations go to in_review, even if perfect matches are found
+            matchingStatus = 'pending_cm_review';
+            lifecycleStatus = 'in_review';
             
             // Try to find existing pitching assignment
             const { data: existingAssignment, error: assignmentError } = await supabase
@@ -278,14 +283,14 @@ const handler = async (req: Request): Promise<Response> => {
             if (existingAssignment && existingAssignment.status !== 'pending') {
               assignment = existingAssignment;
               
-              // Update the pitching assignment with meeting details
+              // Update the pitching assignment with meeting details but keep in_review status
               const { error: updateError } = await supabase
                 .from('pitching_assignments')
                 .update({
                   meeting_scheduled_date: new Date(calendarEvent.dtstart).toISOString(),
                   calendly_link: calendarEvent.location,
                   meeting_notes: calendarEvent.description,
-                  status: lifecycleStatus === 'cancelled' ? 'cancelled' : 'scheduled'
+                  status: lifecycleStatus === 'cancelled' ? 'cancelled' : 'in_review'
                 })
                 .eq('id', assignment.id);
 
@@ -303,14 +308,14 @@ const handler = async (req: Request): Promise<Response> => {
                   meeting_scheduled_date: new Date(calendarEvent.dtstart).toISOString(),
                   calendly_link: calendarEvent.location,
                   meeting_notes: calendarEvent.description,
-                  status: 'scheduled'
+                  status: 'in_review'
                 })
                 .select('id')
                 .single();
 
               if (newAssignment) {
                 assignment = newAssignment;
-                console.log("Auto-created pitching assignment for:", {
+                console.log("Auto-created pitching assignment for review:", {
                   startup: startup.name,
                   juror: juror.name
                 });
@@ -322,9 +327,11 @@ const handler = async (req: Request): Promise<Response> => {
           }
         }
       } else {
-        // No matching startup/juror found
+        // No matching startup/juror found - still goes to in_review for manual assignment
         if (!startups?.length) matchingErrors.push('No matching startup found in attendees');
         if (!jurors?.length) matchingErrors.push('No matching juror found in attendees');
+        matchingStatus = 'pending_cm_review';
+        lifecycleStatus = 'in_review';
       }
     } else {
       // Keep existing matching but update status appropriately  
@@ -350,7 +357,7 @@ const handler = async (req: Request): Promise<Response> => {
       status: lifecycleStatus,
       matching_status: matchingStatus,
       matching_errors: matchingErrors,
-      manual_assignment_needed: matchingStatus === 'unmatched',
+      manual_assignment_needed: true, // All new invitations require CM review
       event_method: eventMethod,
       sequence_number: sequenceNumber,
       previous_event_date: existingInvitation?.event_start_date || null,
@@ -369,24 +376,25 @@ const handler = async (req: Request): Promise<Response> => {
       throw cmResult.error;
     }
 
-    if (matchingStatus === 'auto_matched') {
-      console.log("Successfully auto-matched calendar event:", {
-        startup: startup.name,
-        juror: juror.name,
+    if (matchingStatus === 'pending_cm_review') {
+      console.log("Calendar event routed to CM review:", {
+        startup: startup?.name || 'Unknown',
+        juror: juror?.name || 'Unknown',
         date: calendarEvent.dtstart,
-        assignment_id: assignment.id
+        assignment_id: assignment?.id || 'None'
       });
     } else {
-      console.log("Calendar event saved but requires manual matching:", {
+      console.log("Calendar event processed with status:", {
         calendar_uid: calendarEvent.uid,
-        matching_errors: matchingErrors,
+        status: lifecycleStatus,
+        matching_status: matchingStatus,
         attendee_emails: attendeeEmails
       });
     }
 
     return new Response(JSON.stringify({ 
       success: true, 
-      message: matchingStatus === 'auto_matched' ? "Calendar event processed successfully" : "Calendar event saved, manual matching required",
+      message: "Calendar event routed to CM review - awaiting approval",
       data: {
         startup: startup?.name || 'Unknown',
         juror: juror?.name || 'Unknown',
