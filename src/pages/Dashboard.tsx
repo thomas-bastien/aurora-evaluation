@@ -6,7 +6,7 @@ import { CohortSummaryCard } from "@/components/dashboard/CohortSummaryCard";
 import { FunnelStage } from "@/components/dashboard/FunnelStage";
 import { ScreeningFunnelView } from "@/components/dashboard/ScreeningFunnelView";
 import { PitchingFunnelView } from "@/components/dashboard/PitchingFunnelView";
-import { EmailAnalyticsCard } from "@/components/dashboard/EmailAnalyticsCard";
+import { CommunicationsOverviewCard } from "@/components/dashboard/CommunicationsOverviewCard";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useCohortSettings } from "@/hooks/useCohortSettings";
 import { formatDeadlineDisplay, formatDeadlineSimple, isDeadlinePassed } from "@/utils/deadlineUtils";
@@ -314,8 +314,8 @@ const Dashboard = () => {
         {/* Community Manager Funnel Workflow */}
         {profile?.role === 'admin' && (
           <div className="space-y-8 animate-fade-in" style={{ animationDelay: "400ms" }}>
-            {/* Email Analytics and Progress Overview */}
-            <EmailAnalyticsCard />
+            {/* Communications Overview */}
+            <CommunicationsOverviewCard />
 
             {/* Round 1 - Screening */}
             <ScreeningFunnelView 
