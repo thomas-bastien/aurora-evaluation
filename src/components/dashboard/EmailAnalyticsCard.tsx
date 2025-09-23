@@ -1,106 +1,104 @@
-import { useQuery } from "@tanstack/react-query";
+import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { supabase } from "@/integrations/supabase/client";
-import { 
-  Mail, 
-  TrendingUp, 
-  TrendingDown,
-  AlertTriangle,
-  Eye,
-  MousePointer,
-  CheckCircle,
-  XCircle
-} from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { BarChart3, Mail, TrendingUp, TrendingDown, AlertTriangle } from "lucide-react";
 
-interface EmailAnalytics {
+interface CommunicationAnalytics {
   totalSent: number;
   delivered: number;
   opened: number;
   clicked: number;
   bounced: number;
-  failed: number;
   deliveryRate: number;
   openRate: number;
   clickRate: number;
-  bounceRate: number;
 }
 
-export function EmailAnalyticsCard() {
-  const navigate = useNavigate();
+export const EmailAnalyticsCard = () => {
+  const [analytics, setAnalytics] = useState<CommunicationAnalytics>({
+    totalSent: 0,
+    delivered: 0,
+    opened: 0,
+    clicked: 0,
+    bounced: 0,
+    deliveryRate: 0,
+    openRate: 0,
+    clickRate: 0
+  });
+  const [loading, setLoading] = useState(true);
 
-  const { data: analytics, isLoading } = useQuery({
-    queryKey: ["email-analytics"],
-    queryFn: async () => {
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+  useEffect(() => {
+    fetchAnalytics();
+  }, []);
 
+  const fetchAnalytics = async () => {
+    try {
       const { data: communications, error } = await supabase
-        .from("email_communications")
-        .select("*")
-        .gte("created_at", thirtyDaysAgo.toISOString());
+        .from('email_communications')
+        .select('status, sent_at, delivered_at, opened_at, clicked_at, bounced_at');
 
       if (error) throw error;
 
-      const totalSent = communications?.length || 0;
+      const total = communications?.length || 0;
       const delivered = communications?.filter(c => c.delivered_at).length || 0;
       const opened = communications?.filter(c => c.opened_at).length || 0;
       const clicked = communications?.filter(c => c.clicked_at).length || 0;
-      const bounced = communications?.filter(c => c.bounced_at || c.status === 'bounced').length || 0;
-      const failed = communications?.filter(c => c.status === 'failed').length || 0;
+      const bounced = communications?.filter(c => c.bounced_at).length || 0;
 
-      const deliveryRate = totalSent > 0 ? (delivered / totalSent) * 100 : 0;
-      const openRate = delivered > 0 ? (opened / delivered) * 100 : 0;
-      const clickRate = opened > 0 ? (clicked / opened) * 100 : 0;
-      const bounceRate = totalSent > 0 ? (bounced / totalSent) * 100 : 0;
-
-      return {
-        totalSent,
+      setAnalytics({
+        totalSent: total,
         delivered,
         opened,
         clicked,
         bounced,
-        failed,
-        deliveryRate,
-        openRate,
-        clickRate,
-        bounceRate,
-      } as EmailAnalytics;
-    },
-  });
-
-  const getMetricIcon = (rate: number, type: 'positive' | 'negative') => {
-    if (type === 'positive') {
-      return rate >= 50 ? <TrendingUp className="w-4 h-4 text-green-500" /> : <TrendingDown className="w-4 h-4 text-red-500" />;
-    } else {
-      return rate <= 5 ? <CheckCircle className="w-4 h-4 text-green-500" /> : <XCircle className="w-4 h-4 text-red-500" />;
+        deliveryRate: total > 0 ? (delivered / total) * 100 : 0,
+        openRate: delivered > 0 ? (opened / delivered) * 100 : 0,
+        clickRate: opened > 0 ? (clicked / opened) * 100 : 0
+      });
+    } catch (error) {
+      console.error('Error fetching communication analytics:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const getMetricColor = (rate: number, type: 'positive' | 'negative') => {
-    if (type === 'positive') {
-      if (rate >= 80) return "text-green-600";
-      if (rate >= 50) return "text-yellow-600";
-      return "text-red-600";
-    } else {
-      if (rate <= 2) return "text-green-600";
-      if (rate <= 5) return "text-yellow-600";
-      return "text-red-600";
-    }
+  const getMetricIcon = (rate: number, type: 'delivery' | 'open' | 'click') => {
+    const thresholds = { delivery: 95, open: 20, click: 2 };
+    const threshold = thresholds[type];
+    
+    if (rate >= threshold) return <TrendingUp className="h-4 w-4 text-success" />;
+    if (rate >= threshold * 0.7) return <BarChart3 className="h-4 w-4 text-warning" />;
+    return <TrendingDown className="h-4 w-4 text-destructive" />;
   };
 
-  if (isLoading) {
+  const getMetricColor = (rate: number, type: 'delivery' | 'open' | 'click') => {
+    const thresholds = { delivery: 95, open: 20, click: 2 };
+    const threshold = thresholds[type];
+    
+    if (rate >= threshold) return 'text-success';
+    if (rate >= threshold * 0.7) return 'text-warning';
+    return 'text-destructive';
+  };
+
+  if (loading) {
     return (
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Mail className="w-5 h-5" />
-            Email Analytics
+            <BarChart3 className="h-5 w-5" />
+            Email Performance Analytics
           </CardTitle>
-          <CardDescription>Loading email performance metrics...</CardDescription>
         </CardHeader>
+        <CardContent>
+          <div className="animate-pulse space-y-4">
+            <div className="grid grid-cols-4 gap-4">
+              {[...Array(4)].map((_, i) => (
+                <div key={i} className="h-16 bg-muted rounded"></div>
+              ))}
+            </div>
+          </div>
+        </CardContent>
       </Card>
     );
   }
@@ -108,124 +106,87 @@ export function EmailAnalyticsCard() {
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle className="flex items-center gap-2">
-              <Mail className="w-5 h-5" />
-              Email Performance (Last 30 Days)
-            </CardTitle>
-            <CardDescription>
-              Communication delivery and engagement metrics
-            </CardDescription>
-          </div>
-          <Button variant="outline" size="sm" onClick={() => navigate('/email-management')}>
-            View Details
-          </Button>
-        </div>
+        <CardTitle className="flex items-center gap-2">
+          <BarChart3 className="h-5 w-5" />
+          Email Performance Analytics
+        </CardTitle>
+        <CardDescription>
+          Communication performance metrics across all email campaigns
+        </CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="space-y-6">
-          {/* Primary Metrics */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="text-center p-3 bg-blue-50 rounded-lg">
-              <div className="text-2xl font-bold text-blue-600">{analytics?.totalSent || 0}</div>
-              <div className="text-sm text-muted-foreground">Total Sent</div>
-            </div>
-            <div className="text-center p-3 bg-green-50 rounded-lg">
-              <div className="text-2xl font-bold text-green-600">{analytics?.delivered || 0}</div>
-              <div className="text-sm text-muted-foreground">Delivered</div>
-            </div>
-            <div className="text-center p-3 bg-purple-50 rounded-lg">
-              <div className="text-2xl font-bold text-purple-600">{analytics?.opened || 0}</div>
-              <div className="text-sm text-muted-foreground">Opened</div>
-            </div>
-            <div className="text-center p-3 bg-indigo-50 rounded-lg">
-              <div className="text-2xl font-bold text-indigo-600">{analytics?.clicked || 0}</div>
-              <div className="text-sm text-muted-foreground">Clicked</div>
-            </div>
+        {/* Primary Metrics */}
+        <div className="grid grid-cols-4 gap-4 mb-6">
+          <div className="text-center p-4 bg-muted/30 rounded-lg">
+            <Mail className="h-8 w-8 mx-auto mb-2 text-primary" />
+            <div className="text-2xl font-bold">{analytics.totalSent}</div>
+            <div className="text-sm text-muted-foreground">Total Sent</div>
           </div>
-
-          {/* Performance Rates */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between p-3 border rounded-lg">
-              <div className="flex items-center gap-2">
-                <CheckCircle className="w-4 h-4 text-green-500" />
-                <span className="font-medium">Delivery Rate</span>
-              </div>
-              <div className="flex items-center gap-2">
-                {getMetricIcon(analytics?.deliveryRate || 0, 'positive')}
-                <span className={`font-bold ${getMetricColor(analytics?.deliveryRate || 0, 'positive')}`}>
-                  {(analytics?.deliveryRate || 0).toFixed(1)}%
-                </span>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between p-3 border rounded-lg">
-              <div className="flex items-center gap-2">
-                <Eye className="w-4 h-4 text-blue-500" />
-                <span className="font-medium">Open Rate</span>
-              </div>
-              <div className="flex items-center gap-2">
-                {getMetricIcon(analytics?.openRate || 0, 'positive')}
-                <span className={`font-bold ${getMetricColor(analytics?.openRate || 0, 'positive')}`}>
-                  {(analytics?.openRate || 0).toFixed(1)}%
-                </span>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between p-3 border rounded-lg">
-              <div className="flex items-center gap-2">
-                <MousePointer className="w-4 h-4 text-purple-500" />
-                <span className="font-medium">Click Rate</span>
-              </div>
-              <div className="flex items-center gap-2">
-                {getMetricIcon(analytics?.clickRate || 0, 'positive')}
-                <span className={`font-bold ${getMetricColor(analytics?.clickRate || 0, 'positive')}`}>
-                  {(analytics?.clickRate || 0).toFixed(1)}%
-                </span>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between p-3 border rounded-lg">
-              <div className="flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4 text-red-500" />
-                <span className="font-medium">Bounce Rate</span>
-              </div>
-              <div className="flex items-center gap-2">
-                {getMetricIcon(analytics?.bounceRate || 0, 'negative')}
-                <span className={`font-bold ${getMetricColor(analytics?.bounceRate || 0, 'negative')}`}>
-                  {(analytics?.bounceRate || 0).toFixed(1)}%
-                </span>
-              </div>
-            </div>
+          <div className="text-center p-4 bg-muted/30 rounded-lg">
+            <div className="text-2xl font-bold">{analytics.delivered}</div>
+            <div className="text-sm text-muted-foreground">Delivered</div>
           </div>
-
-          {/* Alerts */}
-          {(analytics?.bounceRate || 0) > 5 && (
-            <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-              <div className="flex items-center gap-2 text-red-700 mb-1">
-                <AlertTriangle className="w-4 h-4" />
-                <span className="font-medium">High Bounce Rate Alert</span>
-              </div>
-              <p className="text-sm text-red-600">
-                Your bounce rate is above 5%. Consider reviewing email addresses and content.
-              </p>
-            </div>
-          )}
-
-          {(analytics?.failed || 0) > 0 && (
-            <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-              <div className="flex items-center gap-2 text-yellow-700 mb-1">
-                <AlertTriangle className="w-4 h-4" />
-                <span className="font-medium">{analytics?.failed} Failed Deliveries</span>
-              </div>
-              <p className="text-sm text-yellow-600">
-                Some emails failed to send. Check the email management page for details.
-              </p>
-            </div>
-          )}
+          <div className="text-center p-4 bg-muted/30 rounded-lg">
+            <div className="text-2xl font-bold">{analytics.opened}</div>
+            <div className="text-sm text-muted-foreground">Opened</div>
+          </div>
+          <div className="text-center p-4 bg-muted/30 rounded-lg">
+            <div className="text-2xl font-bold">{analytics.clicked}</div>
+            <div className="text-sm text-muted-foreground">Clicked</div>
+          </div>
         </div>
+
+        {/* Performance Rates */}
+        <div className="grid grid-cols-3 gap-4 mb-4">
+          <div className="flex items-center justify-between p-3 border rounded-lg">
+            <div>
+              <div className="font-medium">Delivery Rate</div>
+              <div className={`text-sm ${getMetricColor(analytics.deliveryRate, 'delivery')}`}>
+                {analytics.deliveryRate.toFixed(1)}%
+              </div>
+            </div>
+            {getMetricIcon(analytics.deliveryRate, 'delivery')}
+          </div>
+          <div className="flex items-center justify-between p-3 border rounded-lg">
+            <div>
+              <div className="font-medium">Open Rate</div>
+              <div className={`text-sm ${getMetricColor(analytics.openRate, 'open')}`}>
+                {analytics.openRate.toFixed(1)}%
+              </div>
+            </div>
+            {getMetricIcon(analytics.openRate, 'open')}
+          </div>
+          <div className="flex items-center justify-between p-3 border rounded-lg">
+            <div>
+              <div className="font-medium">Click Rate</div>
+              <div className={`text-sm ${getMetricColor(analytics.clickRate, 'click')}`}>
+                {analytics.clickRate.toFixed(1)}%
+              </div>
+            </div>
+            {getMetricIcon(analytics.clickRate, 'click')}
+          </div>
+        </div>
+
+        {/* Alerts */}
+        {(analytics.bounced > 0 || analytics.deliveryRate < 90) && (
+          <div className="p-3 border border-destructive/20 bg-destructive/5 rounded-lg">
+            <div className="flex items-start gap-2">
+              <AlertTriangle className="h-4 w-4 text-destructive mt-0.5" />
+              <div className="space-y-1">
+                <div className="font-medium text-destructive">Performance Alert</div>
+                <div className="text-sm text-muted-foreground">
+                  {analytics.bounced > 0 && (
+                    <div>• {analytics.bounced} emails bounced</div>
+                  )}
+                  {analytics.deliveryRate < 90 && (
+                    <div>• Low delivery rate ({analytics.deliveryRate.toFixed(1)}%)</div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
-}
+};
