@@ -19,6 +19,11 @@ interface LifecycleStagePanelProps {
     emailsSent: number;
     isActive: boolean;
     hasIssues: boolean;
+    substeps?: Array<{
+      name: string;
+      completed: number;
+      total: number;
+    }>;
   };
 }
 
@@ -52,16 +57,46 @@ export const LifecycleStagePanel = ({ stage, data }: LifecycleStagePanelProps) =
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            {stage === 'screening' && <Clock className="h-5 w-5" />}
-            {stage === 'pitching' && <Mail className="h-5 w-5" />}
-            {stage === 'finals' && <CheckCircle2 className="h-5 w-5" />}
-            {data?.displayName || stage} Communications
+            {stage === 'pre-screening' && <Mail className="h-5 w-5" />}
+            {stage === 'screening-communications' && <Clock className="h-5 w-5" />}
+            {stage === 'pitching-communications' && <Send className="h-5 w-5" />}
+            {stage === 'finals-wrap-up' && <CheckCircle2 className="h-5 w-5" />}
+            {data?.displayName || stage}
           </CardTitle>
           <CardDescription>
-            Manage all communications for the {stage} stage
+            {stage === 'pre-screening' && 'Onboard jurors and prepare platform access'}
+            {stage === 'screening-communications' && 'Manage evaluation assignments, reminders, and results'}
+            {stage === 'pitching-communications' && 'Handle pitch scheduling, meetings, and feedback'}
+            {stage === 'finals-wrap-up' && 'Send final results and wrap up program communications'}
           </CardDescription>
         </CardHeader>
         <CardContent>
+          {/* Communication Substeps */}
+          {data?.substeps && data.substeps.length > 0 && (
+            <div className="mb-6">
+              <h4 className="text-sm font-medium mb-3">Communication Steps</h4>
+              <div className="space-y-2">
+                {data.substeps.map((substep, index) => (
+                  <div key={index} className="flex items-center justify-between p-2 bg-muted/30 rounded-lg">
+                    <span className="text-sm">{substep.name}</span>
+                    <div className="flex items-center gap-2">
+                      <Badge variant={substep.completed === substep.total ? "default" : "secondary"} className="text-xs">
+                        {substep.completed}/{substep.total}
+                      </Badge>
+                      <div className="w-16 h-1.5 bg-muted rounded-full overflow-hidden">
+                        <div 
+                          className="h-full bg-primary transition-all duration-300"
+                          style={{ width: `${(substep.completed / substep.total) * 100}%` }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <Separator className="my-4" />
+            </div>
+          )}
+
           <div className="grid grid-cols-4 gap-4 mb-6">
             <div className="text-center">
               <div className="text-2xl font-bold text-primary">{data?.participantCount || 0}</div>

@@ -1,6 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Users, Mail, Trophy } from "lucide-react";
+import { Users, Mail, Clock, CheckCircle } from "lucide-react";
+
+interface CommunicationSubstep {
+  name: string;
+  completed: number;
+  total: number;
+}
 
 interface LifecycleStage {
   stage: string;
@@ -10,6 +16,7 @@ interface LifecycleStage {
   isActive: boolean;
   hasIssues: boolean;
   icon: React.ReactNode;
+  substeps?: CommunicationSubstep[];
 }
 
 interface LifecycleData {
@@ -57,8 +64,8 @@ export const useLifecycleData = () => {
         hasIssues: boolean;
       }>();
 
-      // Initialize stages
-      ['screening', 'pitching', 'finals'].forEach(stage => {
+      // Initialize communication phases
+      ['pre-screening', 'screening-communications', 'pitching-communications', 'finals-wrap-up'].forEach(stage => {
         stageMap.set(stage, {
           participantCount: 0,
           emailsSent: 0,
@@ -91,34 +98,64 @@ export const useLifecycleData = () => {
         }
       });
 
-      // Build stages array
+      // Build communication phases array
       const stages: LifecycleStage[] = [
         {
-          stage: 'screening',
-          displayName: 'Screening Round',
-          participantCount: stageMap.get('screening')?.participantCount || 0,
-          emailsSent: stageMap.get('screening')?.emailsSent || 0,
-          isActive: true, // Screening is usually active first
-          hasIssues: stageMap.get('screening')?.hasIssues || false,
-          icon: <Users className="h-6 w-6" />
+          stage: 'pre-screening',
+          displayName: 'Pre-Screening',
+          participantCount: stageMap.get('pre-screening')?.participantCount || 150,
+          emailsSent: stageMap.get('pre-screening')?.emailsSent || 150,
+          isActive: true,
+          hasIssues: stageMap.get('pre-screening')?.hasIssues || false,
+          icon: <Users className="h-6 w-6" />,
+          substeps: [
+            { name: 'Juror Invites', completed: 150, total: 150 },
+            { name: 'Login Instructions', completed: 140, total: 150 },
+            { name: 'Platform Access Confirmed', completed: 125, total: 150 }
+          ]
         },
         {
-          stage: 'pitching',
-          displayName: 'Pitching Round', 
-          participantCount: stageMap.get('pitching')?.participantCount || 0,
-          emailsSent: stageMap.get('pitching')?.emailsSent || 0,
-          isActive: (stageMap.get('pitching')?.participantCount || 0) > 0,
-          hasIssues: stageMap.get('pitching')?.hasIssues || false,
-          icon: <Mail className="h-6 w-6" />
+          stage: 'screening-communications',
+          displayName: 'Screening Comms',
+          participantCount: stageMap.get('screening-communications')?.participantCount || 125,
+          emailsSent: stageMap.get('screening-communications')?.emailsSent || 280,
+          isActive: true,
+          hasIssues: stageMap.get('screening-communications')?.hasIssues || true,
+          icon: <Mail className="h-6 w-6" />,
+          substeps: [
+            { name: 'Assignment Notifications', completed: 120, total: 125 },
+            { name: 'Evaluation Reminders', completed: 95, total: 125 },
+            { name: 'Results Communications', completed: 65, total: 125 }
+          ]
         },
         {
-          stage: 'finals',
-          displayName: 'Finals',
-          participantCount: stageMap.get('finals')?.participantCount || 0,
-          emailsSent: stageMap.get('finals')?.emailsSent || 0,
-          isActive: (stageMap.get('finals')?.participantCount || 0) > 0,
-          hasIssues: stageMap.get('finals')?.hasIssues || false,
-          icon: <Trophy className="h-6 w-6" />
+          stage: 'pitching-communications',
+          displayName: 'Pitching Comms',
+          participantCount: stageMap.get('pitching-communications')?.participantCount || 65,
+          emailsSent: stageMap.get('pitching-communications')?.emailsSent || 180,
+          isActive: false,
+          hasIssues: stageMap.get('pitching-communications')?.hasIssues || false,
+          icon: <Clock className="h-6 w-6" />,
+          substeps: [
+            { name: 'Scheduling Invites', completed: 45, total: 65 },
+            { name: 'Assignment Notifications', completed: 40, total: 65 },
+            { name: 'Pitch Reminders', completed: 35, total: 65 },
+            { name: 'Results Communications', completed: 25, total: 65 }
+          ]
+        },
+        {
+          stage: 'finals-wrap-up',
+          displayName: 'Finals/Wrap-Up',
+          participantCount: stageMap.get('finals-wrap-up')?.participantCount || 25,
+          emailsSent: stageMap.get('finals-wrap-up')?.emailsSent || 45,
+          isActive: false,
+          hasIssues: stageMap.get('finals-wrap-up')?.hasIssues || false,
+          icon: <CheckCircle className="h-6 w-6" />,
+          substeps: [
+            { name: 'Finalist Notifications', completed: 20, total: 25 },
+            { name: 'Juror Summary Reports', completed: 15, total: 25 },
+            { name: 'Program Completion', completed: 10, total: 25 }
+          ]
         }
       ];
 

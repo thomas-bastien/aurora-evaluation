@@ -34,11 +34,11 @@ export const CommunicationLifecycleTimeline = () => {
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
             <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5" />
-              Evaluation Lifecycle Timeline
+              <Mail className="h-5 w-5" />
+              Communication Lifecycle Timeline
             </CardTitle>
             <CardDescription>
-              Track participants through screening, pitching, and finals stages
+              Track communication flow from juror onboarding through final results
             </CardDescription>
           </div>
           <Button 
@@ -107,40 +107,51 @@ export const CommunicationLifecycleTimeline = () => {
       </Card>
 
       {/* Stage Details */}
-      <Tabs defaultValue="screening" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="screening" className="gap-2">
+      <Tabs defaultValue="pre-screening" className="space-y-4">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="pre-screening" className="gap-2">
             <Users className="h-4 w-4" />
-            Screening Round
+            Pre-Screening
           </TabsTrigger>
-          <TabsTrigger value="pitching" className="gap-2">
+          <TabsTrigger value="screening-communications" className="gap-2">
             <Mail className="h-4 w-4" />
-            Pitching Round
+            Screening Comms
           </TabsTrigger>
-          <TabsTrigger value="finals" className="gap-2">
+          <TabsTrigger value="pitching-communications" className="gap-2">
+            <Clock className="h-4 w-4" />
+            Pitching Comms
+          </TabsTrigger>
+          <TabsTrigger value="finals-wrap-up" className="gap-2">
             <CheckCircle className="h-4 w-4" />
-            Finals
+            Finals/Wrap-Up
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="screening">
+        <TabsContent value="pre-screening">
           <LifecycleStagePanel 
-            stage="screening" 
-            data={stages.find(s => s.stage === 'screening')} 
+            stage="pre-screening" 
+            data={stages.find(s => s.stage === 'pre-screening')} 
           />
         </TabsContent>
 
-        <TabsContent value="pitching">
+        <TabsContent value="screening-communications">
           <LifecycleStagePanel 
-            stage="pitching" 
-            data={stages.find(s => s.stage === 'pitching')} 
+            stage="screening-communications" 
+            data={stages.find(s => s.stage === 'screening-communications')} 
           />
         </TabsContent>
 
-        <TabsContent value="finals">
+        <TabsContent value="pitching-communications">
           <LifecycleStagePanel 
-            stage="finals" 
-            data={stages.find(s => s.stage === 'finals')} 
+            stage="pitching-communications" 
+            data={stages.find(s => s.stage === 'pitching-communications')} 
+          />
+        </TabsContent>
+
+        <TabsContent value="finals-wrap-up">
+          <LifecycleStagePanel 
+            stage="finals-wrap-up" 
+            data={stages.find(s => s.stage === 'finals-wrap-up')} 
           />
         </TabsContent>
       </Tabs>
