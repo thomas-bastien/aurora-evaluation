@@ -57,12 +57,16 @@ export const SendSchedulingEmailsModal = ({
         startupGroups.get(assignment.startup_id)!.push(assignment);
       });
 
-      // Get list of startups that already received scheduling emails
+      // Get list of startups that already received emails for this round type
+      const emailSubjectFilter = currentRound === 'screeningRound' 
+        ? 'subject.ilike.%confirmation%,subject.ilike.%evaluation%'
+        : 'subject.ilike.%scheduling%,subject.ilike.%pitch%';
+        
       const { data: emailedStartups, error } = await supabase
         .from('email_communications')
         .select('recipient_id')
         .eq('recipient_type', 'startup')
-        .or('subject.ilike.%scheduling%,subject.ilike.%pitch%')
+        .or(emailSubjectFilter)
         .eq('status', 'sent');
 
       if (error) throw error;
@@ -107,6 +111,7 @@ export const SendSchedulingEmailsModal = ({
   };
 
   const roundName = currentRound === 'screeningRound' ? 'Screening' : 'Pitching';
+  const isScreeningRound = currentRound === 'screeningRound';
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -114,10 +119,13 @@ export const SendSchedulingEmailsModal = ({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Mail className="w-5 h-5 text-primary" />
-            Send scheduling emails now?
+            {isScreeningRound ? 'Send confirmation emails now?' : 'Send scheduling emails now?'}
           </DialogTitle>
           <DialogDescription>
-            This will send pitch scheduling instructions to selected startups with their assigned investor calendar links.
+            {isScreeningRound 
+              ? 'This will send evaluation confirmation instructions to selected startups with their assigned investor details.'
+              : 'This will send pitch scheduling instructions to selected startups with their assigned investor calendar links.'
+            }
           </DialogDescription>
         </DialogHeader>
 
@@ -146,7 +154,7 @@ export const SendSchedulingEmailsModal = ({
             {emailStats.alreadyEmailed > 0 && (
               <div className="flex items-center gap-2 text-sm text-amber-600">
                 <AlertCircle className="w-4 h-4" />
-                {emailStats.alreadyEmailed} startups already received scheduling emails
+                {emailStats.alreadyEmailed} startups already received {isScreeningRound ? 'confirmation' : 'scheduling'} emails
               </div>
             )}
           </div>

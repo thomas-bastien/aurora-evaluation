@@ -722,32 +722,30 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
               {isConfirmed ? "Assignments Confirmed" : "Confirm Assignments"}
             </Button>
 
-            {/* Send Scheduling Emails Button - Only for pitching round */}
-            {currentRound === 'pitchingRound' && (
-              <Button 
-                onClick={() => setShowSchedulingEmailModal(true)}
-                disabled={!isConfirmed || sendingEmails}
-                variant={isEmailsSent ? "secondary" : "default"}
-                className="flex items-center gap-2"
-              >
-                {sendingEmails ? (
-                  <>
-                    <Mail className="w-4 h-4 animate-pulse" />
-                    Sending Emails...
-                  </>
-                ) : isEmailsSent ? (
-                  <>
-                    <CheckCircle2 className="w-4 h-4" />
-                    Emails Sent
-                  </>
-                ) : (
-                  <>
-                    <Send className="w-4 h-4" />
-                    Send Scheduling Emails
-                  </>
-                )}
-              </Button>
-            )}
+            {/* Send Emails Button - Dynamic text based on round */}
+            <Button 
+              onClick={() => setShowSchedulingEmailModal(true)}
+              disabled={!isConfirmed || sendingEmails}
+              variant={isEmailsSent ? "secondary" : "default"}
+              className="flex items-center gap-2"
+            >
+              {sendingEmails ? (
+                <>
+                  <Mail className="w-4 h-4 animate-pulse" />
+                  {currentRound === 'screeningRound' ? 'Sending Confirmation...' : 'Sending Scheduling...'}
+                </>
+              ) : isEmailsSent ? (
+                <>
+                  <CheckCircle2 className="w-4 h-4" />
+                  Emails Sent
+                </>
+              ) : (
+                <>
+                  <Send className="w-4 h-4" />
+                  {currentRound === 'screeningRound' ? 'Send Confirmation Emails' : 'Send Scheduling Emails'}
+                </>
+              )}
+            </Button>
           </div>
 
           {/* Startups List */}
