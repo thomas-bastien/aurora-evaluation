@@ -2,11 +2,10 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { getDashboardCounts } from '@/utils/countsUtils';
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
-import { CohortSummaryCard } from "@/components/dashboard/CohortSummaryCard";
+import { UnifiedOverviewCard } from "@/components/dashboard/UnifiedOverviewCard";
 import { FunnelStage } from "@/components/dashboard/FunnelStage";
 import { ScreeningFunnelView } from "@/components/dashboard/ScreeningFunnelView";
 import { PitchingFunnelView } from "@/components/dashboard/PitchingFunnelView";
-import { CommunicationsOverviewCard } from "@/components/dashboard/CommunicationsOverviewCard";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useCohortSettings } from "@/hooks/useCohortSettings";
 import { formatDeadlineDisplay, formatDeadlineSimple, isDeadlinePassed } from "@/utils/deadlineUtils";
@@ -298,9 +297,9 @@ const Dashboard = () => {
           </div>
         )}
 
-        {/* Cohort Summary Card */}
+        {/* Unified Overview Card */}
         <div className="mb-8 animate-fade-in">
-          <CohortSummaryCard
+          <UnifiedOverviewCard
             totalStartups={dashboardData.totalStartups}
             activeJurors={dashboardData.activeJurors}
             activeRound={dashboardData.activeRound}
@@ -314,9 +313,6 @@ const Dashboard = () => {
         {/* Community Manager Funnel Workflow */}
         {profile?.role === 'admin' && (
           <div className="space-y-8 animate-fade-in" style={{ animationDelay: "400ms" }}>
-            {/* Communications Overview */}
-            <CommunicationsOverviewCard />
-
             {/* Round 1 - Screening */}
             <ScreeningFunnelView 
               isActive={dashboardData.activeRound === 'screening'}
