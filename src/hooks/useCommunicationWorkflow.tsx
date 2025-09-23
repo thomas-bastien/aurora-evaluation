@@ -152,6 +152,22 @@ export function useCommunicationWorkflow() {
     },
   });
 
+  // Check for login reminders
+  const checkLoginReminders = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.functions.invoke('check-login-reminders');
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['communication-workflow'] });
+      queryClient.invalidateQueries({ queryKey: ['email-history'] });
+      toast.success('Login reminder check completed');
+    },
+    onError: (error: any) => {
+      toast.error(`Login reminder check failed: ${error.message}`);
+    },
+  });
+
   return {
     triggerWorkflowEvent,
     getWorkflowStatus,
@@ -159,5 +175,6 @@ export function useCommunicationWorkflow() {
     getPendingCommunications,
     advanceWorkflowStage,
     completeWorkflowStage,
+    checkLoginReminders,
   };
 }

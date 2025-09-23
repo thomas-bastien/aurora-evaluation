@@ -89,3 +89,6 @@ verify_jwt = false
 
 [functions.lifecycle-orchestrator]
 verify_jwt = false
+
+[functions.check-login-reminders]
+verify_jwt = false
