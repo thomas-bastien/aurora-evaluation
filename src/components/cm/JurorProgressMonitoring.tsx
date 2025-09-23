@@ -10,6 +10,7 @@ import { FilterPanel } from "@/components/common/FilterPanel";
 import { StartupEvaluationModal } from "@/components/evaluation/StartupEvaluationModal";
 import { JurorStatusBadge } from '@/components/common/JuryRoundStatusBadges';
 import { PitchingCallsList } from './PitchingCallsList';
+import { JurorReminderConfirmationModal } from './JurorReminderConfirmationModal';
 import { calculateMultipleProgressiveJurorStatuses, type ProgressiveJurorStatus } from '@/utils/juryStatusUtils';
 import { formatScore } from "@/lib/utils";
 import { 
@@ -71,6 +72,11 @@ export const JurorProgressMonitoring = ({ currentRound }: JurorProgressMonitorin
     lastReminderBatch: null as Date | null
   });
   const [sendingBulkReminders, setSendingBulkReminders] = useState(false);
+  
+  // Confirmation modal state
+  const [showConfirmation, setShowConfirmation] = useState(false);
+  const [confirmationType, setConfirmationType] = useState<'individual' | 'bulk' | null>(null);
+  const [selectedJurorForReminder, setSelectedJurorForReminder] = useState<JurorProgress | null>(null);
   
   
 
@@ -357,6 +363,25 @@ export const JurorProgressMonitoring = ({ currentRound }: JurorProgressMonitorin
     }
   };
 
+  const handleIndividualReminderClick = (juror: JurorProgress) => {
+    setSelectedJurorForReminder(juror);
+    setConfirmationType('individual');
+    setShowConfirmation(true);
+  };
+
+  const handleBulkReminderClick = () => {
+    setConfirmationType('bulk');
+    setShowConfirmation(true);
+  };
+
+  const handleConfirmReminder = async () => {
+    if (confirmationType === 'individual' && selectedJurorForReminder) {
+      await sendReminder(selectedJurorForReminder.id, selectedJurorForReminder.email);
+    } else if (confirmationType === 'bulk') {
+      await sendBulkReminders();
+    }
+  };
+
   const viewJurorDetails = async (jurorId: string) => {
     try {
       // Get the juror's user_id first
@@ -532,7 +557,7 @@ export const JurorProgressMonitoring = ({ currentRound }: JurorProgressMonitorin
               Filters
             </Button>
             <Button 
-              onClick={sendBulkReminders}
+              onClick={handleBulkReminderClick}
               disabled={sendingBulkReminders || filteredJurors.filter(j => 
                 j.progressiveStatus.status !== 'completed' && 
                 j.completionRate < 100 && 
@@ -727,7 +752,7 @@ export const JurorProgressMonitoring = ({ currentRound }: JurorProgressMonitorin
                   <Button 
                     size="sm" 
                     variant="outline"
-                    onClick={() => sendReminder(juror.id, juror.email)}
+                    onClick={() => handleIndividualReminderClick(juror)}
                     disabled={juror.progressiveStatus.status === 'completed' || !juror.canSendReminder}
                   >
                     <Mail className="w-4 h-4 mr-2" />
@@ -879,6 +904,27 @@ export const JurorProgressMonitoring = ({ currentRound }: JurorProgressMonitorin
           currentRound={currentRound === 'screeningRound' ? 'screening' : 'pitching'}
         />
       )}
+
+      {/* Juror Reminder Confirmation Modal */}
+      <JurorReminderConfirmationModal
+        open={showConfirmation}
+        onOpenChange={(open) => {
+          setShowConfirmation(open);
+          if (!open) {
+            setConfirmationType(null);
+            setSelectedJurorForReminder(null);
+          }
+        }}
+        type={confirmationType}
+        selectedJuror={selectedJurorForReminder}
+        eligibleJurors={filteredJurors.filter(j => 
+          j.progressiveStatus.status !== 'completed' && 
+          j.completionRate < 100 && 
+          j.canSendReminder
+        )}
+        currentRound={currentRound}
+        onConfirm={handleConfirmReminder}
+      />
     </TooltipProvider>
   );
 };
