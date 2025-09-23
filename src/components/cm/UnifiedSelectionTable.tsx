@@ -13,19 +13,11 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { StartupDetailsModal } from "@/components/common/StartupDetailsModal";
 import { StatusBadge } from "@/components/common/StatusBadge";
-import {
-  BarChart3,
-  Search,
-  ArrowUpDown,
-  CheckCircle,
-  Trophy,
-  Filter,
-  Eye,
-  RotateCcw,
-  AlertCircle,
-  XCircle,
-  ExternalLink,
-  Users
+import { CommunicationStatusBadge } from '@/components/communication/CommunicationStatusBadge';
+import { 
+  Mail, 
+  Send, 
+  MessageSquare 
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";

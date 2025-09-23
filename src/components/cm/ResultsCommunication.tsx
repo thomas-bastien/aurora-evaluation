@@ -395,16 +395,20 @@ The Aurora Team`
         targetResults = startupResults.filter(r => r.roundStatus === 'under-review' || r.roundStatus === 'pending');
       }
 
-      // Send screening results via edge function
+      // Send individual result emails via new edge function
       let successCount = 0;
       for (const result of targetResults) {
         try {
-          const { data, error } = await supabase.functions.invoke('send-screening-results', {
+          const communicationType = result.isSelected ? 'selection' : 
+                                    result.roundStatus === 'rejected' ? 'rejection' : 'under-review';
+          
+          const { data, error } = await supabase.functions.invoke('send-individual-result', {
             body: {
               startupId: result.id,
-              name: result.name,
-              email: result.email,
-              isSelected: result.isSelected,
+              startupName: result.name,
+              recipientEmail: result.email,
+              communicationType,
+              roundName: currentRound === 'screeningRound' ? 'screening' : 'pitching',
               feedbackSummary: result.feedbackSummary
             }
           });
@@ -448,6 +452,47 @@ The Aurora Team`
       toast.error('Failed to send communications');
     } finally {
       setSendingEmails(false);
+    }
+  };
+
+  // New function for individual email sending
+  const sendIndividualEmail = async (result: StartupResult, communicationType: 'selection' | 'rejection' | 'under-review') => {
+    try {
+      const { data, error } = await supabase.functions.invoke('send-individual-result', {
+        body: {
+          startupId: result.id,
+          startupName: result.name,
+          recipientEmail: result.email,
+          communicationType,
+          roundName: currentRound === 'screeningRound' ? 'screening' : 'pitching',
+          feedbackSummary: result.feedbackSummary
+        }
+      });
+
+      if (error) {
+        console.error(`Failed to send individual email to ${result.name}:`, error);
+        toast.error(`Failed to send email to ${result.name}`);
+        return false;
+      }
+
+      console.log(`Individual email sent successfully to ${result.name}:`, data);
+      
+      // Update status in local state
+      setStartupResults(prev => prev.map(r =>
+        r.id === result.id
+          ? { ...r, feedbackStatus: 'sent', communicationSent: true }
+          : r
+      ));
+      
+      // Refresh analytics
+      await fetchCommunicationAnalytics();
+      
+      toast.success(`${communicationType.charAt(0).toUpperCase() + communicationType.slice(1)} email sent to ${result.name}`);
+      return true;
+    } catch (error) {
+      console.error(`Error sending individual email to ${result.name}:`, error);
+      toast.error(`Error sending email to ${result.name}`);
+      return false;
     }
   };
 

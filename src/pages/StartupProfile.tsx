@@ -14,7 +14,7 @@ import { CURRENCIES } from '@/constants/startupConstants';
 import { normalizeStage, getStageColor } from '@/utils/stageUtils';
 import { getStatusColor } from '@/utils/statusUtils';
 import { StartupEvaluationsList } from '@/components/startups/StartupEvaluationsList';
-import { useStartupEvaluationStats } from '@/hooks/useStartupEvaluationStats';
+import { StartupCommunicationHistory } from '@/components/communication/StartupCommunicationHistory';
 
 interface Startup {
   id: string;
@@ -237,12 +237,63 @@ const StartupProfile = () => {
         </div>
 
         <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="documents">Documents</TabsTrigger>
-            <TabsTrigger value="evaluations">Evaluations</TabsTrigger>
-            <TabsTrigger value="team">Team</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-1">
+            <TabsTrigger value="communications">Communications</TabsTrigger>
           </TabsList>
+          <TabsContent value="team" className="space-y-6">
+            {startup.founder_names && startup.founder_names.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {startup.founder_names.map((founder, index) => (
+                  <Card key={index}>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Users className="w-5 h-5" />
+                        {founder}
+                      </CardTitle>
+                      <CardDescription>Founder</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2">
+                        {startup.contact_email && (
+                          <div className="flex items-center gap-2">
+                            <MessageSquare className="w-4 h-4 text-muted-foreground" />
+                            <a href={`mailto:${startup.contact_email}`} className="text-sm hover:underline">
+                              {startup.contact_email}
+                            </a>
+                          </div>
+                        )}
+                        {startup.contact_phone && (
+                          <div className="flex items-center gap-2">
+                            <MessageSquare className="w-4 h-4 text-muted-foreground" />
+                            <a href={`tel:${startup.contact_phone}`} className="text-sm hover:underline">
+                              {startup.contact_phone}
+                            </a>
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <Card>
+                <CardContent className="p-8 text-center">
+                  <Users className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-foreground mb-2">No Team Information</h3>
+                  <p className="text-muted-foreground">Team member information has not been provided for this startup.</p>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+
+          <TabsContent value="communications" className="space-y-6">
+            <StartupCommunicationHistory startupId={startup.id} startupName={startup.name} />
+          </TabsContent>
+        </Tabs>
+      </main>
+    </div>
+  );
+};
 
           <TabsContent value="overview" className="space-y-6">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

@@ -239,6 +239,7 @@ export type Database = {
           body: string
           bounced_at: string | null
           clicked_at: string | null
+          communication_type: string | null
           content_hash: string
           created_at: string
           delivered_at: string | null
@@ -250,6 +251,7 @@ export type Database = {
           recipient_id: string | null
           recipient_type: string
           resend_email_id: string | null
+          round_name: string | null
           sent_at: string | null
           status: string
           subject: string
@@ -260,6 +262,7 @@ export type Database = {
           body: string
           bounced_at?: string | null
           clicked_at?: string | null
+          communication_type?: string | null
           content_hash: string
           created_at?: string
           delivered_at?: string | null
@@ -271,6 +274,7 @@ export type Database = {
           recipient_id?: string | null
           recipient_type: string
           resend_email_id?: string | null
+          round_name?: string | null
           sent_at?: string | null
           status?: string
           subject: string
@@ -281,6 +285,7 @@ export type Database = {
           body?: string
           bounced_at?: string | null
           clicked_at?: string | null
+          communication_type?: string | null
           content_hash?: string
           created_at?: string
           delivered_at?: string | null
@@ -292,6 +297,7 @@ export type Database = {
           recipient_id?: string | null
           recipient_type?: string
           resend_email_id?: string | null
+          round_name?: string | null
           sent_at?: string | null
           status?: string
           subject?: string
