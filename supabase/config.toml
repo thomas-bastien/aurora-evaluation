@@ -92,3 +92,18 @@ verify_jwt = false
 
 [functions.check-login-reminders]
 verify_jwt = false
+
+[functions.send-juror-reminder]
+verify_jwt = false
+
+[functions.check-evaluation-reminders]
+verify_jwt = false
+
+[functions.send-screening-results]
+verify_jwt = false
+
+[functions.send-pitch-scheduling]
+verify_jwt = false
+
+[functions.send-juror-phase-transition]
+verify_jwt = false
