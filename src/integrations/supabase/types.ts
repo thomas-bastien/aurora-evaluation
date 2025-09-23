@@ -138,6 +138,160 @@ export type Database = {
         }
         Relationships: []
       }
+      email_communications: {
+        Row: {
+          body: string
+          bounced_at: string | null
+          clicked_at: string | null
+          content_hash: string
+          created_at: string
+          delivered_at: string | null
+          error_message: string | null
+          id: string
+          metadata: Json | null
+          opened_at: string | null
+          recipient_email: string
+          recipient_id: string | null
+          recipient_type: string
+          resend_email_id: string | null
+          sent_at: string | null
+          status: string
+          subject: string
+          template_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          body: string
+          bounced_at?: string | null
+          clicked_at?: string | null
+          content_hash: string
+          created_at?: string
+          delivered_at?: string | null
+          error_message?: string | null
+          id?: string
+          metadata?: Json | null
+          opened_at?: string | null
+          recipient_email: string
+          recipient_id?: string | null
+          recipient_type: string
+          resend_email_id?: string | null
+          sent_at?: string | null
+          status?: string
+          subject: string
+          template_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          body?: string
+          bounced_at?: string | null
+          clicked_at?: string | null
+          content_hash?: string
+          created_at?: string
+          delivered_at?: string | null
+          error_message?: string | null
+          id?: string
+          metadata?: Json | null
+          opened_at?: string | null
+          recipient_email?: string
+          recipient_id?: string | null
+          recipient_type?: string
+          resend_email_id?: string | null
+          sent_at?: string | null
+          status?: string
+          subject?: string
+          template_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_communications_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "email_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      email_delivery_events: {
+        Row: {
+          communication_id: string
+          created_at: string
+          event_type: string
+          id: string
+          raw_payload: Json | null
+          resend_event_id: string | null
+          timestamp: string
+        }
+        Insert: {
+          communication_id: string
+          created_at?: string
+          event_type: string
+          id?: string
+          raw_payload?: Json | null
+          resend_event_id?: string | null
+          timestamp?: string
+        }
+        Update: {
+          communication_id?: string
+          created_at?: string
+          event_type?: string
+          id?: string
+          raw_payload?: Json | null
+          resend_event_id?: string | null
+          timestamp?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_delivery_events_communication_id_fkey"
+            columns: ["communication_id"]
+            isOneToOne: false
+            referencedRelation: "email_communications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      email_templates: {
+        Row: {
+          body_template: string
+          category: string
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          name: string
+          subject_template: string
+          updated_at: string
+          variables: Json | null
+          version: number
+        }
+        Insert: {
+          body_template: string
+          category: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          subject_template: string
+          updated_at?: string
+          variables?: Json | null
+          version?: number
+        }
+        Update: {
+          body_template?: string
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          subject_template?: string
+          updated_at?: string
+          variables?: Json | null
+          version?: number
+        }
+        Relationships: []
+      }
       jurors: {
         Row: {
           calendly_link: string | null
