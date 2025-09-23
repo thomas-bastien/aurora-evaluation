@@ -57,15 +57,13 @@ export const LifecycleStagePanel = ({ stage, data }: LifecycleStagePanelProps) =
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            {stage === 'pre-screening' && <Mail className="h-5 w-5" />}
-            {stage === 'screening-communications' && <Clock className="h-5 w-5" />}
+            {stage === 'screening-communications' && <Mail className="h-5 w-5" />}
             {stage === 'pitching-communications' && <Send className="h-5 w-5" />}
             {stage === 'finals-wrap-up' && <CheckCircle2 className="h-5 w-5" />}
             {data?.displayName || stage}
           </CardTitle>
           <CardDescription>
-            {stage === 'pre-screening' && 'Onboard jurors and prepare platform access'}
-            {stage === 'screening-communications' && 'Manage evaluation assignments, reminders, and results'}
+            {stage === 'screening-communications' && 'Manage juror onboarding, evaluation assignments, reminders, and results'}
             {stage === 'pitching-communications' && 'Handle pitch scheduling, meetings, and feedback'}
             {stage === 'finals-wrap-up' && 'Send final results and wrap up program communications'}
           </CardDescription>

@@ -65,7 +65,7 @@ export const useLifecycleData = () => {
       }>();
 
       // Initialize communication phases
-      ['pre-screening', 'screening-communications', 'pitching-communications', 'finals-wrap-up'].forEach(stage => {
+      ['screening-communications', 'pitching-communications', 'finals-wrap-up'].forEach(stage => {
         stageMap.set(stage, {
           participantCount: 0,
           emailsSent: 0,
@@ -101,28 +101,17 @@ export const useLifecycleData = () => {
       // Build communication phases array
       const stages: LifecycleStage[] = [
         {
-          stage: 'pre-screening',
-          displayName: 'Pre-Screening',
-          participantCount: stageMap.get('pre-screening')?.participantCount || 150,
-          emailsSent: stageMap.get('pre-screening')?.emailsSent || 150,
-          isActive: true,
-          hasIssues: stageMap.get('pre-screening')?.hasIssues || false,
-          icon: <Users className="h-6 w-6" />,
-          substeps: [
-            { name: 'Juror Invites', completed: 150, total: 150 },
-            { name: 'Login Instructions', completed: 140, total: 150 },
-            { name: 'Platform Access Confirmed', completed: 125, total: 150 }
-          ]
-        },
-        {
           stage: 'screening-communications',
           displayName: 'Screening Comms',
-          participantCount: stageMap.get('screening-communications')?.participantCount || 125,
-          emailsSent: stageMap.get('screening-communications')?.emailsSent || 280,
+          participantCount: stageMap.get('screening-communications')?.participantCount || 150,
+          emailsSent: stageMap.get('screening-communications')?.emailsSent || 430,
           isActive: true,
           hasIssues: stageMap.get('screening-communications')?.hasIssues || true,
           icon: <Mail className="h-6 w-6" />,
           substeps: [
+            { name: 'Juror Invites', completed: 150, total: 150 },
+            { name: 'Login Instructions', completed: 140, total: 150 },
+            { name: 'Platform Access Confirmed', completed: 125, total: 150 },
             { name: 'Assignment Notifications', completed: 120, total: 125 },
             { name: 'Evaluation Reminders', completed: 95, total: 125 },
             { name: 'Results Communications', completed: 65, total: 125 }

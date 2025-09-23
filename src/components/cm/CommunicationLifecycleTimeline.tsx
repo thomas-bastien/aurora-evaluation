@@ -107,12 +107,8 @@ export const CommunicationLifecycleTimeline = () => {
       </Card>
 
       {/* Stage Details */}
-      <Tabs defaultValue="pre-screening" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="pre-screening" className="gap-2">
-            <Users className="h-4 w-4" />
-            Pre-Screening
-          </TabsTrigger>
+      <Tabs defaultValue="screening-communications" className="space-y-4">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="screening-communications" className="gap-2">
             <Mail className="h-4 w-4" />
             Screening Comms
@@ -126,13 +122,6 @@ export const CommunicationLifecycleTimeline = () => {
             Finals/Wrap-Up
           </TabsTrigger>
         </TabsList>
-
-        <TabsContent value="pre-screening">
-          <LifecycleStagePanel 
-            stage="pre-screening" 
-            data={stages.find(s => s.stage === 'pre-screening')} 
-          />
-        </TabsContent>
 
         <TabsContent value="screening-communications">
           <LifecycleStagePanel 

@@ -33,23 +33,21 @@ export function CommunicationsOverviewCard() {
   }
 
   // Extract participant counts from lifecycle data
-  const preScreeningCount = lifecycleData?.stages.find(s => s.stage === 'pre_screening')?.participantCount || 0;
-  const screeningCount = lifecycleData?.stages.find(s => s.stage === 'screening_communications')?.participantCount || 0;
-  const pitchingCount = lifecycleData?.stages.find(s => s.stage === 'pitching_communications')?.participantCount || 0;
-  const finalsCount = lifecycleData?.stages.find(s => s.stage === 'finals_wrap_up')?.participantCount || 0;
+  const screeningCount = lifecycleData?.stages.find(s => s.stage === 'screening-communications')?.participantCount || 0;
+  const pitchingCount = lifecycleData?.stages.find(s => s.stage === 'pitching-communications')?.participantCount || 0;
+  const finalsCount = lifecycleData?.stages.find(s => s.stage === 'finals-wrap-up')?.participantCount || 0;
 
   // Determine next action based on current communication stage
   const getNextAction = () => {
-    if (preScreeningCount > 0 && screeningCount === 0) {
-      return `Send juror invitations to ${preScreeningCount} participants`;
+    if (screeningCount > 0) {
+      return `Send screening reminders to ${screeningCount} jurors`;
+    } else if (pitchingCount > 0) {
+      return `Coordinate pitch meetings for ${pitchingCount} participants`;
+    } else if (finalsCount > 0) {
+      return `Send final results to ${finalsCount} participants`;
     }
-    if (screeningCount > pitchingCount) {
-      return `Send screening assignments to ${screeningCount - pitchingCount} jurors`;
-    }
-    if (pitchingCount > finalsCount) {
-      return `Send pitch scheduling to ${pitchingCount - finalsCount} participants`;
-    }
-    return "All communications up to date";
+    
+    return 'All communications up to date';
   };
 
   return (
@@ -80,16 +78,7 @@ export function CommunicationsOverviewCard() {
         </div>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="text-center">
-            <div className="flex items-center justify-center gap-2 mb-1">
-              <Users className="w-4 h-4 text-primary-foreground/80" />
-              <span className="text-2xl font-bold text-primary-foreground">
-                {preScreeningCount}
-              </span>
-            </div>
-            <p className="text-xs text-primary-foreground/70">Jurors Onboarded</p>
-          </div>
+        <div className="grid grid-cols-3 gap-4">
           <div className="text-center">
             <div className="flex items-center justify-center gap-2 mb-1">
               <Mail className="w-4 h-4 text-primary-foreground/80" />
