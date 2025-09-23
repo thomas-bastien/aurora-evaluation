@@ -1,5 +1,4 @@
-import { useState } from "react";
-import { EmailManagement } from "@/components/cm/EmailManagement";
+import { CommunicationLifecycleTimeline } from "@/components/cm/CommunicationLifecycleTimeline";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import RoleGuard from "@/components/RoleGuard";
 
@@ -9,7 +8,7 @@ export default function EmailManagementPage() {
       <div className="min-h-screen bg-background">
         <DashboardHeader />
         <div className="container mx-auto px-4 py-8">
-          <EmailManagement />
+          <CommunicationLifecycleTimeline />
         </div>
       </div>
     </RoleGuard>

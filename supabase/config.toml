@@ -86,3 +86,6 @@ verify_jwt = false
 
 [functions.workflow-orchestrator]
 verify_jwt = false
+
+[functions.lifecycle-orchestrator]
+verify_jwt = false

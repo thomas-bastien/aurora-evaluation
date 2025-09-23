@@ -348,40 +348,52 @@ export type Database = {
       }
       email_templates: {
         Row: {
+          auto_trigger_events: Json | null
           body_template: string
           category: string
           created_at: string
           created_by: string | null
+          evaluation_phase: string | null
           id: string
           is_active: boolean
+          lifecycle_stage: string | null
           name: string
           subject_template: string
+          trigger_priority: number | null
           updated_at: string
           variables: Json | null
           version: number
         }
         Insert: {
+          auto_trigger_events?: Json | null
           body_template: string
           category: string
           created_at?: string
           created_by?: string | null
+          evaluation_phase?: string | null
           id?: string
           is_active?: boolean
+          lifecycle_stage?: string | null
           name: string
           subject_template: string
+          trigger_priority?: number | null
           updated_at?: string
           variables?: Json | null
           version?: number
         }
         Update: {
+          auto_trigger_events?: Json | null
           body_template?: string
           category?: string
           created_at?: string
           created_by?: string | null
+          evaluation_phase?: string | null
           id?: string
           is_active?: boolean
+          lifecycle_stage?: string | null
           name?: string
           subject_template?: string
+          trigger_priority?: number | null
           updated_at?: string
           variables?: Json | null
           version?: number
@@ -442,6 +454,42 @@ export type Database = {
           target_verticals?: string[] | null
           updated_at?: string
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      lifecycle_participants: {
+        Row: {
+          created_at: string
+          id: string
+          lifecycle_stage: string
+          metadata: Json | null
+          participant_id: string
+          participant_type: string
+          stage_entered_at: string
+          stage_status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          lifecycle_stage: string
+          metadata?: Json | null
+          participant_id: string
+          participant_type: string
+          stage_entered_at?: string
+          stage_status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          lifecycle_stage?: string
+          metadata?: Json | null
+          participant_id?: string
+          participant_type?: string
+          stage_entered_at?: string
+          stage_status?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -1108,6 +1156,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      advance_participant_lifecycle_stage: {
+        Args: {
+          p_metadata?: Json
+          p_new_stage: string
+          p_participant_id: string
+          p_participant_type: string
+        }
+        Returns: boolean
+      }
       advance_workflow_stage: {
         Args: {
           p_new_stage: Database["public"]["Enums"]["communication_stage"]
