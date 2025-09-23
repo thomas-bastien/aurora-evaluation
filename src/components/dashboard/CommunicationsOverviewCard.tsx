@@ -32,22 +32,39 @@ export function CommunicationsOverviewCard() {
     );
   }
 
-  // Extract participant counts from lifecycle data
-  const screeningCount = lifecycleData?.stages.find(s => s.stage === 'screening-communications')?.participantCount || 0;
-  const pitchingCount = lifecycleData?.stages.find(s => s.stage === 'pitching-communications')?.participantCount || 0;
-  const finalsCount = lifecycleData?.stages.find(s => s.stage === 'finals-wrap-up')?.participantCount || 0;
-
-  // Determine next action based on current communication stage
-  const getNextAction = () => {
-    if (screeningCount > 0) {
-      return `Send screening reminders to ${screeningCount} jurors`;
-    } else if (pitchingCount > 0) {
-      return `Coordinate pitch meetings for ${pitchingCount} participants`;
-    } else if (finalsCount > 0) {
-      return `Send final results to ${finalsCount} participants`;
-    }
+  // Get current active communication steps for progress cards
+  const getCurrentSteps = () => {
+    const activeStage = lifecycleData?.stages.find(s => s.isActive);
+    if (!activeStage?.substeps) return [];
     
-    return 'All communications up to date';
+    // Return the 4 most relevant steps based on active stage
+    return activeStage.substeps.slice(0, 4);
+  };
+
+  const currentSteps = getCurrentSteps();
+
+  // Calculate progress percentage
+  const getProgressPercentage = (completed: number, total: number) => {
+    return Math.round((completed / total) * 100);
+  };
+
+  // Get step icon based on step name
+  const getStepIcon = (stepName: string) => {
+    if (stepName.includes('Invites') || stepName.includes('Notifications')) return Mail;
+    if (stepName.includes('Scheduling')) return Phone;
+    if (stepName.includes('Reminders')) return MessageSquare;
+    if (stepName.includes('Results')) return CheckCircle;
+    return Users;
+  };
+
+  // Determine next action based on current steps
+  const getNextAction = () => {
+    const incompleteStep = currentSteps.find(step => step.completed < step.total);
+    if (incompleteStep) {
+      const percentage = getProgressPercentage(incompleteStep.completed, incompleteStep.total);
+      return `${incompleteStep.name}: ${percentage}% complete (${incompleteStep.completed}/${incompleteStep.total})`;
+    }
+    return 'All current communication steps completed';
   };
 
   return (
@@ -63,7 +80,7 @@ export function CommunicationsOverviewCard() {
                 Communications Overview
               </CardTitle>
               <p className="text-primary-foreground/80 text-sm">
-                Participant progress through communication lifecycle
+                Current round communication progress
               </p>
             </div>
           </div>
@@ -78,34 +95,29 @@ export function CommunicationsOverviewCard() {
         </div>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-3 gap-4">
-          <div className="text-center">
-            <div className="flex items-center justify-center gap-2 mb-1">
-              <Mail className="w-4 h-4 text-primary-foreground/80" />
-              <span className="text-2xl font-bold text-primary-foreground">
-                {screeningCount}
-              </span>
-            </div>
-            <p className="text-xs text-primary-foreground/70">In Screening</p>
-          </div>
-          <div className="text-center">
-            <div className="flex items-center justify-center gap-2 mb-1">
-              <Phone className="w-4 h-4 text-primary-foreground/80" />
-              <span className="text-2xl font-bold text-primary-foreground">
-                {pitchingCount}
-              </span>
-            </div>
-            <p className="text-xs text-primary-foreground/70">In Pitching</p>
-          </div>
-          <div className="text-center">
-            <div className="flex items-center justify-center gap-2 mb-1">
-              <CheckCircle className="w-4 h-4 text-primary-foreground/80" />
-              <span className="text-2xl font-bold text-primary-foreground">
-                {finalsCount}
-              </span>
-            </div>
-            <p className="text-xs text-primary-foreground/70">In Finals</p>
-          </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {currentSteps.map((step, index) => {
+            const Icon = getStepIcon(step.name);
+            const percentage = getProgressPercentage(step.completed, step.total);
+            const isComplete = percentage === 100;
+            
+            return (
+              <div key={index} className="text-center">
+                <div className="flex items-center justify-center gap-2 mb-1">
+                  <Icon className={`w-4 h-4 ${isComplete ? 'text-primary-foreground' : 'text-primary-foreground/60'}`} />
+                  <span className={`text-xl font-bold ${isComplete ? 'text-primary-foreground' : 'text-primary-foreground/80'}`}>
+                    {percentage}%
+                  </span>
+                </div>
+                <p className="text-xs text-primary-foreground/70 leading-tight">
+                  {step.name}
+                </p>
+                <p className="text-xs text-primary-foreground/50 mt-1">
+                  {step.completed}/{step.total}
+                </p>
+              </div>
+            );
+          })}
         </div>
         <div className="mt-4 pt-4 border-t border-primary-foreground/20">
           <p className="text-sm text-primary-foreground/90">

@@ -110,8 +110,6 @@ export const useLifecycleData = () => {
           icon: <Mail className="h-6 w-6" />,
           substeps: [
             { name: 'Juror Invites', completed: 150, total: 150 },
-            { name: 'Login Instructions', completed: 140, total: 150 },
-            { name: 'Platform Access Confirmed', completed: 125, total: 150 },
             { name: 'Assignment Notifications', completed: 120, total: 125 },
             { name: 'Evaluation Reminders', completed: 95, total: 125 },
             { name: 'Results Communications', completed: 65, total: 125 }
@@ -126,8 +124,8 @@ export const useLifecycleData = () => {
           hasIssues: stageMap.get('pitching-communications')?.hasIssues || false,
           icon: <Clock className="h-6 w-6" />,
           substeps: [
-            { name: 'Scheduling Invites', completed: 45, total: 65 },
             { name: 'Assignment Notifications', completed: 40, total: 65 },
+            { name: 'Scheduling Invites', completed: 45, total: 65 },
             { name: 'Pitch Reminders', completed: 35, total: 65 },
             { name: 'Results Communications', completed: 25, total: 65 }
           ]
