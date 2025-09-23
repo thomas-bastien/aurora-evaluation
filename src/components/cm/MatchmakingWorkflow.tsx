@@ -571,25 +571,38 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
             </div>
           )}
 
-          {/* Statistics */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-            <div className="bg-muted/50 p-4 rounded-lg">
-              <div className="text-2xl font-bold text-foreground">{startups.length}</div>
-              <div className="text-sm text-muted-foreground">Total Startups</div>
-            </div>
-            <div className="bg-muted/50 p-4 rounded-lg">
-              <div className="text-2xl font-bold text-foreground">{jurors.length}</div>
-              <div className="text-sm text-muted-foreground">Available Jurors</div>
-            </div>
-            <div className="bg-muted/50 p-4 rounded-lg">
-              <div className="text-2xl font-bold text-foreground">{assignments.length}</div>
-              <div className="text-sm text-muted-foreground">Total Assignments</div>
-            </div>
-            <div className="bg-muted/50 p-4 rounded-lg">
-              <div className="text-2xl font-bold text-foreground">{Math.round(communicationStats.engagementRate)}%</div>
-              <div className="text-sm text-muted-foreground">Notification Engagement</div>
-            </div>
-          </div>
+          {/* Consolidated Statistics Row */}
+          {(() => {
+            const fullyAssignedCount = startups.filter(startup => 
+              getStartupAssignmentCount(startup.id) === 3
+            ).length;
+            const needAssignmentCount = startups.filter(startup => 
+              getStartupAssignmentCount(startup.id) < 3
+            ).length;
+
+            return (
+              <div className="bg-muted/50 p-4 rounded-lg mb-6">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
+                  <div className="flex flex-col">
+                    <div className="text-2xl font-bold text-foreground">{startups.length}</div>
+                    <div className="text-sm text-muted-foreground">Startups</div>
+                  </div>
+                  <div className="flex flex-col">
+                    <div className="text-2xl font-bold text-foreground">{jurors.length}</div>
+                    <div className="text-sm text-muted-foreground">Available Jurors</div>
+                  </div>
+                  <div className="flex flex-col">
+                    <div className="text-2xl font-bold text-foreground">{fullyAssignedCount}/{startups.length}</div>
+                    <div className="text-sm text-muted-foreground">Fully Assigned</div>
+                  </div>
+                  <div className="flex flex-col">
+                    <div className="text-2xl font-bold text-warning">{needAssignmentCount}</div>
+                    <div className="text-sm text-muted-foreground">Need Assignment</div>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
 
           {/* Communication Progress */}
           {communicationStats.notificationsSent > 0 && (
