@@ -16,7 +16,10 @@ import {
   Building,
   FileText,
   Eye,
-  AlertCircle
+  AlertCircle,
+  MessageSquare,
+  BarChart3,
+  Settings
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -53,11 +56,26 @@ export const ResultsCommunication = ({ currentRound }: ResultsCommunicationProps
   const [showFeedbackDialog, setShowFeedbackDialog] = useState(false);
   const [showSendDialog, setShowSendDialog] = useState(false);
   const [sendingEmails, setSendingEmails] = useState(false);
+  
+  // Enhanced communication tracking
+  const [communicationAnalytics, setCommunicationAnalytics] = useState({
+    totalSent: 0,
+    delivered: 0,
+    opened: 0,
+    clicked: 0,
+    bounced: 0,
+    deliveryRate: 0,
+    openRate: 0,
+    clickRate: 0
+  });
+  const [showTemplateManager, setShowTemplateManager] = useState(false);
+  const [showAnalytics, setShowAnalytics] = useState(false);
 
   useEffect(() => {
     fetchResultsData();
     loadTemplates();
-  }, []);
+    fetchCommunicationAnalytics();
+  }, [currentRound]);
 
   const fetchResultsData = async () => {
     try {
@@ -304,6 +322,37 @@ The Aurora Team`
     setTemplates(defaultTemplates);
   };
 
+  const fetchCommunicationAnalytics = async () => {
+    try {
+      // Fetch communication analytics for results
+      const { data: communications, error } = await supabase
+        .from('email_communications')
+        .select('status, sent_at, delivered_at, opened_at, clicked_at, bounced_at')
+        .eq('recipient_type', 'startup');
+
+      if (error) throw error;
+
+      const total = communications?.length || 0;
+      const delivered = communications?.filter(c => c.delivered_at).length || 0;
+      const opened = communications?.filter(c => c.opened_at).length || 0;
+      const clicked = communications?.filter(c => c.clicked_at).length || 0;
+      const bounced = communications?.filter(c => c.bounced_at).length || 0;
+
+      setCommunicationAnalytics({
+        totalSent: total,
+        delivered,
+        opened,
+        clicked,
+        bounced,
+        deliveryRate: total > 0 ? (delivered / total) * 100 : 0,
+        openRate: delivered > 0 ? (opened / delivered) * 100 : 0,
+        clickRate: opened > 0 ? (clicked / opened) * 100 : 0
+      });
+    } catch (error) {
+      console.error('Error fetching communication analytics:', error);
+    }
+  };
+
   const handleEditFeedback = (result: StartupResult) => {
     setSelectedResult(result);
     setEditingFeedback(result.feedbackSummary);
@@ -388,6 +437,9 @@ The Aurora Team`
         if (currentRound === 'screeningRound') {
           await initiateRoundTransition();
         }
+        
+        // Refresh analytics
+        await fetchCommunicationAnalytics();
       }
       
       setShowSendDialog(false);
@@ -491,10 +543,30 @@ The Aurora Team`
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle className="flex items-center gap-2">
-              <Mail className="w-5 h-5" />
-              Results Communication - {currentRound === 'screeningRound' ? 'Screening Round' : 'Pitching Round'}
-            </CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <Mail className="w-5 h-5" />
+                Results Communication - {currentRound === 'screeningRound' ? 'Screening Round' : 'Pitching Round'}
+              </CardTitle>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowAnalytics(!showAnalytics)}
+                >
+                  <BarChart3 className="w-4 h-4 mr-2" />
+                  Analytics
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowTemplateManager(!showTemplateManager)}
+                >
+                  <Settings className="w-4 h-4 mr-2" />
+                  Templates
+                </Button>
+              </div>
+            </div>
             <CardDescription>
               Review feedback summaries and send {currentRound === 'screeningRound' ? 'evaluation' : 'pitch'} results to startups and jurors
             </CardDescription>
@@ -557,8 +629,59 @@ The Aurora Team`
         </div>
       </CardHeader>
       
-      <CardContent>
-        {/* Summary Stats */}
+        <CardContent>
+          {/* Communication Analytics */}
+          {showAnalytics && communicationAnalytics.totalSent > 0 && (
+            <div className="mb-6 p-4 bg-primary/5 border border-primary/20 rounded-lg">
+              <div className="flex items-center gap-2 mb-3">
+                <BarChart3 className="w-5 h-5 text-primary" />
+                <span className="font-medium">Communication Performance Analytics</span>
+              </div>
+              <div className="grid grid-cols-5 gap-4 text-sm">
+                <div className="text-center">
+                  <div className="text-lg font-semibold text-primary">{communicationAnalytics.totalSent}</div>
+                  <div className="text-muted-foreground">Total Sent</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-lg font-semibold text-success">{Math.round(communicationAnalytics.deliveryRate)}%</div>
+                  <div className="text-muted-foreground">Delivery Rate</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-lg font-semibold text-primary">{Math.round(communicationAnalytics.openRate)}%</div>
+                  <div className="text-muted-foreground">Open Rate</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-lg font-semibold text-accent">{Math.round(communicationAnalytics.clickRate)}%</div>
+                  <div className="text-muted-foreground">Click Rate</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-lg font-semibold text-destructive">{communicationAnalytics.bounced}</div>
+                  <div className="text-muted-foreground">Bounced</div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Template Manager */}
+          {showTemplateManager && (
+            <div className="mb-6">
+              <div className="p-4 bg-muted/50 rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <MessageSquare className="w-5 h-5 text-primary" />
+                  <span className="font-medium">Template Management</span>
+                </div>
+                <p className="text-sm text-muted-foreground mb-3">
+                  Manage email templates for different communication types and approval workflows.
+                </p>
+                <Button variant="outline" size="sm">
+                  <Settings className="w-4 h-4 mr-2" />
+                  Open Template Manager
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Summary Stats */}
         <div className="grid grid-cols-5 gap-4 mb-6">
           <div className="text-center p-4 bg-success/10 rounded-lg">
             <div className="text-2xl font-bold text-success">{selectedStartups.length}</div>

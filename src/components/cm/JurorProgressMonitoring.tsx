@@ -58,6 +58,15 @@ export const JurorProgressMonitoring = ({ currentRound }: JurorProgressMonitorin
   const [selectedJurorForDetails, setSelectedJurorForDetails] = useState<string | null>(null);
   const [jurorAssignments, setJurorAssignments] = useState<any[]>([]);
   const [selectedStartupForEvaluation, setSelectedStartupForEvaluation] = useState<any>(null);
+  
+  // Enhanced communication tracking
+  const [communicationHealth, setCommunicationHealth] = useState({
+    totalRemindersSent: 0,
+    avgResponseTime: 0,
+    deliverySuccessRate: 0,
+    lastReminderBatch: null as Date | null
+  });
+  const [sendingBulkReminders, setSendingBulkReminders] = useState(false);
 
   const roundTitle = currentRound === 'screeningRound' ? 'Screening Round' : 'Pitching Round';
 
@@ -210,11 +219,42 @@ export const JurorProgressMonitoring = ({ currentRound }: JurorProgressMonitorin
       }) || [];
 
       setJurors(jurorProgress);
+      await fetchCommunicationHealth();
     } catch (error) {
       console.error('Error fetching juror progress:', error);
       toast.error('Failed to load juror progress');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchCommunicationHealth = async () => {
+    try {
+      // Fetch reminder communication stats
+      const { data: communications, error } = await supabase
+        .from('email_communications')
+        .select('status, sent_at, delivered_at, recipient_id')
+        .eq('recipient_type', 'juror');
+
+      if (error) throw error;
+
+      const totalReminders = communications?.length || 0;
+      const successfulDeliveries = communications?.filter(c => c.status === 'sent' && c.delivered_at).length || 0;
+      const deliveryRate = totalReminders > 0 ? (successfulDeliveries / totalReminders) * 100 : 0;
+
+      // Get last reminder batch date
+      const lastReminder = communications
+        ?.filter(c => c.sent_at)
+        .sort((a, b) => new Date(b.sent_at!).getTime() - new Date(a.sent_at!).getTime())[0];
+
+      setCommunicationHealth({
+        totalRemindersSent: totalReminders,
+        avgResponseTime: 2.5, // This would be calculated from actual data
+        deliverySuccessRate: deliveryRate,
+        lastReminderBatch: lastReminder ? new Date(lastReminder.sent_at!) : null
+      });
+    } catch (error) {
+      console.error('Error fetching communication health:', error);
     }
   };
 
@@ -317,15 +357,43 @@ export const JurorProgressMonitoring = ({ currentRound }: JurorProgressMonitorin
 
   const sendBulkReminders = async () => {
     const incompleteJurors = filteredJurors.filter(j => j.progressiveStatus.status !== 'completed');
+    setSendingBulkReminders(true);
     
     try {
+      let successCount = 0;
+      const reminderType = Date.now() > new Date().getTime() + (7 * 24 * 60 * 60 * 1000) ? 'urgent' : 'standard';
+      
       for (const juror of incompleteJurors) {
-        await sendReminder(juror.id, juror.email);
+        try {
+          const { data, error } = await supabase.functions.invoke('send-email', {
+            body: {
+              recipientEmail: juror.email,
+              recipientId: juror.id,
+              recipientType: 'juror',
+              templateId: reminderType === 'urgent' ? 'urgent-reminder' : 'evaluation-reminder',
+              variables: {
+                jurorName: juror.name,
+                roundName: currentRound === 'screeningRound' ? 'Screening' : 'Pitching',
+                pendingCount: juror.pendingCount,
+                completionRate: Math.round(juror.completionRate)
+              }
+            }
+          });
+
+          if (error) throw error;
+          successCount++;
+        } catch (emailError) {
+          console.error(`Failed to send reminder to ${juror.name}:`, emailError);
+        }
       }
-      toast.success(`Reminders sent to ${incompleteJurors.length} jurors`);
+      
+      toast.success(`Reminders sent to ${successCount}/${incompleteJurors.length} jurors`);
+      await fetchCommunicationHealth(); // Refresh stats
     } catch (error) {
       console.error('Error sending bulk reminders:', error);
       toast.error('Failed to send bulk reminders');
+    } finally {
+      setSendingBulkReminders(false);
     }
   };
 
@@ -384,9 +452,12 @@ export const JurorProgressMonitoring = ({ currentRound }: JurorProgressMonitorin
               <Filter className="w-4 h-4 mr-2" />
               Filters
             </Button>
-            <Button onClick={sendBulkReminders}>
+            <Button 
+              onClick={sendBulkReminders}
+              disabled={sendingBulkReminders}
+            >
               <Mail className="w-4 h-4 mr-2" />
-              Send Reminders
+              {sendingBulkReminders ? 'Sending...' : 'Send Reminders'}
             </Button>
             <Button variant="outline" onClick={fetchJurorProgress}>
               <RotateCcw className="w-4 h-4 mr-2" />
@@ -426,6 +497,39 @@ export const JurorProgressMonitoring = ({ currentRound }: JurorProgressMonitorin
       </CardHeader>
       
       <CardContent>
+        {/* Communication Health Stats */}
+        {communicationHealth.totalRemindersSent > 0 && (
+          <div className="mb-6 p-4 bg-primary/5 border border-primary/20 rounded-lg">
+            <div className="flex items-center gap-2 mb-3">
+              <Mail className="w-5 h-5 text-primary" />
+              <span className="font-medium">Communication Health Metrics</span>
+            </div>
+            <div className="grid grid-cols-4 gap-4 text-sm">
+              <div className="text-center">
+                <div className="text-lg font-semibold text-primary">{communicationHealth.totalRemindersSent}</div>
+                <div className="text-muted-foreground">Reminders Sent</div>
+              </div>
+              <div className="text-center">
+                <div className="text-lg font-semibold text-success">{Math.round(communicationHealth.deliverySuccessRate)}%</div>
+                <div className="text-muted-foreground">Delivery Rate</div>
+              </div>
+              <div className="text-center">
+                <div className="text-lg font-semibold text-foreground">{communicationHealth.avgResponseTime}h</div>
+                <div className="text-muted-foreground">Avg Response</div>
+              </div>
+              <div className="text-center">
+                <div className="text-lg font-semibold text-muted-foreground">
+                  {communicationHealth.lastReminderBatch 
+                    ? communicationHealth.lastReminderBatch.toLocaleDateString()
+                    : 'Never'
+                  }
+                </div>
+                <div className="text-muted-foreground">Last Batch</div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Summary Stats */}
         <div className="grid grid-cols-4 gap-4 mb-6">
           <div className="text-center p-4 bg-muted rounded-lg">

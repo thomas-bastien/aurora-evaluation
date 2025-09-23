@@ -4,7 +4,7 @@ import { getMatchmakingCounts } from '@/utils/countsUtils';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle, Building2, Users, CheckCircle2, Eye, Check, Wand2 } from "lucide-react";
+import { AlertCircle, Building2, Users, CheckCircle2, Eye, Check, Wand2, Mail } from "lucide-react";
 import { toast } from "sonner";
 import { StartupAssignmentModal } from "@/components/matchmaking/StartupAssignmentModal";
 import { AssignmentSummary } from "@/components/matchmaking/AssignmentSummary";
@@ -64,9 +64,19 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
   const [isConfirmed, setIsConfirmed] = useState(false);
   const [loading, setLoading] = useState(true);
   const [autoAssignLoading, setAutoAssignLoading] = useState(false);
+  
+  // Communication tracking state
+  const [communicationStats, setCommunicationStats] = useState({
+    notificationsSent: 0,
+    notificationsPending: 0,
+    notificationsFailed: 0,
+    engagementRate: 0
+  });
+  const [sendingNotifications, setSendingNotifications] = useState(false);
 
   useEffect(() => {
     fetchData();
+    fetchCommunicationStats();
   }, [currentRound]);
 
   const fetchData = async () => {
@@ -197,6 +207,31 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
       toast.error('Failed to load matchmaking data');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchCommunicationStats = async () => {
+    try {
+      // Fetch communication stats for assignment notifications
+      const { data: communications, error } = await supabase
+        .from('email_communications')
+        .select('status, opened_at, clicked_at, template_id')
+        .eq('recipient_type', 'juror');
+
+      if (error) throw error;
+
+      const stats = {
+        notificationsSent: communications?.filter(c => c.status === 'sent').length || 0,
+        notificationsPending: communications?.filter(c => c.status === 'pending').length || 0,
+        notificationsFailed: communications?.filter(c => c.status === 'failed').length || 0,
+        engagementRate: communications?.length > 0 
+          ? (communications.filter(c => c.opened_at).length / communications.length) * 100 
+          : 0
+      };
+
+      setCommunicationStats(stats);
+    } catch (error) {
+      console.error('Error fetching communication stats:', error);
     }
   };
 
@@ -417,6 +452,72 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
     setWorkloadDistribution([]);
   };
 
+  const sendAssignmentNotifications = async () => {
+    setSendingNotifications(true);
+    try {
+      // Get all assigned jurors for current round
+      const assignmentTable = currentRound === 'screeningRound' ? 'screening_assignments' : 'pitching_assignments';
+      const { data: assignmentsData, error } = await supabase
+        .from(assignmentTable)
+        .select(`
+          juror_id,
+          startups!inner(name),
+          jurors!inner(name, email, user_id)
+        `)
+        .not('jurors.user_id', 'is', null);
+
+      if (error) throw error;
+
+      // Group assignments by juror
+      const jurorAssignments = new Map();
+      assignmentsData?.forEach(assignment => {
+        const jurorId = assignment.juror_id;
+        if (!jurorAssignments.has(jurorId)) {
+          jurorAssignments.set(jurorId, {
+            juror: assignment.jurors,
+            assignments: []
+          });
+        }
+        jurorAssignments.get(jurorId).assignments.push(assignment);
+      });
+
+      let successCount = 0;
+      
+      // Send notification to each juror
+      for (const [jurorId, { juror, assignments }] of jurorAssignments) {
+        try {
+          const { data, error } = await supabase.functions.invoke('send-email', {
+            body: {
+              recipientEmail: (juror as any).email,
+              recipientId: jurorId,
+              recipientType: 'juror',
+              templateCategory: 'assignment-notification',
+              variables: {
+                jurorName: (juror as any).name,
+                roundName: currentRound === 'screeningRound' ? 'Screening' : 'Pitching',
+                assignmentCount: assignments.length,
+                startupNames: assignments.map((a: any) => a.startups.name).join(', ')
+              }
+            }
+          });
+
+          if (error) throw error;
+          successCount++;
+        } catch (emailError) {
+          console.error(`Failed to send notification to juror ${jurorId}:`, emailError);
+        }
+      }
+
+      toast.success(`Sent assignment notifications to ${successCount}/${jurorAssignments.size} jurors`);
+      fetchCommunicationStats(); // Refresh stats
+    } catch (error) {
+      console.error('Error sending assignment notifications:', error);
+      toast.error('Failed to send assignment notifications');
+    } finally {
+      setSendingNotifications(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8">
@@ -471,6 +572,50 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
           )}
 
           {/* Statistics */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <div className="bg-muted/50 p-4 rounded-lg">
+              <div className="text-2xl font-bold text-foreground">{startups.length}</div>
+              <div className="text-sm text-muted-foreground">Total Startups</div>
+            </div>
+            <div className="bg-muted/50 p-4 rounded-lg">
+              <div className="text-2xl font-bold text-foreground">{jurors.length}</div>
+              <div className="text-sm text-muted-foreground">Available Jurors</div>
+            </div>
+            <div className="bg-muted/50 p-4 rounded-lg">
+              <div className="text-2xl font-bold text-foreground">{assignments.length}</div>
+              <div className="text-sm text-muted-foreground">Total Assignments</div>
+            </div>
+            <div className="bg-muted/50 p-4 rounded-lg">
+              <div className="text-2xl font-bold text-foreground">{Math.round(communicationStats.engagementRate)}%</div>
+              <div className="text-sm text-muted-foreground">Notification Engagement</div>
+            </div>
+          </div>
+
+          {/* Communication Progress */}
+          {communicationStats.notificationsSent > 0 && (
+            <div className="mb-6 p-4 bg-primary/5 border border-primary/20 rounded-lg">
+              <div className="flex items-center gap-2 mb-2">
+                <Mail className="w-5 h-5 text-primary" />
+                <span className="font-medium">Assignment Notification Progress</span>
+              </div>
+              <div className="grid grid-cols-3 gap-4 text-sm">
+                <div className="text-center">
+                  <div className="text-lg font-semibold text-success">{communicationStats.notificationsSent}</div>
+                  <div className="text-muted-foreground">Sent</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-lg font-semibold text-warning">{communicationStats.notificationsPending}</div>
+                  <div className="text-muted-foreground">Pending</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-lg font-semibold text-destructive">{communicationStats.notificationsFailed}</div>
+                  <div className="text-muted-foreground">Failed</div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Original Statistics Section */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
             <div className="bg-muted/50 p-4 rounded-lg">
               <div className="flex items-center gap-2">

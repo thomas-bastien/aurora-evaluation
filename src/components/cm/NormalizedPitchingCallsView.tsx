@@ -33,6 +33,14 @@ const NormalizedPitchingCallsView = () => {
   const [meetingModalOpen, setMeetingModalOpen] = useState(false);
   const [newAssignmentModalOpen, setNewAssignmentModalOpen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  
+  // Communication tracking state
+  const [meetingCommunicationStats, setMeetingCommunicationStats] = useState({
+    schedulingEmailsSent: 0,
+    meetingInvitesSent: 0,
+    remindersSent: 0,
+    communicationSuccessRate: 0
+  });
 
   // Section collapse state
   const [sectionCollapseState, setSectionCollapseState] = useState(() => {
@@ -175,7 +183,35 @@ const NormalizedPitchingCallsView = () => {
 
   useEffect(() => {
     fetchStartupsAndJurors();
+    fetchMeetingCommunicationStats();
   }, []);
+
+  const fetchMeetingCommunicationStats = async () => {
+    try {
+      // Fetch meeting-related communication stats
+      const { data: communications, error } = await supabase
+        .from('email_communications')
+        .select('status, template_id')
+        .eq('recipient_type', 'startup');
+
+      if (error) throw error;
+
+      const schedulingEmails = communications?.filter(c => c.template_id?.includes('scheduling')).length || 0;
+      const invites = communications?.filter(c => c.template_id?.includes('invitation')).length || 0;
+      const reminders = communications?.filter(c => c.template_id?.includes('reminder')).length || 0;
+      const successful = communications?.filter(c => c.status === 'sent').length || 0;
+      const total = communications?.length || 0;
+
+      setMeetingCommunicationStats({
+        schedulingEmailsSent: schedulingEmails,
+        meetingInvitesSent: invites,
+        remindersSent: reminders,
+        communicationSuccessRate: total > 0 ? (successful / total) * 100 : 0
+      });
+    } catch (error) {
+      console.error('Error fetching meeting communication stats:', error);
+    }
+  };
 
   if (loading) {
     return (
@@ -207,8 +243,18 @@ const NormalizedPitchingCallsView = () => {
         <div>
           <h2 className="text-2xl font-bold tracking-tight">Pitching Calls</h2>
           <p className="text-muted-foreground">
-            Manage juror-startup meetings with a simplified workflow
+            Manage juror-startup meetings with integrated communication tracking
           </p>
+          
+          {/* Meeting Communication Health Bar */}
+          {meetingCommunicationStats.schedulingEmailsSent > 0 && (
+            <div className="mt-2 flex items-center gap-4 text-sm text-muted-foreground">
+              <span>📧 {meetingCommunicationStats.schedulingEmailsSent} scheduling emails</span>
+              <span>📅 {meetingCommunicationStats.meetingInvitesSent} invites sent</span>
+              <span>🔔 {meetingCommunicationStats.remindersSent} reminders</span>
+              <span className="text-success">✓ {Math.round(meetingCommunicationStats.communicationSuccessRate)}% success rate</span>
+            </div>
+          )}
         </div>
         <div className="flex gap-2">
           <Button 
