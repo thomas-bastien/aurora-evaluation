@@ -13,6 +13,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Link } from 'react-router-dom';
 import { UserCheck, Building, Users, Plus, Search, Filter, Upload, Download, Edit, Trash2, Mail } from 'lucide-react';
+import { useCommunicationWorkflow } from '@/hooks/useCommunicationWorkflow';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { useUserProfile } from '@/hooks/useUserProfile';
@@ -84,6 +85,7 @@ export default function JurorsList() {
   const [sendingInvitation, setSendingInvitation] = useState<string | null>(null);
   const { toast } = useToast();
   const { profile } = useUserProfile();
+  const { checkLoginReminders } = useCommunicationWorkflow();
   
   // Check if user has admin permissions
   const isAdmin = profile?.role === 'admin';
@@ -482,22 +484,30 @@ export default function JurorsList() {
               <h1 className="text-3xl font-bold text-foreground">Jury</h1>
               <p className="text-muted-foreground mt-2">Manage evaluation panel members</p>
             </div>
-            {isAdmin && (
-              <div className="flex gap-2">
-                <Button variant="outline" onClick={downloadJurorsCSVTemplate}>
-                  <Download className="h-4 w-4 mr-2" />
-                  Download Template
-                </Button>
-                <Button variant="outline" onClick={() => setCsvModalOpen(true)}>
-                  <Upload className="h-4 w-4 mr-2" />
-                  Upload CSV
-                </Button>
-                <Button onClick={() => setFormModalOpen(true)}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Juror
-                </Button>
-              </div>
-            )}
+             {isAdmin && (
+               <div className="flex gap-2">
+                 <Button 
+                   variant="secondary"
+                   onClick={() => checkLoginReminders.mutate()}
+                   disabled={checkLoginReminders.isPending}
+                 >
+                   <UserCheck className="w-4 h-4 mr-2" />
+                   {checkLoginReminders.isPending ? 'Checking...' : 'Check Login Reminders'}
+                 </Button>
+                 <Button variant="outline" onClick={downloadJurorsCSVTemplate}>
+                   <Download className="h-4 w-4 mr-2" />
+                   Download Template
+                 </Button>
+                 <Button variant="outline" onClick={() => setCsvModalOpen(true)}>
+                   <Upload className="h-4 w-4 mr-2" />
+                   Upload CSV
+                 </Button>
+                 <Button onClick={() => setFormModalOpen(true)}>
+                   <Plus className="h-4 w-4 mr-2" />
+                   Add Juror
+                 </Button>
+               </div>
+             )}
           </div>
         </div>
 

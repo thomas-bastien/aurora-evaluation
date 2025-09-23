@@ -20,12 +20,10 @@ import {
   Clock,
   Filter,
   RotateCcw,
-  Eye,
-  UserCheck
+  Eye
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
-import { useCommunicationWorkflow } from "@/hooks/useCommunicationWorkflow";
 
 interface JurorProgress {
   id: string;
@@ -70,7 +68,7 @@ export const JurorProgressMonitoring = ({ currentRound }: JurorProgressMonitorin
   });
   const [sendingBulkReminders, setSendingBulkReminders] = useState(false);
   
-  const { checkLoginReminders } = useCommunicationWorkflow();
+  
 
   const roundTitle = currentRound === 'screeningRound' ? 'Screening Round' : 'Pitching Round';
 
@@ -462,14 +460,6 @@ export const JurorProgressMonitoring = ({ currentRound }: JurorProgressMonitorin
             >
               <Mail className="w-4 h-4 mr-2" />
               {sendingBulkReminders ? 'Sending...' : 'Send Reminders'}
-            </Button>
-            <Button 
-              variant="secondary"
-              onClick={() => checkLoginReminders.mutate()}
-              disabled={checkLoginReminders.isPending}
-            >
-              <UserCheck className="w-4 h-4 mr-2" />
-              {checkLoginReminders.isPending ? 'Checking...' : 'Check Login Reminders'}
             </Button>
             <Button variant="outline" onClick={fetchJurorProgress}>
               <RotateCcw className="w-4 h-4 mr-2" />
