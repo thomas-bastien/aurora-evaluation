@@ -42,6 +42,10 @@ interface JurorProgress {
   pitchingAssignedCount?: number;
   pitchingScheduledCount?: number;
   pitchingCallsRate?: number;
+  // Reminder tracking
+  lastReminderSent?: Date;
+  reminderStatus?: 'sent' | 'delivered' | 'opened' | 'bounced' | 'failed';
+  canSendReminder?: boolean;
 }
 
 interface JurorProgressMonitoringProps {
@@ -97,6 +101,26 @@ export const JurorProgressMonitoring = ({ currentRound }: JurorProgressMonitorin
         `);
 
       if (error) throw error;
+
+      // Fetch reminder communications for all jurors
+      const { data: reminderCommunications, error: reminderError } = await supabase
+        .from('email_communications')
+        .select(`
+          id,
+          recipient_id,
+          status,
+          sent_at,
+          delivered_at,
+          opened_at,
+          bounced_at,
+          created_at,
+          email_delivery_events(event_type, timestamp)
+        `)
+        .eq('recipient_type', 'juror')
+        .or('subject.ilike.%reminder%,subject.ilike.%evaluation%')
+        .order('created_at', { ascending: false });
+
+      if (reminderError) console.error('Error fetching reminder communications:', reminderError);
 
       // Calculate progressive statuses for all jurors
       const jurorIds = jurorsData?.map(j => j.id) || [];
@@ -174,6 +198,22 @@ export const JurorProgressMonitoring = ({ currentRound }: JurorProgressMonitorin
           completedRounds: []
         };
 
+        // Calculate reminder status and throttling
+        const jurorReminders = reminderCommunications?.filter(r => r.recipient_id === juror.id) || [];
+        const lastReminder = jurorReminders[0]; // Most recent
+        
+        const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+        const canSendReminder = !lastReminder || new Date(lastReminder.created_at) < sevenDaysAgo;
+        
+        let reminderStatus: 'sent' | 'delivered' | 'opened' | 'bounced' | 'failed' | undefined;
+        if (lastReminder) {
+          if (lastReminder.bounced_at) reminderStatus = 'bounced';
+          else if (lastReminder.opened_at) reminderStatus = 'opened';
+          else if (lastReminder.delivered_at) reminderStatus = 'delivered';
+          else if (lastReminder.status === 'sent') reminderStatus = 'sent';
+          else reminderStatus = 'failed';
+        }
+
         // Calculate pitching calls data if in pitching round
         let pitchingAssignedCount = 0;
         let pitchingScheduledCount = 0;
@@ -216,7 +256,10 @@ export const JurorProgressMonitoring = ({ currentRound }: JurorProgressMonitorin
           user_id: juror.user_id,
           pitchingAssignedCount,
           pitchingScheduledCount,
-          pitchingCallsRate
+          pitchingCallsRate,
+          lastReminderSent: lastReminder ? new Date(lastReminder.created_at) : undefined,
+          reminderStatus,
+          canSendReminder
         };
       }) || [];
 
@@ -280,13 +323,34 @@ export const JurorProgressMonitoring = ({ currentRound }: JurorProgressMonitorin
 
   const sendReminder = async (jurorId: string, email: string) => {
     try {
+      const juror = jurors.find(j => j.id === jurorId);
+      if (!juror) throw new Error('Juror not found');
+
+      // Check throttling first
+      if (!juror.canSendReminder) {
+        toast.error('Reminder already sent within the last 7 days');
+        return;
+      }
+
       const { data, error } = await supabase.functions.invoke('send-juror-reminder', {
-        body: { jurorId, email }
+        body: { 
+          jurorId, 
+          email,
+          roundName: currentRound === 'screeningRound' ? 'Screening' : 'Pitching',
+          pendingCount: juror.pendingCount,
+          completionRate: juror.completionRate
+        }
       });
 
       if (error) throw error;
 
-      toast.success('Reminder sent successfully');
+      if (data?.throttled) {
+        toast.error(data.message);
+      } else {
+        toast.success('Reminder sent successfully');
+        // Refresh data to update reminder status
+        fetchJurorProgress();
+      }
     } catch (error) {
       console.error('Error sending reminder:', error);
       toast.error('Failed to send reminder');
@@ -358,27 +422,39 @@ export const JurorProgressMonitoring = ({ currentRound }: JurorProgressMonitorin
   };
 
   const sendBulkReminders = async () => {
-    const incompleteJurors = filteredJurors.filter(j => j.progressiveStatus.status !== 'completed');
+    const incompleteJurors = filteredJurors.filter(j => 
+      j.progressiveStatus.status !== 'completed' && 
+      j.completionRate < 100 && 
+      j.canSendReminder
+    );
+    
+    if (incompleteJurors.length === 0) {
+      toast.error('No eligible jurors for reminders (all complete or recently reminded)');
+      return;
+    }
+
     setSendingBulkReminders(true);
     
     try {
       let successCount = 0;
-      const reminderType = Date.now() > new Date().getTime() + (7 * 24 * 60 * 60 * 1000) ? 'urgent' : 'standard';
+      const frontendUrl = 'https://fadxytngwiporjqchsem.supabase.co';
       
       for (const juror of incompleteJurors) {
         try {
           const { data, error } = await supabase.functions.invoke('send-email', {
             body: {
+              templateCategory: 'juror_reminder',
               recipientEmail: juror.email,
               recipientId: juror.id,
               recipientType: 'juror',
-              templateId: reminderType === 'urgent' ? 'urgent-reminder' : 'evaluation-reminder',
               variables: {
-                jurorName: juror.name,
-                roundName: currentRound === 'screeningRound' ? 'Screening' : 'Pitching',
-                pendingCount: juror.pendingCount,
-                completionRate: Math.round(juror.completionRate)
-              }
+                juror_name: juror.name,
+                round_name: currentRound === 'screeningRound' ? 'Screening' : 'Pitching',
+                pending_count: juror.pendingCount,
+                completion_rate: Math.round(juror.completionRate),
+                login_link: frontendUrl
+              },
+              preventDuplicates: true
             }
           });
 
@@ -390,6 +466,7 @@ export const JurorProgressMonitoring = ({ currentRound }: JurorProgressMonitorin
       }
       
       toast.success(`Reminders sent to ${successCount}/${incompleteJurors.length} jurors`);
+      await fetchJurorProgress(); // Refresh data to update reminder statuses
       await fetchCommunicationHealth(); // Refresh stats
     } catch (error) {
       console.error('Error sending bulk reminders:', error);
@@ -456,10 +533,19 @@ export const JurorProgressMonitoring = ({ currentRound }: JurorProgressMonitorin
             </Button>
             <Button 
               onClick={sendBulkReminders}
-              disabled={sendingBulkReminders}
+              disabled={sendingBulkReminders || filteredJurors.filter(j => 
+                j.progressiveStatus.status !== 'completed' && 
+                j.completionRate < 100 && 
+                j.canSendReminder
+              ).length === 0}
+              variant="outline"
             >
               <Mail className="w-4 h-4 mr-2" />
-              {sendingBulkReminders ? 'Sending...' : 'Send Reminders'}
+              {sendingBulkReminders ? 'Sending...' : `Remind Incomplete (${filteredJurors.filter(j => 
+                j.progressiveStatus.status !== 'completed' && 
+                j.completionRate < 100 && 
+                j.canSendReminder
+              ).length})`}
             </Button>
             <Button variant="outline" onClick={fetchJurorProgress}>
               <RotateCcw className="w-4 h-4 mr-2" />
@@ -572,6 +658,20 @@ export const JurorProgressMonitoring = ({ currentRound }: JurorProgressMonitorin
                     <div className="flex items-center gap-3 mb-1">
                       <h4 className="font-semibold text-foreground">{juror.name}</h4>
                       <JurorStatusBadge jurorId={juror.id} progressiveStatus={juror.progressiveStatus} />
+                      {/* Reminder Status Badge */}
+                      {juror.lastReminderSent && (
+                        <Badge 
+                          variant={
+                            juror.reminderStatus === 'opened' ? 'default' :
+                            juror.reminderStatus === 'delivered' ? 'secondary' :
+                            juror.reminderStatus === 'sent' ? 'outline' :
+                            'destructive'
+                          }
+                          className="text-xs"
+                        >
+                          Reminder sent • {juror.lastReminderSent.toLocaleDateString()}
+                        </Badge>
+                      )}
                     </div>
                     <p className="text-sm text-muted-foreground">
                       {juror.job_title} at {juror.company} • {juror.email}
@@ -628,10 +728,10 @@ export const JurorProgressMonitoring = ({ currentRound }: JurorProgressMonitorin
                     size="sm" 
                     variant="outline"
                     onClick={() => sendReminder(juror.id, juror.email)}
-                    disabled={juror.progressiveStatus.status === 'completed'}
+                    disabled={juror.progressiveStatus.status === 'completed' || !juror.canSendReminder}
                   >
                     <Mail className="w-4 h-4 mr-2" />
-                    Send Reminder
+                    {juror.canSendReminder ? 'Send Reminder' : 'Recently Reminded'}
                   </Button>
                   <Button 
                     size="sm" 
