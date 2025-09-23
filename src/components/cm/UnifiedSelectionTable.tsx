@@ -15,6 +15,18 @@ import { StartupDetailsModal } from "@/components/common/StartupDetailsModal";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { CommunicationStatusBadge } from '@/components/communication/CommunicationStatusBadge';
 import { 
+  BarChart3,
+  Search,
+  ArrowUpDown,
+  CheckCircle,
+  Trophy,
+  Filter,
+  Eye,
+  RotateCcw,
+  AlertCircle,
+  XCircle,
+  ExternalLink,
+  Users,
   Mail, 
   Send, 
   MessageSquare 
