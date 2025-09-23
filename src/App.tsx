@@ -26,6 +26,7 @@ import EvaluationDashboard from "./pages/EvaluationDashboard";
 import Matchmaking from "./pages/Matchmaking";
 import CohortSettings from "./pages/CohortSettings";
 import DemoSelection from "./pages/DemoSelection";
+import EmailManagementPage from "./pages/EmailManagement";
 import NotFound from "./pages/NotFound";
 import { DemoProvider } from "@/contexts/DemoContext";
 
@@ -159,6 +160,13 @@ const App = () => (
               <ProtectedRoute>
                 <RoleGuard allowedRoles={['admin']}>
                   <CohortSettings />
+                </RoleGuard>
+              </ProtectedRoute>
+            } />
+            <Route path="/email-management" element={
+              <ProtectedRoute>
+                <RoleGuard allowedRoles={['admin']}>
+                  <EmailManagementPage />
                 </RoleGuard>
               </ProtectedRoute>
             } />
