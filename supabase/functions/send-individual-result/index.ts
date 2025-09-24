@@ -182,7 +182,10 @@ const handler = async (req: Request): Promise<Response> => {
         metadata: {
           startup_name: requestData.startupName,
           feedback_included: !!requestData.feedbackSummary,
-          custom_message_included: !!requestData.customMessage
+          custom_message_included: !!requestData.customMessage,
+          test_mode: isTestEmail,
+          original_recipient: isTestEmail ? requestData.recipientEmail : null,
+          sandbox_recipient: isTestEmail ? actualRecipient : null
         }
       })
       .select()
@@ -196,13 +199,37 @@ const handler = async (req: Request): Promise<Response> => {
       });
     }
 
+    // Determine recipient email based on test mode
+    const testMode = Deno.env.get("TEST_MODE") === "true";
+    let actualRecipient = requestData.recipientEmail;
+    let isTestEmail = false;
+
+    if (testMode) {
+      // Map communication types to sandbox emails for testing
+      const sandboxEmails = {
+        'selection': 'delivered+selection@resend.dev',
+        'rejection': 'delivered+rejection@resend.dev', 
+        'under-review': 'delivered+pending@resend.dev'
+      };
+      
+      actualRecipient = sandboxEmails[internalType] || 'delivered@resend.dev';
+      isTestEmail = true;
+      
+      console.log(`🧪 SANDBOX MODE: Routing email from ${requestData.recipientEmail} to ${actualRecipient}`);
+    }
+
     // Send email via Resend
     try {
       const emailResponse = await resend.emails.send({
         from: "Aurora Tech Awards <noreply@resend.dev>",
-        to: [requestData.recipientEmail],
-        subject,
-        html: body,
+        to: [actualRecipient],
+        subject: testMode ? `[SANDBOX] ${subject}` : subject,
+        html: testMode ? `
+          <div style="background-color: #fff3cd; border: 1px solid #ffeaa7; padding: 12px; margin-bottom: 20px; border-radius: 4px;">
+            <strong>🧪 SANDBOX MODE:</strong> This email would normally be sent to: <strong>${requestData.recipientEmail}</strong>
+          </div>
+          ${body}
+        ` : body,
       });
 
       console.log("Result email sent successfully via Resend:", emailResponse);
