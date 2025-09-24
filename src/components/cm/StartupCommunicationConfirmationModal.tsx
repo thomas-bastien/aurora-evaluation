@@ -5,7 +5,6 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Mail, AlertTriangle, CheckCircle, XCircle, Eye, Building, User } from "lucide-react";
-import { Checkbox } from "@/components/ui/checkbox";
 
 interface StartupValidationResult {
   id: string;
@@ -33,7 +32,7 @@ interface StartupCommunicationConfirmationModalProps {
   currentRound: 'screeningRound' | 'pitchingRound';
   validationResults: StartupValidationResult[];
   validationSummary: ValidationSummary;
-  onConfirm: (options: { bypassDuplicate: boolean }) => Promise<void>;
+  onConfirm: () => Promise<void>;
   isLoading?: boolean;
 }
 
@@ -48,7 +47,6 @@ export const StartupCommunicationConfirmationModal = ({
   isLoading = false
 }: StartupCommunicationConfirmationModalProps) => {
   const [loading, setLoading] = useState(false);
-  const [bypassDuplicate, setBypassDuplicate] = useState(false);
   
   const roundName = currentRound === 'screeningRound' ? 'Screening' : 'Pitching';
   const commTypeLabel = communicationType?.charAt(0).toUpperCase() + communicationType?.slice(1).replace('-', ' ') || '';
@@ -56,7 +54,7 @@ export const StartupCommunicationConfirmationModal = ({
   const handleConfirm = async () => {
     setLoading(true);
     try {
-      await onConfirm({ bypassDuplicate });
+      await onConfirm();
       onOpenChange(false);
     } catch (error) {
       // Error handling is done in the parent component
@@ -280,16 +278,6 @@ export const StartupCommunicationConfirmationModal = ({
               Each startup will receive a personalized email with their evaluation results and next steps.
               {validationSummary.willSkip > 0 && ` ${validationSummary.willSkip} startups will be skipped due to validation issues.`}
             </p>
-            <div className="flex items-center gap-2 justify-center mt-3">
-              <Checkbox
-                id="bypass-duplicate"
-                checked={bypassDuplicate}
-                onCheckedChange={(val) => setBypassDuplicate(Boolean(val))}
-              />
-              <label htmlFor="bypass-duplicate" className="text-sm text-muted-foreground cursor-pointer">
-                Resend anyway (bypass duplicate protection)
-              </label>
-            </div>
           </div>
         </div>
 

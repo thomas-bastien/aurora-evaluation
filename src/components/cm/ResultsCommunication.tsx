@@ -373,7 +373,7 @@ The Aurora Team`
     }
   };
 
-  const sendCommunications = async (options?: { bypassDuplicate: boolean }) => {
+  const sendCommunications = async () => {
     if (!validationResult || !pendingCommunicationType) return;
     
     setSendingEmails(true);
@@ -382,7 +382,6 @@ The Aurora Team`
       const validStartups = validationResult.validationResults.filter(r => r.isValid);
       
       let successCount = 0;
-      let duplicateCount = 0;
       for (const validatedStartup of validStartups) {
         // Find the original startup data
         const startup = startupResults.find(s => s.id === validatedStartup.id);
@@ -396,8 +395,7 @@ The Aurora Team`
               recipientEmail: startup.email,
               communicationType: pendingCommunicationType,
               roundName: currentRound === 'screeningRound' ? 'screening' : 'pitching',
-              feedbackSummary: startup.feedbackSummary,
-              bypassDuplicateCheck: options?.bypassDuplicate ?? false,
+              feedbackSummary: startup.feedbackSummary
             }
           });
 
@@ -407,47 +405,27 @@ The Aurora Team`
             continue;
           }
 
-          // Handle duplicate-prevented responses
-          if (data?.duplicateId || (typeof data?.message === 'string' && data.message.includes('already sent'))) {
-            console.log(`Duplicate prevented for ${startup.name}:`, data);
-            duplicateCount++;
-            continue; // do not mark as sent
-          }
-
-          // Handle explicit failures
-          if (data?.error) {
-            console.error(`Edge function returned error for ${startup.name}:`, data.error);
-            toast.error(`Failed to send email to ${startup.name}: ${data.error}`);
-            continue;
-          }
-
-          // Only count as success when edge function indicates success
-          if (data?.success) {
-            console.log(`Email sent successfully to ${startup.name}:`, data);
-            successCount++;
-            
-            // Update status
-            setStartupResults(prev => prev.map(r =>
-              r.id === startup.id
-                ? { ...r, feedbackStatus: 'sent', communicationSent: true }
-                : r
-            ));
-          } else {
-            console.warn(`Unexpected response for ${startup.name}:`, data);
-          }
+          console.log(`Email sent successfully to ${startup.name}:`, data);
+          successCount++;
+          
+          // Update status
+          setStartupResults(prev => prev.map(r =>
+            r.id === startup.id
+              ? { ...r, feedbackStatus: 'sent', communicationSent: true }
+              : r
+          ));
         } catch (emailError) {
           console.error(`Error sending email to ${startup.name}:`, emailError);
           toast.error(`Error sending email to ${startup.name}`);
         }
       }
 
-      const skippedCount = validationResult.validationSummary.willSkip + duplicateCount;
+      const skippedCount = validationResult.validationSummary.willSkip;
       
-      if (successCount > 0 || duplicateCount > 0) {
+      if (successCount > 0) {
         toast.success(
-          `${successCount} sent` +
-          (duplicateCount > 0 ? `, ${duplicateCount} skipped as duplicates` : '') +
-          (validationResult.validationSummary.willSkip > 0 ? `, ${validationResult.validationSummary.willSkip} skipped due to validation` : '')
+          `Successfully sent ${successCount} emails` + 
+          (skippedCount > 0 ? `. ${skippedCount} startups were skipped due to validation issues.` : '')
         );
       }
       
@@ -514,50 +492,6 @@ The Aurora Team`
       console.error(`Error sending individual email to ${result.name}:`, error);
       toast.error(`Error sending email to ${result.name}: ${error instanceof Error ? error.message : 'Unknown error'}`);
       return false;
-    }
-  };
-
-  // Test sandbox mode functionality
-  const testSandboxMode = async () => {
-    if (startupResults.length === 0) {
-      toast.error('No startups available for testing');
-      return;
-    }
-
-    const testStartup = startupResults[0];
-    toast.info('Testing sandbox mode with first startup...');
-    
-    try {
-      const { data, error } = await supabase.functions.invoke('send-individual-result', {
-        body: {
-          startupId: testStartup.id,
-          startupName: testStartup.name,
-          recipientEmail: testStartup.email,
-          communicationType: 'selected' as const,
-          roundName: currentRound === 'screeningRound' ? 'screening' : 'pitching',
-          feedbackSummary: testStartup.feedbackSummary || 'Test feedback summary',
-          bypassDuplicateCheck: true
-        }
-      });
-
-      if (error) {
-        console.error('Sandbox test failed:', error);
-        toast.error('Sandbox test failed - check edge function logs');
-        return;
-      }
-
-      if (data?.success) {
-        toast.success(`✅ Sandbox test successful! Email routed to: ${data.actualRecipient}`);
-        console.log('Sandbox test result:', data);
-      } else if (data?.duplicateId) {
-        toast.info('✅ Sandbox routing working - duplicate prevention activated');
-      } else {
-        console.warn('Unexpected sandbox test response:', data);
-        toast.warning('Unexpected response - check console and edge function logs');
-      }
-    } catch (testError) {
-      console.error('Sandbox test error:', testError);
-      toast.error('Sandbox test error - check console');
     }
   };
 
@@ -663,24 +597,13 @@ The Aurora Team`
               Review feedback summaries and send {currentRound === 'screeningRound' ? 'evaluation' : 'pitch'} results to startups and jurors
             </CardDescription>
           </div>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              onClick={() => testSandboxMode()}
-              className="flex items-center gap-2"
-              disabled={sendingEmails}
-            >
-              <Mail className="w-4 h-4" />
-              Test Sandbox Mode
-            </Button>
-            
-            <Dialog open={showSendDialog} onOpenChange={setShowSendDialog}>
-              <DialogTrigger asChild>
-                <Button>
-                  <Send className="w-4 h-4 mr-2" />
-                  Send Communications
-                </Button>
-              </DialogTrigger>
+          <Dialog open={showSendDialog} onOpenChange={setShowSendDialog}>
+            <DialogTrigger asChild>
+              <Button>
+                <Send className="w-4 h-4 mr-2" />
+                Send Communications
+              </Button>
+            </DialogTrigger>
             <DialogContent className="max-w-md">
               <DialogHeader>
                 <DialogTitle>Send Communications</DialogTitle>

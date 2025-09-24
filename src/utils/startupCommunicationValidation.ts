@@ -60,7 +60,7 @@ export const validateStartupCommunications = async (
   
   const roundName = currentRound === 'screeningRound' ? 'screening' : 'pitching';
   const validationResults: StartupValidationResult[] = [];
-  const skipReasonsSummary: Record<string, number> = {};
+  const skipReasons: Record<string, number> = {};
 
   // Get round-specific statuses for all startups
   const startupIds = startups.map(s => s.id);
@@ -114,7 +114,7 @@ export const validateStartupCommunications = async (
       skipReasons.push('not in round');
     }
 
-    // 2. Check if startup status matches communication type  
+    // 2. Check if startup status matches communication type
     let expectedStatus: string;
     switch (communicationType) {
       case 'selected':
@@ -146,10 +146,8 @@ export const validateStartupCommunications = async (
       }
     }
 
-    // 4. Check for duplicate communications (map UI type to internal DB type)
-    const commTypeMap = { selected: 'selection', rejected: 'rejection', 'under-review': 'under-review' } as const;
-    const internalType = commTypeMap[communicationType] || communicationType;
-    const commKey = `${startup.id}-${internalType}`;
+    // 4. Check for duplicate communications
+    const commKey = `${startup.id}-${communicationType}`;
     if (existingCommsMap.has(commKey)) {
       skipReasons.push('already sent');
     }
@@ -180,9 +178,9 @@ export const validateStartupCommunications = async (
       communicationType
     });
 
-    // Count skip reasons for summary
+    // Count skip reasons
     skipReasons.forEach(reason => {
-      skipReasonsSummary[reason] = (skipReasonsSummary[reason] || 0) + 1;
+      skipReasons[reason] = (skipReasons[reason] || 0) + 1;
     });
   }
 
@@ -195,7 +193,7 @@ export const validateStartupCommunications = async (
     validStartups: validStartups.length,
     willSend: validStartups.length,
     willSkip: invalidStartups.length,
-    skipReasons: skipReasonsSummary
+    skipReasons
   };
 
   return {
