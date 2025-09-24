@@ -146,8 +146,10 @@ export const validateStartupCommunications = async (
       }
     }
 
-    // 4. Check for duplicate communications
-    const commKey = `${startup.id}-${communicationType}`;
+    // 4. Check for duplicate communications (map UI type to internal DB type)
+    const commTypeMap = { selected: 'selection', rejected: 'rejection', 'under-review': 'under-review' } as const;
+    const internalType = commTypeMap[communicationType] || communicationType;
+    const commKey = `${startup.id}-${internalType}`;
     if (existingCommsMap.has(commKey)) {
       skipReasons.push('already sent');
     }
