@@ -724,8 +724,14 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
 
             {/* Send Emails Button - Dynamic text based on round */}
             <Button 
-              onClick={() => setShowSchedulingEmailModal(true)}
-              disabled={!isConfirmed || sendingEmails}
+              onClick={() => {
+                if (currentRound === 'screeningRound') {
+                  sendAssignmentNotifications();
+                } else {
+                  setShowSchedulingEmailModal(true);
+                }
+              }}
+              disabled={!isConfirmed || sendingEmails || sendingNotifications}
               variant={isEmailsSent ? "secondary" : "default"}
               className="flex items-center gap-2"
             >
