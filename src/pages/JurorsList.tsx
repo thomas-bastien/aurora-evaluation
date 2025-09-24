@@ -440,14 +440,24 @@ export default function JurorsList() {
         console.error('Failed to send invitation email:', emailResponse.error);
         toast({
           title: "Failed to send invitation",
-          description: "There was an error sending the invitation email.",
+          description: `Error: ${emailResponse.error.message || 'Please try again.'}`,
           variant: "destructive"
         });
+      } else if (emailResponse.data?.error) {
+        console.error('Email sending failed:', emailResponse.data);
+        toast({
+          title: "Email Failed",
+          description: `Failed to send email: ${emailResponse.data.details || emailResponse.data.error}`,
+          variant: "destructive",
+        });
       } else {
+        console.log('Invitation sent successfully:', emailResponse.data);
         toast({
           title: "Invitation sent",
           description: `An invitation email has been sent to ${juror.name}.`,
         });
+        // Refresh the data to update invitation status
+        fetchJurors();
       }
     } catch (error) {
       console.error('Error sending invitation email:', error);

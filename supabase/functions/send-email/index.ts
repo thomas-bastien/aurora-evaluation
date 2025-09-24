@@ -142,14 +142,50 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Send email via Resend
     try {
+      const fromAddress = Deno.env.get("RESEND_FROM") || "Aurora Tech Awards <noreply@resend.dev>";
+      
       const emailResponse = await resend.emails.send({
-        from: "Aurora Tech Awards <noreply@resend.dev>",
+        from: fromAddress,
         to: [requestData.recipientEmail],
         subject,
         html: body,
       });
 
-      console.log("Email sent successfully via Resend:", emailResponse);
+      console.log("Resend API response:", emailResponse);
+
+      // Check if Resend returned an error
+      if (emailResponse.error) {
+        console.error("Resend returned error:", emailResponse.error);
+        
+        // Update communication record with error
+        await supabase
+          .from('email_communications')
+          .update({
+            status: 'failed',
+            error_message: emailResponse.error.message || 'Resend API error'
+          })
+          .eq('id', communication.id);
+
+        // Create delivery event for the error
+        await supabase
+          .from('email_delivery_events')
+          .insert({
+            communication_id: communication.id,
+            event_type: 'failed',
+            raw_payload: { resend_error: emailResponse.error }
+          });
+
+        return new Response(JSON.stringify({ 
+          error: "Failed to send email",
+          details: emailResponse.error.message || 'Resend API error'
+        }), {
+          status: 500,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        });
+      }
+
+      // Email sent successfully
+      console.log("Email sent successfully via Resend:", emailResponse.data);
 
       // Update communication record with Resend ID and status
       await supabase
@@ -182,7 +218,7 @@ const handler = async (req: Request): Promise<Response> => {
       });
 
     } catch (resendError) {
-      console.error("Resend API error:", resendError);
+      console.error("Resend API exception:", resendError);
       
       // Update communication record with error
       await supabase
