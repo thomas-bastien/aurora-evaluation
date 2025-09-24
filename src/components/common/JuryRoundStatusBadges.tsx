@@ -87,6 +87,8 @@ function getUnifiedStatusLabel(status: UnifiedJurorStatus, roundName?: string): 
       return `In Progress${roundContext}`;
     case 'pending':
       return `Pending${roundContext}`;
+    case 'invited':
+      return 'Invited';
     case 'not_invited':
       return 'Not Invited';
     default:
@@ -102,6 +104,8 @@ function getUnifiedStatusColor(status: UnifiedJurorStatus): string {
       return 'text-primary border-primary';
     case 'pending':
       return 'text-warning border-warning';
+    case 'invited':
+      return 'text-info border-info';
     case 'not_invited':
       return 'text-muted-foreground border-muted-foreground';
     default:

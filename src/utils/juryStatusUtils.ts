@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import type { StatusType } from './statusUtils';
 
 // Unified status types for all juror displays
-export type JurorProgressStatus = 'completed' | 'active' | 'pending' | 'not_invited';
+export type JurorProgressStatus = 'completed' | 'active' | 'pending' | 'invited' | 'not_invited';
 export type UnifiedJurorStatus = JurorProgressStatus;
 
 export type { StatusType };
@@ -41,7 +41,7 @@ export async function calculateProgressiveJurorStatus(jurorId: string): Promise<
 
   if (!juror.user_id) {
     return {
-      status: 'pending',
+      status: 'invited',
       currentRound: 'screening', 
       completedRounds: []
     };
@@ -133,7 +133,7 @@ export async function calculateJurorRoundStatus(
     }
 
     if (!juror.user_id) {
-      return 'pending'; // Invited but not accepted
+      return 'invited'; // Invited but not accepted
     }
 
     // Get assignment and evaluation counts using the same logic as JurorProgressMonitoring
@@ -260,7 +260,7 @@ export async function calculateMultipleJurorRoundStatuses(
       }
 
       if (!juror.user_id) {
-        results[jurorId] = 'pending';
+        results[jurorId] = 'invited';
         continue;
       }
 
@@ -479,7 +479,7 @@ export async function calculateMultipleProgressiveJurorStatuses(
 
       if (!jurorInvite.user_id) {
         results[juror.id] = {
-          status: 'pending',
+          status: 'invited',
           currentRound: 'screening',
           completedRounds: []
         };
