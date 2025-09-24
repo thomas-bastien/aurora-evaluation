@@ -651,15 +651,15 @@ export const JurorProgressMonitoring = ({ currentRound }: JurorProgressMonitorin
             <div className="text-sm text-muted-foreground">Total Jurors</div>
           </div>
           <div className="text-center p-4 bg-success/10 rounded-lg">
-            <div className="text-2xl font-bold text-success">{jurors.filter(j => j.progressiveStatus.status === 'completed').length}</div>
+            <div className="text-2xl font-bold text-success">{jurors.filter(j => j.completionRate === 100).length}</div>
             <div className="text-sm text-muted-foreground">Completed</div>
           </div>
           <div className="text-center p-4 bg-warning/10 rounded-lg">
-            <div className="text-2xl font-bold text-warning">{jurors.filter(j => j.progressiveStatus.status === 'active').length}</div>
+            <div className="text-2xl font-bold text-warning">{jurors.filter(j => j.completionRate > 0 && j.completionRate < 100).length}</div>
             <div className="text-sm text-muted-foreground">In Progress</div>
           </div>
           <div className="text-center p-4 bg-muted rounded-lg">
-            <div className="text-2xl font-bold text-muted-foreground">{jurors.filter(j => j.progressiveStatus.status === 'pending').length}</div>
+            <div className="text-2xl font-bold text-muted-foreground">{jurors.filter(j => j.completionRate === 0).length}</div>
             <div className="text-sm text-muted-foreground">Pending</div>
           </div>
         </div>
