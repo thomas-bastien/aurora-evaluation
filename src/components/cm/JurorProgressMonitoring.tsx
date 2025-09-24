@@ -93,7 +93,7 @@ export const JurorProgressMonitoring = ({ currentRound }: JurorProgressMonitorin
 
   const fetchJurorProgress = async () => {
     try {
-      // Fetch jurors with their assignments based on round
+      // Fetch jurors with their assignments based on round (only active jurors with user_id)
       const assignmentTable = currentRound === 'screeningRound' ? 'screening_assignments' : 'pitching_assignments';
       const { data: jurorsData, error } = await supabase
         .from('jurors')
@@ -104,7 +104,8 @@ export const JurorProgressMonitoring = ({ currentRound }: JurorProgressMonitorin
             startup_id,
             status
           )
-        `);
+        `)
+        .not('user_id', 'is', null);
 
       if (error) throw error;
 
