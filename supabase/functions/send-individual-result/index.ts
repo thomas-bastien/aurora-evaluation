@@ -135,6 +135,25 @@ const handler = async (req: Request): Promise<Response> => {
         `<h3>Additional Message:</h3><p>${requestData.customMessage}</p><p>Best regards,<br>The Aurora Team</p>`);
     }
 
+    // Determine recipient email and test mode BEFORE creating communication record
+    const testMode = Deno.env.get("TEST_MODE") === "true";
+    let actualRecipient = requestData.recipientEmail;
+    let isTestEmail = false;
+
+    if (testMode) {
+      // Map communication types to sandbox emails for testing
+      const sandboxEmails = {
+        'selection': 'delivered+selection@resend.dev',
+        'rejection': 'delivered+rejection@resend.dev', 
+        'under-review': 'delivered+pending@resend.dev'
+      };
+      
+      actualRecipient = sandboxEmails[internalType] || 'delivered@resend.dev';
+      isTestEmail = true;
+      
+      console.log(`🧪 SANDBOX MODE: Routing email from ${requestData.recipientEmail} to ${actualRecipient}`);
+    }
+
     // Generate content hash for duplicate prevention using Web Crypto API
     const contentString = `${requestData.recipientEmail}:${subject}:${requestData.roundName}:${internalType}`;
     const encoder = new TextEncoder();
@@ -199,29 +218,10 @@ const handler = async (req: Request): Promise<Response> => {
       });
     }
 
-    // Determine recipient email based on test mode
-    const testMode = Deno.env.get("TEST_MODE") === "true";
-    let actualRecipient = requestData.recipientEmail;
-    let isTestEmail = false;
-
-    if (testMode) {
-      // Map communication types to sandbox emails for testing
-      const sandboxEmails = {
-        'selection': 'delivered+selection@resend.dev',
-        'rejection': 'delivered+rejection@resend.dev', 
-        'under-review': 'delivered+pending@resend.dev'
-      };
-      
-      actualRecipient = sandboxEmails[internalType] || 'delivered@resend.dev';
-      isTestEmail = true;
-      
-      console.log(`🧪 SANDBOX MODE: Routing email from ${requestData.recipientEmail} to ${actualRecipient}`);
-    }
-
     // Send email via Resend
     try {
       const emailResponse = await resend.emails.send({
-        from: "Aurora Tech Awards <noreply@resend.dev>",
+        from: "Aurora Tech Awards <onboarding@resend.dev>",
         to: [actualRecipient],
         subject: testMode ? `[SANDBOX] ${subject}` : subject,
         html: testMode ? `
@@ -232,13 +232,58 @@ const handler = async (req: Request): Promise<Response> => {
         ` : body,
       });
 
-      console.log("Result email sent successfully via Resend:", emailResponse);
+      console.log("Resend API response:", emailResponse);
+
+      // Check for Resend API errors
+      if (emailResponse.error) {
+        console.error("Resend API returned error:", emailResponse.error);
+        
+        // Update communication record with error
+        await supabase
+          .from('email_communications')
+          .update({
+            status: 'failed',
+            error_message: `Resend API error: ${emailResponse.error.message || 'Unknown error'}`
+          })
+          .eq('id', communication.id);
+
+        return new Response(JSON.stringify({ 
+          error: "Failed to send result email",
+          details: emailResponse.error.message || 'Resend API error'
+        }), {
+          status: 500,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        });
+      }
+
+      // Only update to 'sent' if we have a successful response with ID
+      if (!emailResponse.data?.id) {
+        console.error("Resend API did not return email ID:", emailResponse);
+        
+        await supabase
+          .from('email_communications')
+          .update({
+            status: 'failed',
+            error_message: 'Resend API did not return email ID'
+          })
+          .eq('id', communication.id);
+
+        return new Response(JSON.stringify({ 
+          error: "Failed to send result email",
+          details: "No email ID returned from Resend"
+        }), {
+          status: 500,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        });
+      }
+
+      console.log("✅ Result email sent successfully via Resend with ID:", emailResponse.data.id);
 
       // Update communication record with Resend ID and status
       await supabase
         .from('email_communications')
         .update({
-          resend_email_id: emailResponse.data?.id,
+          resend_email_id: emailResponse.data.id,
           status: 'sent',
           sent_at: new Date().toISOString()
         })
@@ -250,22 +295,24 @@ const handler = async (req: Request): Promise<Response> => {
         .insert({
           communication_id: communication.id,
           event_type: 'sent',
-          resend_event_id: emailResponse.data?.id,
+          resend_event_id: emailResponse.data.id,
           raw_payload: { resend_response: emailResponse }
         });
 
       return new Response(JSON.stringify({
         success: true,
         communicationId: communication.id,
-        resendId: emailResponse.data?.id,
-        message: `${internalType} email sent successfully to ${requestData.startupName}`
+        resendId: emailResponse.data.id,
+        message: `${internalType} email sent successfully to ${requestData.startupName}`,
+        testMode: isTestEmail,
+        actualRecipient: actualRecipient
       }), {
         status: 200,
         headers: { "Content-Type": "application/json", ...corsHeaders },
       });
 
     } catch (resendError) {
-      console.error("Resend API error:", resendError);
+      console.error("Resend API exception:", resendError);
       
       // Update communication record with error
       await supabase

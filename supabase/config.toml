@@ -107,3 +107,6 @@ verify_jwt = false
 
 [functions.send-juror-phase-transition]
 verify_jwt = false
+
+[functions.send-individual-result]
+verify_jwt = false
