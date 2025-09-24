@@ -283,6 +283,7 @@ export default function JurorsList() {
         
         // Send invitation email for new jurors
         try {
+          console.log('Sending invitation email to:', insertData.email);
           const emailResponse = await supabase.functions.invoke('send-juror-invitation', {
             body: {
               jurorName: insertData.name,
@@ -296,27 +297,36 @@ export default function JurorsList() {
             }
           });
           
-          if (emailResponse.error) {
-            console.error('Failed to send invitation email:', emailResponse.error);
-            console.error('Email response data:', emailResponse.data);
+          console.log('Email response received:', emailResponse);
+          
+          if (emailResponse.error || !emailResponse.data?.success) {
+            const errorMsg = emailResponse.error?.message || emailResponse.data?.error || 'Unknown error';
+            console.error('Failed to send invitation email:', {
+              error: emailResponse.error,
+              data: emailResponse.data
+            });
             toast({
               title: "Juror added",
-              description: `The juror has been added, but the invitation email failed to send. Error: ${emailResponse.error.message || 'Unknown error'}`,
+              description: `The juror has been added, but the invitation email failed to send. Error: ${errorMsg}`,
               variant: "destructive"
             });
           } else {
             console.log('Invitation email sent successfully:', emailResponse.data);
             toast({
               title: "Juror added & invited",
-              description: "The juror has been successfully added and an invitation email has been sent.",
+              description: `The juror has been successfully added and an invitation email has been sent.`,
             });
           }
         } catch (emailError: any) {
-          console.error('Error sending invitation email:', emailError);
-          console.error('Email error details:', emailError?.message, emailError?.stack);
+          console.error('Error calling send-juror-invitation function:', emailError);
+          console.error('Email error details:', {
+            message: emailError?.message,
+            stack: emailError?.stack,
+            cause: emailError?.cause
+          });
           toast({
             title: "Juror added",
-            description: `The juror has been added, but the invitation email failed to send. Error: ${emailError?.message || 'Network error'}`,
+            description: `The juror has been added, but the invitation email failed to send. Error: ${emailError?.message || 'Network or function error'}`,
             variant: "destructive"
           });
         }

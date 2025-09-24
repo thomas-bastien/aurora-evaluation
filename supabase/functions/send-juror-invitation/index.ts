@@ -32,6 +32,20 @@ const handler = async (req: Request): Promise<Response> => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // Validate required environment variables
+  const requiredSecrets = ['SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY', 'RESEND_API_KEY'];
+  for (const secret of requiredSecrets) {
+    if (!Deno.env.get(secret)) {
+      console.error(`Missing required secret: ${secret}`);
+      return new Response(JSON.stringify({ 
+        error: `Server configuration error: Missing ${secret}` 
+      }), {
+        status: 500,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
+  }
+
   try {
     const { 
       jurorName, 
@@ -44,19 +58,26 @@ const handler = async (req: Request): Promise<Response> => {
       linkedinUrl
     }: JurorInvitationRequest = await req.json();
 
-    console.log(`Sending invitation to juror: ${jurorName} (${jurorEmail})`);
+    console.log(`Processing invitation request for juror: ${jurorName} (${jurorEmail})`);
 
-    // Get or create the juror record and generate invitation token
+    // Get the juror record including ID for proper linking
     const { data: jurorData, error: jurorError } = await supabase
       .from('jurors')
-      .select('invitation_token')
+      .select('id, invitation_token')
       .eq('email', jurorEmail)
       .single();
 
     if (jurorError) {
       console.error("Error fetching juror:", jurorError);
-      throw new Error("Failed to process invitation");
+      throw new Error(`Failed to find juror record: ${jurorError.message}`);
     }
+
+    if (!jurorData.invitation_token) {
+      console.error("Juror missing invitation token");
+      throw new Error("Juror record is missing invitation token");
+    }
+
+    console.log(`Found juror record with ID: ${jurorData.id}`);
 
     // Update invitation timestamps and preference fields
     const expirationDate = new Date();
@@ -73,56 +94,86 @@ const handler = async (req: Request): Promise<Response> => {
     if (preferredStages !== undefined) updateData.preferred_stages = preferredStages;
     if (linkedinUrl !== undefined) updateData.linkedin_url = linkedinUrl;
 
-    await supabase
+    const { error: updateError } = await supabase
       .from('jurors')
       .update(updateData)
       .eq('email', jurorEmail);
 
+    if (updateError) {
+      console.error("Error updating juror timestamps:", updateError);
+      throw new Error(`Failed to update juror record: ${updateError.message}`);
+    }
+
     // Create magic link URL pointing to the authentication edge function
     const frontendUrl = Deno.env.get('FRONTEND_URL') || req.headers.get('origin');
-    const baseUrl = frontendUrl?.replace(/\/$/, '') || '';
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const magicLinkUrl = `${supabaseUrl}/functions/v1/authenticate-juror?token=${jurorData.invitation_token}`;
 
-    // For testing, always send to lucien98@gmail.com
-    const testEmail = "lucien98@gmail.com";
+    console.log(`Sending email to: ${jurorEmail} with magic link`);
 
-    // Use centralized email service
-    const emailResponse = await supabase.functions.invoke('send-email', {
-      body: {
-        templateCategory: 'juror_invitation',
-        recipientEmail: jurorEmail,
-        recipientType: 'juror',
-        recipientId: undefined, // Will be set after finding the juror
-        variables: {
-          juror_name: jurorName,
-          magic_link: magicLinkUrl,
-          expiry_date: expirationDate.toDateString(),
-          company: company || '',
-          job_title: jobTitle || ''
-        },
-        preventDuplicates: true
+    // Use centralized email service with retry mechanism
+    let emailResponse;
+    let attempts = 0;
+    const maxAttempts = 3;
+    
+    while (attempts < maxAttempts) {
+      attempts++;
+      console.log(`Email attempt ${attempts} for ${jurorEmail}`);
+      
+      try {
+        emailResponse = await supabase.functions.invoke('send-email', {
+          body: {
+            templateCategory: 'juror_invitation',
+            recipientEmail: jurorEmail,
+            recipientType: 'juror',
+            recipientId: jurorData.id, // Now properly linking to juror record
+            variables: {
+              juror_name: jurorName,
+              magic_link: magicLinkUrl,
+              expiry_date: expirationDate.toDateString(),
+              company: company || '',
+              job_title: jobTitle || ''
+            },
+            preventDuplicates: true
+          }
+        });
+        
+        // If we get here without error, break out of retry loop
+        break;
+        
+      } catch (invokeError) {
+        console.error(`Email attempt ${attempts} failed:`, invokeError);
+        if (attempts === maxAttempts) {
+          throw invokeError;
+        }
+        // Wait before retry (exponential backoff)
+        await new Promise(resolve => setTimeout(resolve, 1000 * attempts));
       }
-    });
+    }
 
-    if (emailResponse.error) {
-      console.error('Failed to send invitation email:', emailResponse.error);
+    if (emailResponse?.error) {
+      console.error('Failed to send invitation email after retries:', emailResponse.error);
+      console.error('Email response details:', JSON.stringify(emailResponse, null, 2));
       return new Response(JSON.stringify({ 
+        success: false,
         error: 'Failed to send invitation email',
-        details: emailResponse.error 
+        details: emailResponse.error,
+        attempts: attempts
       }), {
         status: 500,
         headers: { "Content-Type": "application/json", ...corsHeaders },
       });
     }
 
-    console.log('Email sent successfully via centralized service:', emailResponse.data);
+    console.log(`Invitation email sent successfully after ${attempts} attempts:`, emailResponse?.data);
 
     return new Response(JSON.stringify({ 
       success: true, 
       message: "Invitation sent successfully",
-      emailResponse: emailResponse.data,
-      originalRecipient: jurorEmail
+      emailResponse: emailResponse?.data,
+      recipientEmail: jurorEmail,
+      jurorId: jurorData.id,
+      attempts: attempts
     }), {
       status: 200,
       headers: {
