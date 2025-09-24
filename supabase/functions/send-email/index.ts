@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { Resend } from "npm:resend@2.0.0";
-import { createHash } from "https://deno.land/std@0.190.0/crypto/mod.ts";
+// Using Web Crypto API for hash generation
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -81,11 +81,11 @@ const handler = async (req: Request): Promise<Response> => {
       }
     }
 
-    // Generate content hash for duplicate prevention
+    // Generate content hash for duplicate prevention using Web Crypto API
     const contentString = `${requestData.recipientEmail}:${subject}:${body}`;
     const encoder = new TextEncoder();
     const data = encoder.encode(contentString);
-    const hashBuffer = await createHash("md5").update(data).digest();
+    const hashBuffer = await crypto.subtle.digest("SHA-256", data);
     const contentHash = Array.from(new Uint8Array(hashBuffer))
       .map(b => b.toString(16).padStart(2, '0'))
       .join('');
