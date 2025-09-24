@@ -144,9 +144,18 @@ const handler = async (req: Request): Promise<Response> => {
     try {
       const fromAddress = Deno.env.get("RESEND_FROM") || "Aurora Tech Awards <noreply@resend.dev>";
       
+      // Test mode - redirect all emails to verified test address
+      const testMode = true; // Set to false to disable
+      const actualRecipient = testMode ? "lucien98@gmail.com" : requestData.recipientEmail;
+
+      console.log(testMode ? 
+        `TEST MODE: Redirecting email from ${requestData.recipientEmail} to lucien98@gmail.com` : 
+        `Sending email to ${requestData.recipientEmail}`
+      );
+      
       const emailResponse = await resend.emails.send({
         from: fromAddress,
-        to: [requestData.recipientEmail],
+        to: [actualRecipient],
         subject,
         html: body,
       });
