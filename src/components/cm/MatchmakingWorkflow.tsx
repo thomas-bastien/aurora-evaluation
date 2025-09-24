@@ -10,6 +10,7 @@ import { StartupAssignmentModal } from "@/components/matchmaking/StartupAssignme
 import { AssignmentSummary } from "@/components/matchmaking/AssignmentSummary";
 import { AutoAssignmentReviewPanel } from "@/components/matchmaking/AutoAssignmentReviewPanel";
 import { SendSchedulingEmailsModal } from "@/components/cm/SendSchedulingEmailsModal";
+import { AssignmentNotificationModal } from "@/components/cm/AssignmentNotificationModal";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { generateAutoAssignments, AutoAssignmentProposal, WorkloadDistribution } from '@/utils/autoAssignmentEngine';
 
@@ -67,6 +68,7 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
   const [loading, setLoading] = useState(true);
   const [autoAssignLoading, setAutoAssignLoading] = useState(false);
   const [showSchedulingEmailModal, setShowSchedulingEmailModal] = useState(false);
+  const [showAssignmentNotificationModal, setShowAssignmentNotificationModal] = useState(false);
   const [sendingEmails, setSendingEmails] = useState(false);
   
   // Communication tracking state
@@ -477,7 +479,7 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
     setWorkloadDistribution([]);
   };
 
-  const sendAssignmentNotifications = async () => {
+  const sendAssignmentNotifications = async (filters?: { excludeAlreadyNotified: boolean }) => {
     setSendingNotifications(true);
     try {
       // Get all assigned jurors for current round
@@ -505,6 +507,58 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
         }
         jurorAssignments.get(jurorId).assignments.push(assignment);
       });
+
+      // Apply filtering if requested
+      if (filters?.excludeAlreadyNotified) {
+        // Query existing assignment notifications
+        const { data: existingNotifications, error: notificationError } = await supabase
+          .from('email_communications')
+          .select(`
+            recipient_id,
+            metadata
+          `)
+          .eq('recipient_type', 'juror')
+          .eq('communication_type', 'assignment-notification')
+          .in('recipient_id', Array.from(jurorAssignments.keys()));
+
+        if (notificationError) throw notificationError;
+
+        // Create a map to track previously notified startups for each juror
+        const jurorPreviousNotifications = new Map<string, Set<string>>();
+        
+        existingNotifications?.forEach(notification => {
+          const jurorId = notification.recipient_id;
+          const metadata = notification.metadata as any;
+          const startupNames = metadata?.variables?.startupNames;
+          
+          if (startupNames && jurorId) {
+            if (!jurorPreviousNotifications.has(jurorId)) {
+              jurorPreviousNotifications.set(jurorId, new Set());
+            }
+            
+            // Parse startup names from previous notifications
+            const previousStartups = startupNames.split(', ');
+            previousStartups.forEach((startupName: string) => {
+              jurorPreviousNotifications.get(jurorId)!.add(startupName.trim());
+            });
+          }
+        });
+
+        // Filter out jurors who don't have new assignments
+        for (const [jurorId, jurorData] of Array.from(jurorAssignments.entries())) {
+          const previouslyNotifiedStartups = jurorPreviousNotifications.get(jurorId) || new Set();
+          const currentStartupNames = jurorData.assignments.map((a: any) => a.startups.name);
+          
+          // Check if this juror has any new startups assigned since last notification
+          const hasNewAssignments = currentStartupNames.some((startupName: string) => 
+            !previouslyNotifiedStartups.has(startupName)
+          );
+          
+          if (!hasNewAssignments) {
+            jurorAssignments.delete(jurorId);
+          }
+        }
+      }
 
       let successCount = 0;
       
@@ -726,7 +780,7 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
             <Button 
               onClick={() => {
                 if (currentRound === 'screeningRound') {
-                  sendAssignmentNotifications();
+                  setShowAssignmentNotificationModal(true);
                 } else {
                   setShowSchedulingEmailModal(true);
                 }
@@ -735,7 +789,7 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
               variant={isEmailsSent ? "secondary" : "default"}
               className="flex items-center gap-2"
             >
-              {sendingEmails ? (
+              {sendingEmails || sendingNotifications ? (
                 <>
                   <Mail className="w-4 h-4 animate-pulse" />
                   {currentRound === 'screeningRound' ? 'Sending Confirmation...' : 'Sending Scheduling...'}
@@ -891,6 +945,15 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
         currentRound={currentRound}
         assignments={assignments}
         onSendEmails={handleSendSchedulingEmails}
+      />
+
+      {/* Assignment Notification Modal */}
+      <AssignmentNotificationModal
+        open={showAssignmentNotificationModal}
+        onClose={() => setShowAssignmentNotificationModal(false)}
+        currentRound={currentRound}
+        assignments={assignments}
+        onSendNotifications={sendAssignmentNotifications}
       />
     </div>
   );
