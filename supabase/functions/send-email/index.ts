@@ -10,7 +10,7 @@ const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
 
 // Test mode configuration - set to false to disable
 const TEST_MODE = true;
-const TEST_EMAIL = "lucien98@gmail.com";
+const TEST_EMAIL = "delivered@resend.dev";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
