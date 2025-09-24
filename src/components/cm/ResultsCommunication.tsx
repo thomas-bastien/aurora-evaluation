@@ -442,8 +442,8 @@ The Aurora Team`
     }
   };
 
-  // New function for individual email sending
-  const sendIndividualEmail = async (result: StartupResult, communicationType: 'selection' | 'rejection' | 'under-review') => {
+  // Enhanced function for individual email sending with better error handling
+  const sendIndividualEmail = async (result: StartupResult, communicationType: 'selected' | 'rejected' | 'under-review') => {
     try {
       const { data, error } = await supabase.functions.invoke('send-individual-result', {
         body: {
@@ -457,8 +457,22 @@ The Aurora Team`
       });
 
       if (error) {
-        console.error(`Failed to send individual email to ${result.name}:`, error);
-        toast.error(`Failed to send email to ${result.name}`);
+        console.error(`Failed to invoke send-individual-result function for ${result.name}:`, error);
+        toast.error(`Failed to send email to ${result.name}: ${error.message || 'Function invocation failed'}`);
+        return false;
+      }
+
+      // Check if the function returned an error in the data
+      if (data?.error) {
+        console.error(`Edge function returned error for ${result.name}:`, data.error);
+        toast.error(`Failed to send email to ${result.name}: ${data.error}`);
+        return false;
+      }
+
+      // Check if the function was successful
+      if (!data?.success) {
+        console.error(`Edge function did not indicate success for ${result.name}:`, data);
+        toast.error(`Failed to send email to ${result.name}: ${data?.message || 'Unknown error'}`);
         return false;
       }
 
@@ -476,7 +490,7 @@ The Aurora Team`
       return true;
     } catch (error) {
       console.error(`Error sending individual email to ${result.name}:`, error);
-      toast.error(`Error sending email to ${result.name}`);
+      toast.error(`Error sending email to ${result.name}: ${error instanceof Error ? error.message : 'Unknown error'}`);
       return false;
     }
   };

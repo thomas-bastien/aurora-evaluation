@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { Resend } from "npm:resend@2.0.0";
-import { createHash } from "https://deno.land/std@0.190.0/crypto/mod.ts";
+// Using Web Crypto API instead of Deno crypto module
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -17,7 +17,7 @@ interface IndividualResultRequest {
   startupId: string;
   startupName: string;
   recipientEmail: string;
-  communicationType: 'selection' | 'rejection' | 'under-review';
+  communicationType: 'selected' | 'rejected' | 'under-review';
   roundName: string;
   feedbackSummary?: string;
   customMessage?: string;
@@ -39,11 +39,20 @@ const handler = async (req: Request): Promise<Response> => {
       recipientEmail: requestData.recipientEmail
     });
 
+    // Map frontend communication types to internal types
+    const communicationTypeMap = {
+      'selected': 'selection',
+      'rejected': 'rejection',
+      'under-review': 'under-review'
+    };
+    
+    const internalType = communicationTypeMap[requestData.communicationType] || requestData.communicationType;
+
     // Generate email content based on communication type
     let subject: string;
     let body: string;
 
-    switch (requestData.communicationType) {
+    switch (internalType) {
       case 'selection':
         subject = requestData.roundName === 'screening' 
           ? `🎉 Congratulations! ${requestData.startupName} has been selected for the Pitching Round`
@@ -117,7 +126,7 @@ const handler = async (req: Request): Promise<Response> => {
         break;
 
       default:
-        throw new Error(`Invalid communication type: ${requestData.communicationType}`);
+        throw new Error(`Invalid communication type: ${requestData.communicationType} (mapped to: ${internalType})`);
     }
 
     // Add custom message if provided
@@ -126,11 +135,11 @@ const handler = async (req: Request): Promise<Response> => {
         `<h3>Additional Message:</h3><p>${requestData.customMessage}</p><p>Best regards,<br>The Aurora Team</p>`);
     }
 
-    // Generate content hash for duplicate prevention
-    const contentString = `${requestData.recipientEmail}:${subject}:${requestData.roundName}:${requestData.communicationType}`;
+    // Generate content hash for duplicate prevention using Web Crypto API
+    const contentString = `${requestData.recipientEmail}:${subject}:${requestData.roundName}:${internalType}`;
     const encoder = new TextEncoder();
     const data = encoder.encode(contentString);
-    const hashBuffer = await createHash("md5").update(data).digest();
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
     const contentHash = Array.from(new Uint8Array(hashBuffer))
       .map(b => b.toString(16).padStart(2, '0'))
       .join('');
@@ -142,14 +151,14 @@ const handler = async (req: Request): Promise<Response> => {
       .eq('recipient_id', requestData.startupId)
       .eq('recipient_type', 'startup')
       .eq('round_name', requestData.roundName)
-      .eq('communication_type', requestData.communicationType)
+      .eq('communication_type', internalType)
       .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()) // Last 7 days
       .single();
 
     if (existing && !duplicateError) {
       console.log("Duplicate result email prevented:", existing.id);
       return new Response(JSON.stringify({ 
-        message: `${requestData.communicationType} email already sent for this round`,
+        message: `${internalType} email already sent for this round`,
         duplicateId: existing.id 
       }), {
         status: 200,
@@ -168,7 +177,7 @@ const handler = async (req: Request): Promise<Response> => {
         body,
         content_hash: contentHash,
         round_name: requestData.roundName,
-        communication_type: requestData.communicationType,
+        communication_type: internalType,
         status: 'pending',
         metadata: {
           startup_name: requestData.startupName,
@@ -222,7 +231,7 @@ const handler = async (req: Request): Promise<Response> => {
         success: true,
         communicationId: communication.id,
         resendId: emailResponse.data?.id,
-        message: `${requestData.communicationType} email sent successfully to ${requestData.startupName}`
+        message: `${internalType} email sent successfully to ${requestData.startupName}`
       }), {
         status: 200,
         headers: { "Content-Type": "application/json", ...corsHeaders },
