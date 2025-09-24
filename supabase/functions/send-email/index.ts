@@ -142,59 +142,14 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Send email via Resend
     try {
-      const fromAddress = Deno.env.get("RESEND_FROM") || "Aurora Tech Awards <noreply@resend.dev>";
-      
-      // Test mode - redirect all emails to verified test address
-      const testMode = true; // Set to false to disable
-      const actualRecipient = testMode ? "lucien98@gmail.com" : requestData.recipientEmail;
-
-      console.log(testMode ? 
-        `TEST MODE: Redirecting email from ${requestData.recipientEmail} to lucien98@gmail.com` : 
-        `Sending email to ${requestData.recipientEmail}`
-      );
-      
       const emailResponse = await resend.emails.send({
-        from: fromAddress,
-        to: [actualRecipient],
+        from: "Aurora Tech Awards <noreply@resend.dev>",
+        to: [requestData.recipientEmail],
         subject,
         html: body,
       });
 
-      console.log("Resend API response:", emailResponse);
-
-      // Check if Resend returned an error
-      if (emailResponse.error) {
-        console.error("Resend returned error:", emailResponse.error);
-        
-        // Update communication record with error
-        await supabase
-          .from('email_communications')
-          .update({
-            status: 'failed',
-            error_message: emailResponse.error.message || 'Resend API error'
-          })
-          .eq('id', communication.id);
-
-        // Create delivery event for the error
-        await supabase
-          .from('email_delivery_events')
-          .insert({
-            communication_id: communication.id,
-            event_type: 'failed',
-            raw_payload: { resend_error: emailResponse.error }
-          });
-
-        return new Response(JSON.stringify({ 
-          error: "Failed to send email",
-          details: emailResponse.error.message || 'Resend API error'
-        }), {
-          status: 500,
-          headers: { "Content-Type": "application/json", ...corsHeaders },
-        });
-      }
-
-      // Email sent successfully
-      console.log("Email sent successfully via Resend:", emailResponse.data);
+      console.log("Email sent successfully via Resend:", emailResponse);
 
       // Update communication record with Resend ID and status
       await supabase
@@ -227,7 +182,7 @@ const handler = async (req: Request): Promise<Response> => {
       });
 
     } catch (resendError) {
-      console.error("Resend API exception:", resendError);
+      console.error("Resend API error:", resendError);
       
       // Update communication record with error
       await supabase
