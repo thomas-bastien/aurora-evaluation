@@ -121,6 +121,7 @@ export const JurorProgressMonitoring = ({ currentRound }: JurorProgressMonitorin
           opened_at,
           bounced_at,
           created_at,
+          metadata,
           email_delivery_events(event_type, timestamp)
         `)
         .eq('recipient_type', 'juror')
@@ -205,9 +206,16 @@ export const JurorProgressMonitoring = ({ currentRound }: JurorProgressMonitorin
           completedRounds: []
         };
 
-        // Calculate reminder status and throttling
-        const jurorReminders = reminderCommunications?.filter(r => r.recipient_id === juror.id) || [];
-        const lastReminder = jurorReminders[0]; // Most recent
+        // Calculate reminder status and throttling - filter by current round
+        const currentRoundName = currentRound === 'screeningRound' ? 'Screening' : 'Pitching';
+        const jurorReminders = reminderCommunications?.filter(r => {
+          if (r.recipient_id !== juror.id) return false;
+          // Filter by round name in metadata
+          const metadata = r.metadata as any;
+          const reminderRoundName = metadata?.variables?.round_name;
+          return reminderRoundName === currentRoundName;
+        }) || [];
+        const lastReminder = jurorReminders[0]; // Most recent for this round
         
         const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
         const canSendReminder = !lastReminder || new Date(lastReminder.created_at) < sevenDaysAgo;
