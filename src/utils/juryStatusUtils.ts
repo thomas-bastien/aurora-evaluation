@@ -423,7 +423,7 @@ export async function calculateMultipleProgressiveJurorStatuses(
     // Get all screening assignments
     const { data: screeningAssignments, error: screeningError } = await supabase
       .from('screening_assignments')
-      .select('juror_id')
+      .select('juror_id, startup_id')
       .in('juror_id', jurorIds);
 
     if (screeningError) throw screeningError;
@@ -431,7 +431,7 @@ export async function calculateMultipleProgressiveJurorStatuses(
     // Get all pitching assignments
     const { data: pitchingAssignments, error: pitchingError } = await supabase
       .from('pitching_assignments')
-      .select('juror_id')
+      .select('juror_id, startup_id')
       .in('juror_id', jurorIds);
 
     if (pitchingError) throw pitchingError;
@@ -447,11 +447,11 @@ export async function calculateMultipleProgressiveJurorStatuses(
       const [screeningEvalData, pitchingEvalData] = await Promise.all([
         supabase
           .from('screening_evaluations')
-          .select('evaluator_id, status')
+          .select('evaluator_id, startup_id, status')
           .in('evaluator_id', userIds),
         supabase
           .from('pitching_evaluations')
-          .select('evaluator_id, status')
+          .select('evaluator_id, startup_id, status')
           .in('evaluator_id', userIds)
       ]);
 
@@ -504,7 +504,12 @@ export async function calculateMultipleProgressiveJurorStatuses(
       let screeningInProgress = 0;
       
       if (juror.user_id && screeningAssigned > 0) {
-        const screeningEvals = screeningEvaluations.filter(e => e.evaluator_id === juror.user_id);
+        // Get startup IDs for this juror's screening assignments
+        const assignedStartupIds = screeningAssignments?.filter(a => a.juror_id === juror.id).map(a => a.startup_id) || [];
+        // Only count evaluations for assigned startups
+        const screeningEvals = screeningEvaluations.filter(e => 
+          e.evaluator_id === juror.user_id && assignedStartupIds.includes(e.startup_id)
+        );
         screeningCompleted = screeningEvals.filter(e => e.status === 'submitted').length;
         screeningInProgress = screeningEvals.filter(e => e.status === 'draft').length;
       }
@@ -519,7 +524,12 @@ export async function calculateMultipleProgressiveJurorStatuses(
       let pitchingInProgress = 0;
       
       if (juror.user_id && pitchingAssigned > 0) {
-        const pitchingEvals = pitchingEvaluations.filter(e => e.evaluator_id === juror.user_id);
+        // Get startup IDs for this juror's pitching assignments
+        const assignedStartupIds = pitchingAssignments?.filter(a => a.juror_id === juror.id).map(a => a.startup_id) || [];
+        // Only count evaluations for assigned startups
+        const pitchingEvals = pitchingEvaluations.filter(e => 
+          e.evaluator_id === juror.user_id && assignedStartupIds.includes(e.startup_id)
+        );
         pitchingCompleted = pitchingEvals.filter(e => e.status === 'submitted').length;
         pitchingInProgress = pitchingEvals.filter(e => e.status === 'draft').length;
       }
