@@ -8,6 +8,10 @@ const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
 
+// Test mode configuration - set to false to disable
+const TEST_MODE = true;
+const TEST_EMAIL = "lucien98@gmail.com";
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -142,9 +146,16 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Send email via Resend
     try {
+      // Determine actual recipient (redirect in test mode)
+      const actualRecipient = TEST_MODE ? TEST_EMAIL : requestData.recipientEmail;
+
+      if (TEST_MODE) {
+        console.log(`🧪 TEST MODE: Redirecting email from ${requestData.recipientEmail} to ${TEST_EMAIL}`);
+      }
+
       const emailResponse = await resend.emails.send({
         from: "Aurora Tech Awards <noreply@resend.dev>",
-        to: [requestData.recipientEmail],
+        to: [actualRecipient],
         subject,
         html: body,
       });
