@@ -20,6 +20,8 @@ import {
   MessageSquare
 } from "lucide-react";
 import { toast } from "sonner";
+import { StartupCommunicationConfirmationModal } from './StartupCommunicationConfirmationModal';
+import { validateStartupCommunications, type CommunicationValidationResult } from '@/utils/startupCommunicationValidation';
 
 interface StartupResult {
   id: string;
@@ -54,6 +56,10 @@ export const ResultsCommunication = ({ currentRound }: ResultsCommunicationProps
   const [showFeedbackDialog, setShowFeedbackDialog] = useState(false);
   const [showSendDialog, setShowSendDialog] = useState(false);
   const [sendingEmails, setSendingEmails] = useState(false);
+  const [showConfirmationModal, setShowConfirmationModal] = useState(false);
+  const [pendingCommunicationType, setPendingCommunicationType] = useState<'selected' | 'rejected' | 'under-review' | null>(null);
+  const [validationResult, setValidationResult] = useState<CommunicationValidationResult | null>(null);
+  const [validatingEmails, setValidatingEmails] = useState(false);
   
 
   useEffect(() => {
@@ -336,9 +342,11 @@ The Aurora Team`
     toast.success('Feedback approved');
   };
 
-  const sendCommunications = async (type: 'selected' | 'rejected' | 'under-review' | 'all') => {
-    setSendingEmails(true);
+  // Enhanced communication sending with validation
+  const initiateCommunications = async (type: 'selected' | 'rejected' | 'under-review') => {
+    setValidatingEmails(true);
     try {
+      // Filter startups based on type
       let targetResults = startupResults;
       
       if (type === 'selected') {
@@ -349,53 +357,83 @@ The Aurora Team`
         targetResults = startupResults.filter(r => r.roundStatus === 'under-review' || r.roundStatus === 'pending');
       }
 
-      // Send individual result emails via new edge function
+      // Run validation
+      const validation = await validateStartupCommunications(targetResults, type, currentRound);
+      
+      setValidationResult(validation);
+      setPendingCommunicationType(type);
+      setShowSendDialog(false);
+      setShowConfirmationModal(true);
+      
+    } catch (error) {
+      console.error('Error validating communications:', error);
+      toast.error('Failed to validate communications');
+    } finally {
+      setValidatingEmails(false);
+    }
+  };
+
+  const sendCommunications = async () => {
+    if (!validationResult || !pendingCommunicationType) return;
+    
+    setSendingEmails(true);
+    try {
+      // Only send to validated startups
+      const validStartups = validationResult.validationResults.filter(r => r.isValid);
+      
       let successCount = 0;
-      for (const result of targetResults) {
+      for (const validatedStartup of validStartups) {
+        // Find the original startup data
+        const startup = startupResults.find(s => s.id === validatedStartup.id);
+        if (!startup) continue;
+        
         try {
-          const communicationType = result.isSelected ? 'selection' : 
-                                    result.roundStatus === 'rejected' ? 'rejection' : 'under-review';
-          
           const { data, error } = await supabase.functions.invoke('send-individual-result', {
             body: {
-              startupId: result.id,
-              startupName: result.name,
-              recipientEmail: result.email,
-              communicationType,
+              startupId: startup.id,
+              startupName: startup.name,
+              recipientEmail: startup.email,
+              communicationType: pendingCommunicationType,
               roundName: currentRound === 'screeningRound' ? 'screening' : 'pitching',
-              feedbackSummary: result.feedbackSummary
+              feedbackSummary: startup.feedbackSummary
             }
           });
 
           if (error) {
-            console.error(`Failed to send email to ${result.name}:`, error);
-            toast.error(`Failed to send email to ${result.name}`);
+            console.error(`Failed to send email to ${startup.name}:`, error);
+            toast.error(`Failed to send email to ${startup.name}`);
             continue;
           }
 
-          console.log(`Email sent successfully to ${result.name}:`, data);
+          console.log(`Email sent successfully to ${startup.name}:`, data);
           successCount++;
           
           // Update status
           setStartupResults(prev => prev.map(r =>
-            r.id === result.id
+            r.id === startup.id
               ? { ...r, feedbackStatus: 'sent', communicationSent: true }
               : r
           ));
         } catch (emailError) {
-          console.error(`Error sending email to ${result.name}:`, emailError);
-          toast.error(`Error sending email to ${result.name}`);
+          console.error(`Error sending email to ${startup.name}:`, emailError);
+          toast.error(`Error sending email to ${startup.name}`);
         }
       }
 
+      const skippedCount = validationResult.validationSummary.willSkip;
+      
       if (successCount > 0) {
-        toast.success(`Successfully sent ${successCount} emails`);
-        
-        // Refresh analytics if needed
-        // await fetchCommunicationAnalytics();
+        toast.success(
+          `Successfully sent ${successCount} emails` + 
+          (skippedCount > 0 ? `. ${skippedCount} startups were skipped due to validation issues.` : '')
+        );
       }
       
-      setShowSendDialog(false);
+      // Reset states
+      setShowConfirmationModal(false);
+      setPendingCommunicationType(null);
+      setValidationResult(null);
+      
     } catch (error) {
       console.error('Error sending communications:', error);
       toast.error('Failed to send communications');
@@ -562,26 +600,26 @@ The Aurora Team`
               <div className="space-y-4">
                 <Button 
                   className="w-full" 
-                  onClick={() => sendCommunications('selected')}
-                  disabled={sendingEmails}
+                  onClick={() => initiateCommunications('selected')}
+                  disabled={sendingEmails || validatingEmails}
                 >
-                  {sendingEmails ? 'Sending...' : `Send to Selected Startups (${selectedStartups.length})`}
+                  {validatingEmails ? 'Validating...' : `Send to Selected Startups (${selectedStartups.length})`}
                 </Button>
                 <Button 
                   className="w-full" 
                   variant="outline"
-                  onClick={() => sendCommunications('rejected')}
-                  disabled={sendingEmails}
+                  onClick={() => initiateCommunications('rejected')}
+                  disabled={sendingEmails || validatingEmails}
                 >
-                  {sendingEmails ? 'Sending...' : `Send to Rejected Startups (${notSelectedStartups.length})`}
+                  {validatingEmails ? 'Validating...' : `Send to Rejected Startups (${notSelectedStartups.length})`}
                 </Button>
                 <Button 
                   className="w-full" 
                   variant="secondary"
-                  onClick={() => sendCommunications('under-review')}
-                  disabled={sendingEmails}
+                  onClick={() => initiateCommunications('under-review')}
+                  disabled={sendingEmails || validatingEmails}
                 >
-                  {sendingEmails ? 'Sending...' : `Send to Under Review Startups (${underReviewStartups.length})`}
+                  {validatingEmails ? 'Validating...' : `Send to Under Review Startups (${underReviewStartups.length})`}
                 </Button>
                 
                 {currentRound === 'screeningRound' && (
@@ -801,6 +839,24 @@ The Aurora Team`
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Enhanced Confirmation Modal */}
+        <StartupCommunicationConfirmationModal
+          open={showConfirmationModal}
+          onOpenChange={setShowConfirmationModal}
+          communicationType={pendingCommunicationType}
+          currentRound={currentRound}
+          validationResults={validationResult?.validationResults || []}
+          validationSummary={validationResult?.validationSummary || {
+            totalStartups: 0,
+            validStartups: 0,
+            willSend: 0,
+            willSkip: 0,
+            skipReasons: {}
+          }}
+          onConfirm={sendCommunications}
+          isLoading={sendingEmails}
+        />
       </CardContent>
     </Card>
   );
