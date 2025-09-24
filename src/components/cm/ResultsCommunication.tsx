@@ -517,6 +517,50 @@ The Aurora Team`
     }
   };
 
+  // Test sandbox mode functionality
+  const testSandboxMode = async () => {
+    if (startupResults.length === 0) {
+      toast.error('No startups available for testing');
+      return;
+    }
+
+    const testStartup = startupResults[0];
+    toast.info('Testing sandbox mode with first startup...');
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('send-individual-result', {
+        body: {
+          startupId: testStartup.id,
+          startupName: testStartup.name,
+          recipientEmail: testStartup.email,
+          communicationType: 'selected' as const,
+          roundName: currentRound === 'screeningRound' ? 'screening' : 'pitching',
+          feedbackSummary: testStartup.feedbackSummary || 'Test feedback summary',
+          bypassDuplicateCheck: true
+        }
+      });
+
+      if (error) {
+        console.error('Sandbox test failed:', error);
+        toast.error('Sandbox test failed - check edge function logs');
+        return;
+      }
+
+      if (data?.success) {
+        toast.success(`✅ Sandbox test successful! Email routed to: ${data.actualRecipient}`);
+        console.log('Sandbox test result:', data);
+      } else if (data?.duplicateId) {
+        toast.info('✅ Sandbox routing working - duplicate prevention activated');
+      } else {
+        console.warn('Unexpected sandbox test response:', data);
+        toast.warning('Unexpected response - check console and edge function logs');
+      }
+    } catch (testError) {
+      console.error('Sandbox test error:', testError);
+      toast.error('Sandbox test error - check console');
+    }
+  };
+
   // New function to handle round transition workflow
   const initiateRoundTransition = async () => {
     try {
@@ -619,13 +663,24 @@ The Aurora Team`
               Review feedback summaries and send {currentRound === 'screeningRound' ? 'evaluation' : 'pitch'} results to startups and jurors
             </CardDescription>
           </div>
-          <Dialog open={showSendDialog} onOpenChange={setShowSendDialog}>
-            <DialogTrigger asChild>
-              <Button>
-                <Send className="w-4 h-4 mr-2" />
-                Send Communications
-              </Button>
-            </DialogTrigger>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => testSandboxMode()}
+              className="flex items-center gap-2"
+              disabled={sendingEmails}
+            >
+              <Mail className="w-4 h-4" />
+              Test Sandbox Mode
+            </Button>
+            
+            <Dialog open={showSendDialog} onOpenChange={setShowSendDialog}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Send className="w-4 h-4 mr-2" />
+                  Send Communications
+                </Button>
+              </DialogTrigger>
             <DialogContent className="max-w-md">
               <DialogHeader>
                 <DialogTitle>Send Communications</DialogTitle>

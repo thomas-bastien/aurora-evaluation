@@ -32,12 +32,18 @@ const handler = async (req: Request): Promise<Response> => {
 
   try {
     const requestData: IndividualResultRequest = await req.json();
+    
+    // Get test mode status first and log prominently
+    const testMode = Deno.env.get("TEST_MODE") === "true";
+    console.log(`🔧 TEST_MODE environment variable: "${Deno.env.get('TEST_MODE')}" -> testMode: ${testMode}`);
+    
     console.log("Processing individual result email:", {
       startupId: requestData.startupId,
       startupName: requestData.startupName,
       communicationType: requestData.communicationType,
       roundName: requestData.roundName,
-      recipientEmail: requestData.recipientEmail
+      recipientEmail: requestData.recipientEmail,
+      testMode: testMode
     });
 
     // Map frontend communication types to internal types
@@ -152,7 +158,10 @@ const handler = async (req: Request): Promise<Response> => {
       actualRecipient = sandboxEmails[internalType] || 'delivered@resend.dev';
       isTestEmail = true;
       
-      console.log(`🧪 SANDBOX MODE: Routing email from ${requestData.recipientEmail} to ${actualRecipient}`);
+      console.log(`🧪 SANDBOX MODE ACTIVE: Routing email from ${requestData.recipientEmail} to ${actualRecipient}`);
+      console.log(`📍 Email destination: ${actualRecipient} (type: ${internalType})`);
+    } else {
+      console.log(`📧 PRODUCTION MODE: Sending to actual recipient: ${actualRecipient}`);
     }
 
     // Generate content hash for duplicate prevention using Web Crypto API
@@ -174,9 +183,17 @@ const handler = async (req: Request): Promise<Response> => {
         .eq('round_name', requestData.roundName)
         .eq('communication_type', internalType)
         .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()) // Last 7 days
-        .single();
+        .maybeSingle();
 
-      if (existing && !duplicateError) {
+      if (duplicateError) {
+        console.error("Error checking for duplicates:", duplicateError);
+        return new Response(JSON.stringify({ error: "Failed to check duplicates" }), {
+          status: 500,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        });
+      }
+
+      if (existing) {
         console.log("Duplicate result email prevented:", existing.id);
         return new Response(JSON.stringify({ 
           message: `${internalType} email already sent for this round`,

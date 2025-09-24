@@ -60,7 +60,7 @@ export const validateStartupCommunications = async (
   
   const roundName = currentRound === 'screeningRound' ? 'screening' : 'pitching';
   const validationResults: StartupValidationResult[] = [];
-  const skipReasons: Record<string, number> = {};
+  const skipReasonsSummary: Record<string, number> = {};
 
   // Get round-specific statuses for all startups
   const startupIds = startups.map(s => s.id);
@@ -114,7 +114,7 @@ export const validateStartupCommunications = async (
       skipReasons.push('not in round');
     }
 
-    // 2. Check if startup status matches communication type
+    // 2. Check if startup status matches communication type  
     let expectedStatus: string;
     switch (communicationType) {
       case 'selected':
@@ -180,9 +180,9 @@ export const validateStartupCommunications = async (
       communicationType
     });
 
-    // Count skip reasons
+    // Count skip reasons for summary
     skipReasons.forEach(reason => {
-      skipReasons[reason] = (skipReasons[reason] || 0) + 1;
+      skipReasonsSummary[reason] = (skipReasonsSummary[reason] || 0) + 1;
     });
   }
 
@@ -195,7 +195,7 @@ export const validateStartupCommunications = async (
     validStartups: validStartups.length,
     willSend: validStartups.length,
     willSkip: invalidStartups.length,
-    skipReasons
+    skipReasons: skipReasonsSummary
   };
 
   return {
