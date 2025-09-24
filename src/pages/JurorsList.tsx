@@ -298,22 +298,25 @@ export default function JurorsList() {
           
           if (emailResponse.error) {
             console.error('Failed to send invitation email:', emailResponse.error);
+            console.error('Email response data:', emailResponse.data);
             toast({
               title: "Juror added",
-              description: "The juror has been added, but the invitation email failed to send.",
+              description: `The juror has been added, but the invitation email failed to send. Error: ${emailResponse.error.message || 'Unknown error'}`,
               variant: "destructive"
             });
           } else {
+            console.log('Invitation email sent successfully:', emailResponse.data);
             toast({
               title: "Juror added & invited",
               description: "The juror has been successfully added and an invitation email has been sent.",
             });
           }
-        } catch (emailError) {
+        } catch (emailError: any) {
           console.error('Error sending invitation email:', emailError);
+          console.error('Email error details:', emailError?.message, emailError?.stack);
           toast({
             title: "Juror added",
-            description: "The juror has been added, but the invitation email failed to send.",
+            description: `The juror has been added, but the invitation email failed to send. Error: ${emailError?.message || 'Network error'}`,
             variant: "destructive"
           });
         }
