@@ -313,10 +313,7 @@ const handler = async (req: Request): Promise<Response> => {
         testMode: isTestEmail,
         actualRecipient: actualRecipient,
         isDuplicate: isDuplicate,
-        duplicateInfo: isDuplicate ? { 
-          previousSentAt: existing?.created_at,
-          message: `This email was previously sent on ${new Date(existing?.created_at).toLocaleDateString()}`
-        } : null
+        duplicateInfo: null // Simplified since we're not tracking duplicates in test mode
       }), {
         status: 200,
         headers: { "Content-Type": "application/json", ...corsHeaders },

@@ -75,7 +75,7 @@ const handler = async (req: Request): Promise<Response> => {
       template = templateLocal;
       subject = templateLocal.subject_template;
       body = templateLocal.body_template;
-    
+    }
 
     // Apply variable substitution
     if (requestData.variables && Object.keys(requestData.variables).length > 0) {
