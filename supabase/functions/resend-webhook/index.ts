@@ -72,7 +72,7 @@ const handler = async (req: Request): Promise<Response> => {
     // Find the communication record by Resend email ID
     const { data: communication, error: commError } = await supabase
       .from('email_communications')
-      .select('id, status')
+      .select('id, status, opened_at')
       .eq('resend_email_id', event.data.email_id)
       .single();
 

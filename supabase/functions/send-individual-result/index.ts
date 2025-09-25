@@ -163,35 +163,31 @@ const handler = async (req: Request): Promise<Response> => {
       .map(b => b.toString(16).padStart(2, '0'))
       .join('');
 
-    // Check for duplicates - prevent sending same type of result email for same round
-    const { data: existing, error: duplicateError } = await supabase
-      .from('email_communications')
-      .select('id, created_at')
-      .eq('recipient_id', requestData.startupId)
-      .eq('recipient_type', 'startup')
-      .eq('round_name', requestData.roundName)
-      .eq('communication_type', internalType)
-      .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()) // Last 7 days
-      .single();
-
-    // In test mode, allow duplicates but track them for gentle reminder
+    // Check for duplicates - prevent sending same type of result email for same round (skipped in test mode)
     let isDuplicate = false;
-    if (existing && !duplicateError) {
-      isDuplicate = true;
-      console.log("Duplicate result email detected:", existing.id);
-      
-      // In production mode, prevent duplicates
-      if (!testMode) {
-        console.log("Duplicate result email prevented (production mode):", existing.id);
+    let existing: { id: string; created_at: string } | null = null;
+    if (!testMode) {
+      const { data: existingRecord, error: duplicateError } = await supabase
+        .from('email_communications')
+        .select('id, created_at')
+        .eq('recipient_id', requestData.startupId)
+        .eq('recipient_type', 'startup')
+        .eq('round_name', requestData.roundName)
+        .eq('communication_type', internalType)
+        .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
+        .maybeSingle();
+      if (existingRecord && !duplicateError) {
+        isDuplicate = true;
+        existing = existingRecord;
+        console.log("Duplicate result email detected:", existingRecord.id);
+        console.log("Duplicate result email prevented (production mode):", existingRecord.id);
         return new Response(JSON.stringify({ 
           message: `${internalType} email already sent for this round`,
-          duplicateId: existing.id 
+          duplicateId: existingRecord.id 
         }), {
           status: 200,
           headers: { "Content-Type": "application/json", ...corsHeaders },
         });
-      } else {
-        console.log("🧪 SANDBOX MODE: Allowing duplicate email for testing purposes");
       }
     }
 
@@ -326,21 +322,21 @@ const handler = async (req: Request): Promise<Response> => {
         headers: { "Content-Type": "application/json", ...corsHeaders },
       });
 
-    } catch (resendError) {
+    } catch (resendError: any) {
       console.error("Resend API exception:", resendError);
-      
+      const errMsg = (resendError && resendError.message) ? resendError.message : 'Unknown Resend error';
       // Update communication record with error
       await supabase
         .from('email_communications')
         .update({
           status: 'failed',
-          error_message: resendError.message || 'Unknown Resend error'
+          error_message: errMsg
         })
         .eq('id', communication.id);
 
       return new Response(JSON.stringify({ 
         error: "Failed to send result email",
-        details: resendError.message 
+        details: errMsg
       }), {
         status: 500,
         headers: { "Content-Type": "application/json", ...corsHeaders },

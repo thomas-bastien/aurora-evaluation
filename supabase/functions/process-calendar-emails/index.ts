@@ -128,7 +128,7 @@ const handler = async (req: Request): Promise<Response> => {
       ...ccList,
       ...calAttendees
     ]
-      .filter((e): e is string => typeof e === 'string' && e)
+      .filter((e): e is string => typeof e === 'string' && Boolean(e))
       .map(e => e.toLowerCase().trim());
 
     // Find matching startup and juror

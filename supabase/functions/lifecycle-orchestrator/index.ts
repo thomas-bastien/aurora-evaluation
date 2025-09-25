@@ -67,10 +67,10 @@ const handler = async (req: Request): Promise<Response> => {
       }
     );
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error in lifecycle-orchestrator:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: error?.message || 'Internal error' }),
       { 
         status: 500, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
@@ -96,19 +96,19 @@ async function triggerCommunication(participantId: string, participantType: stri
     return;
   }
 
-  if (!participant[emailField]) {
+  if (!(participant as any)[emailField]) {
     console.error(`No email found for ${participantType} ${participantId}`);
     return;
   }
 
   // Prepare variables for template substitution
   const variables = {
-    participant_name: participant[nameField],
-    participant_email: participant[emailField],
+    participant_name: (participant as any)[nameField],
+    participant_email: (participant as any)[emailField],
     ...eventData
   };
 
-  console.log(`Triggering communication: ${template.name} to ${participant[emailField]}`);
+  console.log(`Triggering communication: ${template.name} to ${(participant as any)[emailField]}`);
 
   // Call send-email function
   const { error: emailError } = await supabase.functions.invoke('send-email', {
@@ -116,7 +116,7 @@ async function triggerCommunication(participantId: string, participantType: stri
       templateId: template.id,
       recipientId: participantId,
       recipientType: participantType,
-      recipientEmail: participant[emailField],
+      recipientEmail: (participant as any)[emailField],
       variables
     }
   });
@@ -150,7 +150,7 @@ function getNextLifecycleStage(currentStage: string, eventType: string): string 
     }
   };
 
-  return stageTransitions[currentStage]?.[eventType] || null;
+  return (stageTransitions as any)[currentStage]?.[eventType] || null;
 }
 
 async function advanceParticipantStage(participantId: string, participantType: string, newStage: string, metadata: any = {}) {

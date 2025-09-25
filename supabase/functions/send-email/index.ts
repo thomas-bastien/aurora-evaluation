@@ -71,10 +71,11 @@ const handler = async (req: Request): Promise<Response> => {
         });
       }
 
-      template = templateData;
-      subject = template.subject_template;
-      body = template.body_template;
-    }
+      const templateLocal = templateData as EmailTemplate;
+      template = templateLocal;
+      subject = templateLocal.subject_template;
+      body = templateLocal.body_template;
+    
 
     // Apply variable substitution
     if (requestData.variables && Object.keys(requestData.variables).length > 0) {
@@ -94,29 +95,24 @@ const handler = async (req: Request): Promise<Response> => {
       .map(b => b.toString(16).padStart(2, '0'))
       .join('');
 
-    // Check for duplicates if enabled (skip in TEST_MODE)
-    if (requestData.preventDuplicates !== false) {
+    // Check for duplicates if enabled (disabled in TEST_MODE)
+    if (requestData.preventDuplicates !== false && !TEST_MODE) {
       const { data: existing, error: duplicateError } = await supabase
         .from('email_communications')
         .select('id, created_at')
         .eq('content_hash', contentHash)
         .eq('recipient_email', requestData.recipientEmail)
-        .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()) // Last 24 hours
-        .single();
-
+        .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
+        .maybeSingle();
       if (existing && !duplicateError) {
-        if (TEST_MODE) {
-          console.log("🧪 SANDBOX MODE: Duplicate detected but allowing for testing:", existing.id);
-        } else {
-          console.log("Duplicate email prevented:", existing.id);
-          return new Response(JSON.stringify({ 
-            message: "Email not sent - duplicate detected",
-            duplicateId: existing.id 
-          }), {
-            status: 200,
-            headers: { "Content-Type": "application/json", ...corsHeaders },
-          });
-        }
+        console.log("Duplicate email prevented:", existing.id);
+        return new Response(JSON.stringify({
+          message: "Email not sent - duplicate detected",
+          duplicateId: existing.id
+        }), {
+          status: 200,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        });
       }
     }
 
@@ -201,21 +197,22 @@ const handler = async (req: Request): Promise<Response> => {
         headers: { "Content-Type": "application/json", ...corsHeaders },
       });
 
-    } catch (resendError) {
+    } catch (resendError: any) {
       console.error("Resend API error:", resendError);
+      const errMsg = (resendError && resendError.message) ? resendError.message : 'Unknown Resend error';
       
       // Update communication record with error
       await supabase
         .from('email_communications')
         .update({
           status: 'failed',
-          error_message: resendError.message || 'Unknown Resend error'
+          error_message: errMsg
         })
         .eq('id', communication.id);
 
       return new Response(JSON.stringify({ 
         error: "Failed to send email",
-        details: resendError.message 
+        details: errMsg
       }), {
         status: 500,
         headers: { "Content-Type": "application/json", ...corsHeaders },
