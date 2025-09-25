@@ -108,7 +108,7 @@ const handler = async (req: Request): Promise<Response> => {
       founder_name: requestData.startupName, // Using startup name as founder name for now
       startup_name: requestData.startupName,
       round_name: requestData.roundName,
-      feedback: requestData.feedbackSummary || 'No specific feedback provided',
+      feedback_summary: requestData.feedbackSummary || 'No specific feedback provided',
       custom_message: requestData.customMessage || ''
     };
 
@@ -401,7 +401,7 @@ const getDefaultContentByCategory = (category?: string) => {
           <div style="background: #f1f5f9; padding: 20px; border-radius: 8px; margin: 24px 0; border-left: 4px solid #667eea;">
             <h3 style="color: #334155; margin-top: 0; font-size: 18px;">Feedback from Our Panel</h3>
             <div style="color: #475569; font-style: italic;">
-              {{feedback}}
+              {{feedback_summary}}
             </div>
           </div>
           
