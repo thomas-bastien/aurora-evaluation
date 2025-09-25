@@ -1,11 +1,12 @@
 import { CommunicationLifecycleTimeline } from "@/components/cm/CommunicationLifecycleTimeline";
-import { CommunicationTemplateManager } from "@/components/communication/CommunicationTemplateManager";
 import { EmailAnalyticsCard } from "@/components/dashboard/EmailAnalyticsCard";
+import { EmailOverview } from "@/components/communication/EmailOverview";
+import { EmailTemplateTable } from "@/components/communication/EmailTemplateTable";
+import { EmailCommunicationsTable } from "@/components/communication/EmailCommunicationsTable";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import RoleGuard from "@/components/RoleGuard";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
-import { Mail, BarChart3, Settings } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Mail, BarChart3, Settings, MessageSquare, Activity } from "lucide-react";
 
 export default function EmailManagementPage() {
   return (
@@ -21,42 +22,50 @@ export default function EmailManagementPage() {
                 Email Management Hub
               </h1>
               <p className="text-lg text-muted-foreground">
-                Central dashboard for email communications, analytics, and template management
+                Comprehensive email communication management, templates, and analytics
               </p>
             </div>
 
-            <Separator />
+            {/* Tabbed Interface */}
+            <Tabs defaultValue="overview" className="w-full">
+              <TabsList className="grid w-full grid-cols-4">
+                <TabsTrigger value="overview" className="flex items-center gap-2">
+                  <BarChart3 className="h-4 w-4" />
+                  Overview
+                </TabsTrigger>
+                <TabsTrigger value="templates" className="flex items-center gap-2">
+                  <MessageSquare className="h-4 w-4" />
+                  Templates
+                </TabsTrigger>
+                <TabsTrigger value="communications" className="flex items-center gap-2">
+                  <Mail className="h-4 w-4" />
+                  Communications
+                </TabsTrigger>
+                <TabsTrigger value="analytics" className="flex items-center gap-2">
+                  <Activity className="h-4 w-4" />
+                  Timeline
+                </TabsTrigger>
+              </TabsList>
 
-            {/* Analytics Section */}
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <BarChart3 className="h-5 w-5" />
-                <h2 className="text-xl font-semibold">Performance Analytics</h2>
-              </div>
-              <EmailAnalyticsCard />
-            </div>
+              <TabsContent value="overview" className="space-y-6">
+                <EmailOverview />
+              </TabsContent>
 
-            <Separator />
+              <TabsContent value="templates" className="space-y-6">
+                <EmailTemplateTable />
+              </TabsContent>
 
-            {/* Template Management Section */}
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <Settings className="h-5 w-5" />
-                <h2 className="text-xl font-semibold">Template Management</h2>
-              </div>
-              <CommunicationTemplateManager currentRound="screeningRound" />
-            </div>
+              <TabsContent value="communications" className="space-y-6">
+                <EmailCommunicationsTable />
+              </TabsContent>
 
-            <Separator />
-
-            {/* Communication Timeline Section */}
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <Mail className="h-5 w-5" />
-                <h2 className="text-xl font-semibold">Communication Timeline</h2>
-              </div>
-              <CommunicationLifecycleTimeline />
-            </div>
+              <TabsContent value="analytics" className="space-y-6">
+                <div className="grid gap-6">
+                  <EmailAnalyticsCard />
+                  <CommunicationLifecycleTimeline />
+                </div>
+              </TabsContent>
+            </Tabs>
           </div>
         </div>
       </div>
