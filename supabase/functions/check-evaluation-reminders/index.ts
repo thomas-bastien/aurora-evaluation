@@ -86,21 +86,27 @@ const handler = async (req: Request): Promise<Response> => {
       // Skip if juror is already 100% complete
       if (completionRate >= 100) continue;
 
-      // Check for recent reminders (7-day throttling)
-      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
-      const { data: recentReminder, error: reminderError } = await supabase
-        .from('email_communications')
-        .select('id')
-        .eq('recipient_type', 'juror')
-        .eq('recipient_id', juror.id)
-        .or('subject.ilike.%reminder%,subject.ilike.%evaluation%')
-        .gte('created_at', sevenDaysAgo)
-        .limit(1);
+      // Check for recent reminders (7-day throttling) - skip in TEST_MODE
+      const TEST_MODE = Deno.env.get("TEST_MODE") === "true";
+      
+      if (!TEST_MODE) {
+        const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+        const { data: recentReminder, error: reminderError } = await supabase
+          .from('email_communications')
+          .select('id')
+          .eq('recipient_type', 'juror')
+          .eq('recipient_id', juror.id)
+          .or('subject.ilike.%reminder%,subject.ilike.%evaluation%')
+          .gte('created_at', sevenDaysAgo)
+          .limit(1);
 
-      // Skip if reminder sent within last 7 days
-      if (recentReminder && recentReminder.length > 0) {
-        console.log(`Skipping ${juror.name} - reminder sent within last 7 days`);
-        continue;
+        // Skip if reminder sent within last 7 days
+        if (recentReminder && recentReminder.length > 0) {
+          console.log(`Skipping ${juror.name} - reminder sent within last 7 days`);
+          continue;
+        }
+      } else {
+        console.log(`🧪 SANDBOX MODE: Skipping throttling for ${juror.name}`);
       }
 
       eligibleJurors.push({
@@ -116,6 +122,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     let sentCount = 0;
     const frontendUrl = Deno.env.get('FRONTEND_URL') || 'https://fadxytngwiporjqchsem.supabase.co';
+    const TEST_MODE = Deno.env.get("TEST_MODE") === "true";
 
     // Send reminders to eligible jurors
     for (const juror of eligibleJurors) {
@@ -133,7 +140,7 @@ const handler = async (req: Request): Promise<Response> => {
               pending_count: juror.pendingCount,
               login_link: frontendUrl
             },
-            preventDuplicates: true
+            preventDuplicates: !TEST_MODE // Disable duplicate prevention in TEST_MODE
           }
         });
 

@@ -4,6 +4,23 @@ import { Resend } from "https://esm.sh/resend@4.0.0";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
+// Test mode configuration from environment
+const TEST_MODE = Deno.env.get("TEST_MODE") === "true";
+const TEST_EMAIL = "delivered@resend.dev";
+
+// Get appropriate "From" address based on mode
+const getFromAddress = (): string => {
+  if (TEST_MODE) {
+    return Deno.env.get("RESEND_FROM_SANDBOX") || "Aurora Evaluation <onboarding@resend.dev>";
+  }
+  const prodFrom = Deno.env.get("RESEND_FROM");
+  if (!prodFrom) {
+    console.error("RESEND_FROM not configured for production mode");
+    throw new Error("RESEND_FROM must be set for production email sending");
+  }
+  return prodFrom;
+};
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -29,7 +46,16 @@ const handler = async (req: Request): Promise<Response> => {
   try {
     const { jurorId, name, email, fromRound, toRound, evaluationCount }: JurorTransitionRequest = await req.json();
     
+    // Determine recipient based on test mode
+    const actualRecipient = TEST_MODE ? TEST_EMAIL : email;
+    const fromAddress = getFromAddress();
+    
+    console.log(`📧 EMAIL CONFIG: TEST_MODE=${TEST_MODE}, From=${fromAddress}, Original recipient=${email}, Actual recipient=${actualRecipient}`);
     console.log(`Sending round transition notification to: ${name} (${email}), from ${fromRound} to ${toRound}`);
+    
+    if (TEST_MODE) {
+      console.log(`🧪 SANDBOX MODE: Redirecting email from ${email} to ${TEST_EMAIL}`);
+    }
 
     // Initialize Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -98,10 +124,15 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Send email using Resend
     const emailResponse = await resend.emails.send({
-      from: "Aurora Evaluation <noreply@aurora.dev>",
-      to: [email],
-      subject: subject,
-      html: htmlContent,
+      from: fromAddress,
+      to: [actualRecipient],
+      subject: TEST_MODE ? `[SANDBOX] ${subject}` : subject,
+      html: TEST_MODE ? `
+        <div style="background-color: #fff3cd; border: 1px solid #ffeaa7; padding: 12px; margin-bottom: 20px; border-radius: 4px;">
+          <strong>🧪 SANDBOX MODE:</strong> This email would normally be sent to: <strong>${email}</strong>
+        </div>
+        ${htmlContent}
+      ` : htmlContent,
     });
 
     if (emailResponse.error) {

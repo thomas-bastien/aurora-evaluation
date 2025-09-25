@@ -228,4 +228,55 @@ const handler = async (req: Request): Promise<Response> => {
   }
 };
 
+// Default content by category when templates are missing
+const getDefaultContentByCategory = (category?: string) => {
+  const defaults = {
+    'juror_invitation': {
+      subject: 'You\'re invited to evaluate startups',
+      body: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h1>You're Invited to Evaluate Startups</h1>
+          <p>Dear {{juror_name}},</p>
+          <p>You've been invited to participate as an evaluator in our startup evaluation process.</p>
+          <p><a href="{{magic_link}}" style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px;">Get Started</a></p>
+          <p>This invitation expires on {{expiry_date}}.</p>
+        </div>
+      `
+    },
+    'assignment-notification': {
+      subject: 'New startup assignments available',
+      body: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h1>New Assignments Available</h1>
+          <p>Dear {{juror_name}},</p>
+          <p>You have new assignments for the {{round_name}} round.</p>
+          <p>Please log in to view your assignments.</p>
+        </div>
+      `
+    },
+    'juror-reminder': {
+      subject: 'Reminder: Complete your evaluations',
+      body: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h1>Reminder: Complete Your Evaluations</h1>
+          <p>Dear {{juror_name}},</p>
+          <p>You have {{pending_count}} pending evaluations for the {{round_name}} round.</p>
+          <p>Current completion rate: {{completion_rate}}%</p>
+          <p><a href="{{login_link}}" style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px;">Complete Evaluations</a></p>
+        </div>
+      `
+    }
+  };
+  
+  return defaults[category as keyof typeof defaults] || {
+    subject: 'Notification from Aurora Evaluation',
+    body: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h1>Notification</h1>
+        <p>You have a notification from the Aurora Evaluation platform.</p>
+      </div>
+    `
+  };
+};
+
 serve(handler);

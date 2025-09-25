@@ -96,14 +96,16 @@ const handler = async (req: Request): Promise<Response> => {
 
       // Auto-resend invitation email
       try {
-        const response = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/resend-juror-invitation`, {
+        const response = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/send-juror-invitation`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`
           },
           body: JSON.stringify({
-            jurorId: jurorData.id
+            jurorName: jurorData.name,
+            jurorEmail: jurorData.email,
+            company: jurorData.company || ''
           })
         });
         

@@ -8,6 +8,19 @@ const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 const TEST_MODE = Deno.env.get("TEST_MODE") === "true";
 const TEST_EMAIL = "delivered@resend.dev";
 
+// Get appropriate "From" address based on mode
+const getFromAddress = (): string => {
+  if (TEST_MODE) {
+    return Deno.env.get("RESEND_FROM_SANDBOX") || "Aurora Evaluation <onboarding@resend.dev>";
+  }
+  const prodFrom = Deno.env.get("RESEND_FROM");
+  if (!prodFrom) {
+    console.error("RESEND_FROM not configured for production mode");
+    throw new Error("RESEND_FROM must be set for production email sending");
+  }
+  return prodFrom;
+};
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -102,6 +115,9 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Determine recipient based on test mode
     const actualRecipient = TEST_MODE ? TEST_EMAIL : email;
+    const fromAddress = getFromAddress();
+    
+    console.log(`📧 EMAIL CONFIG: TEST_MODE=${TEST_MODE}, From=${fromAddress}, Original recipient=${email}, Actual recipient=${actualRecipient}`);
     
     if (TEST_MODE) {
       console.log(`🧪 SANDBOX MODE: Redirecting email from ${email} to ${TEST_EMAIL}`);
@@ -109,7 +125,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Send email using Resend
     const emailResponse = await resend.emails.send({
-      from: "Aurora Evaluation <noreply@resend.dev>",
+      from: fromAddress,
       to: [actualRecipient],
       subject: TEST_MODE ? `[SANDBOX] ${subject}` : subject,
       html: TEST_MODE ? `
