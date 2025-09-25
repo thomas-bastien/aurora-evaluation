@@ -247,54 +247,227 @@ const handler = async (req: Request): Promise<Response> => {
   }
 };
 
-// Default content by category when templates are missing
+// Professional Aurora-branded email template base
+const createProfessionalEmailTemplate = (content: { title: string; body: string; ctaText?: string; ctaLink?: string }) => {
+  const { title, body, ctaText, ctaLink } = content;
+  
+  return `
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f8fafc;">
+      <!-- Header with Aurora branding -->
+      <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 30px; text-align: center; border-radius: 12px 12px 0 0;">
+        <h1 style="color: white; margin: 0; font-size: 32px; font-weight: bold; letter-spacing: -0.5px;">Aurora Tech Awards</h1>
+        <div style="height: 3px; width: 60px; background: rgba(255,255,255,0.3); margin: 15px auto; border-radius: 2px;"></div>
+        <p style="color: rgba(255,255,255,0.9); margin: 0; font-size: 16px; font-weight: 500;">Excellence in Innovation</p>
+      </div>
+      
+      <!-- Main content -->
+      <div style="background: white; padding: 40px 30px; border-radius: 0 0 12px 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
+        <h2 style="color: #1e293b; margin-top: 0; margin-bottom: 24px; font-size: 24px; font-weight: 600;">${title}</h2>
+        
+        <div style="color: #475569; line-height: 1.7; font-size: 16px;">
+          ${body}
+        </div>
+        
+        ${ctaText && ctaLink ? `
+          <div style="margin: 32px 0; text-align: center;">
+            <a href="${ctaLink}" style="
+              display: inline-block;
+              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+              color: white;
+              padding: 14px 28px;
+              text-decoration: none;
+              border-radius: 8px;
+              font-weight: 600;
+              font-size: 16px;
+              box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+              transition: all 0.3s ease;
+            ">${ctaText}</a>
+          </div>
+        ` : ''}
+      </div>
+      
+      <!-- Footer -->
+      <div style="text-align: center; padding: 24px 30px; color: #64748b; font-size: 14px;">
+        <p style="margin: 0;">© 2025 Aurora Tech Awards. All rights reserved.</p>
+        <div style="margin-top: 8px;">
+          <span style="color: #94a3b8;">Powered by Aurora Innovation Platform</span>
+        </div>
+      </div>
+    </div>
+  `;
+};
+
+// Default content by category with professional Aurora branding
 const getDefaultContentByCategory = (category?: string) => {
   const defaults = {
     'juror_invitation': {
-      subject: 'You\'re invited to evaluate startups',
-      body: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h1>You're Invited to Evaluate Startups</h1>
-          <p>Dear {{juror_name}},</p>
-          <p>You've been invited to participate as an evaluator in our startup evaluation process.</p>
-          <p><a href="{{magic_link}}" style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px;">Get Started</a></p>
-          <p>This invitation expires on {{expiry_date}}.</p>
-        </div>
-      `
+      subject: 'Welcome to Aurora Tech Awards - Complete Your Registration',
+      body: createProfessionalEmailTemplate({
+        title: 'You\'re Invited as a Juror',
+        body: `
+          <p>Dear <strong>{{juror_name}}</strong>,</p>
+          <p>Congratulations! You have been selected to join the prestigious Aurora Tech Awards evaluation panel. Your expertise and insights will help identify the next generation of innovative startups.</p>
+          
+          <div style="background: #f1f5f9; padding: 20px; border-radius: 8px; margin: 24px 0; border-left: 4px solid #667eea;">
+            <h3 style="color: #334155; margin-top: 0; font-size: 18px;">Next Steps</h3>
+            <ul style="color: #475569; margin: 0; padding-left: 20px;">
+              <li>Complete your juror profile</li>
+              <li>Review evaluation criteria and guidelines</li>
+              <li>Begin evaluating assigned startups</li>
+            </ul>
+          </div>
+          
+          <p style="color: #dc2626; font-weight: 500;">⚠️ This invitation expires on <strong>{{expiry_date}}</strong></p>
+        `,
+        ctaText: 'Complete Registration',
+        ctaLink: '{{magic_link}}'
+      })
     },
+    
     'assignment-notification': {
-      subject: 'New startup assignments available',
-      body: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h1>New Assignments Available</h1>
-          <p>Dear {{juror_name}},</p>
-          <p>You have new assignments for the {{round_name}} round.</p>
-          <p>Please log in to view your assignments.</p>
-        </div>
-      `
+      subject: 'New Startup Assignments - {{round_name}} Round',
+      body: createProfessionalEmailTemplate({
+        title: 'New Assignments Available',
+        body: `
+          <p>Hello <strong>{{juror_name}}</strong>,</p>
+          <p>You have been assigned <strong>{{assignment_count}}</strong> new startup(s) for evaluation in the <strong>{{round_name}}</strong> round.</p>
+          
+          <div style="background: #f0f9ff; padding: 20px; border-radius: 8px; margin: 24px 0; border-left: 4px solid #0ea5e9;">
+            <h3 style="color: #0c4a6e; margin-top: 0; font-size: 18px;">Assignment Details</h3>
+            <div style="color: #0369a1;">
+              {{startup_details}}
+            </div>
+          </div>
+          
+          <p>Please log into the platform to review your assignments and begin the evaluation process. Each evaluation typically takes 15-20 minutes to complete.</p>
+        `,
+        ctaText: 'View Assignments',
+        ctaLink: '{{login_link}}'
+      })
     },
+    
     'juror-reminder': {
-      subject: 'Reminder: Complete your evaluations',
-      body: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h1>Reminder: Complete Your Evaluations</h1>
-          <p>Dear {{juror_name}},</p>
-          <p>You have {{pending_count}} pending evaluations for the {{round_name}} round.</p>
-          <p>Current completion rate: {{completion_rate}}%</p>
-          <p><a href="{{login_link}}" style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px;">Complete Evaluations</a></p>
-        </div>
-      `
+      subject: 'Reminder: {{pending_count}} Evaluations Pending - {{round_name}}',
+      body: createProfessionalEmailTemplate({
+        title: 'Evaluation Reminder',
+        body: `
+          <p>Hi <strong>{{juror_name}}</strong>,</p>
+          <p>We hope this email finds you well! This is a friendly reminder about your pending startup evaluations in the <strong>{{round_name}}</strong> round.</p>
+          
+          <div style="background: #fef3c7; padding: 20px; border-radius: 8px; margin: 24px 0; border-left: 4px solid #f59e0b;">
+            <h3 style="color: #92400e; margin-top: 0; font-size: 18px;">Your Progress</h3>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; color: #b45309;">
+              <div><strong>Completion Rate:</strong> {{completion_rate}}%</div>
+              <div><strong>Remaining:</strong> {{pending_count}} evaluations</div>
+            </div>
+          </div>
+          
+          <p>Your evaluations are crucial in identifying innovative startups that will shape the future. Thank you for your continued dedication to excellence.</p>
+        `,
+        ctaText: 'Complete Evaluations',
+        ctaLink: '{{login_link}}'
+      })
+    },
+    
+    'founder_rejection': {
+      subject: 'Aurora Tech Awards Update - {{startup_name}}',
+      body: createProfessionalEmailTemplate({
+        title: 'Thank You for Your Application',
+        body: `
+          <p>Dear <strong>{{founder_name}}</strong>,</p>
+          <p>Thank you for submitting <strong>{{startup_name}}</strong> to Aurora Tech Awards. We were impressed by your innovation and entrepreneurial spirit.</p>
+          
+          <p>After careful consideration by our expert evaluation panel, we will not be moving forward to the next round at this time. This decision was difficult given the high quality of applications we received.</p>
+          
+          <div style="background: #f1f5f9; padding: 20px; border-radius: 8px; margin: 24px 0; border-left: 4px solid #667eea;">
+            <h3 style="color: #334155; margin-top: 0; font-size: 18px;">Feedback from Our Panel</h3>
+            <div style="color: #475569; font-style: italic;">
+              {{feedback}}
+            </div>
+          </div>
+          
+          <p>We strongly encourage you to apply again in future rounds. Innovation is a journey, and we would love to see how <strong>{{startup_name}}</strong> evolves.</p>
+          
+          <p>Keep building, keep innovating!</p>
+        `,
+        ctaText: 'Learn About Future Rounds',
+        ctaLink: '{{program_link}}'
+      })
+    },
+    
+    'founder_selection': {
+      subject: 'Congratulations! {{startup_name}} Selected for Next Round',
+      body: createProfessionalEmailTemplate({
+        title: 'Congratulations! You\'ve Been Selected',
+        body: `
+          <p>Dear <strong>{{founder_name}}</strong>,</p>
+          
+          <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 20px; border-radius: 8px; margin: 24px 0; text-align: center;">
+            <h3 style="color: white; margin: 0; font-size: 20px;">🎉 Congratulations!</h3>
+            <p style="color: rgba(255,255,255,0.9); margin: 8px 0 0 0;"><strong>{{startup_name}}</strong> has been selected to proceed to the next round!</p>
+          </div>
+          
+          <p>We are thrilled to inform you that <strong>{{startup_name}}</strong> has impressed our evaluation panel and will advance in the Aurora Tech Awards.</p>
+          
+          <div style="background: #f0f9ff; padding: 20px; border-radius: 8px; margin: 24px 0; border-left: 4px solid #0ea5e9;">
+            <h3 style="color: #0c4a6e; margin-top: 0; font-size: 18px;">Next Steps</h3>
+            <ul style="color: #0369a1; margin: 0; padding-left: 20px;">
+              <li>You will receive pitch scheduling invitations from our VC partners</li>
+              <li>Prepare your pitch deck and demo presentation</li>
+              <li>Schedule meetings with interested investors</li>
+            </ul>
+          </div>
+          
+          <div style="background: #f1f5f9; padding: 20px; border-radius: 8px; margin: 24px 0; border-left: 4px solid #667eea;">
+            <h3 style="color: #334155; margin-top: 0; font-size: 18px;">Panel Feedback</h3>
+            <div style="color: #475569; font-style: italic;">
+              {{feedback}}
+            </div>
+          </div>
+          
+          <p>This is an incredible achievement. We look forward to seeing your continued success!</p>
+        `,
+        ctaText: 'Access Next Round Resources',
+        ctaLink: '{{next_round_link}}'
+      })
+    },
+    
+    'pitch_scheduling': {
+      subject: 'Schedule Your Pitch - {{startup_name}} x {{vc_name}}',
+      body: createProfessionalEmailTemplate({
+        title: 'Time to Schedule Your Pitch',
+        body: `
+          <p>Dear <strong>{{founder_name}}</strong>,</p>
+          <p>Exciting news! <strong>{{vc_name}}</strong> is interested in learning more about <strong>{{startup_name}}</strong> and would like to schedule a pitch meeting.</p>
+          
+          <div style="background: #ecfdf5; padding: 20px; border-radius: 8px; margin: 24px 0; border-left: 4px solid #10b981;">
+            <h3 style="color: #064e3b; margin-top: 0; font-size: 18px;">Meeting Details</h3>
+            <div style="color: #065f46;">
+              <p><strong>VC Partner:</strong> {{vc_name}}</p>
+              <p><strong>Duration:</strong> 30 minutes</p>
+              <p><strong>Format:</strong> Virtual pitch presentation</p>
+            </div>
+          </div>
+          
+          <p>Please use the calendar link below to select a time that works for your schedule. We recommend preparing a concise pitch deck and being ready to discuss your business model, traction, and funding needs.</p>
+        `,
+        ctaText: 'Schedule Your Pitch',
+        ctaLink: '{{calendly_link}}'
+      })
     }
   };
   
   return defaults[category as keyof typeof defaults] || {
-    subject: 'Notification from Aurora Evaluation',
-    body: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h1>Notification</h1>
-        <p>You have a notification from the Aurora Evaluation platform.</p>
-      </div>
-    `
+    subject: 'Aurora Tech Awards Notification',
+    body: createProfessionalEmailTemplate({
+      title: 'Platform Notification',
+      body: `
+        <p>You have a new notification from the Aurora Tech Awards platform.</p>
+        <p>Please log in to view the details and take any necessary actions.</p>
+      `,
+      ctaText: 'View Notification',
+      ctaLink: '{{login_link}}'
+    })
   };
 };
 

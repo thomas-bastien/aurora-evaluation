@@ -332,8 +332,8 @@ export const CommunicationTemplateManager = ({ currentRound }: CommunicationTemp
 
             <div className="space-y-2">
               <label className="text-sm font-medium">Body:</label>
-              <div className="p-4 bg-muted rounded-lg whitespace-pre-wrap">
-                {previewData.body}
+              <div className="p-4 bg-muted rounded-lg max-h-96 overflow-y-auto">
+                <div dangerouslySetInnerHTML={{ __html: previewData.body }} />
               </div>
             </div>
           </div>
