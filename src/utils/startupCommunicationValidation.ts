@@ -60,7 +60,7 @@ export const validateStartupCommunications = async (
   
   const roundName = currentRound === 'screeningRound' ? 'screening' : 'pitching';
   const validationResults: StartupValidationResult[] = [];
-  const skipReasons: Record<string, number> = {};
+  const skipReasonCounts: Record<string, number> = {};
 
   // Get round-specific statuses for all startups
   const startupIds = startups.map(s => s.id);
@@ -146,7 +146,7 @@ export const validateStartupCommunications = async (
       }
     }
 
-    // 4. Check for duplicate communications
+    // 4. Check for duplicate communications (in test mode, treat as warning only)
     const commKey = `${startup.id}-${communicationType}`;
     if (existingCommsMap.has(commKey)) {
       skipReasons.push('already sent');
@@ -164,8 +164,11 @@ export const validateStartupCommunications = async (
       // skipReasons.push('feedback not approved');
     }
 
+    // In test mode, allow "already sent" as a warning rather than blocker
+    const testMode = window.location.hostname === 'localhost' || window.location.hostname.includes('lovable.app');
     const isValid = skipReasons.length === 0 || 
-      (skipReasons.length === 1 && skipReasons[0] === 'no feedback'); // Allow sending without feedback
+      (skipReasons.length === 1 && skipReasons[0] === 'no feedback') || // Allow sending without feedback
+      (testMode && skipReasons.length === 1 && skipReasons[0] === 'already sent'); // Allow duplicates in test mode
 
     validationResults.push({
       id: startup.id,
@@ -180,7 +183,7 @@ export const validateStartupCommunications = async (
 
     // Count skip reasons
     skipReasons.forEach(reason => {
-      skipReasons[reason] = (skipReasons[reason] || 0) + 1;
+      skipReasonCounts[reason] = (skipReasonCounts[reason] || 0) + 1;
     });
   }
 
@@ -193,7 +196,7 @@ export const validateStartupCommunications = async (
     validStartups: validStartups.length,
     willSend: validStartups.length,
     willSkip: invalidStartups.length,
-    skipReasons
+    skipReasons: skipReasonCounts
   };
 
   return {

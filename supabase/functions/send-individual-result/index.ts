@@ -174,15 +174,25 @@ const handler = async (req: Request): Promise<Response> => {
       .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()) // Last 7 days
       .single();
 
+    // In test mode, allow duplicates but track them for gentle reminder
+    let isDuplicate = false;
     if (existing && !duplicateError) {
-      console.log("Duplicate result email prevented:", existing.id);
-      return new Response(JSON.stringify({ 
-        message: `${internalType} email already sent for this round`,
-        duplicateId: existing.id 
-      }), {
-        status: 200,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
-      });
+      isDuplicate = true;
+      console.log("Duplicate result email detected:", existing.id);
+      
+      // In production mode, prevent duplicates
+      if (!testMode) {
+        console.log("Duplicate result email prevented (production mode):", existing.id);
+        return new Response(JSON.stringify({ 
+          message: `${internalType} email already sent for this round`,
+          duplicateId: existing.id 
+        }), {
+          status: 200,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        });
+      } else {
+        console.log("🧪 SANDBOX MODE: Allowing duplicate email for testing purposes");
+      }
     }
 
     // Create email communication record
@@ -305,7 +315,12 @@ const handler = async (req: Request): Promise<Response> => {
         resendId: emailResponse.data.id,
         message: `${internalType} email sent successfully to ${requestData.startupName}`,
         testMode: isTestEmail,
-        actualRecipient: actualRecipient
+        actualRecipient: actualRecipient,
+        isDuplicate: isDuplicate,
+        duplicateInfo: isDuplicate ? { 
+          previousSentAt: existing?.created_at,
+          message: `This email was previously sent on ${new Date(existing?.created_at).toLocaleDateString()}`
+        } : null
       }), {
         status: 200,
         headers: { "Content-Type": "application/json", ...corsHeaders },

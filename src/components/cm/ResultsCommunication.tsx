@@ -408,6 +408,13 @@ The Aurora Team`
           console.log(`Email sent successfully to ${startup.name}:`, data);
           successCount++;
           
+          // Show gentle reminder if this was a duplicate in test mode
+          if (data?.isDuplicate && data?.duplicateInfo) {
+            toast.info(`${startup.name}: ${data.duplicateInfo.message} (Test mode: duplicate allowed)`, {
+              duration: 6000
+            });
+          }
+          
           // Update status
           setStartupResults(prev => prev.map(r =>
             r.id === startup.id
@@ -474,6 +481,13 @@ The Aurora Team`
         console.error(`Edge function did not indicate success for ${result.name}:`, data);
         toast.error(`Failed to send email to ${result.name}: ${data?.message || 'Unknown error'}`);
         return false;
+      }
+
+      // Show gentle reminder if this was a duplicate in test mode
+      if (data?.isDuplicate && data?.duplicateInfo) {
+        toast.info(`${result.name}: ${data.duplicateInfo.message} (Test mode: duplicate allowed)`, {
+          duration: 6000
+        });
       }
 
       console.log(`Individual email sent successfully to ${result.name}:`, data);
