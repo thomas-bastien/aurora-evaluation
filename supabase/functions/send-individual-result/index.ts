@@ -40,6 +40,13 @@ interface IndividualResultRequest {
   customMessage?: string;
 }
 
+interface EmailTemplate {
+  id: string;
+  subject_template: string;
+  body_template: string;
+  variables: string[];
+}
+
 const handler = async (req: Request): Promise<Response> => {
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
@@ -56,100 +63,60 @@ const handler = async (req: Request): Promise<Response> => {
       recipientEmail: requestData.recipientEmail
     });
 
-    // Map frontend communication types to internal types
-    const communicationTypeMap = {
-      'selected': 'selection',
-      'rejected': 'rejection',
-      'under-review': 'under-review'
+    // Map frontend communication types to template categories
+    const templateCategoryMap = {
+      'selected': 'founder_selection',
+      'rejected': 'founder_rejection',
+      'under-review': 'founder_under_review'
     };
     
-    const internalType = communicationTypeMap[requestData.communicationType] || requestData.communicationType;
+    const templateCategory = templateCategoryMap[requestData.communicationType];
+    const internalType = requestData.communicationType === 'selected' ? 'selection' : 
+                        requestData.communicationType === 'rejected' ? 'rejection' : 'under-review';
 
-    // Generate email content based on communication type
-    let subject: string;
-    let body: string;
+    // Get email template from database
+    let template: EmailTemplate | null = null;
+    let subject = "";
+    let body = "";
 
-    switch (internalType) {
-      case 'selection':
-        subject = requestData.roundName === 'screening' 
-          ? `🎉 Congratulations! ${requestData.startupName} has been selected for the Pitching Round`
-          : `🎉 Congratulations! ${requestData.startupName} has been selected as a Finalist`;
-        
-        body = requestData.roundName === 'screening' 
-          ? `<h2>Congratulations!</h2>
-             <p>We're excited to inform you that <strong>${requestData.startupName}</strong> has been selected to advance to the Pitching Round of our evaluation process.</p>
-             
-             <h3>Next Steps:</h3>
-             <ul>
-               <li>You will receive a calendar invite for your pitch session</li>
-               <li>Prepare a 10-minute presentation followed by Q&A</li>
-               <li>Review the attached pitch guidelines</li>
-             </ul>
-             
-             ${requestData.feedbackSummary ? `<h3>Feedback Summary:</h3><div style="background-color: #f5f5f5; padding: 16px; border-radius: 8px; margin: 16px 0;"><pre style="white-space: pre-wrap;">${requestData.feedbackSummary}</pre></div>` : ''}
-             
-             <p>We look forward to seeing your presentation!</p>
-             
-             <p>Best regards,<br>The Aurora Team</p>`
-          : `<h2>Congratulations!</h2>
-             <p>We're thrilled to inform you that <strong>${requestData.startupName}</strong> has been selected as a Finalist in our evaluation process.</p>
-             
-             <h3>What this means:</h3>
-             <ul>
-               <li>You are among our top selected startups</li>
-               <li>Further partnership opportunities may be available</li>
-               <li>You will receive detailed feedback from our evaluation panel</li>
-             </ul>
-             
-             ${requestData.feedbackSummary ? `<h3>Feedback Summary:</h3><div style="background-color: #f5f5f5; padding: 16px; border-radius: 8px; margin: 16px 0;"><pre style="white-space: pre-wrap;">${requestData.feedbackSummary}</pre></div>` : ''}
-             
-             <p>We are excited to continue our relationship with your startup!</p>
-             
-             <p>Best regards,<br>The Aurora Team</p>`;
-        break;
-
-      case 'rejection':
-        subject = `Thank you for your participation - ${requestData.startupName}`;
-        body = `<h2>Thank you for your participation</h2>
-               <p>Thank you for participating in our startup evaluation process. After careful consideration by our evaluation panel, we have decided not to move forward with <strong>${requestData.startupName}</strong> at this time.</p>
-               
-               ${requestData.feedbackSummary ? `<h3>Your Feedback:</h3><div style="background-color: #f5f5f5; padding: 16px; border-radius: 8px; margin: 16px 0;"><pre style="white-space: pre-wrap;">${requestData.feedbackSummary}</pre></div>` : ''}
-               
-               <p>While we cannot proceed with your startup in this round, we were impressed by your dedication and innovation. We encourage you to:</p>
-               <ul>
-                 <li>Continue developing your business based on the feedback provided</li>
-                 <li>Consider applying to future programs</li>
-                 <li>Stay connected with our community</li>
-               </ul>
-               
-               <p>Best regards,<br>The Aurora Team</p>`;
-        break;
-
-      case 'under-review':
-        subject = `Your Application Status - ${requestData.startupName} Under Review`;
-        body = `<h2>Application Under Review</h2>
-               <p>Thank you for participating in our startup evaluation process. <strong>${requestData.startupName}</strong> is currently under review by our evaluation panel.</p>
-               
-               <h3>Current Status:</h3>
-               <ul>
-                 <li>Your startup is being evaluated by our expert panel</li>
-                 <li>We expect to have results soon</li>
-                 <li>No action is required from your side at this time</li>
-               </ul>
-               
-               <p>We appreciate your patience as we complete our thorough evaluation process.</p>
-               
-               <p>Best regards,<br>The Aurora Team</p>`;
-        break;
-
-      default:
-        throw new Error(`Invalid communication type: ${requestData.communicationType} (mapped to: ${internalType})`);
+    // Fetch template from database
+    const { data: templateData, error: templateError } = await supabase
+      .from('email_templates')
+      .select('*')
+      .eq('category', templateCategory)
+      .eq('is_active', true)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+      
+    if (templateError || !templateData) {
+      console.error("Template fetch error:", templateError);
+      console.log("Using fallback template for category:", templateCategory);
+      
+      // Use fallback template
+      const fallback = getDefaultContentByCategory(templateCategory);
+      subject = fallback.subject;
+      body = fallback.body;
+    } else {
+      template = templateData as EmailTemplate;
+      subject = template.subject_template;
+      body = template.body_template;
     }
 
-    // Add custom message if provided
-    if (requestData.customMessage) {
-      body = body.replace('<p>Best regards,<br>The Aurora Team</p>', 
-        `<h3>Additional Message:</h3><p>${requestData.customMessage}</p><p>Best regards,<br>The Aurora Team</p>`);
+    // Prepare variables for substitution
+    const variables = {
+      founder_name: requestData.startupName, // Using startup name as founder name for now
+      startup_name: requestData.startupName,
+      round_name: requestData.roundName,
+      feedback: requestData.feedbackSummary || 'No specific feedback provided',
+      custom_message: requestData.customMessage || ''
+    };
+
+    // Apply variable substitution
+    for (const [key, value] of Object.entries(variables)) {
+      const placeholder = `{{${key}}}`;
+      subject = subject.replace(new RegExp(placeholder, 'g'), String(value));
+      body = body.replace(new RegExp(placeholder, 'g'), String(value));
     }
 
     // Determine recipient email and test mode BEFORE creating communication record
@@ -366,6 +333,150 @@ const handler = async (req: Request): Promise<Response> => {
       headers: { "Content-Type": "application/json", ...corsHeaders },
     });
   }
+};
+
+// Professional Aurora-branded email template base
+const createProfessionalEmailTemplate = (content: { title: string; body: string; ctaText?: string; ctaLink?: string }) => {
+  const { title, body, ctaText, ctaLink } = content;
+  
+  return `
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f8fafc;">
+      <!-- Header with Aurora branding -->
+      <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 30px; text-align: center; border-radius: 12px 12px 0 0;">
+        <h1 style="color: white; margin: 0; font-size: 32px; font-weight: bold; letter-spacing: -0.5px;">Aurora Tech Awards</h1>
+        <div style="height: 3px; width: 60px; background: rgba(255,255,255,0.3); margin: 15px auto; border-radius: 2px;"></div>
+        <p style="color: rgba(255,255,255,0.9); margin: 0; font-size: 16px; font-weight: 500;">Excellence in Innovation</p>
+      </div>
+      
+      <!-- Main content -->
+      <div style="background: white; padding: 40px 30px; border-radius: 0 0 12px 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
+        <h2 style="color: #1e293b; margin-top: 0; margin-bottom: 24px; font-size: 24px; font-weight: 600;">${title}</h2>
+        
+        <div style="color: #475569; line-height: 1.7; font-size: 16px;">
+          ${body}
+        </div>
+        
+        ${ctaText && ctaLink ? `
+          <div style="margin: 32px 0; text-align: center;">
+            <a href="${ctaLink}" style="
+              display: inline-block;
+              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+              color: white;
+              padding: 14px 28px;
+              text-decoration: none;
+              border-radius: 8px;
+              font-weight: 600;
+              font-size: 16px;
+              box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+              transition: all 0.3s ease;
+            ">${ctaText}</a>
+          </div>
+        ` : ''}
+      </div>
+      
+      <!-- Footer -->
+      <div style="text-align: center; padding: 24px 30px; color: #64748b; font-size: 14px;">
+        <p style="margin: 0;">© 2025 Aurora Tech Awards. All rights reserved.</p>
+        <div style="margin-top: 8px;">
+          <span style="color: #94a3b8;">Powered by Aurora Innovation Platform</span>
+        </div>
+      </div>
+    </div>
+  `;
+};
+
+// Default content by category with professional Aurora branding
+const getDefaultContentByCategory = (category?: string) => {
+  const defaults = {
+    'founder_rejection': {
+      subject: 'Aurora Tech Awards Update - {{startup_name}}',
+      body: createProfessionalEmailTemplate({
+        title: 'Thank You for Your Application',
+        body: `
+          <p>Dear <strong>{{founder_name}}</strong>,</p>
+          <p>Thank you for submitting <strong>{{startup_name}}</strong> to Aurora Tech Awards. We were impressed by your innovation and entrepreneurial spirit.</p>
+          
+          <p>After careful consideration by our expert evaluation panel, we will not be moving forward to the next round at this time. This decision was difficult given the high quality of applications we received.</p>
+          
+          <div style="background: #f1f5f9; padding: 20px; border-radius: 8px; margin: 24px 0; border-left: 4px solid #667eea;">
+            <h3 style="color: #334155; margin-top: 0; font-size: 18px;">Feedback from Our Panel</h3>
+            <div style="color: #475569; font-style: italic;">
+              {{feedback}}
+            </div>
+          </div>
+          
+          <p>We strongly encourage you to apply again in future rounds. Innovation is a journey, and we would love to see how <strong>{{startup_name}}</strong> evolves.</p>
+          
+          <p>Keep building, keep innovating!</p>
+        `
+      })
+    },
+    
+    'founder_selection': {
+      subject: 'Congratulations! {{startup_name}} Selected for Next Round',
+      body: createProfessionalEmailTemplate({
+        title: 'Congratulations! You\'ve Been Selected',
+        body: `
+          <p>Dear <strong>{{founder_name}}</strong>,</p>
+          
+          <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 20px; border-radius: 8px; margin: 24px 0; text-align: center;">
+            <h3 style="color: white; margin: 0; font-size: 20px;">🎉 Congratulations!</h3>
+            <p style="color: rgba(255,255,255,0.9); margin: 8px 0 0 0;"><strong>{{startup_name}}</strong> has been selected to proceed to the next round!</p>
+          </div>
+          
+          <p>We are thrilled to inform you that <strong>{{startup_name}}</strong> has impressed our evaluation panel and will advance in the Aurora Tech Awards.</p>
+          
+          <div style="background: #f0f9ff; padding: 20px; border-radius: 8px; margin: 24px 0; border-left: 4px solid #0ea5e9;">
+            <h3 style="color: #0c4a6e; margin-top: 0; font-size: 18px;">Next Steps</h3>
+            <ul style="color: #0369a1; margin: 0; padding-left: 20px;">
+              <li>You will receive pitch scheduling invitations from our VC partners</li>
+              <li>Prepare your pitch deck and demo presentation</li>
+              <li>Schedule meetings with interested investors</li>
+            </ul>
+          </div>
+          
+          <div style="background: #f1f5f9; padding: 20px; border-radius: 8px; margin: 24px 0; border-left: 4px solid #667eea;">
+            <h3 style="color: #334155; margin-top: 0; font-size: 18px;">Evaluation Feedback</h3>
+            <div style="color: #475569; font-style: italic;">
+              {{feedback}}
+            </div>
+          </div>
+          
+          <p>This is an exciting milestone for <strong>{{startup_name}}</strong>. We look forward to seeing your continued success!</p>
+        `
+      })
+    },
+    
+    'founder_under_review': {
+      subject: 'Application Update - {{startup_name}} Under Review',
+      body: createProfessionalEmailTemplate({
+        title: 'Your Application is Under Review',
+        body: `
+          <p>Dear <strong>{{founder_name}}</strong>,</p>
+          <p>Thank you for submitting <strong>{{startup_name}}</strong> to Aurora Tech Awards. Your application is currently under review by our expert evaluation panel.</p>
+          
+          <div style="background: #fef3c7; padding: 20px; border-radius: 8px; margin: 24px 0; border-left: 4px solid #f59e0b;">
+            <h3 style="color: #92400e; margin-top: 0; font-size: 18px;">Review Status</h3>
+            <ul style="color: #b45309; margin: 0; padding-left: 20px;">
+              <li>Your startup is being evaluated by our expert panel</li>
+              <li>We expect to have results soon</li>
+              <li>No action is required from your side at this time</li>
+            </ul>
+          </div>
+          
+          <p>We appreciate your patience as we complete our thorough evaluation process. We will notify you as soon as the review is complete.</p>
+        `
+      })
+    }
+  };
+
+  return defaults[category as keyof typeof defaults] || {
+    subject: 'Aurora Tech Awards Update',
+    body: createProfessionalEmailTemplate({
+      title: 'Update from Aurora Tech Awards',
+      body: '<p>Thank you for your participation in Aurora Tech Awards.</p>'
+    })
+  };
 };
 
 serve(handler);
