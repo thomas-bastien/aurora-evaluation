@@ -182,7 +182,7 @@ export const useMeetingsData = () => {
         .insert({
           startup_id: startupId,
           juror_id: jurorId,
-          status: 'pending'
+          status: 'assigned'
         });
 
       if (error) throw error;
@@ -235,17 +235,26 @@ export const useMeetingsData = () => {
 
 // Helper function to determine assignment status
 const determineAssignmentStatus = (assignment: any): MeetingStatus => {
+  // Check for explicit completed status or completed date
   if (assignment.meeting_completed_date || assignment.status === 'completed') {
     return 'completed';
   }
+  
+  // Check for explicit cancelled status
   if (assignment.status === 'cancelled') {
     return 'cancelled';
   }
+  
+  // Check for in_review status (takes priority over scheduling date)
   if (assignment.status === 'in_review') {
     return 'in_review';
   }
+  
+  // If there's a scheduled date, show as scheduled regardless of whether status is 'assigned' or 'scheduled'
   if (assignment.meeting_scheduled_date) {
     return 'scheduled';
   }
+  
+  // For 'assigned' status or any other status without a scheduled date, show as pending
   return 'pending';
 };
