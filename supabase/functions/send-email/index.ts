@@ -12,6 +12,19 @@ const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
 const TEST_MODE = Deno.env.get("TEST_MODE") === "true";
 const TEST_EMAIL = "delivered@resend.dev";
 
+// Get appropriate "From" address based on mode
+const getFromAddress = (): string => {
+  if (TEST_MODE) {
+    return Deno.env.get("RESEND_FROM_SANDBOX") || "Aurora Evaluation <onboarding@resend.dev>";
+  }
+  const prodFrom = Deno.env.get("RESEND_FROM");
+  if (!prodFrom) {
+    console.error("RESEND_FROM not configured for production mode");
+    throw new Error("RESEND_FROM must be set for production email sending");
+  }
+  return prodFrom;
+};
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -65,16 +78,19 @@ const handler = async (req: Request): Promise<Response> => {
       
       if (templateError) {
         console.error("Template fetch error:", templateError);
-        return new Response(JSON.stringify({ error: "Template not found" }), {
-          status: 404,
-          headers: { "Content-Type": "application/json", ...corsHeaders },
-        });
+        console.log("Using fallback template for category:", requestData.templateCategory);
+        
+        // Use fallback template instead of returning error
+        const fallback = getDefaultContentByCategory(requestData.templateCategory);
+        subject = fallback.subject;
+        body = fallback.body;
+      } else {
+        const templateLocal = templateData as EmailTemplate;
+        template = templateLocal;
+        subject = templateLocal.subject_template;
+        body = templateLocal.body_template;
       }
 
-      const templateLocal = templateData as EmailTemplate;
-      template = templateLocal;
-      subject = templateLocal.subject_template;
-      body = templateLocal.body_template;
     }
 
     // Apply variable substitution
@@ -153,8 +169,11 @@ const handler = async (req: Request): Promise<Response> => {
         console.log(`🧪 SANDBOX MODE: Redirecting email from ${requestData.recipientEmail} to ${TEST_EMAIL}`);
       }
 
+      const fromAddress = getFromAddress();
+      console.log(`📧 EMAIL CONFIG: TEST_MODE=${TEST_MODE}, From=${fromAddress}, Recipient=${actualRecipient}`);
+
       const emailResponse = await resend.emails.send({
-        from: "Aurora Tech Awards <noreply@resend.dev>",
+        from: fromAddress,
         to: [actualRecipient],
         subject: TEST_MODE ? `[SANDBOX] ${subject}` : subject,
         html: TEST_MODE ? `
