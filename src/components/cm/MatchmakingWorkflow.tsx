@@ -572,10 +572,11 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
               recipientType: 'juror',
               templateCategory: 'assignment-notification',
               variables: {
-                jurorName: (juror as any).name,
-                roundName: currentRound === 'screeningRound' ? 'Screening' : 'Pitching',
-                assignmentCount: assignments.length,
-                startupNames: assignments.map((a: any) => a.startups.name).join(', ')
+                juror_name: (juror as any).name,
+                round_name: currentRound === 'screeningRound' ? 'Screening' : 'Pitching',
+                assignment_count: assignments.length,
+                startup_names: assignments.map((a: any) => a.startups.name).join(', '),
+                platform_url: window.location.origin
               }
             }
           });
