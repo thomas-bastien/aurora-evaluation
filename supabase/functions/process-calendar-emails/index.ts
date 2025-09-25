@@ -158,7 +158,7 @@ const handler = async (req: Request): Promise<Response> => {
   // Detect lifecycle changes
   const eventMethod = calendarEvent.method || 'REQUEST';
   const sequenceNumber = calendarEvent.sequence || 0;
-  let lifecycleStatus = 'scheduled'; // Default all new invitations to scheduled
+  let lifecycleStatus = 'in_review'; // Default all new invitations to in_review for CM approval
   let matchingStatus = 'pending_cm_review'; // Default matching status for new invitations
     const lifecycleHistory = existingInvitation?.lifecycle_history || [];
 
@@ -196,7 +196,7 @@ const handler = async (req: Request): Promise<Response> => {
         lifecycleStatus = 'cancelled';
         matchingStatus = 'cancelled';
       } else {
-        lifecycleStatus = 'scheduled';
+        lifecycleStatus = 'in_review';
         matchingStatus = 'pending_cm_review';
       }
       
@@ -245,10 +245,10 @@ const handler = async (req: Request): Promise<Response> => {
         juror = jurors[0];
         
         if (lifecycleStatus !== 'cancelled') {
-          // If there's an existing pending assignment, set status to scheduled
+          // If there's an existing pending assignment, set status to in_review for CM approval
           if (existingPendingAssignment) {
             matchingStatus = 'pending_cm_review';
-            lifecycleStatus = 'scheduled';
+            lifecycleStatus = 'in_review';
             
             // Update the existing assignment status to assigned
             const { error: updateError } = await supabase
@@ -268,9 +268,9 @@ const handler = async (req: Request): Promise<Response> => {
               assignment = existingPendingAssignment;
             }
           } else {
-            // All new invitations go to scheduled, even if perfect matches are found
+            // All new invitations go to in_review for CM approval, even if perfect matches are found
             matchingStatus = 'pending_cm_review';
-            lifecycleStatus = 'scheduled';
+            lifecycleStatus = 'in_review';
             
             // Try to find existing pitching assignment
             const { data: existingAssignment, error: assignmentError } = await supabase
@@ -327,11 +327,11 @@ const handler = async (req: Request): Promise<Response> => {
           }
         }
       } else {
-        // No matching startup/juror found - still goes to scheduled for manual assignment
+        // No matching startup/juror found - still goes to in_review for manual assignment
         if (!startups?.length) matchingErrors.push('No matching startup found in attendees');
         if (!jurors?.length) matchingErrors.push('No matching juror found in attendees');
         matchingStatus = 'pending_cm_review';
-        lifecycleStatus = 'scheduled';
+        lifecycleStatus = 'in_review';
       }
     } else {
       // Keep existing matching but update status appropriately  
