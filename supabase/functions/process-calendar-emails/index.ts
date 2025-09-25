@@ -155,11 +155,11 @@ const handler = async (req: Request): Promise<Response> => {
       .eq('calendar_uid', calendarEvent.uid)
       .maybeSingle();
 
-    // Detect lifecycle changes
-    const eventMethod = calendarEvent.method || 'REQUEST';
-    const sequenceNumber = calendarEvent.sequence || 0;
-    let lifecycleStatus = 'in_review'; // Default all new invitations to in_review
-    let matchingStatus = 'pending_cm_review'; // Default matching status for new invitations
+  // Detect lifecycle changes
+  const eventMethod = calendarEvent.method || 'REQUEST';
+  const sequenceNumber = calendarEvent.sequence || 0;
+  let lifecycleStatus = 'scheduled'; // Default all new invitations to scheduled
+  let matchingStatus = 'pending_cm_review'; // Default matching status for new invitations
     const lifecycleHistory = existingInvitation?.lifecycle_history || [];
 
     if (existingInvitation) {
@@ -191,12 +191,12 @@ const handler = async (req: Request): Promise<Response> => {
         status_change: `${existingInvitation.status} -> ${lifecycleStatus}`
       });
     } else {
-      // New invitation - all go to in_review except cancelled
+      // New invitation - all go to scheduled except cancelled
       if (eventMethod === 'CANCEL') {
         lifecycleStatus = 'cancelled';
         matchingStatus = 'cancelled';
       } else {
-        lifecycleStatus = 'in_review';
+        lifecycleStatus = 'scheduled';
         matchingStatus = 'pending_cm_review';
       }
       
@@ -245,19 +245,19 @@ const handler = async (req: Request): Promise<Response> => {
         juror = jurors[0];
         
         if (lifecycleStatus !== 'cancelled') {
-          // If there's an existing pending assignment, set status to in_review
+          // If there's an existing pending assignment, set status to scheduled
           if (existingPendingAssignment) {
             matchingStatus = 'pending_cm_review';
-            lifecycleStatus = 'in_review';
+            lifecycleStatus = 'scheduled';
             
-            // Update the existing assignment status to in_review
+            // Update the existing assignment status to assigned
             const { error: updateError } = await supabase
               .from('pitching_assignments')
               .update({
                 meeting_scheduled_date: new Date(calendarEvent.dtstart).toISOString(),
                 calendly_link: calendarEvent.location,
                 meeting_notes: calendarEvent.description,
-                status: 'in_review'
+                status: 'assigned'
               })
               .eq('id', existingPendingAssignment.id);
 
@@ -268,9 +268,9 @@ const handler = async (req: Request): Promise<Response> => {
               assignment = existingPendingAssignment;
             }
           } else {
-            // All new invitations go to in_review, even if perfect matches are found
+            // All new invitations go to scheduled, even if perfect matches are found
             matchingStatus = 'pending_cm_review';
-            lifecycleStatus = 'in_review';
+            lifecycleStatus = 'scheduled';
             
             // Try to find existing pitching assignment
             const { data: existingAssignment, error: assignmentError } = await supabase
@@ -283,14 +283,14 @@ const handler = async (req: Request): Promise<Response> => {
             if (existingAssignment && existingAssignment.status !== 'pending') {
               assignment = existingAssignment;
               
-              // Update the pitching assignment with meeting details but keep in_review status
+              // Update the pitching assignment with meeting details but keep assigned status
               const { error: updateError } = await supabase
                 .from('pitching_assignments')
                 .update({
                   meeting_scheduled_date: new Date(calendarEvent.dtstart).toISOString(),
                   calendly_link: calendarEvent.location,
                   meeting_notes: calendarEvent.description,
-                  status: lifecycleStatus === 'cancelled' ? 'cancelled' : 'in_review'
+                  status: lifecycleStatus === 'cancelled' ? 'cancelled' : 'assigned'
                 })
                 .eq('id', assignment.id);
 
@@ -308,7 +308,7 @@ const handler = async (req: Request): Promise<Response> => {
                   meeting_scheduled_date: new Date(calendarEvent.dtstart).toISOString(),
                   calendly_link: calendarEvent.location,
                   meeting_notes: calendarEvent.description,
-                  status: 'in_review'
+                  status: 'assigned'
                 })
                 .select('id')
                 .single();
@@ -327,11 +327,11 @@ const handler = async (req: Request): Promise<Response> => {
           }
         }
       } else {
-        // No matching startup/juror found - still goes to in_review for manual assignment
+        // No matching startup/juror found - still goes to scheduled for manual assignment
         if (!startups?.length) matchingErrors.push('No matching startup found in attendees');
         if (!jurors?.length) matchingErrors.push('No matching juror found in attendees');
         matchingStatus = 'pending_cm_review';
-        lifecycleStatus = 'in_review';
+        lifecycleStatus = 'scheduled';
       }
     } else {
       // Keep existing matching but update status appropriately  
