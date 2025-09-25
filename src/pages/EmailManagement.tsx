@@ -19,7 +19,7 @@ export default function EmailManagementPage() {
             <div className="space-y-2">
               <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
                 <Mail className="h-8 w-8" />
-                Email Management Hub
+                Communications Management Hub
               </h1>
               <p className="text-lg text-muted-foreground">
                 Comprehensive email communication management, templates, and analytics
