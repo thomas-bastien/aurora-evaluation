@@ -444,11 +444,11 @@ const Dashboard = () => {
               <CardContent>
                 <div className="flex flex-col space-y-4">
                   <FunnelStage
-                    title="Set Up Calendly"
-                    description="Provide your Calendly link for pitch session scheduling"
-                    tooltip="Update your profile with Calendly link for pitch meetings."
-                    status={profile?.calendly_link ? 'completed' : 'upcoming'}
-                    statusText={profile?.calendly_link ? 'Calendly link added' : 'Calendly link needed'}
+                     title="Set Up Scheduling"
+                     description="Provide your scheduling link for pitch session scheduling"
+                     tooltip="Update your profile with scheduling link for pitch meetings."
+                     status={profile?.calendly_link ? 'completed' : 'upcoming'}
+                     statusText={profile?.calendly_link ? 'Scheduling link added' : 'Scheduling link needed'}
                     icon={Calendar}
                     onClick={() => navigate('/profile')}
                     role="vc"

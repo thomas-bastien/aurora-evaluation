@@ -216,7 +216,7 @@ const JurorOnboarding = () => {
 
             {/* Calendly Link */}
             <div>
-              <Label htmlFor="calendlyLink">Calendly Link (Optional)</Label>
+              <Label htmlFor="calendlyLink">Scheduling Link (Optional)</Label>
               <Input
                 type="url"
                 id="calendlyLink"

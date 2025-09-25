@@ -106,7 +106,7 @@ export const WorkflowGuide = ({ userRole, currentRound }: WorkflowGuideProps) =>
         title: "Juror Workflow - Pitching Round", 
         description: "Evaluate startups through live pitch presentations",
         steps: [
-          { icon: Calendar, title: "1. Set Availability", desc: "Upload your Calendly link for pitch call scheduling" },
+          { icon: Calendar, title: "1. Set Availability", desc: "Upload your scheduling link for pitch call scheduling" },
           { icon: Users, title: "2. Join Pitch Calls", desc: "Attend scheduled pitch presentations with startups" },
           { icon: BarChart3, title: "3. Evaluate Pitches", desc: "Complete evaluation forms after each pitch presentation" },
           { icon: Trophy, title: "4. Final Assessment", desc: "Submit comprehensive evaluations to help determine final selections" }

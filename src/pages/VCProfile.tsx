@@ -243,7 +243,7 @@ const VCProfile = () => {
                   </div>
 
                   <div>
-                    <Label htmlFor="calendly_link">Calendly Link</Label>
+                    <Label htmlFor="calendly_link">Scheduling Link</Label>
                     <Input id="calendly_link" type="url" value={formData.calendly_link} onChange={e => setFormData(prev => ({
                     ...prev,
                     calendly_link: e.target.value

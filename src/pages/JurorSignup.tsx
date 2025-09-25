@@ -253,7 +253,7 @@ const JurorSignup = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="calendly">Calendly Link (Optional)</Label>
+                <Label htmlFor="calendly">Scheduling Link (Optional)</Label>
                 <Input
                   id="calendly"
                   type="url"
