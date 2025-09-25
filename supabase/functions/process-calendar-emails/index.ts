@@ -171,14 +171,17 @@ const handler = async (req: Request): Promise<Response> => {
         lifecycleStatus = 'cancelled';
         matchingStatus = 'cancelled';
       } else if (previousEventDate !== newEventDate) {
-        lifecycleStatus = 'rescheduled';
+        // For rescheduled events, keep them in review for CM approval
+        lifecycleStatus = 'in_review';
         matchingStatus = 'rescheduled';
       } else if (sequenceNumber > (existingInvitation.sequence_number || 0)) {
-        lifecycleStatus = 'updated';
-        matchingStatus = existingInvitation.matching_status || 'unmatched';
+        // For minor updates, preserve existing status if it's in_review, otherwise keep existing
+        lifecycleStatus = existingInvitation.status === 'in_review' ? 'in_review' : (existingInvitation.status || 'in_review');
+        matchingStatus = existingInvitation.matching_status || 'pending_cm_review';
       } else {
-        lifecycleStatus = existingInvitation.status || 'scheduled';
-        matchingStatus = existingInvitation.matching_status || 'unmatched';
+        // No significant changes, preserve existing status and matching status
+        lifecycleStatus = existingInvitation.status || 'in_review';
+        matchingStatus = existingInvitation.matching_status || 'pending_cm_review';
       }
 
       // Add to lifecycle history
