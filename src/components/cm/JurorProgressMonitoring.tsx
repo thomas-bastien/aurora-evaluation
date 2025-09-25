@@ -336,13 +336,22 @@ export const JurorProgressMonitoring = ({ currentRound }: JurorProgressMonitorin
     setFilteredJurors(filtered);
   };
 
-  const sendReminder = async (jurorId: string, email: string) => {
+  const formatLastReminder = (date?: Date) => {
+    if (!date) return 'Never';
+    const now = new Date();
+    const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
+    if (diffDays === 0) return 'today';
+    if (diffDays === 1) return 'yesterday';
+    return `${diffDays} days ago`;
+  };
+
+  const sendReminder = async (jurorId: string, email: string, forceOverride = false) => {
     try {
       const juror = jurors.find(j => j.id === jurorId);
       if (!juror) throw new Error('Juror not found');
 
-      // Check throttling first
-      if (!juror.canSendReminder) {
+      // Only check throttling if not forcing override
+      if (!forceOverride && !juror.canSendReminder) {
         toast.error('Reminder already sent within the last 7 days');
         return;
       }
@@ -353,7 +362,8 @@ export const JurorProgressMonitoring = ({ currentRound }: JurorProgressMonitorin
           email,
           roundName: currentRound === 'screeningRound' ? 'Screening' : 'Pitching',
           pendingCount: juror.pendingCount,
-          completionRate: juror.completionRate
+          completionRate: juror.completionRate,
+          forceOverride
         }
       });
 
@@ -383,11 +393,11 @@ export const JurorProgressMonitoring = ({ currentRound }: JurorProgressMonitorin
     setShowConfirmation(true);
   };
 
-  const handleConfirmReminder = async () => {
+  const handleConfirmReminder = async (forceOverride = false) => {
     if (confirmationType === 'individual' && selectedJurorForReminder) {
-      await sendReminder(selectedJurorForReminder.id, selectedJurorForReminder.email);
+      await sendReminder(selectedJurorForReminder.id, selectedJurorForReminder.email, forceOverride);
     } else if (confirmationType === 'bulk') {
-      await sendBulkReminders();
+      await sendBulkReminders(forceOverride);
     }
   };
 
@@ -455,11 +465,11 @@ export const JurorProgressMonitoring = ({ currentRound }: JurorProgressMonitorin
     }
   };
 
-  const sendBulkReminders = async () => {
+  const sendBulkReminders = async (forceOverride = false) => {
     const incompleteJurors = filteredJurors.filter(j => 
       j.progressiveStatus.status !== 'completed' && 
       j.completionRate < 100 && 
-      j.canSendReminder
+      (forceOverride || j.canSendReminder)
     );
     
     if (incompleteJurors.length === 0) {
@@ -475,25 +485,24 @@ export const JurorProgressMonitoring = ({ currentRound }: JurorProgressMonitorin
       
       for (const juror of incompleteJurors) {
         try {
-          const { data, error } = await supabase.functions.invoke('send-email', {
-            body: {
-              templateCategory: 'juror_reminder',
-              recipientEmail: juror.email,
-              recipientId: juror.id,
-              recipientType: 'juror',
-              variables: {
-                juror_name: juror.name,
-                round_name: currentRound === 'screeningRound' ? 'Screening' : 'Pitching',
-                pending_count: juror.pendingCount,
-                completion_rate: Math.round(juror.completionRate),
-                login_link: frontendUrl
-              },
-              preventDuplicates: true
+          const { data, error } = await supabase.functions.invoke('send-juror-reminder', {
+            body: { 
+              jurorId: juror.id, 
+              email: juror.email,
+              roundName: currentRound === 'screeningRound' ? 'Screening' : 'Pitching',
+              pendingCount: juror.pendingCount,
+              completionRate: juror.completionRate,
+              forceOverride
             }
           });
 
           if (error) throw error;
-          successCount++;
+          
+          if (data?.throttled && !forceOverride) {
+            console.log(`Reminder throttled for ${juror.name}`);
+          } else {
+            successCount++;
+          }
         } catch (emailError) {
           console.error(`Failed to send reminder to ${juror.name}:`, emailError);
         }
@@ -762,10 +771,11 @@ export const JurorProgressMonitoring = ({ currentRound }: JurorProgressMonitorin
                     size="sm" 
                     variant="outline"
                     onClick={() => handleIndividualReminderClick(juror)}
-                    disabled={juror.progressiveStatus.status === 'completed' || !juror.canSendReminder}
+                    disabled={juror.progressiveStatus.status === 'completed'}
+                    title={!juror.canSendReminder ? `Last reminder sent ${formatLastReminder(juror.lastReminderSent)}` : ''}
                   >
                     <Mail className="w-4 h-4 mr-2" />
-                    {juror.canSendReminder ? 'Send Reminder' : 'Recently Reminded'}
+                    {juror.canSendReminder ? 'Send Reminder' : 'Send Reminder (Recent)'}
                   </Button>
                   <Button 
                     size="sm" 
@@ -928,8 +938,7 @@ export const JurorProgressMonitoring = ({ currentRound }: JurorProgressMonitorin
         selectedJuror={selectedJurorForReminder}
         eligibleJurors={filteredJurors.filter(j => 
           j.progressiveStatus.status !== 'completed' && 
-          j.completionRate < 100 && 
-          j.canSendReminder
+          j.completionRate < 100
         )}
         currentRound={currentRound}
         onConfirm={handleConfirmReminder}

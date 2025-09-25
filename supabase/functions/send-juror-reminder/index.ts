@@ -17,6 +17,7 @@ interface JurorReminderRequest {
   roundName?: string;
   pendingCount?: number;
   completionRate?: number;
+  forceOverride?: boolean;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -28,8 +29,8 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { jurorId, email, roundName, pendingCount, completionRate }: JurorReminderRequest = await req.json();
-    console.log('Sending reminder to juror:', { jurorId, email, roundName });
+    const { jurorId, email, roundName, pendingCount, completionRate, forceOverride }: JurorReminderRequest = await req.json();
+    console.log('Sending reminder to juror:', { jurorId, email, roundName, forceOverride });
 
     // Get current active round if not provided
     let currentRoundName = roundName;
@@ -43,33 +44,38 @@ const handler = async (req: Request): Promise<Response> => {
       currentRoundName = activeRound?.name === 'screening' ? 'Screening' : 'Pitching';
     }
 
-    // Check for recent reminders (7-day throttling) specific to this round
-    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
-    const { data: recentReminder } = await supabase
-      .from('email_communications')
-      .select('id, metadata')
-      .eq('recipient_type', 'juror')
-      .eq('recipient_id', jurorId)
-      .or('subject.ilike.%reminder%,subject.ilike.%evaluation%')
-      .gte('created_at', sevenDaysAgo);
+    // Skip throttle check if forceOverride is true
+    if (!forceOverride) {
+      // Check for recent reminders (7-day throttling) specific to this round
+      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+      const { data: recentReminder } = await supabase
+        .from('email_communications')
+        .select('id, metadata')
+        .eq('recipient_type', 'juror')
+        .eq('recipient_id', jurorId)
+        .or('subject.ilike.%reminder%,subject.ilike.%evaluation%')
+        .gte('created_at', sevenDaysAgo);
 
-    // Filter by round name in metadata
-    const roundSpecificReminder = recentReminder?.find(reminder => {
-      const metadata = reminder.metadata as any;
-      const reminderRoundName = metadata?.variables?.round_name;
-      return reminderRoundName === currentRoundName;
-    });
-
-    if (roundSpecificReminder) {
-      console.log(`Reminder already sent within last 7 days for ${currentRoundName} round`);
-      return new Response(JSON.stringify({ 
-        success: false,
-        message: `Reminder already sent within last 7 days for ${currentRoundName} round`,
-        throttled: true
-      }), {
-        status: 200,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
+      // Filter by round name in metadata
+      const roundSpecificReminder = recentReminder?.find(reminder => {
+        const metadata = reminder.metadata as any;
+        const reminderRoundName = metadata?.variables?.round_name;
+        return reminderRoundName === currentRoundName;
       });
+
+      if (roundSpecificReminder) {
+        console.log(`Reminder already sent within last 7 days for ${currentRoundName} round`);
+        return new Response(JSON.stringify({ 
+          success: false,
+          message: `Reminder already sent within last 7 days for ${currentRoundName} round`,
+          throttled: true
+        }), {
+          status: 200,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        });
+      }
+    } else {
+      console.log(`Throttle check overridden for ${currentRoundName} round`);
     }
 
     // Fetch juror details

@@ -25,7 +25,7 @@ interface JurorReminderConfirmationModalProps {
   selectedJuror?: JurorProgress | null;
   eligibleJurors?: JurorProgress[];
   currentRound: 'screeningRound' | 'pitchingRound';
-  onConfirm: () => Promise<void>;
+  onConfirm: (forceOverride?: boolean) => Promise<void>;
 }
 
 export const JurorReminderConfirmationModal = ({
@@ -41,10 +41,15 @@ export const JurorReminderConfirmationModal = ({
   
   const roundName = currentRound === 'screeningRound' ? 'Screening' : 'Pitching';
 
-  const handleConfirm = async () => {
+  // Check if any selected juror or eligible jurors are within throttle window
+  const hasThrottledJurors = type === 'individual' 
+    ? selectedJuror && !selectedJuror.canSendReminder
+    : eligibleJurors?.some(j => !j.canSendReminder) || false;
+
+  const handleConfirm = async (forceOverride = false) => {
     setLoading(true);
     try {
-      await onConfirm();
+      await onConfirm(forceOverride);
       onOpenChange(false);
     } catch (error) {
       // Error handling is done in the parent component
@@ -79,6 +84,24 @@ export const JurorReminderConfirmationModal = ({
         </DialogHeader>
 
         <div className="space-y-6">
+          {/* Throttle Override Warning */}
+          {hasThrottledJurors && (
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="w-5 h-5 text-amber-600 mt-0.5" />
+                <div>
+                  <h4 className="font-medium text-amber-800 mb-1">Override Throttle Window</h4>
+                  <p className="text-sm text-amber-700">
+                    {type === 'individual' 
+                      ? `A reminder was sent to ${selectedJuror?.name} ${formatLastReminder(selectedJuror?.lastReminderSent)}. Sending again will override the 7-day throttle window.`
+                      : `Some jurors have received reminders within the last 7 days. Proceeding will override the throttle window for ${eligibleJurors?.filter(j => !j.canSendReminder).length || 0} juror(s).`
+                    }
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Warning for bulk reminders */}
           {type === 'bulk' && (
             <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
@@ -209,18 +232,33 @@ export const JurorReminderConfirmationModal = ({
           >
             Cancel
           </Button>
-          <Button 
-            onClick={handleConfirm}
-            disabled={loading}
-            className="min-w-24"
-          >
-            {loading 
-              ? 'Sending...' 
-              : type === 'individual' 
-                ? 'Send Reminder' 
-                : 'Send All Reminders'
-            }
-          </Button>
+          {hasThrottledJurors ? (
+            <Button 
+              onClick={() => handleConfirm(true)}
+              disabled={loading}
+              className="min-w-24 bg-amber-600 hover:bg-amber-700"
+            >
+              {loading 
+                ? 'Sending...' 
+                : type === 'individual' 
+                  ? 'Override & Send' 
+                  : 'Override & Send All'
+              }
+            </Button>
+          ) : (
+            <Button 
+              onClick={() => handleConfirm(false)}
+              disabled={loading}
+              className="min-w-24"
+            >
+              {loading 
+                ? 'Sending...' 
+                : type === 'individual' 
+                  ? 'Send Reminder' 
+                  : 'Send All Reminders'
+              }
+            </Button>
+          )}
         </div>
       </DialogContent>
     </Dialog>
