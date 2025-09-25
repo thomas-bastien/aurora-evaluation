@@ -6,14 +6,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { ArrowRight, Mail, Users, AlertCircle, CheckCircle, Clock, RefreshCw } from "lucide-react";
 import { LifecycleStagePanel } from './LifecycleStagePanel';
-import { useLifecycleData } from '@/hooks/useLifecycleData';
+import { useLiveCommunicationStats } from '@/hooks/useLiveCommunicationStats';
 
 export const CommunicationLifecycleTimeline = () => {
   const { 
     data: lifecycleData, 
     isLoading, 
     refetch: refreshData 
-  } = useLifecycleData();
+  } = useLiveCommunicationStats();
 
   if (isLoading) {
     return (

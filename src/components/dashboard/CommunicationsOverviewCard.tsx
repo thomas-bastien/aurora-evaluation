@@ -1,12 +1,12 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { MessageSquare, Users, Mail, Phone, CheckCircle } from "lucide-react";
-import { useLifecycleData } from "@/hooks/useLifecycleData";
+import { useLiveCommunicationStats } from "@/hooks/useLiveCommunicationStats";
 import { useNavigate } from "react-router-dom";
 
 export function CommunicationsOverviewCard() {
   const navigate = useNavigate();
-  const { data: lifecycleData, isLoading } = useLifecycleData();
+  const { data: lifecycleData, isLoading } = useLiveCommunicationStats();
 
   if (isLoading) {
     return (

@@ -13,7 +13,7 @@ import {
   ArrowRight 
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useLifecycleData } from "@/hooks/useLifecycleData";
+import { useLiveCommunicationStats } from "@/hooks/useLiveCommunicationStats";
 
 interface UnifiedOverviewCardProps {
   totalStartups: number;
@@ -35,7 +35,7 @@ export const UnifiedOverviewCard = ({
   nextMilestone
 }: UnifiedOverviewCardProps) => {
   const navigate = useNavigate();
-  const { data: lifecycleData, isLoading } = useLifecycleData();
+  const { data: lifecycleData, isLoading } = useLiveCommunicationStats();
 
   // Get communication steps for current round
   const getCurrentSteps = () => {
