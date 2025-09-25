@@ -242,7 +242,8 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // Only update matching if this is a new invitation or if we don't have existing matching data
-    if (!existingInvitation || (!existingInvitation.startup_id && !existingInvitation.juror_id)) {
+    // Don't override status for rescheduled events - they should keep their 'in_review' status
+    if (!existingInvitation || ((!existingInvitation.startup_id && !existingInvitation.juror_id) && matchingStatus !== 'rescheduled')) {
       if (startups?.length && jurors?.length) {
         startup = startups[0];
         juror = jurors[0];
@@ -337,11 +338,29 @@ const handler = async (req: Request): Promise<Response> => {
         lifecycleStatus = 'in_review';
       }
     } else {
-      // Keep existing matching but update status appropriately  
+      // Keep existing matching data and preserve rescheduled status
       startup = { id: existingInvitation.startup_id };
       juror = { id: existingInvitation.juror_id };
       if (existingInvitation.pitching_assignment_id) {
         assignment = { id: existingInvitation.pitching_assignment_id };
+      }
+      
+      // For rescheduled events, update the associated assignment with new meeting details
+      if (matchingStatus === 'rescheduled' && existingInvitation.pitching_assignment_id && lifecycleStatus !== 'cancelled') {
+        const { error: updateError } = await supabase
+          .from('pitching_assignments')
+          .update({
+            meeting_scheduled_date: new Date(calendarEvent.dtstart).toISOString(),
+            calendly_link: calendarEvent.location,
+            meeting_notes: calendarEvent.description,
+            status: 'assigned'
+          })
+          .eq('id', existingInvitation.pitching_assignment_id);
+
+        if (updateError) {
+          console.error('Error updating assignment for rescheduled event:', updateError);
+          matchingErrors.push('Failed to update assignment for rescheduled event');
+        }
       }
     }
 
