@@ -8,8 +8,8 @@ const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
 
-// Test mode configuration - set to false to disable
-const TEST_MODE = true;
+// Test mode configuration from environment
+const TEST_MODE = Deno.env.get("TEST_MODE") === "true";
 const TEST_EMAIL = "delivered@resend.dev";
 
 const corsHeaders = {
@@ -94,7 +94,7 @@ const handler = async (req: Request): Promise<Response> => {
       .map(b => b.toString(16).padStart(2, '0'))
       .join('');
 
-    // Check for duplicates if enabled
+    // Check for duplicates if enabled (skip in TEST_MODE)
     if (requestData.preventDuplicates !== false) {
       const { data: existing, error: duplicateError } = await supabase
         .from('email_communications')
@@ -105,14 +105,18 @@ const handler = async (req: Request): Promise<Response> => {
         .single();
 
       if (existing && !duplicateError) {
-        console.log("Duplicate email prevented:", existing.id);
-        return new Response(JSON.stringify({ 
-          message: "Email not sent - duplicate detected",
-          duplicateId: existing.id 
-        }), {
-          status: 200,
-          headers: { "Content-Type": "application/json", ...corsHeaders },
-        });
+        if (TEST_MODE) {
+          console.log("🧪 SANDBOX MODE: Duplicate detected but allowing for testing:", existing.id);
+        } else {
+          console.log("Duplicate email prevented:", existing.id);
+          return new Response(JSON.stringify({ 
+            message: "Email not sent - duplicate detected",
+            duplicateId: existing.id 
+          }), {
+            status: 200,
+            headers: { "Content-Type": "application/json", ...corsHeaders },
+          });
+        }
       }
     }
 
@@ -150,14 +154,19 @@ const handler = async (req: Request): Promise<Response> => {
       const actualRecipient = TEST_MODE ? TEST_EMAIL : requestData.recipientEmail;
 
       if (TEST_MODE) {
-        console.log(`🧪 TEST MODE: Redirecting email from ${requestData.recipientEmail} to ${TEST_EMAIL}`);
+        console.log(`🧪 SANDBOX MODE: Redirecting email from ${requestData.recipientEmail} to ${TEST_EMAIL}`);
       }
 
       const emailResponse = await resend.emails.send({
         from: "Aurora Tech Awards <noreply@resend.dev>",
         to: [actualRecipient],
-        subject,
-        html: body,
+        subject: TEST_MODE ? `[SANDBOX] ${subject}` : subject,
+        html: TEST_MODE ? `
+          <div style="background-color: #fff3cd; border: 1px solid #ffeaa7; padding: 12px; margin-bottom: 20px; border-radius: 4px;">
+            <strong>🧪 SANDBOX MODE:</strong> This email would normally be sent to: <strong>${requestData.recipientEmail}</strong>
+          </div>
+          ${body}
+        ` : body,
       });
 
       console.log("Email sent successfully via Resend:", emailResponse);

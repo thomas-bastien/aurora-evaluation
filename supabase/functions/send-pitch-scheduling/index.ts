@@ -4,6 +4,10 @@ import { Resend } from "npm:resend@2.0.0";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
+// Test mode configuration from environment
+const TEST_MODE = Deno.env.get("TEST_MODE") === "true";
+const TEST_EMAIL = "delivered@resend.dev";
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -55,8 +59,13 @@ const handler = async (req: Request): Promise<Response> => {
       </div>
     `).join('');
 
-    // Prepare CC recipients (all assigned jurors)
-    const ccEmails = assignedJurors.map(juror => juror.email);
+    // Determine recipients based on test mode
+    const actualRecipient = TEST_MODE ? TEST_EMAIL : startupEmail;
+    const ccEmails = TEST_MODE ? [] : assignedJurors.map(juror => juror.email);
+    
+    if (TEST_MODE) {
+      console.log(`🧪 SANDBOX MODE: Redirecting email from ${startupEmail} to ${TEST_EMAIL}, CC disabled`);
+    }
 
     const subject = "🚀 Time to Schedule Your Pitch Sessions!";
     const htmlContent = `
@@ -107,11 +116,16 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Send email to startup with CC to all assigned jurors
     const emailResponse = await resend.emails.send({
-      from: "Aurora Evaluation <noreply@aurora.dev>",
-      to: [startupEmail],
+      from: "Aurora Evaluation <noreply@resend.dev>",
+      to: [actualRecipient],
       cc: ccEmails,
-      subject: subject,
-      html: htmlContent,
+      subject: TEST_MODE ? `[SANDBOX] ${subject}` : subject,
+      html: TEST_MODE ? `
+        <div style="background-color: #fff3cd; border: 1px solid #ffeaa7; padding: 12px; margin-bottom: 20px; border-radius: 4px;">
+          <strong>🧪 SANDBOX MODE:</strong> This email would normally be sent to: <strong>${startupEmail}</strong> with CC to: <strong>${assignedJurors.map(j => j.email).join(', ')}</strong>
+        </div>
+        ${htmlContent}
+      ` : htmlContent,
     });
 
     if (emailResponse.error) {

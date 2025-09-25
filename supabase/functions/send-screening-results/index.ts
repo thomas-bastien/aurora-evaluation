@@ -4,6 +4,10 @@ import { Resend } from "npm:resend@2.0.0";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
+// Test mode configuration from environment
+const TEST_MODE = Deno.env.get("TEST_MODE") === "true";
+const TEST_EMAIL = "delivered@resend.dev";
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -96,12 +100,24 @@ const handler = async (req: Request): Promise<Response> => {
       `;
     }
 
-    // Send email using Resend (using dummy email for testing)
+    // Determine recipient based on test mode
+    const actualRecipient = TEST_MODE ? TEST_EMAIL : email;
+    
+    if (TEST_MODE) {
+      console.log(`🧪 SANDBOX MODE: Redirecting email from ${email} to ${TEST_EMAIL}`);
+    }
+
+    // Send email using Resend
     const emailResponse = await resend.emails.send({
-      from: "Aurora Evaluation <noreply@aurora.dev>",
-      to: ["lucien98@gmail.com", "thomasbastien.uk@gmail.com"], // Using dummy emails for testing
-      subject: subject,
-      html: htmlContent,
+      from: "Aurora Evaluation <noreply@resend.dev>",
+      to: [actualRecipient],
+      subject: TEST_MODE ? `[SANDBOX] ${subject}` : subject,
+      html: TEST_MODE ? `
+        <div style="background-color: #fff3cd; border: 1px solid #ffeaa7; padding: 12px; margin-bottom: 20px; border-radius: 4px;">
+          <strong>🧪 SANDBOX MODE:</strong> This email would normally be sent to: <strong>${email}</strong>
+        </div>
+        ${htmlContent}
+      ` : htmlContent,
     });
 
     if (emailResponse.error) {
