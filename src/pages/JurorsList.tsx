@@ -669,34 +669,34 @@ export default function JurorsList() {
                     <TableCell>{juror.company || '-'}</TableCell>
                     <TableCell>
                       <div className="space-y-1">
-                        {juror.preferred_regions && juror.preferred_regions.length > 0 && (
-                          <div className="flex flex-wrap gap-1">
-                            {juror.preferred_regions.slice(0, 2).map(region => (
-                              <Badge key={region} variant="secondary" className="text-xs">
-                                {region}
-                              </Badge>
-                            ))}
-                            {juror.preferred_regions.length > 2 && (
-                              <Badge variant="outline" className="text-xs">
-                                +{juror.preferred_regions.length - 2}
-                              </Badge>
-                            )}
-                          </div>
-                        )}
-                        {juror.target_verticals && juror.target_verticals.length > 0 && (
-                          <div className="flex flex-wrap gap-1">
-                            {juror.target_verticals.slice(0, 2).map(vertical => (
-                              <Badge key={vertical} variant="outline" className="text-xs">
-                                {vertical}
-                              </Badge>
-                            ))}
-                            {juror.target_verticals.length > 2 && (
-                              <Badge variant="outline" className="text-xs">
-                                +{juror.target_verticals.length - 2}
-                              </Badge>
-                            )}
-                          </div>
-                        )}
+                         {juror.preferred_regions && juror.preferred_regions.length > 0 && (
+                           <div className="flex flex-wrap gap-1">
+                             {juror.preferred_regions.slice(0, 2).map((region, index) => (
+                               <Badge key={`${juror.id}-region-${index}`} variant="secondary" className="text-xs">
+                                 {region}
+                               </Badge>
+                             ))}
+                             {juror.preferred_regions.length > 2 && (
+                               <Badge variant="outline" className="text-xs">
+                                 +{juror.preferred_regions.length - 2}
+                               </Badge>
+                             )}
+                           </div>
+                         )}
+                         {juror.target_verticals && juror.target_verticals.length > 0 && (
+                           <div className="flex flex-wrap gap-1">
+                             {juror.target_verticals.slice(0, 2).map((vertical, index) => (
+                               <Badge key={`${juror.id}-vertical-${index}`} variant="outline" className="text-xs">
+                                 {vertical}
+                               </Badge>
+                             ))}
+                             {juror.target_verticals.length > 2 && (
+                               <Badge variant="outline" className="text-xs">
+                                 +{juror.target_verticals.length - 2}
+                               </Badge>
+                             )}
+                           </div>
+                         )}
                         {(!juror.preferred_regions || juror.preferred_regions.length === 0) && 
                          (!juror.target_verticals || juror.target_verticals.length === 0) && (
                           <span className="text-sm text-muted-foreground">No preferences set</span>
