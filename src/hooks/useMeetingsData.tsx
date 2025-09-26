@@ -124,6 +124,19 @@ export const useMeetingsData = () => {
   const updateMeetingStatus = async (meetingId: string, newStatus: MeetingStatus, sourceType: 'assignment' | 'calendar_invitation') => {
     try {
       if (sourceType === 'assignment') {
+        // Get current status to prevent regressions
+        const { data: currentMeeting } = await supabase
+          .from('pitching_assignments')
+          .select('status')
+          .eq('id', meetingId)
+          .single();
+
+        // Validate status transition to prevent regressions
+        if (currentMeeting && !isValidStatusTransition(currentMeeting.status, newStatus)) {
+          toast.error(`Cannot change status from ${currentMeeting.status} to ${newStatus}`);
+          return;
+        }
+
         const updateData: any = { status: newStatus };
         
         if (newStatus === 'completed') {
@@ -244,6 +257,24 @@ export const useMeetingsData = () => {
     createAssignment,
     approveInReview
   };
+};
+
+// Helper function to validate status transitions and prevent regressions
+const isValidStatusTransition = (currentStatus: string, newStatus: string): boolean => {
+  const statusHierarchy = {
+    'pending': 1,
+    'assigned': 2,
+    'in_review': 3,
+    'scheduled': 4,
+    'completed': 5,
+    'cancelled': 5
+  };
+
+  const currentLevel = statusHierarchy[currentStatus as keyof typeof statusHierarchy] || 1;
+  const newLevel = statusHierarchy[newStatus as keyof typeof statusHierarchy] || 1;
+
+  // Allow same level transitions and upgrades, prevent downgrades except to cancelled
+  return newLevel >= currentLevel || newStatus === 'cancelled';
 };
 
 // Helper function to determine assignment status

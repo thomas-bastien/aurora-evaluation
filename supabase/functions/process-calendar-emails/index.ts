@@ -254,14 +254,15 @@ const handler = async (req: Request): Promise<Response> => {
             matchingStatus = 'pending_cm_review';
             lifecycleStatus = 'in_review';
             
-            // Update the existing assignment status to assigned
+            // Update the existing assignment - preserve status if it's higher level than 'assigned'
+            const preservedStatus = existingPendingAssignment.status === 'pending' ? 'assigned' : existingPendingAssignment.status;
             const { error: updateError } = await supabase
               .from('pitching_assignments')
               .update({
                 meeting_scheduled_date: new Date(calendarEvent.dtstart).toISOString(),
                 calendly_link: calendarEvent.location,
                 meeting_notes: calendarEvent.description,
-                status: 'assigned'
+                status: preservedStatus
               })
               .eq('id', existingPendingAssignment.id);
 
@@ -287,14 +288,18 @@ const handler = async (req: Request): Promise<Response> => {
             if (existingAssignment && existingAssignment.status !== 'pending') {
               assignment = existingAssignment;
               
-              // Update the pitching assignment with meeting details but keep assigned status
+              // Update the pitching assignment with meeting details but preserve higher-level statuses
+              const preservedStatus = shouldPreserveStatus(existingAssignment.status) 
+                ? existingAssignment.status 
+                : (lifecycleStatus === 'cancelled' ? 'cancelled' : 'assigned');
+              
               const { error: updateError } = await supabase
                 .from('pitching_assignments')
                 .update({
                   meeting_scheduled_date: new Date(calendarEvent.dtstart).toISOString(),
                   calendly_link: calendarEvent.location,
                   meeting_notes: calendarEvent.description,
-                  status: lifecycleStatus === 'cancelled' ? 'cancelled' : 'assigned'
+                  status: preservedStatus
                 })
                 .eq('id', assignment.id);
 
@@ -347,13 +352,24 @@ const handler = async (req: Request): Promise<Response> => {
       
       // For rescheduled events, update the associated assignment with new meeting details
       if (matchingStatus === 'rescheduled' && existingInvitation.pitching_assignment_id && lifecycleStatus !== 'cancelled') {
+        // First get the current status to preserve it
+        const { data: currentAssignment } = await supabase
+          .from('pitching_assignments')
+          .select('status')
+          .eq('id', existingInvitation.pitching_assignment_id)
+          .single();
+        
+        const preservedStatus = currentAssignment && shouldPreserveStatus(currentAssignment.status) 
+          ? currentAssignment.status 
+          : 'assigned';
+        
         const { error: updateError } = await supabase
           .from('pitching_assignments')
           .update({
             meeting_scheduled_date: new Date(calendarEvent.dtstart).toISOString(),
             calendly_link: calendarEvent.location,
             meeting_notes: calendarEvent.description,
-            status: 'assigned'
+            status: preservedStatus
           })
           .eq('id', existingInvitation.pitching_assignment_id);
 
@@ -440,6 +456,13 @@ const handler = async (req: Request): Promise<Response> => {
     });
   }
 };
+
+// Helper function to determine if a status should be preserved
+function shouldPreserveStatus(status: string): boolean {
+  // Preserve higher-level statuses that shouldn't be downgraded
+  const preservedStatuses = ['completed', 'cancelled', 'scheduled', 'in_review'];
+  return preservedStatuses.includes(status);
+}
 
 function parseIcsContent(icsContent: string): CalendarEvent | null {
   try {
