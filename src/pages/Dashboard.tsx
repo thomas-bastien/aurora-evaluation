@@ -219,6 +219,19 @@ const Dashboard = () => {
         }
         
         const matchmakingProgress = activeStartups > 0 ? Math.round((totalAssignments / (activeStartups * 3)) * 100) : 0;
+        
+        // Calculate pitching calls statistics from pitching_assignments
+        const { data: pitchingAssignments } = await supabase
+          .from('pitching_assignments')
+          .select('status, meeting_scheduled_date, meeting_completed_date');
+        
+        const pitchCallsScheduled = pitchingAssignments?.filter(assignment => 
+          assignment.status === 'scheduled' || assignment.meeting_scheduled_date
+        ).length || 0;
+        
+        const pitchCallsCompleted = pitchingAssignments?.filter(assignment => 
+          assignment.status === 'completed' || assignment.meeting_completed_date
+        ).length || 0;
 
         setDashboardData({
           activeStartups,
@@ -241,8 +254,8 @@ const Dashboard = () => {
           },
           pitchingStats: {
             matchmakingProgress: 0, // TODO: Calculate for pitching phase
-            pitchCallsScheduled: 0, // TODO: Calculate from pitch_requests
-            pitchCallsCompleted: 0, // TODO: Calculate from pitch_requests
+            pitchCallsScheduled,
+            pitchCallsCompleted,
             evaluationsProgress: pitchingProgress.percentage,
             finalSelectionComplete: false,
             finalResultsComplete: false

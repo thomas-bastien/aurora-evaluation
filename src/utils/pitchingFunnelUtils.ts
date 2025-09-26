@@ -99,48 +99,47 @@ export const getPitchingMatchmakingStepData = async (): Promise<FunnelStepData> 
 
 /**
  * Step 2: Pitching Calls
- * Currently mirrors Step 3 (Evaluations) since call data is not yet available
+ * Completion % = completed calls ÷ total pitch calls (Pitching Round)
  */
 export const getPitchingCallsStepData = async (): Promise<FunnelStepData> => {
   try {
-    // Get total expected evaluations for pitching
-    const { count: totalAssignments } = await supabase
+    // Get all pitching assignments (total pitch calls)
+    const { data: assignments } = await supabase
       .from('pitching_assignments')
-      .select('*', { count: 'exact', head: true })
-      .eq('status', 'assigned');
+      .select('status, meeting_scheduled_date, meeting_completed_date');
 
-    const denominator = totalAssignments || 0;
+    const denominator = assignments?.length || 0;
 
-    // Get submitted evaluations
-    const { count: submittedEvaluations } = await supabase
-      .from('pitching_evaluations')
-      .select('*', { count: 'exact', head: true })
-      .eq('status', 'submitted');
+    // Helper function to determine if call is completed (matching useMeetingsData logic)
+    const isCompleted = (assignment: any): boolean => {
+      return assignment.meeting_completed_date || assignment.status === 'completed';
+    };
 
-    const numerator = submittedEvaluations || 0;
+    // Count completed calls
+    const numerator = assignments?.filter(isCompleted).length || 0;
     const percentage = denominator > 0 ? Math.round((numerator / denominator) * 100) : 0;
 
     return {
       title: "Pitching Calls",
-      description: "Evaluations submitted",
+      description: "Calls completed",
       numerator,
       denominator,
       percentage,
       route: "/selection?round=pitching&tab=juror-progress",
       status: percentage >= 80 ? 'completed' : percentage > 0 ? 'in-progress' : 'pending',
-      tooltip: "Currently mirrors Pitching Evaluations completion until Pitching Call data is integrated"
+      tooltip: "Shows progress of pitch meetings completed compared to total pitch calls assigned in Pitching Round"
     };
   } catch (error) {
     console.error('Error fetching pitching calls data:', error);
     return {
       title: "Pitching Calls",
-      description: "Evaluations submitted",
+      description: "Calls completed",
       numerator: 0,
       denominator: 0,
       percentage: 0,
       route: "/selection?round=pitching&tab=juror-progress",
       status: 'pending',
-      tooltip: "Currently mirrors Pitching Evaluations completion until Pitching Call data is integrated"
+      tooltip: "Shows progress of pitch meetings completed compared to total pitch calls assigned in Pitching Round"
     };
   }
 };
