@@ -260,9 +260,29 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
 
   const handleConfirmAssignments = async () => {
     try {
-      // Delete all existing assignments for current startups
       const startupIds = startups.map(s => s.id);
       const assignmentTable = currentRound === 'screeningRound' ? 'screening_assignments' : 'pitching_assignments';
+      
+      // First, query existing assignments to preserve their statuses
+      const { data: existingAssignments, error: queryError } = await supabase
+        .from(assignmentTable)
+        .select('startup_id, juror_id, status')
+        .in('startup_id', startupIds);
+
+      if (queryError) throw queryError;
+
+      // Create a lookup map for existing statuses
+      const statusLookup = new Map<string, string>();
+      existingAssignments?.forEach(assignment => {
+        const key = `${assignment.startup_id}-${assignment.juror_id}`;
+        // Only preserve statuses that represent meeting progress
+        const progressStatuses = ['scheduled', 'completed', 'cancelled', 'in_review'];
+        if (progressStatuses.includes(assignment.status)) {
+          statusLookup.set(key, assignment.status);
+        }
+      });
+
+      // Delete all existing assignments for current startups
       const { error: deleteError } = await supabase
         .from(assignmentTable)
         .delete()
@@ -270,12 +290,17 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
 
       if (deleteError) throw deleteError;
 
-      // Insert new assignments
-      const assignmentInserts = assignments.map(assignment => ({
-        startup_id: assignment.startup_id,
-        juror_id: assignment.juror_id,
-        status: 'assigned'
-      }));
+      // Insert new assignments with preserved statuses
+      const assignmentInserts = assignments.map(assignment => {
+        const key = `${assignment.startup_id}-${assignment.juror_id}`;
+        const preservedStatus = statusLookup.get(key);
+        
+        return {
+          startup_id: assignment.startup_id,
+          juror_id: assignment.juror_id,
+          status: preservedStatus || 'assigned' // Use preserved status or default to 'assigned'
+        };
+      });
 
       if (assignmentInserts.length > 0) {
         const { error: insertError } = await supabase
@@ -286,7 +311,14 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
       }
 
       setIsConfirmed(true);
-      toast.success('All assignments have been confirmed successfully!');
+      
+      // Show how many statuses were preserved
+      const preservedCount = assignmentInserts.filter(a => a.status !== 'assigned').length;
+      const message = preservedCount > 0 
+        ? `All assignments confirmed! ${preservedCount} meeting status${preservedCount !== 1 ? 'es' : ''} preserved.`
+        : 'All assignments have been confirmed successfully!';
+      
+      toast.success(message);
 
     } catch (error) {
       console.error('Error saving assignments:', error);
