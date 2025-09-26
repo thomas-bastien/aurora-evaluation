@@ -294,13 +294,13 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
     }
   };
 
-  const handleSendSchedulingEmails = (filters: { onlyConfirmed: boolean; excludeAlreadyEmailed: boolean }) => {
+  const handleSendSchedulingEmails = (filters: { onlyConfirmed: boolean; excludeAlreadyEmailed: boolean; forceOverride?: boolean }) => {
     setShowSchedulingEmailModal(false);
     return sendPitchSchedulingEmails(filters);
   };
 
   // Function to send pitch scheduling emails with filtering options
-  const sendPitchSchedulingEmails = async (filters?: { onlyConfirmed: boolean; excludeAlreadyEmailed: boolean }) => {
+  const sendPitchSchedulingEmails = async (filters?: { onlyConfirmed: boolean; excludeAlreadyEmailed: boolean; forceOverride?: boolean }) => {
     try {
       setSendingEmails(true);
       console.log('Sending pitch scheduling emails...');
@@ -317,8 +317,8 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
       // Filter startups based on options
       let eligibleStartupIds = Array.from(startupAssignments.keys());
 
-      // Apply excludeAlreadyEmailed filter
-      if (filters?.excludeAlreadyEmailed) {
+      // Apply excludeAlreadyEmailed filter (unless force override is enabled)
+      if (filters?.excludeAlreadyEmailed && !filters?.forceOverride) {
         const { data: emailedStartups } = await supabase
           .from('email_communications')
           .select('recipient_id')
@@ -384,7 +384,8 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
       }
 
       if (successCount > 0) {
-        toast.success(`Sent pitch scheduling emails to ${successCount} startups with investor calendar links!`);
+        const overrideMessage = filters?.forceOverride ? ' (including previously emailed startups)' : '';
+        toast.success(`Sent pitch scheduling emails to ${successCount} startups with investor calendar links${overrideMessage}!`);
         setIsEmailsSent(true);
       } else {
         toast.error('No scheduling emails were sent successfully');

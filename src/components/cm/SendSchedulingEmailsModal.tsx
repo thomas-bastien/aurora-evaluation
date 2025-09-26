@@ -14,7 +14,7 @@ interface SendSchedulingEmailsModalProps {
   onClose: () => void;
   currentRound: 'screeningRound' | 'pitchingRound';
   assignments: Assignment[];
-  onSendEmails: (filters: { onlyConfirmed: boolean; excludeAlreadyEmailed: boolean }) => Promise<void>;
+  onSendEmails: (filters: { onlyConfirmed: boolean; excludeAlreadyEmailed: boolean; forceOverride?: boolean }) => Promise<void>;
 }
 
 export const SendSchedulingEmailsModal = ({ 
@@ -86,8 +86,12 @@ export const SendSchedulingEmailsModal = ({
     }
   };
 
-  const handleConfirm = async () => {
-    await onSendEmails({ onlyConfirmed: true, excludeAlreadyEmailed: true });
+  const handleConfirm = async (forceOverride = false) => {
+    await onSendEmails({ 
+      onlyConfirmed: true, 
+      excludeAlreadyEmailed: !forceOverride, 
+      forceOverride 
+    });
     onClose();
   };
 
@@ -100,6 +104,9 @@ export const SendSchedulingEmailsModal = ({
     status: 'assigned'
   }));
 
+  const hasSkippedStartups = emailStats.alreadyEmailed > 0;
+  const totalPossible = emailStats.totalStartups + emailStats.alreadyEmailed;
+
   return (
     <UniversalCommunicationModal
       open={open}
@@ -109,12 +116,17 @@ export const SendSchedulingEmailsModal = ({
       type="bulk"
       participants={mockParticipants}
       statistics={{
-        total: emailStats.totalStartups + emailStats.alreadyEmailed,
+        total: totalPossible,
         eligible: emailStats.totalStartups,
         willSend: emailStats.estimatedEmails,
         willSkip: emailStats.alreadyEmailed,
         skipReasons: emailStats.alreadyEmailed > 0 ? { 'already emailed': emailStats.alreadyEmailed } : undefined
       }}
+      hasThrottleOverride={hasSkippedStartups}
+      throttleMessage={hasSkippedStartups ? 
+        `${emailStats.alreadyEmailed} startup${emailStats.alreadyEmailed !== 1 ? 's' : ''} will be skipped because they have already received scheduling emails. Use override to re-send emails to all startups.` 
+        : undefined
+      }
       onConfirm={handleConfirm}
       isLoading={loading}
     />
