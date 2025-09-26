@@ -366,7 +366,7 @@ const pitchingEvaluationSections: EvaluationSection[] = [{
   criteria: [{
     key: 'founder_team_score',
     label: 'Founder & Team Assessment',
-    description: '5: Exceptional team with outstanding track record and expertise | 4: Strong, experienced team with proven skills | 3: Adequate experience with some relevant background | 2: Limited experience but potential for growth | 1: Significant concerns about team capabilities'
+    description: 'Assess team experience, expertise, and track record'
   }]
 }, {
   key: 'profitability_market',
@@ -375,7 +375,7 @@ const pitchingEvaluationSections: EvaluationSection[] = [{
   criteria: [{
     key: 'profitability_market_score',
     label: 'Market Potential & Profitability',
-    description: '5: Exceptional market opportunity with outstanding growth potential | 4: Strong growth in large market with credible projections backed by data | 3: Adequate market size with realistic targets | 2: Limited market potential or weak execution plan | 1: Significant concerns about market viability'
+    description: 'Evaluate market size, growth potential, and profitability projections'
   }]
 }, {
   key: 'prize_money_usage',
@@ -384,7 +384,7 @@ const pitchingEvaluationSections: EvaluationSection[] = [{
   criteria: [{
     key: 'prize_money_usage_score',
     label: 'Prize Money Allocation',
-    description: '5: Exceptionally detailed allocation with clear ROI expectations | 4: Specific allocation aligned with goals and expected outcomes stated | 3: Adequate planning with general alignment to business stage | 2: Limited detail or minor misalignment with goals | 1: Vague or significantly misaligned with business needs'
+    description: 'Assess funding allocation plan and alignment with business objectives'
   }]
 }, {
   key: 'information_delivery',
@@ -393,7 +393,7 @@ const pitchingEvaluationSections: EvaluationSection[] = [{
   criteria: [{
     key: 'information_delivery_score',
     label: 'Pitch Quality & Delivery',
-    description: '5: Outstanding presentation with exceptional storytelling and flow | 4: Clear, logical, structured with smooth flow and strong storytelling | 3: Adequate presentation with good structure | 2: Some organizational issues or unclear elements | 1: Disorganized, unclear, or missing critical elements'
+    description: 'Evaluate presentation clarity, structure, and storytelling effectiveness'
   }]
 }, {
   key: 'qa_performance',
@@ -402,7 +402,7 @@ const pitchingEvaluationSections: EvaluationSection[] = [{
   criteria: [{
     key: 'qa_performance_score',
     label: 'Q&A Session Performance',
-    description: '5: Exceptional responses with deep insights and evidence | 4: Precise, evidence-based answers with good depth | 3: Adequate responses showing reasonable knowledge | 2: Some uncertainty or shallow responses | 1: Vague, unsupported, or off-topic answers'
+    description: 'Assess quality of responses during Q&A session'
   }]
 }];
 const guidedFeedbackOptions = [{
@@ -942,6 +942,40 @@ export const StartupEvaluationModal = ({
                 </CardContent>
               </Card>
 
+              {/* Scoring Scale Reference */}
+              <Card className="bg-gradient-to-r from-primary/5 to-secondary/5 border-primary/20">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-primary">
+                    <Star className="w-5 h-5" />
+                    Scoring Scale Reference (1-5)
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-5 gap-3 text-sm">
+                    <div className="text-center p-3 rounded-lg bg-destructive/10 border border-destructive/20">
+                      <div className="font-bold text-destructive mb-1">1 - Poor</div>
+                      <div className="text-xs text-muted-foreground">Vague, unsupported, or off-topic answers</div>
+                    </div>
+                    <div className="text-center p-3 rounded-lg bg-orange-100 border border-orange-200 dark:bg-orange-900/20 dark:border-orange-800/30">
+                      <div className="font-bold text-orange-700 dark:text-orange-400 mb-1">2 - Weak</div>
+                      <div className="text-xs text-muted-foreground">Some uncertainty or shallow responses</div>
+                    </div>
+                    <div className="text-center p-3 rounded-lg bg-yellow-100 border border-yellow-200 dark:bg-yellow-900/20 dark:border-yellow-800/30">
+                      <div className="font-bold text-yellow-700 dark:text-yellow-400 mb-1">3 - Adequate</div>
+                      <div className="text-xs text-muted-foreground">Adequate responses showing reasonable knowledge</div>
+                    </div>
+                    <div className="text-center p-3 rounded-lg bg-blue-100 border border-blue-200 dark:bg-blue-900/20 dark:border-blue-800/30">
+                      <div className="font-bold text-blue-700 dark:text-blue-400 mb-1">4 - Strong</div>
+                      <div className="text-xs text-muted-foreground">Precise, evidence-based answers with good depth</div>
+                    </div>
+                    <div className="text-center p-3 rounded-lg bg-success/10 border border-success/20">
+                      <div className="font-bold text-success mb-1">5 - Excellent</div>
+                      <div className="text-xs text-muted-foreground">Exceptional responses with deep insights and evidence</div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
               {/* Evaluation Criteria Sections */}
               <Card>
                 <CardHeader>
@@ -989,15 +1023,16 @@ export const StartupEvaluationModal = ({
                                             id={`${criterion.key}-${score}`}
                                             className="w-4 h-4"
                                           />
-                                          <Label 
-                                            htmlFor={`${criterion.key}-${score}`} 
-                                            className="text-xs cursor-pointer"
-                                            title={
-                                              score === 5 ? 'Excellent' :
-                                              score === 4 ? 'Strong' :
-                                              score === 3 ? 'Adequate' :
-                                              score === 2 ? 'Weak' : 'Poor'
-                                            }
+                                           <Label 
+                                             htmlFor={`${criterion.key}-${score}`} 
+                                             className="text-xs cursor-pointer"
+                                             title={
+                                               score === 5 ? 'Excellent: Exceptional responses with deep insights and evidence' :
+                                               score === 4 ? 'Strong: Precise, evidence-based answers with good depth' :
+                                               score === 3 ? 'Adequate: Adequate responses showing reasonable knowledge' :
+                                               score === 2 ? 'Weak: Some uncertainty or shallow responses' : 
+                                               'Poor: Vague, unsupported, or off-topic answers'
+                                             }
                                           >
                                             {score}
                                           </Label>
