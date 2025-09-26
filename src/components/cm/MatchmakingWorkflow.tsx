@@ -262,63 +262,93 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
     try {
       const startupIds = startups.map(s => s.id);
       const assignmentTable = currentRound === 'screeningRound' ? 'screening_assignments' : 'pitching_assignments';
-      
-      // First, query existing assignments to preserve their statuses
-      const { data: existingAssignments, error: queryError } = await supabase
+
+      // Fetch existing assignments with full details to preserve state
+      const { data: existing, error: existingError } = await supabase
         .from(assignmentTable)
-        .select('startup_id, juror_id, status')
+        .select('*')
         .in('startup_id', startupIds);
 
-      if (queryError) throw queryError;
+      if (existingError) throw existingError;
 
-      // Create a lookup map for existing statuses
-      const statusLookup = new Map<string, string>();
-      existingAssignments?.forEach(assignment => {
-        const key = `${assignment.startup_id}-${assignment.juror_id}`;
-        // Only preserve statuses that represent meeting progress
-        const progressStatuses = ['scheduled', 'completed', 'cancelled', 'in_review'];
-        if (progressStatuses.includes(assignment.status)) {
-          statusLookup.set(key, assignment.status);
+      // Build maps/sets for diffing
+      const existingByKey = new Map<string, any>();
+      existing?.forEach((a: any) => {
+        const key = `${a.startup_id}-${a.juror_id}`;
+        existingByKey.set(key, a);
+      });
+
+      const desiredKeys = new Set(assignments.map(a => `${a.startup_id}-${a.juror_id}`));
+
+      const toKeep: any[] = [];
+      const toInsert: { startup_id: string; juror_id: string; status: string }[] = [];
+      const toCancelIds: string[] = [];
+      const toDeleteIds: string[] = [];
+
+      // Classify existing rows: keep vs remove (cancel or delete)
+      existing?.forEach((a: any) => {
+        const key = `${a.startup_id}-${a.juror_id}`;
+        if (desiredKeys.has(key)) {
+          toKeep.push(a);
+        } else {
+          const progressStatuses = ['scheduled', 'completed', 'cancelled', 'in_review'];
+          const progressed = progressStatuses.includes(a.status) || !!a.meeting_scheduled_date;
+          // Only cancel progressed pitching assignments; screening has no meeting context
+          if (progressed && assignmentTable === 'pitching_assignments') {
+            toCancelIds.push(a.id);
+          } else {
+            toDeleteIds.push(a.id);
+          }
         }
       });
 
-      // Delete all existing assignments for current startups
-      const { error: deleteError } = await supabase
-        .from(assignmentTable)
-        .delete()
-        .in('startup_id', startupIds);
-
-      if (deleteError) throw deleteError;
-
-      // Insert new assignments with preserved statuses
-      const assignmentInserts = assignments.map(assignment => {
-        const key = `${assignment.startup_id}-${assignment.juror_id}`;
-        const preservedStatus = statusLookup.get(key);
-        
-        return {
-          startup_id: assignment.startup_id,
-          juror_id: assignment.juror_id,
-          status: preservedStatus || 'assigned' // Use preserved status or default to 'assigned'
-        };
+      // Determine inserts (desired that don't exist yet)
+      const existingKeys = new Set(existing?.map((a: any) => `${a.startup_id}-${a.juror_id}`) || []);
+      assignments.forEach(a => {
+        const key = `${a.startup_id}-${a.juror_id}`;
+        if (!existingKeys.has(key)) {
+          toInsert.push({ startup_id: a.startup_id, juror_id: a.juror_id, status: 'assigned' });
+        }
       });
 
-      if (assignmentInserts.length > 0) {
+      // Execute minimal changes
+      if (toCancelIds.length > 0) {
+        const { error: cancelError } = await supabase
+          .from(assignmentTable)
+          .update({ status: 'cancelled' })
+          .in('id', toCancelIds);
+        if (cancelError) throw cancelError;
+      }
+
+      if (toDeleteIds.length > 0) {
+        const { error: deleteError } = await supabase
+          .from(assignmentTable)
+          .delete()
+          .in('id', toDeleteIds);
+        if (deleteError) throw deleteError;
+      }
+
+      if (toInsert.length > 0) {
         const { error: insertError } = await supabase
           .from(assignmentTable)
-          .insert(assignmentInserts);
-
+          .insert(toInsert);
         if (insertError) throw insertError;
       }
 
       setIsConfirmed(true);
-      
-      // Show how many statuses were preserved
-      const preservedCount = assignmentInserts.filter(a => a.status !== 'assigned').length;
-      const message = preservedCount > 0 
-        ? `All assignments confirmed! ${preservedCount} meeting status${preservedCount !== 1 ? 'es' : ''} preserved.`
-        : 'All assignments have been confirmed successfully!';
-      
-      toast.success(message);
+      console.log('Assignments diff result', {
+        kept: toKeep.length,
+        inserted: toInsert.length,
+        cancelled: toCancelIds.length,
+        deleted: toDeleteIds.length
+      });
+
+      const parts: string[] = [];
+      if (toInsert.length) parts.push(`${toInsert.length} inserted`);
+      if (toCancelIds.length) parts.push(`${toCancelIds.length} cancelled`);
+      if (toDeleteIds.length) parts.push(`${toDeleteIds.length} removed`);
+      if (toKeep.length) parts.push(`${toKeep.length} preserved`);
+      toast.success(`Assignments updated: ${parts.join(', ')}.`);
 
     } catch (error) {
       console.error('Error saving assignments:', error);

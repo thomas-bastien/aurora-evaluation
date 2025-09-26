@@ -177,6 +177,19 @@ export const useMeetingsData = () => {
 
   const createAssignment = async (startupId: string, jurorId: string) => {
     try {
+      // Prevent duplicate assignments
+      const { data: existing } = await supabase
+        .from('pitching_assignments')
+        .select('id')
+        .eq('startup_id', startupId)
+        .eq('juror_id', jurorId)
+        .maybeSingle();
+
+      if (existing) {
+        toast.info('This investor is already assigned to this startup.');
+        return;
+      }
+
       const { error } = await supabase
         .from('pitching_assignments')
         .insert({
@@ -235,26 +248,31 @@ export const useMeetingsData = () => {
 
 // Helper function to determine assignment status
 const determineAssignmentStatus = (assignment: any): MeetingStatus => {
-  // Check for explicit completed status or completed date
+  // Completed takes precedence
   if (assignment.meeting_completed_date || assignment.status === 'completed') {
     return 'completed';
   }
   
-  // Check for explicit cancelled status
+  // Cancelled
   if (assignment.status === 'cancelled') {
     return 'cancelled';
   }
   
-  // Check for in_review status (takes priority over scheduling date)
+  // In review
   if (assignment.status === 'in_review') {
     return 'in_review';
   }
+
+  // Explicit scheduled state should show as scheduled even without a date
+  if (assignment.status === 'scheduled') {
+    return 'scheduled';
+  }
   
-  // If there's a scheduled date, show as scheduled regardless of whether status is 'assigned' or 'scheduled'
+  // Scheduled date present implies scheduled
   if (assignment.meeting_scheduled_date) {
     return 'scheduled';
   }
   
-  // For 'assigned' status or any other status without a scheduled date, show as pending
+  // Default
   return 'pending';
 };
