@@ -248,7 +248,8 @@ export const JurorProgressMonitoring = ({ currentRound }: JurorProgressMonitorin
           const scheduledFromAssignments = pitchingAssignmentsData.filter((pa: any) => 
             pa.juror_id === juror.id && 
             assignedStartupIds.includes(pa.startup_id) &&
-            (pa.meeting_scheduled_date || pa.meeting_completed_date)
+            (pa.meeting_scheduled_date || pa.meeting_completed_date) &&
+            pa.status !== 'cancelled'
           ).length;
           
           // Use the higher count (avoid double counting but ensure we capture all scheduled calls)
