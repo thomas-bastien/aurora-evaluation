@@ -319,56 +319,51 @@ export async function fetchJurorContributionData(roundName: string): Promise<Jur
 }
 
 export async function fetchPitchAnalyticsData(): Promise<PitchAnalytics[]> {
-  // Fetch pitch requests separately
-  const { data: pitchRequests, error } = await supabase
-    .from('pitch_requests')
+  // Fetch pitching assignments with startup and juror details (same as Pitching Calls tab)
+  const { data: assignments, error } = await supabase
+    .from('pitching_assignments')
     .select(`
-      id,
-      status,
-      pitch_date,
-      meeting_notes,
-      startup_id,
-      vc_id
-    `);
+      *,
+      startup:startups!inner(name, contact_email),
+      juror:jurors!inner(name, email)
+    `)
+    .order('created_at', { ascending: false });
 
   if (error) throw error;
 
-  // Get unique startup and VC IDs
-  const startupIds = [...new Set(pitchRequests.map((p: any) => p.startup_id).filter(Boolean))];
-  const vcIds = [...new Set(pitchRequests.map((p: any) => p.vc_id).filter(Boolean))];
+  // Helper function to determine assignment status (matching useMeetingsData logic)
+  const determineStatus = (assignment: any): string => {
+    if (assignment.meeting_completed_date || assignment.status === 'completed') {
+      return 'completed';
+    }
+    if (assignment.status === 'cancelled') {
+      return 'cancelled';
+    }
+    if (assignment.status === 'in_review') {
+      return 'in_review';
+    }
+    if (assignment.status === 'scheduled' || assignment.meeting_scheduled_date) {
+      return 'scheduled';
+    }
+    return 'pending';
+  };
 
-  // Fetch startup details
-  const { data: startups } = await supabase
-    .from('startups')
-    .select('id, name')
-    .in('id', startupIds);
-
-  // Fetch juror details using correct relationship (vc_id -> jurors.user_id)
-  const { data: jurors } = await supabase
-    .from('jurors')
-    .select('user_id, name')
-    .in('user_id', vcIds);
-
-  // Create lookup maps
-  const startupLookup = startups?.reduce((acc: any, startup: any) => {
-    acc[startup.id] = startup;
-    return acc;
-  }, {}) || {};
-
-  const jurorLookup = jurors?.reduce((acc: any, juror: any) => {
-    acc[juror.user_id] = juror;
-    return acc;
-  }, {}) || {};
-
-  return pitchRequests.map((pitch: any) => ({
-    id: pitch.id,
-    startupName: startupLookup[pitch.startup_id]?.name || 'Unknown',
-    pitchStatus: pitch.status,
-    meetingDate: pitch.pitch_date,
-    vcName: jurorLookup[pitch.vc_id]?.name || 'Unknown',
-    outcome: pitch.status === 'completed' ? 'Completed' : pitch.status === 'scheduled' ? 'Scheduled' : null,
-    notes: pitch.meeting_notes
-  }));
+  return assignments.map((assignment: any) => {
+    const status = determineStatus(assignment);
+    return {
+      id: assignment.id,
+      startupName: assignment.startup.name || 'Unknown',
+      pitchStatus: status,
+      meetingDate: assignment.meeting_scheduled_date || assignment.meeting_completed_date,
+      vcName: assignment.juror.name || 'Unknown',
+      outcome: status === 'completed' ? 'Completed' : 
+               status === 'scheduled' ? 'Scheduled' : 
+               status === 'cancelled' ? 'Cancelled' : 
+               status === 'in_review' ? 'In Review' : 
+               'Pending',
+      notes: assignment.meeting_notes
+    };
+  });
 }
 
 // Utility Functions
