@@ -79,6 +79,7 @@ const handler = async (req: Request): Promise<Response> => {
     const fromAddress = getFromAddress();
     
     console.log(`📧 EMAIL CONFIG: TEST_MODE=${TEST_MODE}, From=${fromAddress}, Original recipient=${startupEmail}, Actual recipient=${actualRecipient}`);
+    console.log(`📧 CC EMAILS ARRAY:`, JSON.stringify(ccEmails));
     
     if (TEST_MODE) {
       console.log(`🧪 SANDBOX MODE: Redirecting email from ${startupEmail} to ${TEST_EMAIL}, CC to admin: ${ADMIN_CC_EMAIL}`);
