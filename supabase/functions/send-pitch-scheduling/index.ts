@@ -11,15 +11,7 @@ const ADMIN_CC_EMAIL = "lucien98london@gmail.com";
 
 // Get appropriate "From" address based on mode
 const getFromAddress = (): string => {
-  if (TEST_MODE) {
-    return Deno.env.get("RESEND_FROM_SANDBOX") || "Aurora Evaluation <onboarding@resend.dev>";
-  }
-  const prodFrom = Deno.env.get("RESEND_FROM");
-  if (!prodFrom) {
-    console.error("RESEND_FROM not configured for production mode");
-    throw new Error("RESEND_FROM must be set for production email sending");
-  }
-  return prodFrom;
+  return "Aurora Evaluation <no-reply@aurora-evaluation.com>";
 };
 
 const corsHeaders = {
