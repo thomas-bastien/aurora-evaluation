@@ -6,8 +6,8 @@ const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
 // Test mode configuration from environment
 const TEST_MODE = Deno.env.get("TEST_MODE") === "true";
-const TEST_EMAIL = "delivered@resend.dev";
-const ADMIN_CC_EMAIL = Deno.env.get("ADMIN_CC_EMAIL") || "admin@example.com";
+const TEST_EMAIL = "lucien98@gmail.com";
+const ADMIN_CC_EMAIL = "lucien98london@gmail.com";
 
 // Get appropriate "From" address based on mode
 const getFromAddress = (): string => {
