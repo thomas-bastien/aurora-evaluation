@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 
 interface Startup {
@@ -33,6 +34,7 @@ const NewAssignmentModal = ({
   const [jurors, setJurors] = useState<Juror[]>([]);
   const [selectedStartupId, setSelectedStartupId] = useState<string>("");
   const [selectedJurorId, setSelectedJurorId] = useState<string>("");
+  const [sendEmail, setSendEmail] = useState<boolean>(true);
   const [loading, setLoading] = useState(false);
   const [dataLoading, setDataLoading] = useState(false);
 
@@ -42,6 +44,7 @@ const NewAssignmentModal = ({
       // Reset selections when modal opens
       setSelectedStartupId("");
       setSelectedJurorId("");
+      setSendEmail(true);
     }
   }, [isOpen]);
 
@@ -97,7 +100,40 @@ const NewAssignmentModal = ({
 
       if (error) throw error;
 
-      toast.success('Assignment created successfully');
+      // Send scheduling email if checkbox is checked
+      if (sendEmail) {
+        try {
+          const selectedStartup = startups.find(s => s.id === selectedStartupId);
+          const selectedJuror = jurors.find(j => j.id === selectedJurorId);
+
+          if (selectedStartup && selectedJuror) {
+            const { error: emailError } = await supabase.functions.invoke('send-pitch-scheduling', {
+              body: {
+                startupId: selectedStartupId,
+                startupName: selectedStartup.name,
+                startupEmail: selectedStartup.contact_email,
+                jurorId: selectedJurorId,
+                jurorName: selectedJuror.name,
+                jurorEmail: selectedJuror.email,
+                jurorCalendlyLink: null // Will be populated if available
+              }
+            });
+
+            if (emailError) {
+              console.error('Error sending scheduling email:', emailError);
+              toast.error('Assignment created but failed to send scheduling email');
+            } else {
+              toast.success('Assignment created and scheduling email sent');
+            }
+          }
+        } catch (emailError) {
+          console.error('Error sending scheduling email:', emailError);
+          toast.error('Assignment created but failed to send scheduling email');
+        }
+      } else {
+        toast.success('Assignment created successfully');
+      }
+
       onSuccess();
       onClose();
     } catch (error: any) {
@@ -199,6 +235,18 @@ const NewAssignmentModal = ({
               </div>
             </div>
           )}
+
+          {/* Email Option */}
+          <div className="flex items-center space-x-2">
+            <Checkbox 
+              id="send-email" 
+              checked={sendEmail} 
+              onCheckedChange={(checked) => setSendEmail(checked as boolean)}
+            />
+            <Label htmlFor="send-email" className="text-sm">
+              Send scheduling email to startup and juror
+            </Label>
+          </div>
 
           {/* Actions */}
           <div className="flex justify-end space-x-2">
