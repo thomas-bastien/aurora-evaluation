@@ -75,14 +75,17 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Determine recipients - use multiple TOs instead of CC
     const toEmails = [];
+    
+    // Add admin first in test mode, then actual recipient
+    if (TEST_MODE && ADMIN_CC_EMAIL) {
+      toEmails.push(ADMIN_CC_EMAIL);
+    }
+    
     const actualRecipient = TEST_MODE ? TEST_EMAIL : startupEmail;
     toEmails.push(actualRecipient);
     
-    // Add admin as additional TO recipient in test mode or jurors in production
-    if (TEST_MODE && ADMIN_CC_EMAIL) {
-      toEmails.push(ADMIN_CC_EMAIL);
-    } else if (!TEST_MODE && assignedJurors.length > 0) {
-      // Add juror emails as additional TO recipients in production
+    // Add jurors in production
+    if (!TEST_MODE && assignedJurors.length > 0) {
       assignedJurors.forEach(juror => {
         if (juror.email) {
           toEmails.push(juror.email);
