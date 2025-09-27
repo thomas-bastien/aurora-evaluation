@@ -73,16 +73,30 @@ const handler = async (req: Request): Promise<Response> => {
       </div>
     `).join('');
 
-    // Determine recipients based on test mode
+    // Determine recipients - use multiple TOs instead of CC
+    const toEmails = [];
     const actualRecipient = TEST_MODE ? TEST_EMAIL : startupEmail;
-    const ccEmails = TEST_MODE ? [ADMIN_CC_EMAIL] : assignedJurors.map(juror => juror.email);
+    toEmails.push(actualRecipient);
+    
+    // Add admin as additional TO recipient in test mode or jurors in production
+    if (TEST_MODE && ADMIN_CC_EMAIL) {
+      toEmails.push(ADMIN_CC_EMAIL);
+    } else if (!TEST_MODE && assignedJurors.length > 0) {
+      // Add juror emails as additional TO recipients in production
+      assignedJurors.forEach(juror => {
+        if (juror.email) {
+          toEmails.push(juror.email);
+        }
+      });
+    }
+    
     const fromAddress = getFromAddress();
     
-    console.log(`📧 EMAIL CONFIG: TEST_MODE=${TEST_MODE}, From=${fromAddress}, Original recipient=${startupEmail}, Actual recipient=${actualRecipient}`);
-    console.log(`📧 CC EMAILS ARRAY:`, JSON.stringify(ccEmails));
+    console.log(`📧 EMAIL CONFIG: TEST_MODE=${TEST_MODE}, From=${fromAddress}, Original recipient=${startupEmail}`);
+    console.log(`📧 TO EMAILS ARRAY:`, JSON.stringify(toEmails));
     
     if (TEST_MODE) {
-      console.log(`🧪 SANDBOX MODE: Redirecting email from ${startupEmail} to ${TEST_EMAIL}, CC to admin: ${ADMIN_CC_EMAIL}`);
+      console.log(`🧪 SANDBOX MODE: Redirecting email from ${startupEmail} to ${TEST_EMAIL}, additional TO: ${ADMIN_CC_EMAIL}`);
     }
 
     const subject = "🚀 Time to Schedule Your Pitch Sessions!";
@@ -132,16 +146,15 @@ const handler = async (req: Request): Promise<Response> => {
       </div>
     `;
 
-    // Send email to startup with CC to all assigned jurors
+    // Send email to all recipients (no CC needed now)
     const emailResponse = await resend.emails.send({
       from: fromAddress,
-      to: [actualRecipient],
-      cc: ccEmails,
+      to: toEmails,
       subject: TEST_MODE ? `[SANDBOX] ${subject}` : subject,
       html: TEST_MODE ? `
         <div style="background-color: #fff3cd; border: 1px solid #ffeaa7; padding: 12px; margin-bottom: 20px; border-radius: 4px;">
-          <strong>🧪 SANDBOX MODE:</strong> This email would normally be sent to: <strong>${startupEmail}</strong> with CC to: <strong>${assignedJurors.map(j => j.email).join(', ')}</strong><br>
-          <strong>Admin CC:</strong> ${ADMIN_CC_EMAIL}
+          <strong>🧪 SANDBOX MODE:</strong> This email would normally be sent to: <strong>${startupEmail}</strong> with additional TO recipients: <strong>${assignedJurors.map(j => j.email).join(', ')}</strong><br>
+          <strong>Admin TO:</strong> ${ADMIN_CC_EMAIL}
         </div>
         ${htmlContent}
       ` : htmlContent,
@@ -158,7 +171,7 @@ const handler = async (req: Request): Promise<Response> => {
       success: true,
       emailId: emailResponse.data?.id,
       message: `Pitch scheduling email sent to ${startupName}`,
-      ccRecipients: ccEmails.length
+      toRecipients: toEmails.length
     }), {
       status: 200,
       headers: {
