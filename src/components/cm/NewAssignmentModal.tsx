@@ -77,16 +77,17 @@ const NewAssignmentModal = ({
 
     setLoading(true);
     try {
-      // Check if assignment already exists
+      // Check if active assignment already exists (ignore cancelled ones)
       const { data: existingAssignment } = await supabase
         .from('pitching_assignments')
         .select('id')
         .eq('startup_id', selectedStartupId)
         .eq('juror_id', selectedJurorId)
-        .single();
+        .neq('status', 'cancelled')
+        .maybeSingle();
 
       if (existingAssignment) {
-        toast.error('This assignment already exists');
+        toast.error('An active assignment already exists for this startup-juror pair');
         return;
       }
 
