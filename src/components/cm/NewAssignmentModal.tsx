@@ -112,10 +112,13 @@ const NewAssignmentModal = ({
                 startupId: selectedStartupId,
                 startupName: selectedStartup.name,
                 startupEmail: selectedStartup.contact_email,
-                jurorId: selectedJurorId,
-                jurorName: selectedJuror.name,
-                jurorEmail: selectedJuror.email,
-                jurorCalendlyLink: null // Will be populated if available
+                assignedJurors: [{
+                  id: selectedJuror.id,
+                  name: selectedJuror.name,
+                  email: selectedJuror.email,
+                  company: 'N/A', // Company field not available in jurors table
+                  calendlyLink: '' // Will be populated if available
+                }]
               }
             });
 
