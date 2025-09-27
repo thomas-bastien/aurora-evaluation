@@ -7,6 +7,7 @@ const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 // Test mode configuration from environment
 const TEST_MODE = Deno.env.get("TEST_MODE") === "true";
 const TEST_EMAIL = "delivered@resend.dev";
+const ADMIN_CC_EMAIL = Deno.env.get("ADMIN_CC_EMAIL") || "admin@example.com";
 
 // Get appropriate "From" address based on mode
 const getFromAddress = (): string => {
@@ -74,13 +75,13 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Determine recipients based on test mode
     const actualRecipient = TEST_MODE ? TEST_EMAIL : startupEmail;
-    const ccEmails = TEST_MODE ? [] : assignedJurors.map(juror => juror.email);
+    const ccEmails = TEST_MODE ? [ADMIN_CC_EMAIL] : assignedJurors.map(juror => juror.email);
     const fromAddress = getFromAddress();
     
     console.log(`📧 EMAIL CONFIG: TEST_MODE=${TEST_MODE}, From=${fromAddress}, Original recipient=${startupEmail}, Actual recipient=${actualRecipient}`);
     
     if (TEST_MODE) {
-      console.log(`🧪 SANDBOX MODE: Redirecting email from ${startupEmail} to ${TEST_EMAIL}, CC disabled`);
+      console.log(`🧪 SANDBOX MODE: Redirecting email from ${startupEmail} to ${TEST_EMAIL}, CC to admin: ${ADMIN_CC_EMAIL}`);
     }
 
     const subject = "🚀 Time to Schedule Your Pitch Sessions!";
@@ -138,7 +139,8 @@ const handler = async (req: Request): Promise<Response> => {
       subject: TEST_MODE ? `[SANDBOX] ${subject}` : subject,
       html: TEST_MODE ? `
         <div style="background-color: #fff3cd; border: 1px solid #ffeaa7; padding: 12px; margin-bottom: 20px; border-radius: 4px;">
-          <strong>🧪 SANDBOX MODE:</strong> This email would normally be sent to: <strong>${startupEmail}</strong> with CC to: <strong>${assignedJurors.map(j => j.email).join(', ')}</strong>
+          <strong>🧪 SANDBOX MODE:</strong> This email would normally be sent to: <strong>${startupEmail}</strong> with CC to: <strong>${assignedJurors.map(j => j.email).join(', ')}</strong><br>
+          <strong>Admin CC:</strong> ${ADMIN_CC_EMAIL}
         </div>
         ${htmlContent}
       ` : htmlContent,
