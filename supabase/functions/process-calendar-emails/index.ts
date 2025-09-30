@@ -718,7 +718,10 @@ function parseIcsContent(icsContent: string): CalendarEvent | null {
       } else if (line.startsWith('DTSTART')) {
         const dateMatch = line.match(/DTSTART[^:]*:(.+)/);
         if (dateMatch) {
+          console.log("📅 Raw DTSTART line:", line);
+          console.log("📅 Extracted DTSTART value:", dateMatch[1]);
           event.dtstart = parseIcsDate(dateMatch[1]);
+          console.log("📅 Parsed DTSTART result:", event.dtstart);
         }
       } else if (line.startsWith('DTEND')) {
         const dateMatch = line.match(/DTEND[^:]*:(.+)/);
@@ -753,24 +756,58 @@ function parseIcsContent(icsContent: string): CalendarEvent | null {
 function parseIcsDate(dateString: string): string {
   try {
     if (!dateString) return '';
-    const ds = String(dateString).trim();
-    // Handle YYYYMMDDTHHMMSSZ or similar
+    
+    // Clean and normalize the date string
+    let ds = String(dateString).trim();
+    
+    // Remove timezone identifiers but preserve the date value
+    // Apple Calendar format: TZID=Europe/Prague:20251027T020000
+    if (ds.includes('TZID=')) {
+      const tzMatch = ds.match(/TZID=([^:]+):(.+)/);
+      if (tzMatch) {
+        ds = tzMatch[2]; // Extract just the date part
+        console.log("🕐 Extracted timezone-aware date:", ds);
+      }
+    }
+    
+    // Handle YYYYMMDDTHHMMSSZ or YYYYMMDDTHHMMSS
     if (ds.includes('T')) {
       const cleanDate = ds.replace(/[TZ]/g, '');
+      
+      // Validate we have at least 8 digits (YYYYMMDD)
+      if (cleanDate.length < 8) {
+        console.warn("⚠️ Date string too short:", ds);
+        return '';
+      }
+      
       const year = cleanDate.substring(0, 4);
       const month = cleanDate.substring(4, 6);
       const day = cleanDate.substring(6, 8);
       const hour = cleanDate.substring(8, 10) || '00';
       const minute = cleanDate.substring(10, 12) || '00';
       const second = cleanDate.substring(12, 14) || '00';
+      
+      // Validate year is reasonable (between 2020-2030)
+      const yearNum = parseInt(year);
+      if (yearNum < 2020 || yearNum > 2030) {
+        console.error("❌ Invalid year detected:", yearNum, "from string:", dateString);
+      }
+      
       return new Date(`${year}-${month}-${day}T${hour}:${minute}:${second}Z`).toISOString();
     }
+    
     // Handle YYYYMMDD format (all-day events)
-    const year = ds.substring(0, 4);
-    const month = ds.substring(4, 6);
-    const day = ds.substring(6, 8);
-    return new Date(`${year}-${month}-${day}T00:00:00Z`).toISOString();
-  } catch (_) {
+    if (ds.length >= 8) {
+      const year = ds.substring(0, 4);
+      const month = ds.substring(4, 6);
+      const day = ds.substring(6, 8);
+      return new Date(`${year}-${month}-${day}T00:00:00Z`).toISOString();
+    }
+    
+    console.warn("⚠️ Unrecognized date format:", ds);
+    return '';
+  } catch (error) {
+    console.error("❌ Date parsing error:", error, "for string:", dateString);
     return '';
   }
 }
