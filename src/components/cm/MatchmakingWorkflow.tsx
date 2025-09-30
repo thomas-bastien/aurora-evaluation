@@ -277,9 +277,27 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
 
       if (existingError) throw existingError;
 
-      // Build maps/sets for diffing
+      // Deduplicate existing assignments before processing
+      // This handles cases where duplicate assignments exist in the database
+      const deduplicatedExisting = Array.from(
+        (existing || []).reduce((map, a) => {
+          const key = `${a.startup_id}-${a.juror_id}`;
+          // Keep the most recent one if duplicates exist
+          if (!map.has(key) || new Date(a.created_at) > new Date(map.get(key).created_at)) {
+            map.set(key, a);
+          }
+          return map;
+        }, new Map<string, any>())
+      ).map(([_, assignment]) => assignment);
+
+      // Log warning if duplicates were found
+      if (existing && existing.length !== deduplicatedExisting.length) {
+        console.warn(`⚠️ Found ${existing.length - deduplicatedExisting.length} duplicate assignments that were automatically deduplicated`);
+      }
+
+      // Build maps/sets for diffing using deduplicated data
       const existingByKey = new Map<string, any>();
-      existing?.forEach((a: any) => {
+      deduplicatedExisting.forEach((a: any) => {
         const key = `${a.startup_id}-${a.juror_id}`;
         existingByKey.set(key, a);
       });
@@ -292,7 +310,7 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
       const toDeleteIds: string[] = [];
 
       // Classify existing rows: keep vs remove (cancel or delete)
-      existing?.forEach((a: any) => {
+      deduplicatedExisting.forEach((a: any) => {
         const key = `${a.startup_id}-${a.juror_id}`;
         if (desiredKeys.has(key)) {
           toKeep.push(a);
@@ -309,7 +327,7 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
       });
 
       // Determine inserts (desired that don't exist yet)
-      const existingKeys = new Set(existing?.map((a: any) => `${a.startup_id}-${a.juror_id}`) || []);
+      const existingKeys = new Set(deduplicatedExisting.map((a: any) => `${a.startup_id}-${a.juror_id}`) || []);
       assignments.forEach(a => {
         const key = `${a.startup_id}-${a.juror_id}`;
         if (!existingKeys.has(key)) {
