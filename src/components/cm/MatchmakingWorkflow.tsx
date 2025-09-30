@@ -326,6 +326,28 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
         }
       });
 
+      // For pitching round: validate startups are actually selected in screening
+      if (currentRound === 'pitchingRound') {
+        const startupIds = assignments.map(a => a.startup_id);
+        const { data: validationData, error: validationError } = await supabase
+          .from('startup_round_statuses')
+          .select('startup_id, status, rounds!inner(name)')
+          .eq('rounds.name', 'screening')
+          .eq('status', 'selected')
+          .in('startup_id', startupIds);
+          
+        if (validationError) throw validationError;
+        
+        const validStartupIds = new Set(validationData?.map(v => v.startup_id) || []);
+        const invalidAssignments = assignments.filter(a => !validStartupIds.has(a.startup_id));
+        
+        if (invalidAssignments.length > 0) {
+          const invalidNames = invalidAssignments.map(a => a.startup_name).join(', ');
+          toast.error(`Cannot create pitching assignments for rejected startups: ${invalidNames}`);
+          throw new Error('Invalid assignments detected');
+        }
+      }
+
       // Determine inserts (desired that don't exist yet)
       const existingKeys = new Set(deduplicatedExisting.map((a: any) => `${a.startup_id}-${a.juror_id}`) || []);
       assignments.forEach(a => {
