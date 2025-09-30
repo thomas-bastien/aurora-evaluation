@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.53.0";
+import JSZip from "https://esm.sh/jszip@3.10.1";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -98,7 +99,7 @@ const handler = async (req: Request): Promise<Response> => {
       });
 
       // Try direct extraction from attachments field
-      icsContent = extractIcsContent(emailData.attachments);
+      icsContent = await extractIcsContent(emailData.attachments);
 
       // STRATEGY 2: If attachments is an array, try each item
       if (!icsContent && Array.isArray(emailData.attachments)) {
@@ -119,11 +120,11 @@ const handler = async (req: Request): Promise<Response> => {
           // Try structured object { filename, content, contentType }
           if (item && typeof item === 'object') {
             // Try common property names
-            icsContent = extractIcsContent(item.content) || 
-                         extractIcsContent(item.data) ||
-                         extractIcsContent(item.body) ||
-                         extractIcsContent(item.file) ||
-                         extractIcsContent(item);
+            icsContent = await extractIcsContent(item.content) || 
+                         await extractIcsContent(item.data) ||
+                         await extractIcsContent(item.body) ||
+                         await extractIcsContent(item.file) ||
+                         await extractIcsContent(item);
             
             if (icsContent) {
               console.log(`Found ICS in attachment item ${i}`);
@@ -131,7 +132,7 @@ const handler = async (req: Request): Promise<Response> => {
             }
           } else {
             // Try item directly (might be string or number array)
-            icsContent = extractIcsContent(item);
+            icsContent = await extractIcsContent(item);
             if (icsContent) {
               console.log(`Found ICS in raw item ${i}`);
               break;
@@ -157,7 +158,7 @@ const handler = async (req: Request): Promise<Response> => {
           const field = (emailData as any)[fieldName];
           if (field) {
             console.log(`  Checking field: ${fieldName}`);
-            icsContent = extractIcsContent(field);
+            icsContent = await extractIcsContent(field);
             if (icsContent) {
               console.log(`Found ICS in flat field: ${fieldName}`);
               break;
@@ -169,7 +170,7 @@ const handler = async (req: Request): Promise<Response> => {
       // STRATEGY 4: Parse from email body (existing logic)
       if (!icsContent && emailData.body?.includes?.('BEGIN:VCALENDAR')) {
         console.log("Strategy 4: Extracting from email body");
-        icsContent = extractIcsContent(emailData.body);
+        icsContent = await extractIcsContent(emailData.body);
       }
 
       // STRATEGY 5: Try to extract ICS from HTML body
@@ -178,7 +179,7 @@ const handler = async (req: Request): Promise<Response> => {
         // Remove HTML tags
         const textOnly = emailData.body.replace(/<[^>]*>/g, ' ');
         if (textOnly.includes('BEGIN:VCALENDAR')) {
-          icsContent = extractIcsContent(textOnly);
+          icsContent = await extractIcsContent(textOnly);
         }
       }
 
@@ -563,8 +564,76 @@ function shouldPreserveStatus(status: string): boolean {
 }
 
 // Flexible content extractor that handles various input formats
-function extractIcsContent(input: any): string | null {
+async function extractIcsContent(input: any): Promise<string | null> {
   if (!input) return null;
+  
+  // Strategy 0: URL Detection & Fetching (for Zapier S3 URLs)
+  if (typeof input === 'string') {
+    // Remove quotes if URL is wrapped
+    const cleanInput = input.replace(/^["']|["']$/g, '');
+    
+    // Check if it's a URL
+    if (cleanInput.startsWith('http://') || cleanInput.startsWith('https://')) {
+      console.log("🔗 Detected URL, fetching content from:", cleanInput.substring(0, 80) + "...");
+      
+      try {
+        const response = await fetch(cleanInput);
+        if (!response.ok) {
+          console.error("❌ Failed to fetch URL:", response.status, response.statusText);
+          return null;
+        }
+        
+        const contentType = response.headers.get('content-type') || '';
+        const arrayBuffer = await response.arrayBuffer();
+        console.log("✅ Successfully fetched content, size:", arrayBuffer.byteLength, "bytes");
+        
+        // Check if it's a ZIP file (by magic bytes or content-type)
+        const uint8Array = new Uint8Array(arrayBuffer);
+        const isZip = uint8Array[0] === 0x50 && uint8Array[1] === 0x4B && // PK magic bytes
+                      uint8Array[2] === 0x03 && uint8Array[3] === 0x04;
+        
+        if (isZip || contentType.includes('zip')) {
+          console.log("📦 ZIP file detected, decompressing...");
+          
+          try {
+            const zip = await JSZip.loadAsync(arrayBuffer);
+            console.log("📂 ZIP contents:", Object.keys(zip.files).join(', '));
+            
+            // Find .ics file in ZIP
+            const icsFile = Object.keys(zip.files).find(name => 
+              name.toLowerCase().endsWith('.ics') && !zip.files[name].dir
+            );
+            
+            if (icsFile) {
+              console.log("📅 Found ICS file in ZIP:", icsFile);
+              const icsContent = await zip.files[icsFile].async('text');
+              
+              if (icsContent.includes('BEGIN:VCALENDAR')) {
+                console.log("✅ Successfully extracted ICS from ZIP");
+                return icsContent;
+              }
+            } else {
+              console.warn("⚠️ No .ics file found in ZIP");
+            }
+          } catch (zipError) {
+            console.error("❌ ZIP decompression failed:", zipError);
+          }
+        } else {
+          // Not a ZIP, treat as plain text/ICS
+          const text = new TextDecoder().decode(uint8Array);
+          if (text.includes('BEGIN:VCALENDAR')) {
+            console.log("✅ Found ICS content in fetched file");
+            return text;
+          }
+        }
+        
+      } catch (fetchError) {
+        console.error("❌ Error fetching from URL:", fetchError);
+      }
+      
+      return null; // URL fetch/processing failed
+    }
+  }
   
   // Strategy 1: Direct string with ICS content
   if (typeof input === 'string') {
@@ -624,7 +693,7 @@ function extractIcsContent(input: any): string | null {
     const possibleContentProps = ['content', 'data', 'body', 'file', 'attachment'];
     for (const prop of possibleContentProps) {
       if (input[prop]) {
-        const result = extractIcsContent(input[prop]);
+        const result = await extractIcsContent(input[prop]);
         if (result) return result;
       }
     }
