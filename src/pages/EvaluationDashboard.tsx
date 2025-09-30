@@ -216,7 +216,7 @@ const EvaluationDashboard = () => {
                   <div className="text-xs text-muted-foreground">Complete</div>
                 </div>
               </div>
-              <Progress value={completionRate} className="h-2" />
+              <Progress value={completionRate} className="h-2" variant="gradient" />
             </CardContent>
           </Card>
         </div>
