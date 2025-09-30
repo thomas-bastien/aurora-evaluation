@@ -96,152 +96,157 @@ export const PitchingFunnelView = ({ isActive = true, deadlineInfo }: PitchingFu
 
   if (loading) {
     return (
-      <div className="space-y-6">
-        <Card>
-          <CardHeader className="pb-4">
-            <div className="flex items-center gap-3">
-              <Skeleton className="h-8 w-32" />
-              <Skeleton className="h-6 w-20" />
-            </div>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <Skeleton className="h-20 w-full" />
-          </CardContent>
-        </Card>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-          {[...Array(5)].map((_, i) => (
-            <Skeleton key={i} className="h-40 w-full" />
-          ))}
-        </div>
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Badge variant="secondary" className="px-3 py-1">Round 2</Badge>
+            Pitching Round
+          </CardTitle>
+          <CardDescription>
+            Final evaluation and selection of startups from shortlisted candidates
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {[...Array(5)].map((_, i) => (
+              <Skeleton key={i} className="h-20 w-full" />
+            ))}
+          </div>
+        </CardContent>
+      </Card>
     );
   }
 
   if (error) {
     return (
       <Card>
-        <CardContent className="p-8 text-center">
-          <AlertCircle className="w-12 h-12 text-destructive mx-auto mb-4" />
-          <h3 className="text-lg font-semibold mb-2">Error Loading Funnel</h3>
-          <p className="text-muted-foreground mb-4">{error}</p>
-          <Button onClick={handleRefresh} variant="outline">
-            <RefreshCw className="w-4 h-4 mr-2" />
-            Retry
-          </Button>
-        </CardContent>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Badge variant="secondary" className="px-3 py-1">Round 2</Badge>
+                Pitching Round
+              </CardTitle>
+              <CardDescription className="text-destructive">
+                {error}
+              </CardDescription>
+            </div>
+            <Button variant="outline" size="sm" onClick={handleRefresh}>
+              <RefreshCw className="w-4 h-4" />
+            </Button>
+          </div>
+        </CardHeader>
       </Card>
     );
   }
 
   return (
     <TooltipProvider>
-      <div className="space-y-6">
-        {/* Header Card */}
-        <Card className="hover:shadow-md transition-shadow">
-          <CardHeader className="pb-4">
-            <div className="flex items-center justify-between">
-              <div className="flex-1">
-                <div className="flex items-center gap-3 mb-2">
-                  <CardTitle className="text-xl">Pitching Round</CardTitle>
-                  <Badge className="bg-cyan-100 text-cyan-800 px-3 py-1">
-                    Round 2
-                  </Badge>
-                </div>
-                <CardDescription>
-                  Final evaluation and selection of startups from shortlisted candidates
-                </CardDescription>
-              </div>
-              <div className="flex items-center gap-2">
-                {deadlineInfo && (
-                  <div className="text-sm text-muted-foreground flex items-center gap-1">
-                    <Calendar className="w-4 h-4" />
-                    <span>{deadlineInfo}</span>
-                  </div>
-                )}
-                <Badge 
-                  className={isActive ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600'}
-                >
-                  {isActive ? 'Active' : 'Upcoming'}
-                </Badge>
-                <Button variant="outline" size="sm" onClick={handleRefresh}>
-                  <RefreshCw className="w-4 h-4" />
-                </Button>
-              </div>
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Badge variant="secondary" className="px-3 py-1">Round 2</Badge>
+                Pitching Round
+              </CardTitle>
+              <CardDescription>
+                Final evaluation and selection of startups from shortlisted candidates
+              </CardDescription>
             </div>
-          </CardHeader>
-        </Card>
-
-        {/* Progress Card */}
-        <Card className="mb-6">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h3 className="text-lg font-semibold">Overall Progress</h3>
-                <p className="text-sm text-muted-foreground">
-                  Track completion across all funnel stages
-                </p>
-              </div>
-              <div className="text-right">
-                <div className="text-2xl font-bold text-primary">
-                  {Math.round(funnelData.reduce((sum, step) => sum + step.percentage, 0) / funnelData.length)}%
+            <div className="flex items-center gap-2">
+              {deadlineInfo && (
+                <div className="text-sm text-muted-foreground flex items-center gap-1">
+                  <Calendar className="w-4 h-4" />
+                  <span>{deadlineInfo}</span>
                 </div>
-                <div className="text-xs text-muted-foreground">Complete</div>
-              </div>
+              )}
+              <Badge 
+                variant={isActive ? 'default' : 'outline'}
+                className="px-3 py-1"
+              >
+                {isActive ? 'Active' : 'Upcoming'}
+              </Badge>
+              <Button variant="outline" size="sm" onClick={handleRefresh}>
+                <RefreshCw className="w-4 h-4" />
+              </Button>
             </div>
-            <Progress 
-              value={funnelData.reduce((sum, step) => sum + step.percentage, 0) / funnelData.length} 
-              className="h-2"
-              variant="gradient"
-            />
-          </CardContent>
-        </Card>
-
-        {/* Step Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-          {funnelData.map((step, index) => {
-            const IconComponent = STEP_ICONS[index];
-            const isClickable = isActive && step.route;
-            
-            return (
-              <Tooltip key={step.title}>
-                <TooltipTrigger asChild>
-                  <Card 
-                    className={`hover:shadow-md transition-shadow ${isClickable ? 'cursor-pointer' : ''}`}
-                    onClick={() => isClickable && handleStepClick(step.route!)}
-                  >
-                    <CardContent className="p-4">
-                      <div className="flex items-center gap-4 mb-3">
-                        <div className="p-3 rounded-lg bg-cyan-50 flex-shrink-0">
-                          <IconComponent className="w-6 h-6 text-cyan-600" />
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex items-center justify-between mb-2">
-                            <h4 className="font-semibold text-base">{step.title}</h4>
-                            <ArrowRight className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 gap-4">
+            {funnelData.map((step, index) => {
+              const IconComponent = STEP_ICONS[index];
+              const isClickable = isActive && step.percentage > 0;
+              
+              return (
+                <div key={index} className="flex items-center gap-4">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        className={`flex-1 h-auto p-4 justify-start ${
+                          isClickable 
+                            ? 'hover:bg-accent cursor-pointer' 
+                            : 'cursor-default opacity-75'
+                        }`}
+                        onClick={() => isClickable && handleStepClick(step.route)}
+                        disabled={!isClickable}
+                      >
+                        <div className="flex items-center gap-4 w-full">
+                          {/* Step Icon */}
+                          <div className={`p-2 rounded-full ${getStatusColor(step.status)}`}>
+                            <IconComponent className="w-5 h-5" />
+                          </div>
+                          
+                          {/* Step Content */}
+                          <div className="flex-1 text-left">
+                            <div className="flex items-center justify-between mb-2">
+                              <h4 className="font-medium text-sm">{step.title}</h4>
+                              <Badge variant="outline" className={`text-xs flex items-center gap-1 ${
+                                step.status === 'completed' ? 'bg-green-100 text-green-800' :
+                                step.status === 'in-progress' ? 'bg-yellow-100 text-yellow-800' :
+                                'bg-gray-100 text-gray-600'
+                              }`}>
+                                {getStatusIcon(step.status)}
+                                {step.percentage.toFixed(0)}%
+                              </Badge>
+                            </div>
+                            
+                            <div className="space-y-2">
+                              <p className="text-xs text-muted-foreground">{step.description}</p>
+                              
+                              <div className="flex items-center gap-2">
+                                <Progress 
+                                  value={step.percentage} 
+                                  className="flex-1 h-2"
+                                />
+                                <span className="text-xs text-muted-foreground min-w-fit">
+                                  {step.numerator}/{step.denominator}
+                                </span>
+                              </div>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                      <p className="text-sm text-muted-foreground mb-3">{step.description}</p>
-                      <div className="flex items-center justify-between mb-2">
-                        <Badge className="bg-blue-600 text-white px-3 py-1 text-sm font-medium">
-                          {step.numerator} of {step.denominator} ({Math.round(step.percentage)}%)
-                        </Badge>
-                      </div>
-                      <Progress value={step.percentage} className="h-2" variant="gradient" />
-                    </CardContent>
-                  </Card>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p className="font-medium">{step.title}</p>
-                  <p className="text-xs text-muted-foreground">{step.tooltip}</p>
-                </TooltipContent>
-              </Tooltip>
-            );
-          })}
-        </div>
-      </div>
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" className="max-w-80">
+                      <p>{step.tooltip}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                  
+                  {/* Arrow between steps (except last step) */}
+                  {index < funnelData.length - 1 && (
+                    <div className="flex items-center">
+                      <ArrowRight className="w-4 h-4 text-muted-foreground" />
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
     </TooltipProvider>
   );
 };
