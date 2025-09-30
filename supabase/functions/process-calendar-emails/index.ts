@@ -710,8 +710,22 @@ function parseIcsContent(icsContent: string): CalendarEvent | null {
     const lines = unfolded.split(/\r\n|\n|\r/);
     const event: Partial<CalendarEvent> = { attendees: [] };
     
+    let inVEvent = false; // Track if we're inside VEVENT component
+    
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i].trim();
+      
+      // Track VEVENT boundaries
+      if (line === 'BEGIN:VEVENT') {
+        inVEvent = true;
+        continue;
+      } else if (line === 'END:VEVENT') {
+        inVEvent = false;
+        continue;
+      }
+      
+      // Only parse event properties when inside VEVENT
+      if (!inVEvent) continue;
       
       if (line.startsWith('SUMMARY:')) {
         event.summary = line.substring(8);
@@ -720,13 +734,19 @@ function parseIcsContent(icsContent: string): CalendarEvent | null {
         if (dateMatch) {
           console.log("📅 Raw DTSTART line:", line);
           console.log("📅 Extracted DTSTART value:", dateMatch[1]);
-          event.dtstart = parseIcsDate(dateMatch[1]);
-          console.log("📅 Parsed DTSTART result:", event.dtstart);
+          const parsedDate = parseIcsDate(dateMatch[1]);
+          if (parsedDate) { // Only set if valid
+            event.dtstart = parsedDate;
+            console.log("📅 Parsed DTSTART result:", event.dtstart);
+          }
         }
       } else if (line.startsWith('DTEND')) {
         const dateMatch = line.match(/DTEND[^:]*:(.+)/);
         if (dateMatch) {
-          event.dtend = parseIcsDate(dateMatch[1]);
+          const parsedDate = parseIcsDate(dateMatch[1]);
+          if (parsedDate) { // Only set if valid
+            event.dtend = parsedDate;
+          }
         }
       } else if (line.startsWith('ATTENDEE')) {
         const emailMatch = line.match(/mailto:([^;]+)/i);
@@ -742,10 +762,17 @@ function parseIcsContent(icsContent: string): CalendarEvent | null {
       }
     }
     
-    if (event.summary && event.dtstart && event.uid) {
+    // Validate required fields including non-empty dtstart
+    if (event.summary && event.dtstart && event.dtstart.length > 0 && event.uid) {
       return event as CalendarEvent;
     }
     
+    console.warn("⚠️ Invalid event parsed:", { 
+      hasSummary: !!event.summary, 
+      hasDtstart: !!event.dtstart,
+      dtstart: event.dtstart,
+      hasUid: !!event.uid 
+    });
     return null;
   } catch (error) {
     console.error("Error parsing ICS content:", error);
@@ -787,10 +814,11 @@ function parseIcsDate(dateString: string): string {
       const minute = cleanDate.substring(10, 12) || '00';
       const second = cleanDate.substring(12, 14) || '00';
       
-      // Validate year is reasonable (between 2020-2030)
+      // Reject invalid years instead of just logging
       const yearNum = parseInt(year);
       if (yearNum < 2020 || yearNum > 2030) {
-        console.error("❌ Invalid year detected:", yearNum, "from string:", dateString);
+        console.error("❌ Invalid year detected:", yearNum, "from string:", dateString, "- REJECTING");
+        return ''; // Return empty string to reject this date
       }
       
       return new Date(`${year}-${month}-${day}T${hour}:${minute}:${second}Z`).toISOString();
@@ -801,6 +829,14 @@ function parseIcsDate(dateString: string): string {
       const year = ds.substring(0, 4);
       const month = ds.substring(4, 6);
       const day = ds.substring(6, 8);
+      
+      // Validate year for all-day events too
+      const yearNum = parseInt(year);
+      if (yearNum < 2020 || yearNum > 2030) {
+        console.error("❌ Invalid year detected:", yearNum, "from string:", dateString, "- REJECTING");
+        return '';
+      }
+      
       return new Date(`${year}-${month}-${day}T00:00:00Z`).toISOString();
     }
     
