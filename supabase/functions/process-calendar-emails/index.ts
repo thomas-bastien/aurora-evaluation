@@ -55,10 +55,15 @@ const handler = async (req: Request): Promise<Response> => {
     );
 
     const emailData: EmailWebhookPayload = await req.json();
-    console.log("Received email webhook:", { 
-      from: emailData.from, 
+    console.log("Received email webhook - Raw data inspection:", {
+      from: emailData.from,
       subject: emailData.subject,
-      attachmentCount: emailData.attachments?.length || 0,
+      attachmentsType: typeof emailData.attachments,
+      attachmentsIsArray: Array.isArray(emailData.attachments),
+      attachmentsLength: Array.isArray(emailData.attachments) ? emailData.attachments.length : 'N/A',
+      attachmentsSample: emailData.attachments ? 
+        JSON.stringify(emailData.attachments).substring(0, 500) : 'none',
+      allEmailDataKeys: Object.keys(emailData),
       hasParsedEvent: !!emailData.parsed_calendar_event
     });
 
@@ -83,33 +88,126 @@ const handler = async (req: Request): Promise<Response> => {
     } else {
       console.log("No pre-parsed calendar event found, attempting ICS parsing...");
       
-      // Fallback to existing ICS parsing logic
-      const attachments = Array.isArray(emailData.attachments) ? emailData.attachments : [];
-      for (const attachment of attachments) {
-        const filename = (attachment as any)?.filename ?? '';
-        const contentType = (attachment as any)?.contentType ?? '';
-        const content = (attachment as any)?.content ?? '';
-        const isIcsByName = typeof filename === 'string' && filename.toLowerCase().endsWith('.ics');
-        const isIcsByType = typeof contentType === 'string' && contentType.toLowerCase().includes('calendar');
-        const isIcsByContent = typeof content === 'string' && content.includes('BEGIN:VCALENDAR');
-        if (isIcsByName || isIcsByType || isIcsByContent) {
-          console.log('Found ICS candidate attachment:', { filename, contentType, length: (content?.length ?? 0) });
-          calendarEvent = parseIcsContent(content);
-          if (calendarEvent) break;
+      let icsContent: string | null = null;
+
+      // STRATEGY 1: Inspect raw attachments field
+      console.log("Strategy 1: Analyzing raw attachments field...", {
+        type: typeof emailData.attachments,
+        isArray: Array.isArray(emailData.attachments),
+        constructor: emailData.attachments?.constructor?.name
+      });
+
+      // Try direct extraction from attachments field
+      icsContent = extractIcsContent(emailData.attachments);
+
+      // STRATEGY 2: If attachments is an array, try each item
+      if (!icsContent && Array.isArray(emailData.attachments)) {
+        console.log(`Strategy 2: Processing array of ${emailData.attachments.length} items...`);
+        
+        // Limit to first 50 items to avoid processing 232 items
+        const itemsToCheck = Math.min(emailData.attachments.length, 50);
+        
+        for (let i = 0; i < itemsToCheck; i++) {
+          const item = emailData.attachments[i];
+          
+          // Log first few items for debugging
+          if (i < 3) {
+            console.log(`  Item ${i} type:`, typeof item, 
+              typeof item === 'object' ? `keys: ${Object.keys(item).join(', ')}` : '');
+          }
+          
+          // Try structured object { filename, content, contentType }
+          if (item && typeof item === 'object') {
+            // Try common property names
+            icsContent = extractIcsContent(item.content) || 
+                         extractIcsContent(item.data) ||
+                         extractIcsContent(item.body) ||
+                         extractIcsContent(item.file) ||
+                         extractIcsContent(item);
+            
+            if (icsContent) {
+              console.log(`Found ICS in attachment item ${i}`);
+              break;
+            }
+          } else {
+            // Try item directly (might be string or number array)
+            icsContent = extractIcsContent(item);
+            if (icsContent) {
+              console.log(`Found ICS in raw item ${i}`);
+              break;
+            }
+          }
         }
       }
 
-      // If no .ics attachment, try parsing from email body
-      if (!calendarEvent && (emailData.body?.includes?.('BEGIN:VCALENDAR'))) {
-        calendarEvent = parseIcsContent(emailData.body);
+      // STRATEGY 3: Check for flat attachment fields
+      if (!icsContent) {
+        console.log("Strategy 3: Checking flat fields...");
+        const flatFields = [
+          'attachment_content',
+          'ics_file',
+          'calendar_attachment',
+          'file_content',
+          'ics_content',
+          'calendar_data',
+          'event_data'
+        ];
+        
+        for (const fieldName of flatFields) {
+          const field = (emailData as any)[fieldName];
+          if (field) {
+            console.log(`  Checking field: ${fieldName}`);
+            icsContent = extractIcsContent(field);
+            if (icsContent) {
+              console.log(`Found ICS in flat field: ${fieldName}`);
+              break;
+            }
+          }
+        }
+      }
+
+      // STRATEGY 4: Parse from email body (existing logic)
+      if (!icsContent && emailData.body?.includes?.('BEGIN:VCALENDAR')) {
+        console.log("Strategy 4: Extracting from email body");
+        icsContent = extractIcsContent(emailData.body);
+      }
+
+      // STRATEGY 5: Try to extract ICS from HTML body
+      if (!icsContent && emailData.body) {
+        console.log("Strategy 5: Looking for ICS in HTML/encoded body");
+        // Remove HTML tags
+        const textOnly = emailData.body.replace(/<[^>]*>/g, ' ');
+        if (textOnly.includes('BEGIN:VCALENDAR')) {
+          icsContent = extractIcsContent(textOnly);
+        }
+      }
+
+      // Parse the ICS content if found
+      if (icsContent) {
+        console.log("Successfully extracted ICS content, parsing...");
+        calendarEvent = parseIcsContent(icsContent);
+      } else {
+        console.log("No ICS content found after trying all strategies");
       }
     }
 
     if (!calendarEvent) {
-      console.log("No calendar event found - neither pre-parsed from Zapier nor ICS data in email");
+      console.log("No calendar event found - debugging info:", {
+        attachmentsProvided: !!emailData.attachments,
+        attachmentsType: typeof emailData.attachments,
+        bodyLength: emailData.body?.length || 0,
+        bodyContainsVCal: emailData.body?.includes('BEGIN:VCALENDAR') || false,
+        allFields: Object.keys(emailData)
+      });
+      
       return new Response(JSON.stringify({ 
         success: false, 
-        message: "No calendar event found - ensure Zapier is configured to send parsed calendar data or include ICS attachments" 
+        message: "No calendar event found",
+        debug: {
+          attachmentsReceived: !!emailData.attachments,
+          attachmentFormat: typeof emailData.attachments,
+          suggestion: "Check Zapier configuration to ensure ICS content is included"
+        }
       }), {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -462,6 +560,77 @@ function shouldPreserveStatus(status: string): boolean {
   // Preserve higher-level statuses that shouldn't be downgraded
   const preservedStatuses = ['completed', 'cancelled', 'scheduled', 'in_review'];
   return preservedStatuses.includes(status);
+}
+
+// Flexible content extractor that handles various input formats
+function extractIcsContent(input: any): string | null {
+  if (!input) return null;
+  
+  // Strategy 1: Direct string with ICS content
+  if (typeof input === 'string') {
+    if (input.includes('BEGIN:VCALENDAR')) {
+      console.log("Found ICS in direct string");
+      return input;
+    }
+    
+    // Try base64 decode (standard)
+    try {
+      const decoded = atob(input);
+      if (decoded.includes('BEGIN:VCALENDAR')) {
+        console.log("Found ICS in base64 string");
+        return decoded;
+      }
+    } catch {}
+    
+    // Try URL-safe base64
+    try {
+      const urlSafe = input.replace(/-/g, '+').replace(/_/g, '/');
+      const decoded = atob(urlSafe);
+      if (decoded.includes('BEGIN:VCALENDAR')) {
+        console.log("Found ICS in URL-safe base64");
+        return decoded;
+      }
+    } catch {}
+  }
+  
+  // Strategy 2: Array of numbers (byte array from Zapier)
+  if (Array.isArray(input) && input.length > 0 && typeof input[0] === 'number') {
+    try {
+      const text = new TextDecoder().decode(new Uint8Array(input));
+      if (text.includes('BEGIN:VCALENDAR')) {
+        console.log("Found ICS in byte array");
+        return text;
+      }
+    } catch (e) {
+      console.error("Failed to decode byte array:", e);
+    }
+  }
+  
+  // Strategy 3: Buffer-like object { type: 'Buffer', data: [...] }
+  if (input.type === 'Buffer' && Array.isArray(input.data)) {
+    try {
+      const text = new TextDecoder().decode(new Uint8Array(input.data));
+      if (text.includes('BEGIN:VCALENDAR')) {
+        console.log("Found ICS in Buffer object");
+        return text;
+      }
+    } catch (e) {
+      console.error("Failed to decode Buffer:", e);
+    }
+  }
+  
+  // Strategy 4: Object with common property names
+  if (typeof input === 'object') {
+    const possibleContentProps = ['content', 'data', 'body', 'file', 'attachment'];
+    for (const prop of possibleContentProps) {
+      if (input[prop]) {
+        const result = extractIcsContent(input[prop]);
+        if (result) return result;
+      }
+    }
+  }
+  
+  return null;
 }
 
 function parseIcsContent(icsContent: string): CalendarEvent | null {
