@@ -47,6 +47,7 @@ interface Assignment {
   juror_id: string;
   startup_name: string;
   juror_name: string;
+  status?: string;
 }
 
 interface MatchmakingWorkflowProps {
@@ -171,6 +172,7 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
         .select(`
           startup_id,
           juror_id,
+          status,
           startups!inner(name),
           jurors!inner(name, user_id)
         `)
@@ -181,6 +183,7 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
       const mappedAssignments = assignmentsData?.map(assignment => ({
         startup_id: assignment.startup_id,
         juror_id: assignment.juror_id,
+        status: assignment.status,
         startup_name: (assignment.startups as any).name,
         juror_name: (assignment.jurors as any).name,
       })) || [];
@@ -242,7 +245,10 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
   };
 
   const getStartupAssignmentCount = (startupId: string): number => {
-    return assignments.filter(assignment => assignment.startup_id === startupId).length;
+    return assignments.filter(assignment => 
+      assignment.startup_id === startupId && 
+      assignment.status !== 'cancelled'
+    ).length;
   };
 
   const handleAssignStartup = (startup: Startup) => {

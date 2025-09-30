@@ -30,6 +30,7 @@ interface Assignment {
   juror_id: string;
   startup_name: string;
   juror_name: string;
+  status?: string;
 }
 const Matchmaking = () => {
   const [startups, setStartups] = useState<Startup[]>([]);
@@ -71,6 +72,7 @@ const Matchmaking = () => {
       } = await supabase.from('screening_assignments').select(`
           startup_id,
           juror_id,
+          status,
           startups(name),
           jurors(name)
         `);
@@ -82,6 +84,7 @@ const Matchmaking = () => {
       const transformedAssignments = assignmentsData?.map(assignment => ({
         startup_id: assignment.startup_id,
         juror_id: assignment.juror_id,
+        status: assignment.status,
         startup_name: (assignment.startups as any)?.name || '',
         juror_name: (assignment.jurors as any)?.name || ''
       })) || [];
@@ -113,7 +116,10 @@ const Matchmaking = () => {
     return missingItems.length > 0 ? `Missing: ${missingItems.join(', ')}` : null;
   };
   const getStartupAssignmentCount = (startupId: string) => {
-    return assignments.filter(a => a.startup_id === startupId).length;
+    return assignments.filter(a => 
+      a.startup_id === startupId && 
+      a.status !== 'cancelled'
+    ).length;
   };
   const handleAssignStartup = (startup: Startup) => {
     setSelectedStartup(startup);
