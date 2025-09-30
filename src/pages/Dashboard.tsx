@@ -290,19 +290,19 @@ const Dashboard = () => {
       <main className="max-w-7xl mx-auto px-6 py-8">
         {/* Profile Completion Banner for VCs */}
         {profile?.role === 'vc' && (!profile.target_verticals || profile.target_verticals.length === 0 || !profile.preferred_stages || profile.preferred_stages.length === 0) && (
-          <div className="mb-6 animate-pulse-gentle">
-            <Card className="bg-gradient-warning border-warning/20">
+          <div className="mb-6">
+            <Card className="border-yellow-200 bg-yellow-50">
               <CardHeader className="pb-4">
                 <CardTitle className="text-foreground flex items-center gap-2">
                   <Users className="w-5 h-5" />
                   Complete Your Profile
                 </CardTitle>
-                <CardDescription className="text-black">
+                <CardDescription>
                   Finish setting up your profile to start evaluating startups and scheduling pitch sessions.
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <Button onClick={() => navigate('/juror-onboarding?onboarding=true')} className="bg-warning text-warning-foreground hover:bg-warning/90">
+                <Button onClick={() => navigate('/juror-onboarding?onboarding=true')}>
                   Complete Profile Setup
                 </Button>
               </CardContent>
@@ -311,7 +311,7 @@ const Dashboard = () => {
         )}
 
         {/* Unified Overview Card */}
-        <div className="mb-8 animate-fade-in">
+        <div className="mb-8">
           <UnifiedOverviewCard
             totalStartups={dashboardData.totalStartups}
             activeJurors={dashboardData.activeJurors}
@@ -325,7 +325,7 @@ const Dashboard = () => {
 
         {/* Community Manager Funnel Workflow */}
         {profile?.role === 'admin' && (
-          <div className="space-y-8 animate-fade-in" style={{ animationDelay: "400ms" }}>
+          <div className="space-y-8">
             {/* Round 1 - Screening */}
             <ScreeningFunnelView 
               isActive={dashboardData.activeRound === 'screening'}
@@ -342,7 +342,7 @@ const Dashboard = () => {
 
         {/* VC Funnel Workflow */}
         {profile?.role === 'vc' && (
-          <div className="space-y-8 animate-fade-in" style={{ animationDelay: "400ms" }}>
+          <div className="space-y-8">
             {/* Role-specific tagline */}
             <div className="text-center py-4">
               <p className="text-lg text-muted-foreground">

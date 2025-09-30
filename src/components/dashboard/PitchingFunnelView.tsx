@@ -14,7 +14,10 @@ import {
   FileText,
   ArrowRight,
   RefreshCw,
-  Calendar
+  Calendar,
+  CheckCircle,
+  Clock,
+  AlertCircle
 } from "lucide-react";
 import { getPitchingFunnelData, type FunnelStepData } from "@/utils/pitchingFunnelUtils";
 import { useToast } from "@/hooks/use-toast";
@@ -29,13 +32,26 @@ const STEP_ICONS = [Network, Phone, Star, TrendingUp, FileText];
 const getStatusColor = (status: FunnelStepData['status']) => {
   switch (status) {
     case 'completed':
-      return 'bg-success text-success-foreground';
+      return 'bg-green-100 text-green-600';
     case 'in-progress':
-      return 'bg-warning text-warning-foreground';
+      return 'bg-yellow-100 text-yellow-600';
     case 'pending':
-      return 'bg-muted text-muted-foreground';
+      return 'bg-gray-100 text-gray-600';
     default:
-      return 'bg-muted text-muted-foreground';
+      return 'bg-gray-100 text-gray-600';
+  }
+};
+
+const getStatusIcon = (status: FunnelStepData['status']) => {
+  switch (status) {
+    case 'completed':
+      return <CheckCircle className="w-3 h-3" />;
+    case 'in-progress':
+      return <Clock className="w-3 h-3" />;
+    case 'pending':
+      return <AlertCircle className="w-3 h-3" />;
+    default:
+      return <AlertCircle className="w-3 h-3" />;
   }
 };
 
@@ -180,14 +196,19 @@ export const PitchingFunnelView = ({ isActive = true, deadlineInfo }: PitchingFu
                         <div className="flex items-center gap-4 w-full">
                           {/* Step Icon */}
                           <div className={`p-2 rounded-full ${getStatusColor(step.status)}`}>
-                            <IconComponent className="w-4 h-4" />
+                            <IconComponent className="w-5 h-5" />
                           </div>
                           
                           {/* Step Content */}
                           <div className="flex-1 text-left">
                             <div className="flex items-center justify-between mb-2">
                               <h4 className="font-medium text-sm">{step.title}</h4>
-                              <Badge variant="outline" className="text-xs">
+                              <Badge variant="outline" className={`text-xs flex items-center gap-1 ${
+                                step.status === 'completed' ? 'bg-green-100 text-green-800' :
+                                step.status === 'in-progress' ? 'bg-yellow-100 text-yellow-800' :
+                                'bg-gray-100 text-gray-600'
+                              }`}>
+                                {getStatusIcon(step.status)}
                                 {step.percentage.toFixed(0)}%
                               </Badge>
                             </div>

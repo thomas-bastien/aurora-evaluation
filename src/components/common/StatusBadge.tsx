@@ -1,5 +1,6 @@
 import { Badge } from '@/components/ui/badge';
 import { getStatusLabel, getStatusColor, getJurorStatusLabel, type StatusType } from '@/utils/statusUtils';
+import { CheckCircle, Clock, AlertCircle } from 'lucide-react';
 
 interface StatusBadgeProps {
   status: StatusType | string;
@@ -16,12 +17,28 @@ export function StatusBadge({ status, roundName, showRoundContext, className, is
     : baseLabel;
     
   const colorClasses = getStatusColor(status);
+  
+  // Determine icon based on status
+  const getStatusIcon = () => {
+    const statusStr = String(status).toLowerCase();
+    if (statusStr.includes('complete') || statusStr === 'selected' || statusStr === 'submitted') {
+      return <CheckCircle className="w-3 h-3 mr-1" />;
+    }
+    if (statusStr.includes('draft') || statusStr.includes('progress') || statusStr === 'scheduled') {
+      return <Clock className="w-3 h-3 mr-1" />;
+    }
+    if (statusStr.includes('pending') || statusStr === 'not_started' || statusStr === 'rejected') {
+      return <AlertCircle className="w-3 h-3 mr-1" />;
+    }
+    return null;
+  };
 
   return (
     <Badge 
       variant="outline"
-      className={`${colorClasses} ${className || ''}`}
+      className={`${colorClasses} ${className || ''} flex items-center`}
     >
+      {getStatusIcon()}
       {label}
     </Badge>
   );
