@@ -69,6 +69,14 @@ export default function StartupsList() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [startupToDelete, setStartupToDelete] = useState<Startup | null>(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [deletionImpact, setDeletionImpact] = useState<{
+    screeningEvaluations: number;
+    pitchingEvaluations: number;
+    screeningAssignments: number;
+    pitchingAssignments: number;
+    pitchMeetings: number;
+  } | null>(null);
+  const [loadingImpact, setLoadingImpact] = useState(false);
 
   const { toast } = useToast();
   const { profile } = useUserProfile();
@@ -340,9 +348,57 @@ export default function StartupsList() {
     setFormModalOpen(true);
   };
 
-  const handleDelete = (startup: Startup) => {
+  const checkStartupDeletionImpact = async (startupId: string) => {
+    setLoadingImpact(true);
+    try {
+      // Count screening evaluations
+      const { count: screeningEvalCount } = await supabase
+        .from('screening_evaluations')
+        .select('*', { count: 'exact', head: true })
+        .eq('startup_id', startupId);
+
+      // Count pitching evaluations
+      const { count: pitchingEvalCount } = await supabase
+        .from('pitching_evaluations')
+        .select('*', { count: 'exact', head: true })
+        .eq('startup_id', startupId);
+
+      // Count screening assignments
+      const { count: screeningAssignCount } = await supabase
+        .from('screening_assignments')
+        .select('*', { count: 'exact', head: true })
+        .eq('startup_id', startupId);
+
+      // Count pitching assignments
+      const { count: pitchingAssignCount } = await supabase
+        .from('pitching_assignments')
+        .select('*', { count: 'exact', head: true })
+        .eq('startup_id', startupId);
+
+      // Count pitch meetings
+      const { count: pitchMeetingsCount } = await supabase
+        .from('pitch_requests')
+        .select('*', { count: 'exact', head: true })
+        .eq('startup_id', startupId);
+
+      setDeletionImpact({
+        screeningEvaluations: screeningEvalCount || 0,
+        pitchingEvaluations: pitchingEvalCount || 0,
+        screeningAssignments: screeningAssignCount || 0,
+        pitchingAssignments: pitchingAssignCount || 0,
+        pitchMeetings: pitchMeetingsCount || 0,
+      });
+    } catch (error) {
+      console.error('Error checking deletion impact:', error);
+    } finally {
+      setLoadingImpact(false);
+    }
+  };
+
+  const handleDelete = async (startup: Startup) => {
     setStartupToDelete(startup);
     setDeleteDialogOpen(true);
+    await checkStartupDeletionImpact(startup.id);
   };
 
   const confirmDelete = async () => {
@@ -815,18 +871,67 @@ export default function StartupsList() {
           />
 
           {/* Delete Confirmation Dialog */}
-          <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <AlertDialog open={deleteDialogOpen} onOpenChange={(open) => {
+            setDeleteDialogOpen(open);
+            if (!open) {
+              setDeletionImpact(null);
+            }
+          }}>
             <AlertDialogContent>
               <AlertDialogHeader>
                 <AlertDialogTitle>Delete Startup</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Are you sure you want to delete "{startupToDelete?.name}"? This action cannot be undone.
+                <AlertDialogDescription className="space-y-4">
+                  <p>Are you sure you want to delete "<strong>{startupToDelete?.name}</strong>"?</p>
+                  
+                  {loadingImpact ? (
+                    <div className="flex items-center gap-2 text-sm">
+                      <span className="animate-spin">⏳</span>
+                      <span>Checking data impact...</span>
+                    </div>
+                  ) : deletionImpact && (
+                    <div className="mt-4 p-4 bg-muted rounded-md space-y-2">
+                      <p className="font-semibold text-sm">⚠️ This will affect:</p>
+                      <ul className="space-y-1 text-sm">
+                        {deletionImpact.screeningEvaluations > 0 && (
+                          <li className="text-destructive">
+                            🔴 {deletionImpact.screeningEvaluations} Screening Evaluation{deletionImpact.screeningEvaluations !== 1 ? 's' : ''} (will be lost)
+                          </li>
+                        )}
+                        {deletionImpact.pitchingEvaluations > 0 && (
+                          <li className="text-destructive">
+                            🔴 {deletionImpact.pitchingEvaluations} Pitching Evaluation{deletionImpact.pitchingEvaluations !== 1 ? 's' : ''} (will be lost)
+                          </li>
+                        )}
+                        {deletionImpact.screeningAssignments > 0 && (
+                          <li className="text-yellow-600">
+                            🟡 {deletionImpact.screeningAssignments} Screening Assignment{deletionImpact.screeningAssignments !== 1 ? 's' : ''} (will be removed)
+                          </li>
+                        )}
+                        {deletionImpact.pitchingAssignments > 0 && (
+                          <li className="text-yellow-600">
+                            🟡 {deletionImpact.pitchingAssignments} Pitching Assignment{deletionImpact.pitchingAssignments !== 1 ? 's' : ''} (will be removed)
+                          </li>
+                        )}
+                        {deletionImpact.pitchMeetings > 0 && (
+                          <li className="text-destructive">
+                            🔴 {deletionImpact.pitchMeetings} Pitch Meeting{deletionImpact.pitchMeetings !== 1 ? 's' : ''} (will be cancelled)
+                          </li>
+                        )}
+                      </ul>
+                    </div>
+                  )}
+                  
+                  <p className="text-destructive font-medium mt-4">This action cannot be undone.</p>
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                  Delete
+                <AlertDialogAction 
+                  onClick={confirmDelete} 
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  disabled={loadingImpact}
+                >
+                  Delete Anyway
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>

@@ -83,6 +83,13 @@ export default function JurorsList() {
   const [jurorToDelete, setJurorToDelete] = useState<Juror | null>(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [sendingInvitation, setSendingInvitation] = useState<string | null>(null);
+  const [deletionImpact, setDeletionImpact] = useState<{
+    screeningEvaluations: number;
+    pitchingEvaluations: number;
+    screeningAssignments: number;
+    pitchingAssignments: number;
+  } | null>(null);
+  const [loadingImpact, setLoadingImpact] = useState(false);
   const { toast } = useToast();
   const { profile } = useUserProfile();
   const { checkLoginReminders } = useCommunicationWorkflow();
@@ -377,9 +384,50 @@ export default function JurorsList() {
     setFormModalOpen(true);
   };
 
-  const handleDelete = (juror: Juror) => {
+  const checkJurorDeletionImpact = async (jurorId: string, userId: string | null) => {
+    setLoadingImpact(true);
+    try {
+      // Count screening evaluations
+      const { count: screeningEvalCount } = await supabase
+        .from('screening_evaluations')
+        .select('*', { count: 'exact', head: true })
+        .eq('evaluator_id', userId);
+
+      // Count pitching evaluations
+      const { count: pitchingEvalCount } = await supabase
+        .from('pitching_evaluations')
+        .select('*', { count: 'exact', head: true })
+        .eq('evaluator_id', userId);
+
+      // Count screening assignments
+      const { count: screeningAssignCount } = await supabase
+        .from('screening_assignments')
+        .select('*', { count: 'exact', head: true })
+        .eq('juror_id', jurorId);
+
+      // Count pitching assignments
+      const { count: pitchingAssignCount } = await supabase
+        .from('pitching_assignments')
+        .select('*', { count: 'exact', head: true })
+        .eq('juror_id', jurorId);
+
+      setDeletionImpact({
+        screeningEvaluations: screeningEvalCount || 0,
+        pitchingEvaluations: pitchingEvalCount || 0,
+        screeningAssignments: screeningAssignCount || 0,
+        pitchingAssignments: pitchingAssignCount || 0,
+      });
+    } catch (error) {
+      console.error('Error checking deletion impact:', error);
+    } finally {
+      setLoadingImpact(false);
+    }
+  };
+
+  const handleDelete = async (juror: Juror) => {
     setJurorToDelete(juror);
     setDeleteDialogOpen(true);
+    await checkJurorDeletionImpact(juror.id, juror.user_id);
   };
 
   const confirmDelete = async () => {
@@ -785,18 +833,68 @@ export default function JurorsList() {
       />
 
       {/* Delete Confirmation Dialog */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+      <AlertDialog open={deleteDialogOpen} onOpenChange={(open) => {
+        setDeleteDialogOpen(open);
+        if (!open) {
+          setDeletionImpact(null);
+        }
+      }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Juror</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete {jurorToDelete?.name}? This action cannot be undone.
+            <AlertDialogDescription className="space-y-4">
+              <p>Are you sure you want to delete <strong>{jurorToDelete?.name}</strong>?</p>
+              
+              {loadingImpact ? (
+                <div className="flex items-center gap-2 text-sm">
+                  <span className="animate-spin">⏳</span>
+                  <span>Checking data impact...</span>
+                </div>
+              ) : deletionImpact && (
+                <div className="mt-4 p-4 bg-muted rounded-md space-y-2">
+                  <p className="font-semibold text-sm">⚠️ This will affect:</p>
+                  <ul className="space-y-1 text-sm">
+                    {deletionImpact.screeningEvaluations > 0 && (
+                      <li className="text-destructive">
+                        🔴 {deletionImpact.screeningEvaluations} Screening Evaluation{deletionImpact.screeningEvaluations !== 1 ? 's' : ''} submitted (will be lost)
+                      </li>
+                    )}
+                    {deletionImpact.pitchingEvaluations > 0 && (
+                      <li className="text-destructive">
+                        🔴 {deletionImpact.pitchingEvaluations} Pitching Evaluation{deletionImpact.pitchingEvaluations !== 1 ? 's' : ''} submitted (will be lost)
+                      </li>
+                    )}
+                    {deletionImpact.screeningAssignments > 0 && (
+                      <li className="text-yellow-600">
+                        🟡 {deletionImpact.screeningAssignments} Screening Assignment{deletionImpact.screeningAssignments !== 1 ? 's' : ''} (will be removed)
+                      </li>
+                    )}
+                    {deletionImpact.pitchingAssignments > 0 && (
+                      <li className="text-yellow-600">
+                        🟡 {deletionImpact.pitchingAssignments} Pitching Assignment{deletionImpact.pitchingAssignments !== 1 ? 's' : ''} (will be removed)
+                      </li>
+                    )}
+                  </ul>
+                  
+                  {(deletionImpact.screeningEvaluations > 0 || deletionImpact.pitchingEvaluations > 0) && (
+                    <p className="text-destructive text-xs font-semibold mt-3">
+                      ⚠️ CRITICAL: This juror has submitted evaluations. Deleting will cause data integrity issues!
+                    </p>
+                  )}
+                </div>
+              )}
+              
+              <p className="text-destructive font-medium mt-4">This action cannot be undone.</p>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              Delete
+            <AlertDialogAction 
+              onClick={confirmDelete} 
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={loadingImpact}
+            >
+              Delete Anyway
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
