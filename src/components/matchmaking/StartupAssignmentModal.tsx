@@ -59,12 +59,48 @@ export const StartupAssignmentModal = ({
 }: StartupAssignmentModalProps) => {
   const [selectedJurorIds, setSelectedJurorIds] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [jurorAssignmentCounts, setJurorAssignmentCounts] = useState<Map<string, number>>(new Map());
   const { toast } = useToast();
 
   // Initialize selected jurors from existing assignments
   useEffect(() => {
     setSelectedJurorIds(existingAssignments.map(a => a.juror_id));
   }, [existingAssignments]);
+
+  // Fetch assignment counts when modal opens
+  useEffect(() => {
+    const fetchAssignmentCounts = async () => {
+      if (!open) return;
+      
+      const { supabase } = await import('@/integrations/supabase/client');
+      
+      // Count screening assignments per juror
+      const { data: screeningData } = await supabase
+        .from('screening_assignments')
+        .select('juror_id')
+        .eq('status', 'assigned');
+      
+      // Count pitching assignments per juror
+      const { data: pitchingData } = await supabase
+        .from('pitching_assignments')
+        .select('juror_id')
+        .eq('status', 'assigned');
+      
+      // Aggregate counts
+      const counts = new Map<string, number>();
+      
+      [...(screeningData || []), ...(pitchingData || [])].forEach(assignment => {
+        counts.set(
+          assignment.juror_id, 
+          (counts.get(assignment.juror_id) || 0) + 1
+        );
+      });
+      
+      setJurorAssignmentCounts(counts);
+    };
+    
+    fetchAssignmentCounts();
+  }, [open]);
 
   const filteredJurors = jurors.filter(juror =>
     juror.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -123,6 +159,15 @@ export const StartupAssignmentModal = ({
     if (score >= 8) return 'text-green-600 bg-green-50 border-green-200';
     if (score >= 5) return 'text-yellow-600 bg-yellow-50 border-yellow-200';
     return 'text-red-600 bg-red-50 border-red-200';
+  };
+
+  // Calculate effective limit for juror
+  const getEffectiveLimit = (juror: Juror): number => {
+    if (juror.evaluation_limit !== null && juror.evaluation_limit !== undefined) {
+      return juror.evaluation_limit;
+    }
+    // Default to 4 if no custom limit set
+    return 4;
   };
 
   // Sort jurors by fit score (highest first)
@@ -332,6 +377,14 @@ export const StartupAssignmentModal = ({
                           <div className={`flex items-center gap-1 px-2 py-1 rounded text-xs ${matches.stage ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
                             <Building2 className="w-2 h-2" />
                             Stage: {breakdown.stage}/3
+                          </div>
+                          <div className={`flex items-center gap-1 px-2 py-1 rounded text-xs ${
+                            (jurorAssignmentCounts.get(juror.id) || 0) < getEffectiveLimit(juror)
+                              ? 'bg-blue-100 text-blue-700'
+                              : 'bg-orange-100 text-orange-700'
+                          }`}>
+                            <Star className="w-2 h-2" />
+                            Assignments: {jurorAssignmentCounts.get(juror.id) || 0}/{getEffectiveLimit(juror)}
                           </div>
                         </div>
                       </div>
