@@ -211,7 +211,14 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
 
       setStartups(sortedStartups);
       setJurors(jurorsData || []);
-      setAssignments(mappedAssignments);
+      
+      // Only keep assignments for startups in the current view
+      const visibleStartupIds = new Set(sortedStartups.map(s => s.id));
+      const filteredAssignments = mappedAssignments.filter(a => 
+        visibleStartupIds.has(a.startup_id)
+      );
+      
+      setAssignments(filteredAssignments);
     } catch (error) {
       console.error('Error fetching matchmaking data:', error);
       toast.error('Failed to load matchmaking data');
@@ -357,7 +364,13 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
         if (validationError) throw validationError;
         
         const validStartupIds = new Set(validationData?.map(v => v.startup_id) || []);
-        const invalidAssignments = assignments.filter(a => !validStartupIds.has(a.startup_id));
+        
+        // Only validate assignments for startups in the current view
+        const visibleStartupIds = new Set(startups.map(s => s.id));
+        const assignmentsToValidate = assignments.filter(a => 
+          visibleStartupIds.has(a.startup_id)
+        );
+        const invalidAssignments = assignmentsToValidate.filter(a => !validStartupIds.has(a.startup_id));
         
         if (invalidAssignments.length > 0) {
           const invalidNames = invalidAssignments.map(a => a.startup_name).join(', ');
