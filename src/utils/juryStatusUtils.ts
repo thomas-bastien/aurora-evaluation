@@ -356,18 +356,19 @@ export async function getJuryAssignmentCounts(
     const assignmentTable = roundName === 'screening' ? 'screening_assignments' : 'pitching_assignments';
     const evaluationTable = roundName === 'screening' ? 'screening_evaluations' : 'pitching_evaluations';
 
-    // Get assignments count
+    // Get assignments count and startup IDs
     const { data: assignments, error: assignmentError } = await supabase
       .from(assignmentTable)
-      .select('id')
+      .select('id, startup_id')
       .eq('juror_id', jurorId);
 
     if (assignmentError) throw assignmentError;
 
     const assigned = assignments?.length || 0;
+    const assignedStartupIds = assignments?.map(a => a.startup_id) || [];
 
     // If no user_id or no assignments, return zeros
-    if (!jurorData.user_id || assigned === 0) {
+    if (!jurorData.user_id || assigned === 0 || assignedStartupIds.length === 0) {
       return {
         assigned: assigned,
         completed: 0,
@@ -376,11 +377,12 @@ export async function getJuryAssignmentCounts(
       };
     }
 
-    // Get evaluation counts by status
+    // Get evaluation counts by status - only for currently assigned startups
     const { data: evaluations, error: evaluationError } = await supabase
       .from(evaluationTable)
-      .select('status')
-      .eq('evaluator_id', jurorData.user_id);
+      .select('status, startup_id')
+      .eq('evaluator_id', jurorData.user_id)
+      .in('startup_id', assignedStartupIds);
 
     if (evaluationError) throw evaluationError;
 
