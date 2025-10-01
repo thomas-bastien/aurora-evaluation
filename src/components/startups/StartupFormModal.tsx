@@ -11,6 +11,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { normalizeStage } from '@/utils/stageUtils';
 import { AURORA_VERTICALS, BUSINESS_MODELS, CURRENCIES, REGION_OPTIONS } from '@/constants/startupConstants';
 import { STAGE_OPTIONS } from '@/constants/jurorPreferences';
+import { useUserProfile } from '@/hooks/useUserProfile';
 
 interface Startup {
   name: string;
@@ -34,6 +35,7 @@ interface Startup {
   verticals?: string[];
   other_vertical_description?: string;
   regions?: string[];
+  internal_score?: number;
 }
 
 interface StartupFormModalProps {
@@ -51,6 +53,9 @@ export function StartupFormModal({
   initialData,
   mode = 'create'
 }: StartupFormModalProps) {
+  const { profile } = useUserProfile();
+  const isAdmin = profile?.role === 'admin';
+  
   const [formData, setFormData] = useState<Partial<Startup>>(
     initialData || {
       founder_names: [],
@@ -507,6 +512,36 @@ export function StartupFormModal({
               )}
             </div>
           </div>
+
+          {/* Internal Score (Admin Only) */}
+          {isAdmin && (
+            <div>
+              <Label htmlFor="internal_score">
+                Internal Score (Admin Only)
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="inline w-3 h-3 ml-1 text-muted-foreground" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Aurora internal evaluation score (0-10 scale). Hidden from VCs.</p>
+                  </TooltipContent>
+                </Tooltip>
+              </Label>
+              <Input
+                id="internal_score"
+                type="number"
+                step="0.1"
+                min="0"
+                max="10"
+                value={formData.internal_score || ''}
+                onChange={(e) => {
+                  const value = e.target.value ? parseFloat(e.target.value) : undefined;
+                  setFormData(prev => ({ ...prev, internal_score: value }));
+                }}
+                placeholder="0.0 - 10.0"
+              />
+            </div>
+          )}
 
           <div className="flex justify-end gap-2 pt-4">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

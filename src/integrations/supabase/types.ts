@@ -995,6 +995,7 @@ export type Database = {
           funding_raised: number | null
           id: string
           industry: string | null
+          internal_score: number | null
           investment_currency: string | null
           key_metrics: Json | null
           linkedin_url: string | null
@@ -1027,6 +1028,7 @@ export type Database = {
           funding_raised?: number | null
           id?: string
           industry?: string | null
+          internal_score?: number | null
           investment_currency?: string | null
           key_metrics?: Json | null
           linkedin_url?: string | null
@@ -1059,6 +1061,7 @@ export type Database = {
           funding_raised?: number | null
           id?: string
           industry?: string | null
+          internal_score?: number | null
           investment_currency?: string | null
           key_metrics?: Json | null
           linkedin_url?: string | null

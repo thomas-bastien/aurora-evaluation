@@ -16,6 +16,7 @@ import { getStatusColor } from '@/utils/statusUtils';
 import { StartupEvaluationsList } from '@/components/startups/StartupEvaluationsList';
 import { useStartupEvaluationStats } from '@/hooks/useStartupEvaluationStats';
 import { StartupCommunicationHistory } from '@/components/communication/StartupCommunicationHistory';
+import { useUserProfile } from '@/hooks/useUserProfile';
 
 interface Startup {
   id: string;
@@ -43,11 +44,15 @@ interface Startup {
   verticals: string[] | null;
   other_vertical_description: string | null;
   regions: string[] | null;
+  internal_score: number | null;
 }
 
 const StartupProfile = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { profile } = useUserProfile();
+  const isAdmin = profile?.role === 'admin';
+  
   const [startup, setStartup] = useState<Startup | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -332,6 +337,23 @@ const StartupProfile = () => {
                   <CardTitle>Key Metrics</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  {isAdmin && startup.internal_score !== null && startup.internal_score !== undefined && (
+                    <div className="pb-4 border-b">
+                      <div className="flex justify-between items-center mb-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium">Internal Score</span>
+                          <Badge variant="outline" className="text-xs">Admin Only</Badge>
+                        </div>
+                        <span className="text-lg font-bold text-primary">
+                          {formatScore(startup.internal_score)}
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Aurora internal evaluation (0-10 scale)
+                      </p>
+                    </div>
+                  )}
+                  
                   {startup.key_metrics ? (
                     Object.entries(startup.key_metrics).map(([key, value]) => (
                       <div key={key}>

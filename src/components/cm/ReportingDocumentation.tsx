@@ -32,6 +32,7 @@ import {
   fetchPitchAnalyticsData,
   type StartupAnalytics as ExportStartupAnalytics
 } from "@/utils/reportExports";
+import { EvaluationDecisionReportCard } from "@/components/cm/EvaluationDecisionReportCard";
 
 interface ReportingDocumentationProps {
   currentRound: 'screeningRound' | 'pitchingRound';
@@ -569,7 +570,10 @@ export const ReportingDocumentation = ({ currentRound }: ReportingDocumentationP
 
       {/* Reports Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      {reports.map(report => {
+        {/* Evaluation Decision Report Card */}
+        <EvaluationDecisionReportCard currentRound={currentRound} />
+        
+        {reports.map(report => {
         const IconComponent = report.icon;
         const isGeneratingCSV = generatingReport === `${report.title}-csv`;
         const isGeneratingPDF = generatingReport === `${report.title}-pdf`;
