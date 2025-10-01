@@ -128,47 +128,61 @@ const Dashboard = () => {
             .maybeSingle();
             
           if (jurorRecord) {
-            // Get assignments and evaluations for BOTH rounds in parallel
+            // Get assignments to extract startup IDs
             const [
-              { count: screeningAssignmentsCount },
-              { count: pitchingAssignmentsCount },
-              { count: screeningEvaluationsCount },
-              { count: pitchingEvaluationsCount }
+              { data: screeningAssignmentData },
+              { data: pitchingAssignmentData }
             ] = await Promise.all([
               supabase.from('screening_assignments')
-                .select('*', { count: 'exact', head: true })
+                .select('startup_id')
                 .eq('juror_id', jurorRecord.id)
                 .eq('status', 'assigned'),
               supabase.from('pitching_assignments')
-                .select('*', { count: 'exact', head: true })
+                .select('startup_id')
                 .eq('juror_id', jurorRecord.id)
-                .eq('status', 'assigned'),
-              supabase.from('screening_evaluations')
-                .select('*', { count: 'exact', head: true })
-                .eq('evaluator_id', profile?.user_id)
-                .eq('status', 'submitted'),
-              supabase.from('pitching_evaluations')
-                .select('*', { count: 'exact', head: true })
-                .eq('evaluator_id', profile?.user_id)
-                .eq('status', 'submitted')
+                .eq('status', 'assigned')
+            ]);
+
+            const screeningStartupIds = screeningAssignmentData?.map(a => a.startup_id) || [];
+            const pitchingStartupIds = pitchingAssignmentData?.map(a => a.startup_id) || [];
+            
+            // Get evaluations filtered by assigned startups
+            const [
+              { count: screeningEvaluationsCount },
+              { count: pitchingEvaluationsCount }
+            ] = await Promise.all([
+              screeningStartupIds.length > 0
+                ? supabase.from('screening_evaluations')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('evaluator_id', profile?.user_id)
+                    .eq('status', 'submitted')
+                    .in('startup_id', screeningStartupIds)
+                : Promise.resolve({ count: 0 }),
+              pitchingStartupIds.length > 0
+                ? supabase.from('pitching_evaluations')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('evaluator_id', profile?.user_id)
+                    .eq('status', 'submitted')
+                    .in('startup_id', pitchingStartupIds)
+                : Promise.resolve({ count: 0 })
             ]);
               
             // Calculate progress for both rounds
-            const screeningAssignments = screeningAssignmentsCount || 0;
+            const screeningAssignmentsCount = screeningStartupIds.length;
             const screeningEvaluations = screeningEvaluationsCount || 0;
-            const pitchingAssignments = pitchingAssignmentsCount || 0;
+            const pitchingAssignmentsCount = pitchingStartupIds.length;
             const pitchingEvaluations = pitchingEvaluationsCount || 0;
             
             screeningProgress = {
-              assignments: screeningAssignments,
+              assignments: screeningAssignmentsCount,
               completed: screeningEvaluations,
-              percentage: screeningAssignments > 0 ? Math.round((screeningEvaluations / screeningAssignments) * 100) : 0
+              percentage: screeningAssignmentsCount > 0 ? Math.round((screeningEvaluations / screeningAssignmentsCount) * 100) : 0
             };
             
             pitchingProgress = {
-              assignments: pitchingAssignments,
+              assignments: pitchingAssignmentsCount,
               completed: pitchingEvaluations,
-              percentage: pitchingAssignments > 0 ? Math.round((pitchingEvaluations / pitchingAssignments) * 100) : 0
+              percentage: pitchingAssignmentsCount > 0 ? Math.round((pitchingEvaluations / pitchingAssignmentsCount) * 100) : 0
             };
             
             // Set overall progress based on current/active round
@@ -176,42 +190,57 @@ const Dashboard = () => {
           }
         } else {
           // For admins, calculate progress for both rounds (same as VCs)
+          // Get assignments to extract startup IDs
           const [
-            { count: screeningAssignmentsCount },
-            { count: pitchingAssignmentsCount },
+            { data: screeningAssignmentData },
+            { data: pitchingAssignmentData }
+          ] = await Promise.all([
+            supabase.from('screening_assignments')
+              .select('startup_id')
+              .eq('status', 'assigned'),
+            supabase.from('pitching_assignments')
+              .select('startup_id')
+              .eq('status', 'assigned')
+          ]);
+
+          const screeningStartupIds = screeningAssignmentData?.map(a => a.startup_id) || [];
+          const pitchingStartupIds = pitchingAssignmentData?.map(a => a.startup_id) || [];
+          
+          // Get evaluations filtered by assigned startups
+          const [
             { count: screeningEvaluationsCount },
             { count: pitchingEvaluationsCount }
           ] = await Promise.all([
-            supabase.from('screening_assignments')
-              .select('*', { count: 'exact', head: true })
-              .eq('status', 'assigned'),
-            supabase.from('pitching_assignments')
-              .select('*', { count: 'exact', head: true })
-              .eq('status', 'assigned'),
-            supabase.from('screening_evaluations')
-              .select('*', { count: 'exact', head: true })
-              .eq('status', 'submitted'),
-            supabase.from('pitching_evaluations')
-              .select('*', { count: 'exact', head: true })
-              .eq('status', 'submitted')
+            screeningStartupIds.length > 0
+              ? supabase.from('screening_evaluations')
+                  .select('*', { count: 'exact', head: true })
+                  .eq('status', 'submitted')
+                  .in('startup_id', screeningStartupIds)
+              : Promise.resolve({ count: 0 }),
+            pitchingStartupIds.length > 0
+              ? supabase.from('pitching_evaluations')
+                  .select('*', { count: 'exact', head: true })
+                  .eq('status', 'submitted')
+                  .in('startup_id', pitchingStartupIds)
+              : Promise.resolve({ count: 0 })
           ]);
             
           // Calculate progress for both rounds
-          const screeningAssignments = screeningAssignmentsCount || 0;
+          const screeningAssignmentsCount = screeningStartupIds.length;
           const screeningEvaluations = screeningEvaluationsCount || 0;
-          const pitchingAssignments = pitchingAssignmentsCount || 0;
+          const pitchingAssignmentsCount = pitchingStartupIds.length;
           const pitchingEvaluations = pitchingEvaluationsCount || 0;
           
           screeningProgress = {
-            assignments: screeningAssignments,
+            assignments: screeningAssignmentsCount,
             completed: screeningEvaluations,
-            percentage: screeningAssignments > 0 ? Math.round((screeningEvaluations / screeningAssignments) * 100) : 0
+            percentage: screeningAssignmentsCount > 0 ? Math.round((screeningEvaluations / screeningAssignmentsCount) * 100) : 0
           };
           
           pitchingProgress = {
-            assignments: pitchingAssignments,
+            assignments: pitchingAssignmentsCount,
             completed: pitchingEvaluations,
-            percentage: pitchingAssignments > 0 ? Math.round((pitchingEvaluations / pitchingAssignments) * 100) : 0
+            percentage: pitchingAssignmentsCount > 0 ? Math.round((pitchingEvaluations / pitchingAssignmentsCount) * 100) : 0
           };
           
           // Set overall progress based on current/active round (same as VCs)
