@@ -611,18 +611,21 @@ export const JurorProgressMonitoring = ({ currentRound }: JurorProgressMonitorin
           </div>
           
           {showFilters && (
-            <div className="p-4 border rounded-lg bg-muted">
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="w-full p-2 border rounded"
-              >
-                <option value="all">All Statuses</option>
-                <option value="completed">Completed</option>
-                <option value="active">In Progress</option>
-                <option value="pending">Pending</option>
-                <option value="not_invited">Not Invited</option>
-              </select>
+            <div className="p-4 border rounded-lg bg-muted space-y-3">
+              <div>
+                <label className="text-sm font-medium mb-2 block">Status Filter</label>
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className="w-full p-2 border rounded"
+                >
+                  <option value="all">All Statuses</option>
+                  <option value="completed">Completed</option>
+                  <option value="active">In Progress</option>
+                  <option value="pending">Pending</option>
+                  <option value="not_invited">Not Invited</option>
+                </select>
+              </div>
             </div>
           )}
         </div>
@@ -721,11 +724,14 @@ export const JurorProgressMonitoring = ({ currentRound }: JurorProgressMonitorin
                       {juror.job_title} at {juror.company} • {juror.email}
                     </p>
                   </div>
-                  <div className="text-right">
+                  <div className="text-right space-y-1">
                     <div className="text-lg font-bold text-foreground">
                       {juror.completedCount}/{juror.assignedCount}
                     </div>
                     <div className="text-xs text-muted-foreground">evaluations</div>
+                    <div className="text-xs text-muted-foreground mt-1">
+                      Workload: {juror.assignedCount}
+                    </div>
                   </div>
                 </div>
                 

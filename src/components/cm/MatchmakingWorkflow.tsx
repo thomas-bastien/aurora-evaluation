@@ -267,6 +267,23 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
 
   const handleConfirmAssignments = async () => {
     try {
+      // Check for under-assigned startups (< 3 jurors)
+      const underAssigned = startups.filter(s => {
+        const count = getStartupAssignmentCount(s.id);
+        return s.roundStatus !== 'rejected' && count > 0 && count < 3;
+      });
+
+      // Show confirmation dialog if there are under-assigned startups
+      if (underAssigned.length > 0) {
+        const confirmMessage = `⚠️ ${underAssigned.length} startup(s) have fewer than 3 jurors assigned:\n\n${
+          underAssigned.slice(0, 5).map(s => `• ${s.name} (${getStartupAssignmentCount(s.id)}/3)`).join('\n')
+        }${underAssigned.length > 5 ? `\n... and ${underAssigned.length - 5} more` : ''}\n\nDo you want to proceed anyway?`;
+        
+        if (!confirm(confirmMessage)) {
+          return;
+        }
+      }
+
       const startupIds = startups.map(s => s.id);
       const assignmentTable = currentRound === 'screeningRound' ? 'screening_assignments' : 'pitching_assignments';
 
@@ -832,11 +849,11 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
                 <div>
                   <p className="text-2xl font-bold">
                     {startups.filter(startup => {
-                      const requiredAssignments = 3;
-                      return startup.roundStatus !== 'rejected' && getStartupAssignmentCount(startup.id) < requiredAssignments;
+                      const count = getStartupAssignmentCount(startup.id);
+                      return startup.roundStatus !== 'rejected' && count > 0 && count < 3;
                     }).length}
                   </p>
-                  <p className="text-sm text-muted-foreground">Need Assignment</p>
+                  <p className="text-sm text-muted-foreground">Under-Assigned (&lt;3)</p>
                 </div>
               </div>
             </div>
@@ -963,9 +980,23 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
                           {/* Round-specific status badge using StatusBadge component */}
                           <StatusBadge status={startup.roundStatus || 'pending'} roundName={currentRound === 'screeningRound' ? 'screening' : 'pitching'} />
                           
-                          <Badge variant={isFullyAssigned ? "default" : "destructive"}>
-                            {assignmentCount}/{requiredAssignments} Jurors Assigned
-                          </Badge>
+                          {/* Assignment count badge with visual warnings */}
+                          {assignmentCount === 0 ? (
+                            <Badge variant="destructive" className="flex items-center gap-1">
+                              <AlertCircle className="w-3 h-3" />
+                              Unassigned
+                            </Badge>
+                          ) : assignmentCount < requiredAssignments ? (
+                            <Badge variant="outline" className="bg-warning/10 text-warning border-warning/20 flex items-center gap-1">
+                              <AlertCircle className="w-3 h-3" />
+                              ⚠️ {assignmentCount}/3 jurors
+                            </Badge>
+                          ) : (
+                            <Badge variant="default" className="flex items-center gap-1">
+                              <CheckCircle2 className="w-3 h-3" />
+                              {assignmentCount} jurors
+                            </Badge>
+                          )}
                         </div>
 
                         <div className="text-sm text-muted-foreground space-y-1">

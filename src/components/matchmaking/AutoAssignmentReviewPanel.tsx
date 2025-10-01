@@ -98,6 +98,30 @@ export const AutoAssignmentReviewPanel = ({
           </TabsList>
 
           <TabsContent value="proposals" className="space-y-4">
+            {/* Warning banner for over-limit jurors */}
+            {workloadDistribution.some(d => d.exceedsLimit) && (
+              <div className="p-4 bg-warning/10 border border-warning/20 rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <AlertCircle className="w-5 h-5 text-warning" />
+                  <span className="font-medium text-warning">Juror Limit Warnings</span>
+                </div>
+                <p className="text-sm text-muted-foreground mb-2">
+                  {workloadDistribution.filter(d => d.exceedsLimit).length} juror(s) will exceed their evaluation limit:
+                </p>
+                <ul className="text-sm space-y-1">
+                  {workloadDistribution.filter(d => d.exceedsLimit).slice(0, 5).map(d => (
+                    <li key={d.jurorId} className="text-muted-foreground">
+                      • {d.jurorName}: {d.proposedAssignments} / {d.evaluationLimit}
+                      {d.isCustomLimit && <span className="ml-2 text-xs">(custom limit)</span>}
+                    </li>
+                  ))}
+                  {workloadDistribution.filter(d => d.exceedsLimit).length > 5 && (
+                    <li className="text-muted-foreground">... and {workloadDistribution.filter(d => d.exceedsLimit).length - 5} more</li>
+                  )}
+                </ul>
+              </div>
+            )}
+
             {/* Summary Stats */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <Card>
