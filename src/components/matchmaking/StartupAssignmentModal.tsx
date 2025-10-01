@@ -30,6 +30,7 @@ interface Juror {
   target_verticals?: string[] | null;
   preferred_stages?: string[] | null;
   linkedin_url?: string | null;
+  evaluation_limit?: number | null;
 }
 
 interface Assignment {
@@ -140,13 +141,12 @@ export const StartupAssignmentModal = ({
   };
 
   const handleSave = async () => {
-    if (selectedJurorIds.length < 3) {
+    // Soft warning for < 3 jurors (don't block)
+    if (selectedJurorIds.length > 0 && selectedJurorIds.length < 3) {
       toast({
-        title: "Insufficient Jurors",
-        description: "Please select at least 3 jurors for this startup.",
-        variant: "destructive"
+        title: "⚠️ Below Recommended Minimum",
+        description: `Only ${selectedJurorIds.length} juror(s) assigned. We recommend at least 3 evaluations per startup.`,
       });
-      return;
     }
 
     try {
@@ -265,8 +265,10 @@ export const StartupAssignmentModal = ({
             <span className="text-sm text-muted-foreground">
               {selectedJurorIds.length >= 3 ? (
                 <span className="text-success">✓ Minimum requirement met</span>
+              ) : selectedJurorIds.length > 0 ? (
+                <span className="text-warning">⚠️ Below minimum (3 recommended)</span>
               ) : (
-                <span className="text-destructive">Minimum 3 jurors required</span>
+                <span className="text-muted-foreground">No jurors selected</span>
               )}
             </span>
           </div>
@@ -365,7 +367,6 @@ export const StartupAssignmentModal = ({
             </Button>
             <Button 
               onClick={handleSave}
-              disabled={selectedJurorIds.length < 3}
             >
               Save Assignment
             </Button>

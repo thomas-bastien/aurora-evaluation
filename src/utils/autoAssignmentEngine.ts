@@ -19,6 +19,7 @@ export interface Juror {
   preferred_regions?: string[];
   target_verticals?: string[];
   preferred_stages?: string[];
+  evaluation_limit?: number | null; // Custom limit override
 }
 
 export interface Assignment {
@@ -45,7 +46,10 @@ export interface WorkloadDistribution {
   currentAssignments: number;
   proposedAssignments: number;
   targetAssignments: number;
+  evaluationLimit: number; // Effective limit (custom or dynamic)
+  isCustomLimit: boolean; // True if custom limit is set
   isOverloaded: boolean;
+  exceedsLimit: boolean; // True if proposed > limit
 }
 
 /**
@@ -191,9 +195,16 @@ export async function generateAutoAssignments(
       // Get explicit interest bonus
       const interestBonus = await getExplicitInterestBonus(juror.id, startup.id, roundName);
       
-      // Apply workload balancing penalty
+      // Use custom limit if set, otherwise use dynamic target
+      const effectiveLimit = juror.evaluation_limit ?? targetAssignments;
       const currentLoad = tempWorkloads.get(juror.id) || 0;
-      const workloadPenalty = currentLoad > targetAssignments ? -2 * (currentLoad - targetAssignments) : 0;
+
+      // Stronger penalty for exceeding limit
+      const workloadPenalty = currentLoad >= effectiveLimit 
+        ? -5 * (currentLoad - effectiveLimit + 1) // Strong penalty when at/over limit
+        : currentLoad > targetAssignments 
+        ? -2 * (currentLoad - targetAssignments) // Moderate penalty
+        : 0;
       
       const totalScore = fitScore + interestBonus + workloadPenalty;
       
@@ -214,9 +225,10 @@ export async function generateAutoAssignments(
       });
     }
 
-    // Sort by total score and select top 3
+    // Sort by total score and select top jurors (adaptable to available jurors)
     jurorScores.sort((a, b) => b.totalScore - a.totalScore);
-    const selectedJurors = jurorScores.slice(0, 3);
+    const targetJurorCount = Math.min(3, jurors.length); // Adapt to available jurors
+    const selectedJurors = jurorScores.slice(0, targetJurorCount);
 
     // Update temporary workloads
     selectedJurors.forEach(({ juror }) => {
@@ -237,14 +249,22 @@ export async function generateAutoAssignments(
   }
 
   // Calculate final workload distribution
-  const workloadDistribution: WorkloadDistribution[] = jurors.map(juror => ({
-    jurorId: juror.id,
-    jurorName: juror.name,
-    currentAssignments: currentWorkloads.get(juror.id) || 0,
-    proposedAssignments: tempWorkloads.get(juror.id) || 0,
-    targetAssignments,
-    isOverloaded: (tempWorkloads.get(juror.id) || 0) > targetAssignments + 1
-  }));
+  const workloadDistribution: WorkloadDistribution[] = jurors.map(juror => {
+    const effectiveLimit = juror.evaluation_limit ?? targetAssignments;
+    const proposed = tempWorkloads.get(juror.id) || 0;
+    
+    return {
+      jurorId: juror.id,
+      jurorName: juror.name,
+      currentAssignments: currentWorkloads.get(juror.id) || 0,
+      proposedAssignments: proposed,
+      targetAssignments,
+      evaluationLimit: effectiveLimit,
+      isCustomLimit: juror.evaluation_limit !== null && juror.evaluation_limit !== undefined,
+      isOverloaded: proposed > targetAssignments + 1,
+      exceedsLimit: proposed > effectiveLimit
+    };
+  });
 
   return { proposals, workloadDistribution };
 }

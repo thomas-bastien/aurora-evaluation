@@ -40,6 +40,7 @@ interface Juror {
   preferred_regions?: string[];
   target_verticals?: string[];
   preferred_stages?: string[];
+  evaluation_limit?: number | null;
 }
 
 interface Assignment {
@@ -157,10 +158,10 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
         return acc;
       }, {} as Record<string, string>) || {};
 
-      // Fetch jurors/VCs
+      // Fetch jurors/VCs with evaluation_limit
       const { data: jurorsData, error: jurorsError } = await supabase
         .from('jurors')
-        .select('*')
+        .select('id, name, email, company, job_title, calendly_link, preferred_regions, target_verticals, preferred_stages, evaluation_limit')
         .not('user_id', 'is', null)
         .order('name');
 
@@ -546,7 +547,8 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
         job_title: j.job_title,
         preferred_regions: j.preferred_regions || [],
         target_verticals: j.target_verticals || [],
-        preferred_stages: j.preferred_stages || []
+        preferred_stages: j.preferred_stages || [],
+        evaluation_limit: j.evaluation_limit || null
       }));
 
       // Generate auto-assignment proposals

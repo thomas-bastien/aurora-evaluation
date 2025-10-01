@@ -36,10 +36,10 @@ export const AutoAssignmentReviewPanel = ({
   };
 
   const getWorkloadColor = (distribution: WorkloadDistribution) => {
-    const diff = distribution.proposedAssignments - distribution.targetAssignments;
-    if (Math.abs(diff) <= 1) return 'text-success';
-    if (distribution.isOverloaded) return 'text-destructive';
-    return 'text-warning';
+    if (distribution.exceedsLimit) return 'text-destructive';
+    if (distribution.proposedAssignments === distribution.evaluationLimit) return 'text-warning';
+    if (distribution.isOverloaded) return 'text-warning';
+    return 'text-success';
   };
 
   const handleApprove = () => {
@@ -76,7 +76,7 @@ export const AutoAssignmentReviewPanel = ({
     ? proposals.reduce((sum, p) => sum + p.proposedJurors.reduce((jSum, j) => jSum + j.fitScore, 0), 0) / (proposals.length * 3)
     : 0;
 
-  const overloadedJurors = workloadDistribution.filter(wd => wd.isOverloaded).length;
+  const overloadedJurors = workloadDistribution.filter(wd => wd.exceedsLimit).length;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -203,19 +203,27 @@ export const AutoAssignmentReviewPanel = ({
                   <Card key={distribution.jurorId}>
                     <CardContent className="p-4">
                       <div className="flex items-center justify-between">
-                        <div>
-                          <span className="font-medium">{distribution.jurorName}</span>
-                          <p className="text-sm text-muted-foreground">
-                            Target: {distribution.targetAssignments} assignments
-                          </p>
+                        <div className="flex items-center gap-2">
+                          <div>
+                            <span className="font-medium">{distribution.jurorName}</span>
+                            <p className="text-sm text-muted-foreground">
+                              Target: {distribution.targetAssignments} assignments
+                            </p>
+                          </div>
+                          {distribution.isCustomLimit && (
+                            <Badge variant="outline" className="text-xs">Custom Limit</Badge>
+                          )}
                         </div>
                         <div className="text-right">
-                          <div className={`text-lg font-bold ${getWorkloadColor(distribution)}`}>
-                            {distribution.currentAssignments} → {distribution.proposedAssignments}
+                          <div className={`text-lg font-bold ${getWorkloadColor(distribution)} flex items-center gap-2 justify-end`}>
+                            {distribution.currentAssignments} → {distribution.proposedAssignments} / {distribution.evaluationLimit}
+                            {distribution.exceedsLimit && <span>⚠️</span>}
                           </div>
                           <p className="text-xs text-muted-foreground">
-                            {distribution.proposedAssignments > distribution.targetAssignments + 1 
-                              ? 'Overloaded' 
+                            {distribution.exceedsLimit
+                              ? 'Exceeds limit' 
+                              : distribution.proposedAssignments === distribution.evaluationLimit
+                              ? 'At limit'
                               : Math.abs(distribution.proposedAssignments - distribution.targetAssignments) <= 1
                               ? 'Balanced'
                               : 'Under target'

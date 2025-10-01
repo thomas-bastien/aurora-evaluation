@@ -412,6 +412,7 @@ export type Database = {
           company: string | null
           created_at: string
           email: string
+          evaluation_limit: number | null
           id: string
           invitation_expires_at: string | null
           invitation_sent_at: string | null
@@ -430,6 +431,7 @@ export type Database = {
           company?: string | null
           created_at?: string
           email: string
+          evaluation_limit?: number | null
           id?: string
           invitation_expires_at?: string | null
           invitation_sent_at?: string | null
@@ -448,6 +450,7 @@ export type Database = {
           company?: string | null
           created_at?: string
           email?: string
+          evaluation_limit?: number | null
           id?: string
           invitation_expires_at?: string | null
           invitation_sent_at?: string | null
