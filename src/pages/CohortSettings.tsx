@@ -1,16 +1,18 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Calendar, Save } from 'lucide-react';
+import { ArrowLeft, Calendar, Save, Download } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useCohortSettings, CohortSettingsInput } from '@/hooks/useCohortSettings';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { formatDateForInput } from '@/utils/deadlineUtils';
 import { LoadingModal } from '@/components/ui/loading-modal';
 import { useToast } from '@/hooks/use-toast';
+import { ZohoExportTab } from '@/components/cohort/ZohoExportTab';
 
 export default function CohortSettings() {
   const navigate = useNavigate();
@@ -83,85 +85,104 @@ export default function CohortSettings() {
         <div>
           <h1 className="text-2xl font-bold">Cohort Settings</h1>
           <p className="text-muted-foreground">
-            Configure cohort details and round deadlines
+            Configure cohort details and export data
           </p>
         </div>
       </div>
 
       <Separator className="mb-6" />
 
-      {/* Settings Form */}
-      <Card className="max-w-2xl">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Calendar className="w-5 h-5" />
+      {/* Tabbed Interface */}
+      <Tabs defaultValue="configuration" className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="configuration" className="flex items-center gap-2">
+            <Calendar className="w-4 h-4" />
             Cohort Configuration
-          </CardTitle>
-          <CardDescription>
-            Set the cohort name and deadlines for screening and pitching rounds. 
-            These settings will be used across all dashboards and communications.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Cohort Name */}
-            <div className="space-y-2">
-              <Label htmlFor="cohort_name">Cohort Name</Label>
-              <Input
-                id="cohort_name"
-                type="text"
-                value={formData.cohort_name}
-                onChange={(e) => handleInputChange('cohort_name', e.target.value)}
-                placeholder="e.g., Aurora Tech Awards 2025 Cohort"
-                required
-              />
-              <p className="text-xs text-muted-foreground">
-                This name will appear on dashboards and in communications
-              </p>
-            </div>
+          </TabsTrigger>
+          <TabsTrigger value="export" className="flex items-center gap-2">
+            <Download className="w-4 h-4" />
+            Zoho Export
+          </TabsTrigger>
+        </TabsList>
 
-            {/* Screening Deadline */}
-            <div className="space-y-2">
-              <Label htmlFor="screening_deadline">Screening Round Deadline</Label>
-              <Input
-                id="screening_deadline"
-                type="date"
-                value={formData.screening_deadline ? formatDateForInput(formData.screening_deadline) : ''}
-                onChange={(e) => handleInputChange('screening_deadline', e.target.value || null)}
-              />
-              <p className="text-xs text-muted-foreground">
-                Last date for jurors to complete screening evaluations
-              </p>
-            </div>
+        <TabsContent value="configuration">
+          <Card className="max-w-2xl">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Calendar className="w-5 h-5" />
+                Cohort Configuration
+              </CardTitle>
+              <CardDescription>
+                Set the cohort name and deadlines for screening and pitching rounds. 
+                These settings will be used across all dashboards and communications.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSubmit} className="space-y-6">
+                {/* Cohort Name */}
+                <div className="space-y-2">
+                  <Label htmlFor="cohort_name">Cohort Name</Label>
+                  <Input
+                    id="cohort_name"
+                    type="text"
+                    value={formData.cohort_name}
+                    onChange={(e) => handleInputChange('cohort_name', e.target.value)}
+                    placeholder="e.g., Aurora Tech Awards 2025 Cohort"
+                    required
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    This name will appear on dashboards and in communications
+                  </p>
+                </div>
 
-            {/* Pitching Deadline */}
-            <div className="space-y-2">
-              <Label htmlFor="pitching_deadline">Pitching Round Deadline</Label>
-              <Input
-                id="pitching_deadline"
-                type="date"
-                value={formData.pitching_deadline ? formatDateForInput(formData.pitching_deadline) : ''}
-                onChange={(e) => handleInputChange('pitching_deadline', e.target.value || null)}
-              />
-              <p className="text-xs text-muted-foreground">
-                Last date for jurors to complete pitching evaluations
-              </p>
-            </div>
+                {/* Screening Deadline */}
+                <div className="space-y-2">
+                  <Label htmlFor="screening_deadline">Screening Round Deadline</Label>
+                  <Input
+                    id="screening_deadline"
+                    type="date"
+                    value={formData.screening_deadline ? formatDateForInput(formData.screening_deadline) : ''}
+                    onChange={(e) => handleInputChange('screening_deadline', e.target.value || null)}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Last date for jurors to complete screening evaluations
+                  </p>
+                </div>
 
-            {/* Save Button */}
-            <div className="flex justify-end pt-4">
-              <Button
-                type="submit"
-                disabled={isUpdating}
-                className="flex items-center gap-2"
-              >
-                <Save className="w-4 h-4" />
-                {isUpdating ? 'Saving...' : 'Save Settings'}
-              </Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
+                {/* Pitching Deadline */}
+                <div className="space-y-2">
+                  <Label htmlFor="pitching_deadline">Pitching Round Deadline</Label>
+                  <Input
+                    id="pitching_deadline"
+                    type="date"
+                    value={formData.pitching_deadline ? formatDateForInput(formData.pitching_deadline) : ''}
+                    onChange={(e) => handleInputChange('pitching_deadline', e.target.value || null)}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Last date for jurors to complete pitching evaluations
+                  </p>
+                </div>
+
+                {/* Save Button */}
+                <div className="flex justify-end pt-4">
+                  <Button
+                    type="submit"
+                    disabled={isUpdating}
+                    className="flex items-center gap-2"
+                  >
+                    <Save className="w-4 h-4" />
+                    {isUpdating ? 'Saving...' : 'Save Settings'}
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="export">
+          <ZohoExportTab />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
