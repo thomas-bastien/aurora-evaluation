@@ -9,7 +9,8 @@ import {
   generateJurorsCSV,
   generateStartupsCSV,
   generateFoundersCSV,
-  generateEvaluationResultsCSV,
+  generateDealsCSV,
+  generateDealContactRolesCSV,
   createZohoExportZIP,
   downloadZIPFile,
   getExportPreviewCounts
@@ -43,7 +44,8 @@ export function ZohoExportTab() {
       const jurorsCSV = await generateJurorsCSV();
       const startupsCSV = await generateStartupsCSV();
       const foundersCSV = await generateFoundersCSV();
-      const evaluationResultsCSV = await generateEvaluationResultsCSV();
+      const dealsCSV = await generateDealsCSV();
+      const dealContactRolesCSV = await generateDealContactRolesCSV();
 
       // Create ZIP file
       const zipBlob = await createZohoExportZIP({
@@ -51,7 +53,8 @@ export function ZohoExportTab() {
         'Jurors.csv': jurorsCSV,
         'Startups.csv': startupsCSV,
         'Founders.csv': foundersCSV,
-        'Evaluation_Results.csv': evaluationResultsCSV
+        'Deals.csv': dealsCSV,
+        'Deal_Contact_Roles.csv': dealContactRolesCSV
       });
 
       // Download ZIP
@@ -138,12 +141,12 @@ export function ZohoExportTab() {
                   <span><strong>Founders:</strong> {previewCounts?.founders || 0}</span>
                 </div>
                 <div className="flex items-center gap-2 text-sm">
-                  <span>📝</span>
-                  <span><strong>Screening Evals:</strong> {previewCounts?.screeningEvaluations || 0}</span>
+                  <span>🤝</span>
+                  <span><strong>Deals:</strong> {previewCounts?.deals || 0}</span>
                 </div>
                 <div className="flex items-center gap-2 text-sm">
-                  <span>📝</span>
-                  <span><strong>Pitching Evals:</strong> {previewCounts?.pitchingEvaluations || 0}</span>
+                  <span>🔗</span>
+                  <span><strong>Contact Roles:</strong> {previewCounts?.dealContactRoles || 0}</span>
                 </div>
               </div>
             )}

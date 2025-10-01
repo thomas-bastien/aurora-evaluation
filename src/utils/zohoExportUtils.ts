@@ -302,20 +302,17 @@ export async function generateStartupsCSV(): Promise<string> {
     .limit(1)
     .maybeSingle();
 
-  // Get startups from current cohort with evaluation scores
+  // Get startups from current cohort
   const { data: startups, error } = await supabase
     .from('startups')
-    .select(`
-      *,
-      startup_round_statuses!inner(status, round_id, rounds!inner(name))
-    `)
+    .select('*')
     .gte('created_at', cohortSettings?.created_at || '2000-01-01')
     .order('name', { ascending: true });
 
   if (error) throw error;
 
   const rows: string[] = [
-    'Account Name,Website,Phone,Industry,Description,Stage,Country,Region,Business_Model,Founded_Year,Team_Size,Funding_Goal,Funding_Raised,Total_Investment,Currency,LinkedIn,Aurora_Screening_Score,Aurora_Screening_Status,Aurora_Pitching_Score,Aurora_Pitching_Status,Aurora_Final_Status,Aurora_Profile_Link,Aurora_ID,Notes'
+    'Account Name,Website,Phone,Industry,Description,Stage,Country,Region,Business_Model,Founded_Year,Team_Size,Funding_Goal,Funding_Raised,Total_Investment,Currency,LinkedIn,Aurora_Screening_Avg_Score,Aurora_Pitching_Avg_Score,Aurora_Overall_Avg_Score,Aurora_Profile_Link,Aurora_ID,Notes'
   ];
 
   for (let i = 0; i < (startups?.length || 0); i++) {
@@ -330,8 +327,8 @@ export async function generateStartupsCSV(): Promise<string> {
       .eq('status', 'submitted');
     
     const screeningAvg = screeningEvals && screeningEvals.length > 0
-      ? (screeningEvals.reduce((sum, e) => sum + (e.overall_score || 0), 0) / screeningEvals.length).toFixed(2)
-      : '';
+      ? (screeningEvals.reduce((sum, e) => sum + (e.overall_score || 0), 0) / screeningEvals.length)
+      : null;
     
     // Get pitching evaluations
     const { data: pitchingEvals } = await supabase
@@ -341,19 +338,14 @@ export async function generateStartupsCSV(): Promise<string> {
       .eq('status', 'submitted');
     
     const pitchingAvg = pitchingEvals && pitchingEvals.length > 0
-      ? (pitchingEvals.reduce((sum, e) => sum + (e.overall_score || 0), 0) / pitchingEvals.length).toFixed(2)
-      : '';
+      ? (pitchingEvals.reduce((sum, e) => sum + (e.overall_score || 0), 0) / pitchingEvals.length)
+      : null;
     
-    // Get round statuses
-    const screeningStatus = (startup as any).startup_round_statuses?.find((srs: any) => 
-      srs.rounds?.name === 'screening'
-    )?.status || '';
+    // Calculate overall average: (screening_avg + pitching_avg) / 2
+    const overallAvg = (screeningAvg && pitchingAvg)
+      ? (screeningAvg + pitchingAvg) / 2
+      : (screeningAvg || pitchingAvg || null);
     
-    const pitchingStatus = (startup as any).startup_round_statuses?.find((srs: any) => 
-      srs.rounds?.name === 'pitching'
-    )?.status || '';
-    
-    const finalStatus = pitchingStatus || screeningStatus;
     const industry = startup.verticals?.[0] || '';
     const notes = buildStartupNotes(startup);
     const profileLink = `https://aurora.app/startups/${startup.id}`;
@@ -375,11 +367,9 @@ export async function generateStartupsCSV(): Promise<string> {
       escapeCSVField(startup.total_investment_received || ''),
       escapeCSVField(startup.investment_currency || ''),
       escapeCSVField(startup.linkedin_url || ''),
-      screeningAvg,
-      escapeCSVField(screeningStatus),
-      pitchingAvg,
-      escapeCSVField(pitchingStatus),
-      escapeCSVField(finalStatus),
+      screeningAvg ? screeningAvg.toFixed(2) : '',
+      pitchingAvg ? pitchingAvg.toFixed(2) : '',
+      overallAvg ? overallAvg.toFixed(2) : '',
       profileLink,
       auroraId,
       escapeCSVField(notes)
@@ -434,120 +424,164 @@ export async function generateFoundersCSV(): Promise<string> {
   return rows.join('\n');
 }
 
-export async function generateEvaluationResultsCSV(): Promise<string> {
-  // Get screening evaluations
-  const { data: screeningEvals } = await supabase
-    .from('screening_evaluations')
-    .select(`
-      id,
-      startup_id,
-      evaluator_id,
-      overall_score,
-      strengths,
-      improvement_areas,
-      overall_notes,
-      pitch_development_aspects,
-      recommendation,
-      wants_pitch_session,
-      investment_amount,
-      guided_feedback,
-      created_at,
-      startups!inner(name),
-      profiles!inner(user_id)
-    `)
-    .eq('status', 'submitted');
+export async function generateDealsCSV(): Promise<string> {
+  // Get current cohort settings
+  const { data: cohortSettings } = await supabase
+    .from('cohort_settings')
+    .select('cohort_name, created_at')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
 
-  // Get pitching evaluations
-  const { data: pitchingEvals } = await supabase
-    .from('pitching_evaluations')
+  const cohortName = cohortSettings?.cohort_name || 'Aurora Cohort';
+
+  // Get startups with their round statuses
+  const { data: startups, error } = await supabase
+    .from('startups')
     .select(`
-      id,
-      startup_id,
-      evaluator_id,
-      overall_score,
-      strengths,
-      improvement_areas,
-      overall_notes,
-      pitch_development_aspects,
-      recommendation,
-      wants_pitch_session,
-      investment_amount,
-      guided_feedback,
-      created_at,
-      startups!inner(name),
-      profiles!inner(user_id)
+      *,
+      startup_round_statuses(status, rounds(name))
     `)
-    .eq('status', 'submitted');
+    .gte('created_at', cohortSettings?.created_at || '2000-01-01')
+    .order('name', { ascending: true });
+
+  if (error) throw error;
 
   const rows: string[] = [
-    'Related_To_Account,Related_To_Aurora_ID,Note_Title,Note_Content,Created_Time,Aurora_Link,Aurora_ID'
+    'Deal Name,Account Name,Stage,Amount,Closing Date,Aurora_Deal_ID,Aurora_Startup_ID'
   ];
 
-  // Get juror mapping
-  const { data: jurors } = await supabase
-    .from('jurors')
-    .select('user_id, name, company');
-
-  const jurorMap = new Map(jurors?.map(j => [j.user_id, { name: j.name, company: j.company }]) || []);
-
-  // Process screening evaluations
-  screeningEvals?.forEach((screeningEval, index) => {
-    const jurorInfo = jurorMap.get(screeningEval.evaluator_id);
-    const evaluation: Evaluation = {
-      ...screeningEval,
-      startup_name: (screeningEval as any).startups.name,
-      juror_name: jurorInfo?.name || 'Unknown',
-      vc_fund: jurorInfo?.company,
-      round_type: 'Screening'
-    };
+  startups?.forEach((startup, index) => {
+    const auroraId = `s_${String(index + 1).padStart(3, '0')}`;
+    const dealName = `${startup.name} - ${cohortName}`;
     
-    const auroraId = `eval_scr_${String(index + 1).padStart(3, '0')}`;
-    const startupIndex = 1; // This would need proper mapping
-    const auroraStartupId = `s_${String(startupIndex).padStart(3, '0')}`;
-    const title = `Screening Evaluation - ${evaluation.juror_name}${evaluation.vc_fund ? ` (${evaluation.vc_fund})` : ''}`;
-    const content = formatEvaluationNote(evaluation);
-    const createdTime = new Date(evaluation.created_at).toISOString().replace('T', ' ').split('.')[0];
-    const link = `https://aurora.app/evaluations/${evaluation.id}`;
+    // Determine stage from startup_round_statuses
+    let stage = 'Screening'; // Default
+    const statuses = (startup as any).startup_round_statuses || [];
+    
+    // Find the most progressed status
+    const screeningStatus = statuses.find((s: any) => s.rounds?.name === 'screening');
+    const pitchingStatus = statuses.find((s: any) => s.rounds?.name === 'pitching');
+    
+    if (pitchingStatus) {
+      if (pitchingStatus.status === 'selected') {
+        stage = 'Selected';
+      } else if (pitchingStatus.status === 'rejected') {
+        stage = 'Rejected';
+      } else {
+        stage = 'Pitching';
+      }
+    } else if (screeningStatus) {
+      if (screeningStatus.status === 'selected') {
+        stage = 'Pitching'; // Selected in screening means moved to pitching
+      } else if (screeningStatus.status === 'rejected') {
+        stage = 'Rejected';
+      } else {
+        stage = 'Screening';
+      }
+    }
     
     rows.push([
-      escapeCSVField(evaluation.startup_name),
-      auroraStartupId,
-      escapeCSVField(title),
-      escapeCSVField(content),
-      createdTime,
-      link,
+      escapeCSVField(dealName),
+      escapeCSVField(startup.name),
+      escapeCSVField(stage),
+      '', // Amount - blank
+      '', // Closing Date - blank
+      auroraId,
       auroraId
     ].join(','));
   });
 
-  // Process pitching evaluations
-  pitchingEvals?.forEach((pitchingEval, index) => {
-    const jurorInfo = jurorMap.get(pitchingEval.evaluator_id);
-    const evaluation: Evaluation = {
-      ...pitchingEval,
-      startup_name: (pitchingEval as any).startups.name,
-      juror_name: jurorInfo?.name || 'Unknown',
-      vc_fund: jurorInfo?.company,
-      round_type: 'Pitching'
-    };
+  return rows.join('\n');
+}
+
+export async function generateDealContactRolesCSV(): Promise<string> {
+  // Get current cohort settings
+  const { data: cohortSettings } = await supabase
+    .from('cohort_settings')
+    .select('cohort_name, created_at')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const cohortName = cohortSettings?.cohort_name || 'Aurora Cohort';
+
+  // Get all startups for mapping
+  const { data: startups } = await supabase
+    .from('startups')
+    .select('id, name')
+    .gte('created_at', cohortSettings?.created_at || '2000-01-01')
+    .order('name', { ascending: true });
+
+  const startupMap = new Map(startups?.map((s, idx) => [
+    s.id,
+    { name: s.name, auroraId: `s_${String(idx + 1).padStart(3, '0')}` }
+  ]) || []);
+
+  // Get screening assignments
+  const { data: screeningAssignments } = await supabase
+    .from('screening_assignments')
+    .select(`
+      id,
+      startup_id,
+      juror_id,
+      jurors(name, email)
+    `);
+
+  // Get pitching assignments
+  const { data: pitchingAssignments } = await supabase
+    .from('pitching_assignments')
+    .select(`
+      id,
+      startup_id,
+      juror_id,
+      jurors(name, email)
+    `);
+
+  const rows: string[] = [
+    'Deal Name,Contact Email,Contact Name,Role,Aurora_Deal_ID,Aurora_Juror_ID,Aurora_Assignment_ID'
+  ];
+
+  // Process screening assignments
+  screeningAssignments?.forEach((assignment) => {
+    const startup = startupMap.get(assignment.startup_id);
+    const juror = (assignment as any).jurors;
     
-    const auroraId = `eval_pit_${String(index + 1).padStart(3, '0')}`;
-    const startupIndex = 1; // This would need proper mapping
-    const auroraStartupId = `s_${String(startupIndex).padStart(3, '0')}`;
-    const title = `Pitching Evaluation - ${evaluation.juror_name}${evaluation.vc_fund ? ` (${evaluation.vc_fund})` : ''}`;
-    const content = formatEvaluationNote(evaluation);
-    const createdTime = new Date(evaluation.created_at).toISOString().replace('T', ' ').split('.')[0];
-    const link = `https://aurora.app/evaluations/${evaluation.id}`;
+    if (startup && juror) {
+      const dealName = `${startup.name} - ${cohortName}`;
+      const jurorId = `j_${assignment.juror_id.substring(0, 8)}`;
+      
+      rows.push([
+        escapeCSVField(dealName),
+        escapeCSVField(juror.email),
+        escapeCSVField(juror.name),
+        'Screening Evaluator',
+        startup.auroraId,
+        jurorId,
+        `sa_${assignment.id.substring(0, 8)}`
+      ].join(','));
+    }
+  });
+
+  // Process pitching assignments
+  pitchingAssignments?.forEach((assignment) => {
+    const startup = startupMap.get(assignment.startup_id);
+    const juror = (assignment as any).jurors;
     
-    rows.push([
-      escapeCSVField(evaluation.startup_name),
-      auroraStartupId,
-      escapeCSVField(title),
-      escapeCSVField(content),
-      createdTime,
-      link,
-      auroraId
-    ].join(','));
+    if (startup && juror) {
+      const dealName = `${startup.name} - ${cohortName}`;
+      const jurorId = `j_${assignment.juror_id.substring(0, 8)}`;
+      
+      rows.push([
+        escapeCSVField(dealName),
+        escapeCSVField(juror.email),
+        escapeCSVField(juror.name),
+        'Pitching Evaluator',
+        startup.auroraId,
+        jurorId,
+        `pa_${assignment.id.substring(0, 8)}`
+      ].join(','));
+    }
   });
 
   return rows.join('\n');
@@ -594,7 +628,7 @@ export async function getExportPreviewCounts() {
     .limit(1)
     .maybeSingle();
 
-  // Get Startups count
+  // Get Startups count (= Deals count, 1 deal per startup)
   const { count: startupsCount } = await supabase
     .from('startups')
     .select('*', { count: 'exact', head: true })
@@ -608,24 +642,23 @@ export async function getExportPreviewCounts() {
   
   const foundersCount = startups?.reduce((sum, s) => sum + (s.founder_names?.length || 0), 0) || 0;
 
-  // Get Screening Evaluations count
-  const { count: screeningCount } = await supabase
-    .from('screening_evaluations')
-    .select('*', { count: 'exact', head: true })
-    .eq('status', 'submitted');
+  // Get Deal Contact Roles count (screening + pitching assignments)
+  const { count: screeningAssignmentsCount } = await supabase
+    .from('screening_assignments')
+    .select('*', { count: 'exact', head: true });
 
-  // Get Pitching Evaluations count
-  const { count: pitchingCount } = await supabase
-    .from('pitching_evaluations')
-    .select('*', { count: 'exact', head: true })
-    .eq('status', 'submitted');
+  const { count: pitchingAssignmentsCount } = await supabase
+    .from('pitching_assignments')
+    .select('*', { count: 'exact', head: true });
+
+  const dealContactRolesCount = (screeningAssignmentsCount || 0) + (pitchingAssignmentsCount || 0);
 
   return {
     vcFunds: vcFundsCount,
     jurors: jurorsCount,
     startups: startupsCount || 0,
     founders: foundersCount,
-    screeningEvaluations: screeningCount || 0,
-    pitchingEvaluations: pitchingCount || 0
+    deals: startupsCount || 0,
+    dealContactRoles: dealContactRolesCount
   };
 }

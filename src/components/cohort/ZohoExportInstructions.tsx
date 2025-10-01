@@ -48,8 +48,8 @@ export function ZohoExportInstructions() {
             <AccordionContent className="space-y-2 text-sm">
               <p>• Navigate to: Settings → Data Administration → Import → Accounts</p>
               <p>• Upload <code className="bg-muted px-1 rounded">Startups.csv</code></p>
-              <p>• Map all Aurora_* fields as custom fields</p>
-              <p>• This creates your Startup Accounts</p>
+              <p>• Map Aurora_Screening_Avg_Score, Aurora_Pitching_Avg_Score, Aurora_Overall_Avg_Score as custom fields</p>
+              <p>• This creates your Startup Accounts with average scores</p>
             </AccordionContent>
           </AccordionItem>
 
@@ -64,12 +64,23 @@ export function ZohoExportInstructions() {
           </AccordionItem>
 
           <AccordionItem value="step-5">
-            <AccordionTrigger>Step 5: Import Evaluations (Evaluation_Results.csv)</AccordionTrigger>
+            <AccordionTrigger>Step 5: Import Deals (Deals.csv)</AccordionTrigger>
             <AccordionContent className="space-y-2 text-sm">
-              <p>• Navigate to: Settings → Data Administration → Import → Notes</p>
-              <p>• Upload <code className="bg-muted px-1 rounded">Evaluation_Results.csv</code></p>
-              <p>• Map "Related_To_Account" to link Notes to Startup Accounts</p>
-              <p>• This attaches evaluation notes to startups</p>
+              <p>• Navigate to: Settings → Data Administration → Import → Deals</p>
+              <p>• Upload <code className="bg-muted px-1 rounded">Deals.csv</code></p>
+              <p>• Map "Account Name" to link Deals to Startup Accounts</p>
+              <p>• Map Aurora_Deal_ID and Aurora_Startup_ID as custom fields</p>
+              <p>• This creates Deals tracking each startup's Aurora journey</p>
+            </AccordionContent>
+          </AccordionItem>
+
+          <AccordionItem value="step-6">
+            <AccordionTrigger>Step 6: Import Contact Roles (Deal_Contact_Roles.csv)</AccordionTrigger>
+            <AccordionContent className="space-y-2 text-sm">
+              <p>• Navigate to: Settings → Data Administration → Import → Contact Roles (or Deals module)</p>
+              <p>• Upload <code className="bg-muted px-1 rounded">Deal_Contact_Roles.csv</code></p>
+              <p>• Map "Deal Name" to link to Deals, "Contact Email" to link to Jurors</p>
+              <p>• This connects Jurors to Deals showing who evaluated each startup</p>
             </AccordionContent>
           </AccordionItem>
         </Accordion>
