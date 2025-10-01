@@ -1,33 +1,73 @@
 export function generateJurorsCSVTemplate(): string {
+  // Documentation rows
+  const docRows = [
+    '# REQUIRED FIELDS: name, email',
+    '# OPTIONAL FIELDS: job_title, company, linkedin_url, calendly_link, preferred_stages, target_verticals, preferred_regions, evaluation_limit',
+    '# ARRAY FIELDS (semicolon-separated): preferred_stages, target_verticals, preferred_regions',
+    '# VALID STAGES: Pre-Seed, Seed, Series A, Series B, Series C+, Growth, IPO',
+    '# VALID REGIONS: Africa, Asia Pacific (APAC), Europe, Latin America (LATAM), Middle East & North Africa (MENA), North America',
+    '# VALID VERTICALS: See startup template for full list (e.g., "Artificial Intelligence (AI/ML);Fintech;HealthTech & MedTech")',
+    '# evaluation_limit: Number of startups this juror should evaluate (leave empty for no limit)',
+    ''
+  ];
+
   const headers = [
     'name',
-    'email', 
+    'email',
     'job_title',
-    'company'
+    'company',
+    'linkedin_url',
+    'calendly_link',
+    'preferred_stages',
+    'target_verticals',
+    'preferred_regions',
+    'evaluation_limit'
   ];
 
   const exampleRows = [
+    // Complete example with all preferences
     [
       'Sarah Johnson',
       'sarah.johnson@techventures.com',
       'Senior Partner',
-      'TechVentures Capital'
+      'TechVentures Capital',
+      'https://linkedin.com/in/sarahjohnson',
+      'https://calendly.com/sarahjohnson/30min',
+      'Seed;Series A',
+      'Artificial Intelligence (AI/ML);Enterprise Software;Fintech',
+      'North America;Europe',
+      '10'
     ],
+    // Minimal example with only required fields
     [
       'Michael Chen',
       'mchen@innovatefund.io',
-      'Investment Director',
-      'Innovate Fund'
+      '',
+      '',
+      '',
+      '',
+      '',
+      '',
+      '',
+      ''
     ],
+    // Mixed example with partial preferences
     [
       'Emily Rodriguez',
       'emily@growthpartners.com',
       'Principal',
-      'Growth Partners LLC'
+      'Growth Partners LLC',
+      'https://linkedin.com/in/emilyrodriguez',
+      '',
+      'Pre-Seed;Seed',
+      'HealthTech & MedTech;RetailTech & E-commerce',
+      'Latin America (LATAM);North America',
+      '15'
     ]
   ];
 
   const csvContent = [
+    ...docRows,
     headers.join(','),
     ...exampleRows.map(row => row.map(cell => `"${cell}"`).join(','))
   ].join('\n');
