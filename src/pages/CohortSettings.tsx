@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Calendar, Save, Download } from 'lucide-react';
+import { ArrowLeft, Calendar, Save, Download, Trash2 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,12 +13,16 @@ import { formatDateForInput } from '@/utils/deadlineUtils';
 import { LoadingModal } from '@/components/ui/loading-modal';
 import { useToast } from '@/hooks/use-toast';
 import { ZohoExportTab } from '@/components/cohort/ZohoExportTab';
+import { CohortResetConfirmationModal } from '@/components/cohort/CohortResetConfirmationModal';
+import { useCohortReset } from '@/hooks/useCohortReset';
 
 export default function CohortSettings() {
   const navigate = useNavigate();
   const { profile: userProfile, loading: profileLoading } = useUserProfile();
   const { toast } = useToast();
   const { cohortSettings, isLoading, updateCohortSettings, isUpdating } = useCohortSettings();
+  const { resetCohort, isResetting } = useCohortReset();
+  const [showResetModal, setShowResetModal] = useState(false);
   
   const [formData, setFormData] = useState<CohortSettingsInput>({
     cohort_name: '',
@@ -59,6 +63,16 @@ export default function CohortSettings() {
       ...prev,
       [field]: value
     }));
+  };
+
+  const handleResetConfirm = () => {
+    if (cohortSettings) {
+      resetCohort({
+        cohortId: cohortSettings.id,
+        cohortName: cohortSettings.cohort_name
+      });
+      setShowResetModal(false);
+    }
   };
 
   if (isLoading || profileLoading) {
@@ -174,15 +188,55 @@ export default function CohortSettings() {
                     {isUpdating ? 'Saving...' : 'Save Settings'}
                   </Button>
                 </div>
-              </form>
-            </CardContent>
-          </Card>
-        </TabsContent>
+                    </form>
+                  </CardContent>
+                </Card>
+
+                {/* Danger Zone */}
+                <Card className="border-destructive/50">
+                  <CardHeader>
+                    <CardTitle className="text-destructive">Danger Zone</CardTitle>
+                    <CardDescription>
+                      Irreversible actions that affect cohort data
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex items-start justify-between gap-4 p-4 border border-destructive/20 rounded-lg bg-destructive/5">
+                      <div className="flex-1">
+                        <h4 className="font-semibold text-foreground mb-1">Reset Cohort Data</h4>
+                        <p className="text-sm text-muted-foreground">
+                          Permanently delete all startups, jurors, evaluations, and communications for this cohort. 
+                          Cohort settings will remain intact. This action cannot be undone.
+                        </p>
+                      </div>
+                      <Button
+                        variant="destructive"
+                        onClick={() => setShowResetModal(true)}
+                        disabled={!cohortSettings || isResetting}
+                        className="shrink-0"
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Reset Data
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
 
         <TabsContent value="export">
           <ZohoExportTab />
         </TabsContent>
       </Tabs>
+
+      {cohortSettings && (
+        <CohortResetConfirmationModal
+          open={showResetModal}
+          onOpenChange={setShowResetModal}
+          cohortName={cohortSettings.cohort_name}
+          onConfirm={handleResetConfirm}
+          isLoading={isResetting}
+        />
+      )}
     </div>
   );
 }

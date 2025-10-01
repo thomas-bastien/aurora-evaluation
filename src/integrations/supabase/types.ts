@@ -108,6 +108,44 @@ export type Database = {
           },
         ]
       }
+      cohort_reset_logs: {
+        Row: {
+          cohort_id: string
+          cohort_name: string
+          id: string
+          notes: string | null
+          records_deleted: Json
+          triggered_at: string
+          triggered_by: string
+        }
+        Insert: {
+          cohort_id: string
+          cohort_name: string
+          id?: string
+          notes?: string | null
+          records_deleted?: Json
+          triggered_at?: string
+          triggered_by: string
+        }
+        Update: {
+          cohort_id?: string
+          cohort_name?: string
+          id?: string
+          notes?: string | null
+          records_deleted?: Json
+          triggered_at?: string
+          triggered_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cohort_reset_logs_cohort_id_fkey"
+            columns: ["cohort_id"]
+            isOneToOne: false
+            referencedRelation: "cohort_settings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cohort_settings: {
         Row: {
           cohort_name: string
