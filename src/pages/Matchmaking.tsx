@@ -314,7 +314,7 @@ const Matchmaking = () => {
         </Card>
 
         {/* Assignment Modal */}
-        {selectedStartup && <StartupAssignmentModal startup={selectedStartup} jurors={jurors} existingAssignments={assignments.filter(a => a.startup_id === selectedStartup.id)} open={showAssignmentModal} onOpenChange={setShowAssignmentModal} onComplete={handleAssignmentComplete} />}
+        {selectedStartup && <StartupAssignmentModal startup={selectedStartup} jurors={jurors} existingAssignments={assignments.filter(a => a.startup_id === selectedStartup.id)} currentRound="screeningRound" open={showAssignmentModal} onOpenChange={setShowAssignmentModal} onComplete={handleAssignmentComplete} />}
 
         {/* Assignment Summary Modal */}
         <AssignmentSummary assignments={assignments} startups={startups} jurors={jurors} open={showSummary} onOpenChange={setShowSummary} isConfirmed={isConfirmed} />

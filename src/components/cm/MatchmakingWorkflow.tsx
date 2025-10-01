@@ -1068,6 +1068,7 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
           startup={selectedStartup}
           jurors={jurors}
           existingAssignments={assignments.filter(a => a.startup_id === selectedStartup.id)}
+          currentRound={currentRound}
           open={showAssignmentModal}
           onOpenChange={setShowAssignmentModal}
           onComplete={handleAssignmentComplete}

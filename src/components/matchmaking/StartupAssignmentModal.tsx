@@ -44,6 +44,7 @@ interface StartupAssignmentModalProps {
   startup: Startup;
   jurors: Juror[];
   existingAssignments: Assignment[];
+  currentRound: 'screeningRound' | 'pitchingRound';
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onComplete: (assignments: Assignment[]) => void;
@@ -53,6 +54,7 @@ export const StartupAssignmentModal = ({
   startup,
   jurors,
   existingAssignments,
+  currentRound,
   open,
   onOpenChange,
   onComplete
@@ -67,29 +69,27 @@ export const StartupAssignmentModal = ({
     setSelectedJurorIds(existingAssignments.map(a => a.juror_id));
   }, [existingAssignments]);
 
-  // Fetch assignment counts when modal opens
+  // Fetch assignment counts when modal opens (round-specific)
   useEffect(() => {
     const fetchAssignmentCounts = async () => {
       if (!open) return;
       
       const { supabase } = await import('@/integrations/supabase/client');
       
-      // Count screening assignments per juror
-      const { data: screeningData } = await supabase
-        .from('screening_assignments')
+      // Determine which table based on current round
+      const assignmentTable = currentRound === 'screeningRound' 
+        ? 'screening_assignments' 
+        : 'pitching_assignments';
+      
+      // Fetch ONLY from the current round's table
+      const { data } = await supabase
+        .from(assignmentTable)
         .select('juror_id')
         .eq('status', 'assigned');
       
-      // Count pitching assignments per juror
-      const { data: pitchingData } = await supabase
-        .from('pitching_assignments')
-        .select('juror_id')
-        .eq('status', 'assigned');
-      
-      // Aggregate counts
+      // Count assignments per juror for THIS ROUND ONLY
       const counts = new Map<string, number>();
-      
-      [...(screeningData || []), ...(pitchingData || [])].forEach(assignment => {
+      (data || []).forEach(assignment => {
         counts.set(
           assignment.juror_id, 
           (counts.get(assignment.juror_id) || 0) + 1
@@ -100,7 +100,7 @@ export const StartupAssignmentModal = ({
     };
     
     fetchAssignmentCounts();
-  }, [open]);
+  }, [open, currentRound]);
 
   const filteredJurors = jurors.filter(juror =>
     juror.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -198,24 +198,20 @@ export const StartupAssignmentModal = ({
       // Import supabase client
       const { supabase } = await import('@/integrations/supabase/client');
       
-      // Delete existing assignments for this startup in both tables
-      const { error: deleteScreeningError } = await supabase
-        .from('screening_assignments')
+      // Determine which table based on current round
+      const assignmentTable = currentRound === 'screeningRound' 
+        ? 'screening_assignments' 
+        : 'pitching_assignments';
+      
+      // Delete existing assignments from THE CURRENT ROUND'S TABLE ONLY
+      const { error: deleteError } = await supabase
+        .from(assignmentTable)
         .delete()
         .eq('startup_id', startup.id);
       
-      const { error: deletePitchingError } = await supabase
-        .from('pitching_assignments')
-        .delete()
-        .eq('startup_id', startup.id);
-      
-      // If both fail, throw the error (likely means neither table exists for this startup)
-      if (deleteScreeningError && deletePitchingError) {
-        throw deleteScreeningError; // Default to screening error
-      }
+      if (deleteError) throw deleteError;
 
-      // Create new assignments - default to screening for now
-      // TODO: Make this round-aware based on current active round
+      // Create new assignments in THE CURRENT ROUND'S TABLE
       const assignmentRecords = selectedJurorIds.map(jurorId => ({
         startup_id: startup.id,
         juror_id: jurorId,
@@ -223,7 +219,7 @@ export const StartupAssignmentModal = ({
       }));
 
       const { error: insertError } = await supabase
-        .from('screening_assignments')
+        .from(assignmentTable)
         .insert(assignmentRecords);
       
       if (insertError) throw insertError;
