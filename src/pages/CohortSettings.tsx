@@ -180,7 +180,7 @@ export default function CohortSettings() {
               <CardContent className="space-y-4">
                 <div className="flex items-start justify-between gap-4 p-4 border border-destructive/20 rounded-lg bg-destructive/5">
                   <div className="flex-1">
-                    <h4 className="font-semibold mb-1 text-red-600 text-base">Irreversible actions that affect cohort data
+                    <h4 className="font-semibold mb-1 text-base text-gray-500">Irreversible actions that affect cohort data
                   </h4>
                     <p className="text-sm text-muted-foreground">
                       Permanently delete all startups, jurors, evaluations, and communications for this cohort. 
