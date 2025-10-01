@@ -95,50 +95,70 @@ const VCProfile = () => {
 
   const fetchEvaluationStats = async () => {
     if (!user) return;
+    
     try {
-      // Fetch assignments count - check both tables
-      let totalAssigned = 0;
+      // Get juror record
+      const { data: jurorData } = await supabase
+        .from('jurors')
+        .select('id')
+        .eq('user_id', user.id)
+        .maybeSingle();
       
-      // Check screening assignments
-      const { count: screeningCount } = await supabase
+      if (!jurorData) return;
+      
+      // Get assignments for both rounds
+      const { data: screeningAssignments } = await supabase
         .from('screening_assignments')
-        .select('*', { count: 'exact', head: true })
-        .eq('juror_id', user.id)
+        .select('startup_id')
+        .eq('juror_id', jurorData.id)
         .eq('status', 'assigned');
-        
-      // Check pitching assignments  
-      const { count: pitchingCount } = await supabase
-        .from('pitching_assignments')
-        .select('*', { count: 'exact', head: true })
-        .eq('juror_id', user.id)
-        .eq('status', 'assigned');
-
-      totalAssigned = (screeningCount || 0) + (pitchingCount || 0);
-
-      // Fetch evaluations - check both tables
-      let evaluations: any[] = [];
       
-      // Get screening evaluations
-      const { data: screeningEvals } = await supabase
-        .from('screening_evaluations')
-        .select('*')
-        .eq('evaluator_id', user.id);
-        
-      // Get pitching evaluations  
-      const { data: pitchingEvals } = await supabase
-        .from('pitching_evaluations')
-        .select('*')
-        .eq('evaluator_id', user.id);
-        
-      evaluations = [...(screeningEvals || []), ...(pitchingEvals || [])];
-      const completed = evaluations?.filter(e => e.status === 'submitted').length || 0;
-      const draft = evaluations?.filter(e => e.status === 'draft').length || 0;
-      const averageScore = evaluations && evaluations.length > 0 ? evaluations.filter(e => e.overall_score).reduce((sum, e) => sum + (e.overall_score || 0), 0) / evaluations.filter(e => e.overall_score).length : 0;
+      const { data: pitchingAssignments } = await supabase
+        .from('pitching_assignments')
+        .select('startup_id')
+        .eq('juror_id', jurorData.id)
+        .eq('status', 'assigned');
+      
+      const screeningStartupIds = screeningAssignments?.map(a => a.startup_id) || [];
+      const pitchingStartupIds = pitchingAssignments?.map(a => a.startup_id) || [];
+      
+      // Fetch evaluations filtered by assigned startups
+      let screeningEvals = [];
+      if (screeningStartupIds.length > 0) {
+        const { data } = await supabase
+          .from('screening_evaluations')
+          .select('*')
+          .eq('evaluator_id', user.id)
+          .in('startup_id', screeningStartupIds);
+        screeningEvals = data || [];
+      }
+      
+      let pitchingEvals = [];
+      if (pitchingStartupIds.length > 0) {
+        const { data } = await supabase
+          .from('pitching_evaluations')
+          .select('*')
+          .eq('evaluator_id', user.id)
+          .in('startup_id', pitchingStartupIds);
+        pitchingEvals = data || [];
+      }
+      
+      // Calculate stats from filtered evaluations
+      const totalAssigned = screeningStartupIds.length + pitchingStartupIds.length;
+      const evaluations = [...screeningEvals, ...pitchingEvals];
+      const completed = evaluations.filter(e => e.status === 'submitted').length;
+      const draft = evaluations.filter(e => e.status === 'draft').length;
+      
+      const evaluationsWithScores = evaluations.filter(e => e.overall_score);
+      const averageScore = evaluationsWithScores.length > 0
+        ? evaluationsWithScores.reduce((sum, e) => sum + (e.overall_score || 0), 0) / evaluationsWithScores.length
+        : 0;
+      
       setStats({
-        total_assigned: totalAssigned || 0,
+        total_assigned: totalAssigned,
         completed,
         draft,
-        average_score: averageScore || 0
+        average_score: averageScore
       });
     } catch (error) {
       console.error('Error fetching evaluation stats:', error);
