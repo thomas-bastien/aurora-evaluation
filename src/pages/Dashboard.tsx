@@ -320,6 +320,7 @@ const Dashboard = () => {
             cohortName={cohortSettings?.cohort_name}
             deadlineInfo={dashboardData.deadlineInfo}
             nextMilestone={dashboardData.nextMilestone}
+            userRole={profile?.role}
           />
         </div>
 

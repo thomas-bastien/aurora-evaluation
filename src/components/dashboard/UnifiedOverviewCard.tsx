@@ -23,6 +23,7 @@ interface UnifiedOverviewCardProps {
   cohortName?: string;
   deadlineInfo?: string;
   nextMilestone: string;
+  userRole?: 'admin' | 'vc';
 }
 
 export const UnifiedOverviewCard = ({
@@ -32,7 +33,8 @@ export const UnifiedOverviewCard = ({
   evaluationProgress,
   cohortName = "Aurora Tech Awards 2025 Cohort",
   deadlineInfo,
-  nextMilestone
+  nextMilestone,
+  userRole
 }: UnifiedOverviewCardProps) => {
   const navigate = useNavigate();
   const { data: lifecycleData, isLoading } = useLiveCommunicationStats();
@@ -97,15 +99,17 @@ export const UnifiedOverviewCard = ({
             >
               {activeRound === 'screening' ? 'Screening Round' : 'Pitching Round'}
             </Badge>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => navigate('/email-management')}
-              className="bg-primary-foreground/10 text-primary-foreground border-primary-foreground/20 hover:bg-primary-foreground/20"
-            >
-              View Full Timeline
-              <ArrowRight className="w-3 h-3 ml-1" />
-            </Button>
+            {userRole === 'admin' && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate('/email-management')}
+                className="bg-primary-foreground/10 text-primary-foreground border-primary-foreground/20 hover:bg-primary-foreground/20"
+              >
+                View Full Timeline
+                <ArrowRight className="w-3 h-3 ml-1" />
+              </Button>
+            )}
           </div>
         </div>
       </CardHeader>
@@ -155,59 +159,63 @@ export const UnifiedOverviewCard = ({
           </div>
         </div>
 
-        {/* Communications Overview Row */}
-        <div>
-          <h4 className="text-primary-foreground/90 text-xs font-medium uppercase tracking-wide mb-3">
-            Communications Overview
-          </h4>
-          <div className="grid grid-cols-4 gap-4">
-            {currentSteps.map((step, index) => {
-              const IconComponent = getStepIcon(step.name);
-              const percentage = getProgressPercentage(step.completed, step.total);
-              
-              return (
-                <div key={index} className="text-center">
+        {/* Communications Overview Row - Admin Only */}
+        {userRole === 'admin' && (
+          <div>
+            <h4 className="text-primary-foreground/90 text-xs font-medium uppercase tracking-wide mb-3">
+              Communications Overview
+            </h4>
+            <div className="grid grid-cols-4 gap-4">
+              {currentSteps.map((step, index) => {
+                const IconComponent = getStepIcon(step.name);
+                const percentage = getProgressPercentage(step.completed, step.total);
+                
+                return (
+                  <div key={index} className="text-center">
+                    <div className="flex items-center justify-center gap-2 mb-1">
+                      <IconComponent className="w-4 h-4 text-primary-foreground/80" />
+                      <span className="text-2xl font-bold text-primary-foreground">
+                        {percentage}%
+                      </span>
+                    </div>
+                    <p className="text-xs text-primary-foreground/70 mb-1">
+                      {step.name}
+                    </p>
+                    <p className="text-xs text-primary-foreground/60">
+                      {step.completed}/{step.total}
+                    </p>
+                  </div>
+                );
+              })}
+
+              {/* Fill empty slots if less than 4 steps */}
+              {Array.from({ length: Math.max(0, 4 - currentSteps.length) }).map((_, index) => (
+                <div key={`empty-${index}`} className="text-center">
                   <div className="flex items-center justify-center gap-2 mb-1">
-                    <IconComponent className="w-4 h-4 text-primary-foreground/80" />
-                    <span className="text-2xl font-bold text-primary-foreground">
-                      {percentage}%
+                    <Mail className="w-4 h-4 text-primary-foreground/40" />
+                    <span className="text-2xl font-bold text-primary-foreground/40">
+                      --
                     </span>
                   </div>
-                  <p className="text-xs text-primary-foreground/70 mb-1">
-                    {step.name}
-                  </p>
-                  <p className="text-xs text-primary-foreground/60">
-                    {step.completed}/{step.total}
+                  <p className="text-xs text-primary-foreground/40">
+                    No data
                   </p>
                 </div>
-              );
-            })}
-
-            {/* Fill empty slots if less than 4 steps */}
-            {Array.from({ length: Math.max(0, 4 - currentSteps.length) }).map((_, index) => (
-              <div key={`empty-${index}`} className="text-center">
-                <div className="flex items-center justify-center gap-2 mb-1">
-                  <Mail className="w-4 h-4 text-primary-foreground/40" />
-                  <span className="text-2xl font-bold text-primary-foreground/40">
-                    --
-                  </span>
-                </div>
-                <p className="text-xs text-primary-foreground/40">
-                  No data
-                </p>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Combined Footer */}
         <div className="mt-6 pt-4 border-t border-primary-foreground/20 flex items-center justify-between">
           <p className="text-sm text-primary-foreground/90">
             <span className="font-medium">Next Milestone:</span> {nextMilestone}
           </p>
-          <p className="text-sm text-primary-foreground/90">
-            <span className="font-medium">Next Action:</span> {getNextAction()}
-          </p>
+          {userRole === 'admin' && (
+            <p className="text-sm text-primary-foreground/90">
+              <span className="font-medium">Next Action:</span> {getNextAction()}
+            </p>
+          )}
         </div>
       </CardContent>
     </Card>
