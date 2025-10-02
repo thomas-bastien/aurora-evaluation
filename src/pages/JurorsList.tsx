@@ -30,15 +30,19 @@ interface Juror {
   email: string;
   job_title: string | null;
   company: string | null;
+  linkedin_url: string | null;
+  calendly_link: string | null;
+  preferred_regions: string[] | null;
+  target_verticals: string[] | null;
+  preferred_stages: string[] | null;
+  evaluation_limit: number | null;
+  meeting_limit: number | null;
   created_at: string;
+  updated_at: string;
   user_id: string | null;
   invitation_token: string | null;
   invitation_sent_at: string | null;
   invitation_expires_at: string | null;
-  preferred_regions: string[] | null;
-  target_verticals: string[] | null;
-  preferred_stages: string[] | null;
-  linkedin_url: string | null;
 }
 
 interface JurorWithStatuses extends Juror {
@@ -107,10 +111,10 @@ export default function JurorsList() {
 
   const fetchJurors = async () => {
     try {
-      const { data, error } = await supabase
-        .from('jurors')
-        .select('*')
-        .order('created_at', { ascending: false });
+    const { data, error } = await supabase
+      .from('jurors')
+      .select('id, name, email, job_title, company, linkedin_url, calendly_link, preferred_regions, target_verticals, preferred_stages, evaluation_limit, meeting_limit, created_at, updated_at, user_id, invitation_token, invitation_sent_at, invitation_expires_at')
+      .order('created_at', { ascending: false });
 
       if (error) {
         console.error('Error fetching jurors:', error);
@@ -374,7 +378,11 @@ export default function JurorsList() {
       target_verticals: juror.target_verticals,
       preferred_stages: juror.preferred_stages,
       linkedin_url: juror.linkedin_url,
+      calendly_link: juror.calendly_link,
+      evaluation_limit: juror.evaluation_limit,
+      meeting_limit: juror.meeting_limit,
       created_at: juror.created_at,
+      updated_at: juror.updated_at,
       user_id: juror.user_id,
       invitation_token: juror.invitation_token,
       invitation_sent_at: juror.invitation_sent_at,

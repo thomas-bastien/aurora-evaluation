@@ -17,6 +17,9 @@ interface Juror {
   target_verticals: string[] | null;
   preferred_stages: string[] | null;
   linkedin_url: string | null;
+  calendly_link?: string | null;
+  evaluation_limit?: number | null;
+  meeting_limit?: number | null;
 }
 
 interface JurorFormModalProps {
@@ -43,7 +46,10 @@ export function JurorFormModal({
       preferred_regions: [],
       target_verticals: [],
       preferred_stages: [],
-      linkedin_url: ''
+      linkedin_url: '',
+      calendly_link: '',
+      evaluation_limit: null,
+      meeting_limit: null
     }
   );
 
@@ -60,7 +66,10 @@ export function JurorFormModal({
         preferred_regions: [],
         target_verticals: [],
         preferred_stages: [],
-        linkedin_url: ''
+        linkedin_url: '',
+        calendly_link: '',
+        evaluation_limit: null,
+        meeting_limit: null
       });
     }
   }, [initialData, mode, open]);
@@ -85,7 +94,10 @@ export function JurorFormModal({
         preferred_regions: [],
         target_verticals: [],
         preferred_stages: [],
-        linkedin_url: ''
+        linkedin_url: '',
+        calendly_link: '',
+        evaluation_limit: null,
+        meeting_limit: null
       });
     }
     
@@ -162,13 +174,24 @@ export function JurorFormModal({
           </div>
 
           <div>
-            <Label htmlFor="linkedin_url">LinkedIn Profile (Optional)</Label>
+            <Label htmlFor="linkedin_url">LinkedIn Profile</Label>
             <Input
               id="linkedin_url"
               type="url"
               value={formData.linkedin_url || ''}
               onChange={(e) => setFormData(prev => ({ ...prev, linkedin_url: e.target.value }))}
               placeholder="https://linkedin.com/in/your-profile"
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="calendly_link">Calendly Link</Label>
+            <Input
+              id="calendly_link"
+              type="url"
+              value={formData.calendly_link || ''}
+              onChange={(e) => setFormData(prev => ({ ...prev, calendly_link: e.target.value }))}
+              placeholder="https://calendly.com/your-link"
             />
           </div>
 
@@ -222,6 +245,40 @@ export function JurorFormModal({
                   {stage}
                 </Badge>
               ))}
+            </div>
+          </div>
+
+          <Separator />
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="evaluation_limit">Screening Evaluations Limit</Label>
+              <Input
+                id="evaluation_limit"
+                type="number"
+                min="0"
+                value={formData.evaluation_limit ?? ''}
+                onChange={(e) => setFormData(prev => ({ ...prev, evaluation_limit: e.target.value ? parseInt(e.target.value) : null }))}
+                placeholder="Number of startups"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Number of startups willing to evaluate in screening round
+              </p>
+            </div>
+
+            <div>
+              <Label htmlFor="meeting_limit">Pitching Calls Limit</Label>
+              <Input
+                id="meeting_limit"
+                type="number"
+                min="0"
+                value={formData.meeting_limit ?? ''}
+                onChange={(e) => setFormData(prev => ({ ...prev, meeting_limit: e.target.value ? parseInt(e.target.value) : null }))}
+                placeholder="Number of meetings"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Number of pitch meetings willing to attend
+              </p>
             </div>
           </div>
 

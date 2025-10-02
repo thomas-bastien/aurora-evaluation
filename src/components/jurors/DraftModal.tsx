@@ -22,6 +22,7 @@ interface Juror {
   target_verticals?: string[];
   preferred_regions?: string[];
   evaluation_limit?: number;
+  meeting_limit?: number;
 }
 
 interface DuplicateMatch {
@@ -139,7 +140,7 @@ export function DraftModal({ open, onOpenChange, draftData, onImportComplete }: 
     const emails = validData.map(j => j.email);
     const { data: existingJurors, error } = await supabase
       .from('jurors')
-      .select('id, name, email, job_title, company, linkedin_url, calendly_link, preferred_stages, target_verticals, preferred_regions, evaluation_limit')
+      .select('id, name, email, job_title, company, linkedin_url, calendly_link, preferred_stages, target_verticals, preferred_regions, evaluation_limit, meeting_limit')
       .in('email', emails);
 
     if (error) throw error;
@@ -175,6 +176,7 @@ export function DraftModal({ open, onOpenChange, draftData, onImportComplete }: 
         target_verticals: entry.target_verticals || null,
         preferred_regions: entry.preferred_regions || null,
         evaluation_limit: entry.evaluation_limit || null,
+        meeting_limit: entry.meeting_limit || null,
       }));
 
       // Step 1: Check for internal duplicates first
@@ -202,6 +204,7 @@ export function DraftModal({ open, onOpenChange, draftData, onImportComplete }: 
           target_verticals: j.target_verticals || null,
           preferred_regions: j.preferred_regions || null,
           evaluation_limit: j.evaluation_limit || null,
+          meeting_limit: j.meeting_limit || null,
         }));
         internalDups.forEach(dup => {
           const selected = internalDuplicateResolution === 'first' 
@@ -218,6 +221,7 @@ export function DraftModal({ open, onOpenChange, draftData, onImportComplete }: 
             target_verticals: selected.target_verticals || null,
             preferred_regions: selected.preferred_regions || null,
             evaluation_limit: selected.evaluation_limit || null,
+            meeting_limit: selected.meeting_limit || null,
           });
         });
       }
@@ -262,6 +266,7 @@ export function DraftModal({ open, onOpenChange, draftData, onImportComplete }: 
               target_verticals: dup.incoming.target_verticals,
               preferred_regions: dup.incoming.preferred_regions,
               evaluation_limit: dup.incoming.evaluation_limit,
+              meeting_limit: dup.incoming.meeting_limit,
             })
             .eq('email', dup.incoming.email);
 
