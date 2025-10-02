@@ -100,7 +100,9 @@ export function CSVUploadModal({ open, onOpenChange, onDataParsed }: CSVUploadMo
               (startup as any)[mappedField] = parseNumericField(value);
               break;
             case 'founder_names':
-              startup.founder_names = parseArrayField(value);
+            case 'regions':
+            case 'verticals':
+              (startup as any)[mappedField] = parseArrayField(value);
               break;
             case 'status':
               startup.status = value || 'pending';
@@ -167,7 +169,9 @@ export function CSVUploadModal({ open, onOpenChange, onDataParsed }: CSVUploadMo
                     (startup as any)[mappedField] = parseNumericField(value);
                     break;
                   case 'founder_names':
-                    startup.founder_names = parseArrayField(value);
+                  case 'regions':
+                  case 'verticals':
+                    (startup as any)[mappedField] = parseArrayField(value);
                     break;
                   case 'status':
                     startup.status = String(value) || 'pending';
