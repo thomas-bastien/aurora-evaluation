@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Upload, FileText } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import * as XLSX from 'xlsx';
 
 interface Juror {
   name: string;
@@ -84,44 +85,88 @@ export function CSVUploadModal({ open, onOpenChange, onDataParsed }: CSVUploadMo
     return data;
   };
 
-  const handleFileUpload = (file: File) => {
-    if (!file.name.endsWith('.csv')) {
+  const parseExcel = (file: File): Promise<Partial<Juror>[]> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const data = e.target?.result;
+          const workbook = XLSX.read(data, { type: 'binary' });
+          const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+          const jsonData: any[] = XLSX.utils.sheet_to_json(firstSheet);
+          
+          const parsed: Partial<Juror>[] = jsonData.map((row: any) => {
+            const juror: Partial<Juror> = {};
+            
+            // Handle different possible column names
+            juror.name = row.name || row.Name || row.NAME || '';
+            juror.email = row.email || row.Email || row.EMAIL || '';
+            juror.job_title = row.job_title || row['job title'] || row['Job Title'] || row.job_title || row.JOB_TITLE || '';
+            juror.company = row.company || row.Company || row.COMPANY || '';
+            
+            return juror;
+          }).filter(j => j.name && j.email);
+          
+          resolve(parsed);
+        } catch (error) {
+          reject(error);
+        }
+      };
+      reader.onerror = reject;
+      reader.readAsBinaryString(file);
+    });
+  };
+
+  const handleFileUpload = async (file: File) => {
+    const isCSV = file.name.endsWith('.csv');
+    const isExcel = file.name.endsWith('.xlsx');
+
+    if (!isCSV && !isExcel) {
       toast({
         title: "Invalid file type",
-        description: "Please upload a CSV file.",
+        description: "Please upload a CSV or Excel (.xlsx) file.",
         variant: "destructive",
       });
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const csvText = e.target?.result as string;
-      try {
-        const parsedData = parseCSV(csvText);
-        if (parsedData.length === 0) {
-          toast({
-            title: "No data found",
-            description: "The CSV file appears to be empty or invalid.",
-            variant: "destructive",
-          });
-          return;
-        }
-        onDataParsed(parsedData);
-        onOpenChange(false);
-        toast({
-          title: "CSV uploaded successfully",
-          description: `${parsedData.length} jurors loaded for review.`,
+    try {
+      let parsedData: Partial<Juror>[] = [];
+
+      if (isCSV) {
+        const reader = new FileReader();
+        const csvText = await new Promise<string>((resolve, reject) => {
+          reader.onload = (e) => resolve(e.target?.result as string);
+          reader.onerror = reject;
+          reader.readAsText(file);
         });
-      } catch (error) {
+        parsedData = parseCSV(csvText);
+      } else {
+        parsedData = await parseExcel(file);
+      }
+
+      if (parsedData.length === 0) {
         toast({
-          title: "Error parsing CSV",
-          description: "Please check the file format and try again.",
+          title: "No data found",
+          description: "The file appears to be empty or invalid.",
           variant: "destructive",
         });
+        return;
       }
-    };
-    reader.readAsText(file);
+
+      onDataParsed(parsedData);
+      onOpenChange(false);
+      toast({
+        title: "File uploaded successfully",
+        description: `${parsedData.length} jurors loaded for review.`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error parsing file",
+        description: "Please check the file format and try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleDrop = (e: React.DragEvent) => {
@@ -140,7 +185,7 @@ export function CSVUploadModal({ open, onOpenChange, onDataParsed }: CSVUploadMo
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Upload CSV File</DialogTitle>
+          <DialogTitle>Upload CSV or Excel File</DialogTitle>
         </DialogHeader>
         
         <div className="space-y-4">
@@ -157,12 +202,12 @@ export function CSVUploadModal({ open, onOpenChange, onDataParsed }: CSVUploadMo
           >
             <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
             <p className="text-sm text-muted-foreground mb-2">
-              Drag and drop your CSV file here, or click to select
+              Drag and drop your CSV or Excel file here, or click to select
             </p>
             <Input
               id="juror-file-upload"
               type="file"
-              accept=".csv"
+              accept=".csv,.xlsx"
               className="hidden"
               onChange={handleFileSelect}
             />
@@ -177,7 +222,7 @@ export function CSVUploadModal({ open, onOpenChange, onDataParsed }: CSVUploadMo
           </div>
           
           <p className="text-xs text-muted-foreground">
-            Make sure your CSV includes headers: name, email, job_title (optional), company (optional).
+            Make sure your file includes headers: name, email, job_title (optional), company (optional).
           </p>
         </div>
       </DialogContent>

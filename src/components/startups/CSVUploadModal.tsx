@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Upload, FileText } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { normalizeStage } from '@/utils/stageUtils';
+import * as XLSX from 'xlsx';
 
 interface Startup {
   name: string;
@@ -124,44 +125,102 @@ export function CSVUploadModal({ open, onOpenChange, onDataParsed }: CSVUploadMo
     return data;
   };
 
-  const handleFileUpload = (file: File) => {
-    if (!file.name.endsWith('.csv')) {
+  const parseExcel = (file: File): Promise<Partial<Startup>[]> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const data = e.target?.result;
+          const workbook = XLSX.read(data, { type: 'binary' });
+          const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+          const jsonData: any[] = XLSX.utils.sheet_to_json(firstSheet);
+          
+          const parsed: Partial<Startup>[] = jsonData.map((row: any) => {
+            const startup: Partial<Startup> = {};
+            
+            // Handle different possible column names and data types
+            startup.name = row.name || row.Name || row.NAME || '';
+            startup.description = row.description || row.Description || '';
+            startup.industry = row.industry || row.Industry || '';
+            startup.stage = normalizeStage(row.stage || row.Stage || '');
+            startup.location = row.location || row.Location || '';
+            startup.founded_year = row.founded_year || row['Founded Year'] || row.founded_year ? parseInt(String(row.founded_year || row['Founded Year'])) : undefined;
+            startup.team_size = row.team_size || row['Team Size'] ? parseInt(String(row.team_size || row['Team Size'])) : undefined;
+            startup.funding_goal = row.funding_goal || row['Funding Goal'] ? parseInt(String(row.funding_goal || row['Funding Goal'])) : undefined;
+            startup.funding_raised = row.funding_raised || row['Funding Raised'] ? parseInt(String(row.funding_raised || row['Funding Raised'])) : undefined;
+            startup.website = row.website || row.Website || '';
+            startup.contact_email = row.contact_email || row['Contact Email'] || row.email || '';
+            startup.contact_phone = row.contact_phone || row['Contact Phone'] || row.phone || '';
+            
+            // Handle founder names (semicolon-separated)
+            const founderNames = row.founder_names || row['Founder Names'] || row.founders || '';
+            startup.founder_names = founderNames ? String(founderNames).split(';').map((n: string) => n.trim()) : [];
+            
+            startup.status = row.status || row.Status || 'pending';
+            
+            return startup;
+          }).filter(s => s.name);
+          
+          resolve(parsed);
+        } catch (error) {
+          reject(error);
+        }
+      };
+      reader.onerror = reject;
+      reader.readAsBinaryString(file);
+    });
+  };
+
+  const handleFileUpload = async (file: File) => {
+    const isCSV = file.name.endsWith('.csv');
+    const isExcel = file.name.endsWith('.xlsx');
+
+    if (!isCSV && !isExcel) {
       toast({
         title: "Invalid file type",
-        description: "Please upload a CSV file.",
+        description: "Please upload a CSV or Excel (.xlsx) file.",
         variant: "destructive",
       });
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const csvText = e.target?.result as string;
-      try {
-        const parsedData = parseCSV(csvText);
-        if (parsedData.length === 0) {
-          toast({
-            title: "No data found",
-            description: "The CSV file appears to be empty or invalid.",
-            variant: "destructive",
-          });
-          return;
-        }
-        onDataParsed(parsedData);
-        onOpenChange(false);
-        toast({
-          title: "CSV uploaded successfully",
-          description: `${parsedData.length} startups loaded for review.`,
+    try {
+      let parsedData: Partial<Startup>[] = [];
+
+      if (isCSV) {
+        const reader = new FileReader();
+        const csvText = await new Promise<string>((resolve, reject) => {
+          reader.onload = (e) => resolve(e.target?.result as string);
+          reader.onerror = reject;
+          reader.readAsText(file);
         });
-      } catch (error) {
+        parsedData = parseCSV(csvText);
+      } else {
+        parsedData = await parseExcel(file);
+      }
+
+      if (parsedData.length === 0) {
         toast({
-          title: "Error parsing CSV",
-          description: "Please check the file format and try again.",
+          title: "No data found",
+          description: "The file appears to be empty or invalid.",
           variant: "destructive",
         });
+        return;
       }
-    };
-    reader.readAsText(file);
+
+      onDataParsed(parsedData);
+      onOpenChange(false);
+      toast({
+        title: "File uploaded successfully",
+        description: `${parsedData.length} startups loaded for review.`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error parsing file",
+        description: "Please check the file format and try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleDrop = (e: React.DragEvent) => {
@@ -180,7 +239,7 @@ export function CSVUploadModal({ open, onOpenChange, onDataParsed }: CSVUploadMo
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Upload CSV File</DialogTitle>
+          <DialogTitle>Upload CSV or Excel File</DialogTitle>
         </DialogHeader>
         
         <div className="space-y-4">
@@ -197,12 +256,12 @@ export function CSVUploadModal({ open, onOpenChange, onDataParsed }: CSVUploadMo
           >
             <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
             <p className="text-sm text-muted-foreground mb-2">
-              Drag and drop your CSV file here, or click to select
+              Drag and drop your CSV or Excel file here, or click to select
             </p>
             <Input
               id="file-upload"
               type="file"
-              accept=".csv"
+              accept=".csv,.xlsx"
               className="hidden"
               onChange={handleFileSelect}
             />
@@ -217,7 +276,7 @@ export function CSVUploadModal({ open, onOpenChange, onDataParsed }: CSVUploadMo
           </div>
           
           <p className="text-xs text-muted-foreground">
-            Make sure your CSV includes headers that match the startup schema. 
+            Make sure your file includes headers that match the startup schema. 
             Use semicolons (;) to separate multiple founder names.
           </p>
         </div>
