@@ -23,6 +23,11 @@ interface DuplicateMatch {
   incoming: Juror;
 }
 
+interface InternalDuplicate {
+  email: string;
+  entries: Juror[];
+}
+
 interface ValidationError {
   field: string;
   message: string;
@@ -42,6 +47,9 @@ export function DraftModal({ open, onOpenChange, draftData, onImportComplete }: 
   const [duplicates, setDuplicates] = useState<DuplicateMatch[]>([]);
   const [showDuplicateReview, setShowDuplicateReview] = useState(false);
   const [duplicateResolution, setDuplicateResolution] = useState<'skip' | 'update' | null>(null);
+  const [internalDuplicates, setInternalDuplicates] = useState<InternalDuplicate[]>([]);
+  const [showInternalDuplicateReview, setShowInternalDuplicateReview] = useState(false);
+  const [internalDuplicateResolution, setInternalDuplicateResolution] = useState<'first' | 'last' | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -96,6 +104,31 @@ export function DraftModal({ open, onOpenChange, draftData, onImportComplete }: 
   const totalEntries = editableData.length;
   const validEntries = totalEntries - Object.keys(validationErrors).length;
 
+  const detectInternalDuplicates = (data: Juror[]): { uniqueJurors: Juror[], internalDuplicates: InternalDuplicate[] } => {
+    const emailMap = new Map<string, Juror[]>();
+    
+    data.forEach(juror => {
+      const email = juror.email.toLowerCase();
+      if (!emailMap.has(email)) {
+        emailMap.set(email, []);
+      }
+      emailMap.get(email)!.push(juror);
+    });
+    
+    const internalDuplicates: InternalDuplicate[] = [];
+    const uniqueJurors: Juror[] = [];
+    
+    emailMap.forEach((entries, email) => {
+      if (entries.length > 1) {
+        internalDuplicates.push({ email, entries });
+      } else {
+        uniqueJurors.push(entries[0]);
+      }
+    });
+    
+    return { uniqueJurors, internalDuplicates };
+  };
+
   const detectDuplicates = async (validData: Juror[]) => {
     const emails = validData.map(j => j.email);
     const { data: existingJurors, error } = await supabase
@@ -132,8 +165,41 @@ export function DraftModal({ open, onOpenChange, draftData, onImportComplete }: 
         company: entry.company?.trim() || null
       }));
 
-      // Detect duplicates
-      const { newJurors, duplicateMatches } = await detectDuplicates(validData);
+      // Step 1: Check for internal duplicates first
+      const { uniqueJurors, internalDuplicates: internalDups } = detectInternalDuplicates(validData);
+      
+      // If internal duplicates found and user hasn't decided yet, show review UI
+      if (internalDups.length > 0 && !internalDuplicateResolution) {
+        setInternalDuplicates(internalDups);
+        setShowInternalDuplicateReview(true);
+        setIsImporting(false);
+        return;
+      }
+
+      // Resolve internal duplicates based on user choice
+      let resolvedData = validData;
+      if (internalDups.length > 0 && internalDuplicateResolution) {
+        resolvedData = uniqueJurors.map(j => ({
+          name: j.name,
+          email: j.email,
+          job_title: j.job_title || null,
+          company: j.company || null
+        }));
+        internalDups.forEach(dup => {
+          const selected = internalDuplicateResolution === 'first' 
+            ? dup.entries[0] 
+            : dup.entries[dup.entries.length - 1];
+          resolvedData.push({
+            name: selected.name,
+            email: selected.email,
+            job_title: selected.job_title || null,
+            company: selected.company || null
+          });
+        });
+      }
+
+      // Step 2: Detect database duplicates
+      const { newJurors, duplicateMatches } = await detectDuplicates(resolvedData);
 
       // If duplicates found and user hasn't decided yet, show review UI
       if (duplicateMatches.length > 0 && !duplicateResolution) {
@@ -194,6 +260,9 @@ export function DraftModal({ open, onOpenChange, draftData, onImportComplete }: 
       setDuplicates([]);
       setShowDuplicateReview(false);
       setDuplicateResolution(null);
+      setInternalDuplicates([]);
+      setShowInternalDuplicateReview(false);
+      setInternalDuplicateResolution(null);
     } catch (error: any) {
       console.error('Import error:', error);
       
@@ -229,16 +298,126 @@ export function DraftModal({ open, onOpenChange, draftData, onImportComplete }: 
     setIsImporting(false);
   };
 
+  const handleProceedWithInternalResolution = () => {
+    if (!internalDuplicateResolution) {
+      toast({
+        title: "Please select an option",
+        description: "Choose how to handle duplicate emails before proceeding.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Continue with the import after internal duplicates are resolved
+    setShowInternalDuplicateReview(false);
+    handleImport();
+  };
+
+  const handleCancelInternalDuplicateReview = () => {
+    setShowInternalDuplicateReview(false);
+    setInternalDuplicates([]);
+    setInternalDuplicateResolution(null);
+    setIsImporting(false);
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
-            {showDuplicateReview ? 'Review Duplicate Emails' : 'Review Draft Imports'}
+            {showInternalDuplicateReview 
+              ? 'Review Duplicate Emails in Upload' 
+              : showDuplicateReview 
+                ? 'Review Existing Emails' 
+                : 'Review Draft Imports'}
           </DialogTitle>
         </DialogHeader>
 
-        {showDuplicateReview ? (
+        {showInternalDuplicateReview ? (
+          <div className="space-y-4">
+            <Alert variant="destructive">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>
+                {internalDuplicates.length} email{internalDuplicates.length > 1 ? 's appear' : ' appears'} multiple times in your upload file.
+                Each email can only be used once.
+              </AlertDescription>
+            </Alert>
+
+            <div className="space-y-4 max-h-[40vh] overflow-y-auto">
+              {internalDuplicates.map((dup, index) => (
+                <div key={index} className="border rounded-lg p-4 bg-muted/50">
+                  <div className="mb-3">
+                    <p className="font-semibold text-sm">{dup.email}</p>
+                    <p className="text-xs text-muted-foreground">
+                      Appears {dup.entries.length} times in the upload
+                    </p>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    {dup.entries.map((entry, entryIndex) => (
+                      <div key={entryIndex} className="text-sm bg-background p-2 rounded border">
+                        <div className="flex items-center justify-between">
+                          <span className="font-medium">Entry {entryIndex + 1}</span>
+                          {entryIndex === 0 && (
+                            <Badge variant="secondary" className="text-xs">First</Badge>
+                          )}
+                          {entryIndex === dup.entries.length - 1 && (
+                            <Badge variant="secondary" className="text-xs">Last</Badge>
+                          )}
+                        </div>
+                        <div className="mt-1 text-xs space-y-0.5 text-muted-foreground">
+                          <div>Name: {entry.name}</div>
+                          <div>Job Title: {entry.job_title || '—'}</div>
+                          <div>Company: {entry.company || '—'}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="border rounded-lg p-4 bg-background">
+              <h4 className="text-sm font-semibold mb-3">How would you like to proceed?</h4>
+              <RadioGroup 
+                value={internalDuplicateResolution || ''} 
+                onValueChange={(value) => setInternalDuplicateResolution(value as 'first' | 'last')}
+              >
+                <div className="flex items-start space-x-2 mb-3">
+                  <RadioGroupItem value="first" id="first" />
+                  <Label htmlFor="first" className="cursor-pointer">
+                    <div className="font-medium">Keep first occurrence</div>
+                    <div className="text-sm text-muted-foreground">
+                      For each duplicate email, use the first entry in the file
+                    </div>
+                  </Label>
+                </div>
+                <div className="flex items-start space-x-2">
+                  <RadioGroupItem value="last" id="last" />
+                  <Label htmlFor="last" className="cursor-pointer">
+                    <div className="font-medium">Keep last occurrence</div>
+                    <div className="text-sm text-muted-foreground">
+                      For each duplicate email, use the last entry in the file
+                    </div>
+                  </Label>
+                </div>
+              </RadioGroup>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-4 border-t">
+              <Button variant="outline" onClick={handleCancelInternalDuplicateReview}>
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleProceedWithInternalResolution}
+                disabled={!internalDuplicateResolution || isImporting}
+                className="min-w-24"
+              >
+                {isImporting ? 'Processing...' : 'Continue'}
+              </Button>
+            </div>
+          </div>
+        ) : showDuplicateReview ? (
           <div className="space-y-4">
             <Alert variant="destructive">
               <AlertTriangle className="h-4 w-4" />
