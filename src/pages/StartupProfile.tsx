@@ -252,18 +252,16 @@ const StartupProfile = () => {
         </div>
 
         <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-6">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="market">Market & Traction</TabsTrigger>
             <TabsTrigger value="documents">Documents</TabsTrigger>
             <TabsTrigger value="evaluations">Evaluations</TabsTrigger>
-            <TabsTrigger value="team">Team</TabsTrigger>
             <TabsTrigger value="communications">Communications</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Company Details */}
+              {/* Company Details Block */}
               <Card className="lg:col-span-2">
                 <CardHeader>
                   <CardTitle>Company Details</CardTitle>
@@ -303,6 +301,12 @@ const StartupProfile = () => {
                         <span className="text-sm">{startup.team_size} employees</span>
                       </div>
                     )}
+                    {startup.full_time_team_members && (
+                      <div className="flex items-center gap-2">
+                        <Users className="w-4 h-4 text-muted-foreground" />
+                        <span className="text-sm">{startup.full_time_team_members} full-time</span>
+                      </div>
+                    )}
                     {startup.funding_raised && (
                       <div className="flex items-center gap-2">
                         <DollarSign className="w-4 h-4 text-muted-foreground" />
@@ -336,7 +340,7 @@ const StartupProfile = () => {
 
                   <div className="pt-4 flex gap-4">
                     {startup.website && (
-                      <Button variant="outline" asChild>
+                      <Button variant="outline" size="sm" asChild>
                         <a href={startup.website} target="_blank" rel="noopener noreferrer">
                           <ExternalLink className="w-4 h-4 mr-2" />
                           Visit Website
@@ -344,7 +348,7 @@ const StartupProfile = () => {
                       </Button>
                     )}
                     {startup.linkedin_url && (
-                      <Button variant="outline" asChild>
+                      <Button variant="outline" size="sm" asChild>
                         <a href={startup.linkedin_url} target="_blank" rel="noopener noreferrer">
                           <Linkedin className="w-4 h-4 mr-2" />
                           LinkedIn
@@ -355,7 +359,7 @@ const StartupProfile = () => {
                 </CardContent>
               </Card>
 
-              {/* Key Metrics */}
+              {/* Key Metrics Sidebar */}
               <Card>
                 <CardHeader>
                   <CardTitle>Key Metrics</CardTitle>
@@ -404,111 +408,119 @@ const StartupProfile = () => {
                 </CardContent>
               </Card>
             </div>
-          </TabsContent>
 
-          <TabsContent value="market" className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Market Presence */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Market Presence</CardTitle>
-                  <CardDescription>Geographic reach and market positioning</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {startup.serviceable_obtainable_market && (
+            {/* Market & Traction Block */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Market & Traction</CardTitle>
+                <CardDescription>Geographic reach, market positioning, and customer base</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-4">
+                    {startup.serviceable_obtainable_market && (
+                      <div>
+                        <h4 className="text-sm font-semibold mb-2 text-muted-foreground">SERVICEABLE OBTAINABLE MARKET</h4>
+                        <p className="text-sm text-foreground leading-relaxed">
+                          {startup.serviceable_obtainable_market}
+                        </p>
+                      </div>
+                    )}
+                    {startup.countries_operating && (
+                      <div>
+                        <h4 className="text-sm font-semibold mb-2 text-muted-foreground">COUNTRIES OPERATING</h4>
+                        <p className="text-sm text-foreground leading-relaxed">
+                          {startup.countries_operating}
+                        </p>
+                      </div>
+                    )}
+                    {startup.paying_customers_per_year && (
+                      <div>
+                        <h4 className="text-sm font-semibold mb-2 text-muted-foreground">PAYING CUSTOMERS PER YEAR</h4>
+                        <p className="text-sm text-foreground leading-relaxed">
+                          {startup.paying_customers_per_year}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                  <div className="space-y-4">
+                    {startup.countries_expansion_plan && (
+                      <div>
+                        <h4 className="text-sm font-semibold mb-2 text-muted-foreground">EXPANSION PLAN</h4>
+                        <p className="text-sm text-foreground leading-relaxed">
+                          {startup.countries_expansion_plan}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Team Block */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Team</CardTitle>
+                <CardDescription>Founder and team information</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-4">
                     <div>
-                      <div className="flex items-center gap-2 mb-2">
-                        <DollarSign className="w-4 h-4 text-primary" />
-                        <span className="text-sm font-semibold">Serviceable Obtainable Market</span>
-                      </div>
-                      <p className="text-lg font-bold text-primary ml-6">{startup.serviceable_obtainable_market}</p>
-                      <p className="text-xs text-muted-foreground ml-6">Target addressable market size</p>
+                      <h4 className="text-sm font-semibold mb-3 text-muted-foreground">FOUNDER</h4>
+                      {(startup.founder_first_name || startup.founder_last_name) && (
+                        <div className="flex items-center gap-2 mb-2">
+                          <Users className="w-4 h-4 text-muted-foreground" />
+                          <span className="text-sm font-medium">
+                            {[startup.founder_first_name, startup.founder_last_name].filter(Boolean).join(' ')}
+                          </span>
+                        </div>
+                      )}
+                      {startup.founder_linkedin && (
+                        <div className="flex items-center gap-2">
+                          <Linkedin className="w-4 h-4 text-muted-foreground" />
+                          <a 
+                            href={startup.founder_linkedin} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-sm text-primary hover:underline"
+                          >
+                            LinkedIn Profile
+                          </a>
+                        </div>
+                      )}
+                      {startup.founder_names && startup.founder_names.length > 0 && (
+                        <div className="mt-2">
+                          <span className="text-xs text-muted-foreground">Additional founders:</span>
+                          <p className="text-sm">{startup.founder_names.join(', ')}</p>
+                        </div>
+                      )}
                     </div>
-                  )}
-                  
-                  {startup.countries_operating && (
-                    <div className="pt-4 border-t">
-                      <div className="flex items-center gap-2 mb-2">
-                        <MapPin className="w-4 h-4 text-muted-foreground" />
-                        <span className="text-sm font-semibold">Currently Operating</span>
-                      </div>
-                      <p className="text-sm ml-6">{startup.countries_operating}</p>
-                    </div>
-                  )}
-                  
-                  {startup.countries_expansion_plan && (
-                    <div className="pt-4 border-t">
-                      <div className="flex items-center gap-2 mb-2">
-                        <MapPin className="w-4 h-4 text-muted-foreground" />
-                        <span className="text-sm font-semibold">Expansion Plans</span>
-                      </div>
-                      <p className="text-sm ml-6">{startup.countries_expansion_plan}</p>
-                    </div>
-                  )}
-
-                  {!startup.serviceable_obtainable_market && !startup.countries_operating && !startup.countries_expansion_plan && (
-                    <p className="text-sm text-muted-foreground">No market data available</p>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* Traction & Customers */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Traction & Growth</CardTitle>
-                  <CardDescription>Customer base and growth metrics</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {startup.paying_customers_per_year && (
+                  </div>
+                  <div className="space-y-4">
                     <div>
-                      <div className="flex items-center gap-2 mb-2">
-                        <Users className="w-4 h-4 text-primary" />
-                        <span className="text-sm font-semibold">Paying Customers/Year</span>
-                      </div>
-                      <p className="text-lg font-bold text-primary ml-6">{startup.paying_customers_per_year}</p>
-                      <p className="text-xs text-muted-foreground ml-6">
-                        {startup.paying_customers_per_year.includes('-') 
-                          ? 'Annual paying customer range' 
-                          : 'Annual paying customers'}
-                      </p>
+                      <h4 className="text-sm font-semibold mb-3 text-muted-foreground">CONTACT</h4>
+                      {startup.contact_email && (
+                        <div className="flex items-center gap-2 mb-2">
+                          <MessageSquare className="w-4 h-4 text-muted-foreground" />
+                          <a 
+                            href={`mailto:${startup.contact_email}`}
+                            className="text-sm text-primary hover:underline"
+                          >
+                            {startup.contact_email}
+                          </a>
+                        </div>
+                      )}
+                      {startup.contact_phone && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm">{startup.contact_phone}</span>
+                        </div>
+                      )}
                     </div>
-                  )}
-
-                  {startup.full_time_team_members && (
-                    <div className="pt-4 border-t">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Users className="w-4 h-4 text-muted-foreground" />
-                        <span className="text-sm font-semibold">Full-Time Team</span>
-                      </div>
-                      <p className="text-lg font-bold ml-6">{startup.full_time_team_members}</p>
-                      <p className="text-xs text-muted-foreground ml-6">
-                        Full-time employees
-                        {startup.team_size && ` (${startup.team_size} total team size)`}
-                      </p>
-                    </div>
-                  )}
-
-                  {startup.funding_raised && (
-                    <div className="pt-4 border-t">
-                      <div className="flex items-center gap-2 mb-2">
-                        <DollarSign className="w-4 h-4 text-muted-foreground" />
-                        <span className="text-sm font-semibold">Funding Progress</span>
-                      </div>
-                      <p className="text-lg font-bold ml-6">{formatFunding(startup.funding_raised)}</p>
-                      <p className="text-xs text-muted-foreground ml-6">
-                        {startup.funding_goal 
-                          ? `of ${formatFunding(startup.funding_goal)} goal` 
-                          : 'Total funding raised'}
-                      </p>
-                    </div>
-                  )}
-
-                  {!startup.paying_customers_per_year && !startup.full_time_team_members && !startup.funding_raised && (
-                    <p className="text-sm text-muted-foreground">No traction data available</p>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
 
           <TabsContent value="documents" className="space-y-6">
@@ -565,101 +577,6 @@ const StartupProfile = () => {
 
           <TabsContent value="evaluations" className="space-y-6">
             <StartupEvaluationsList startupId={startup.id} />
-          </TabsContent>
-
-          <TabsContent value="team" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Team & Founders</CardTitle>
-                <CardDescription>Leadership and contact information</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {/* Primary Founder */}
-                {(startup.founder_first_name || startup.founder_last_name) && (
-                  <div className="pb-4 border-b">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <h4 className="text-lg font-semibold">
-                          {startup.founder_first_name} {startup.founder_last_name}
-                        </h4>
-                        <p className="text-sm text-muted-foreground">Primary Founder</p>
-                      </div>
-                      {startup.founder_linkedin && (
-                        <Button variant="outline" size="sm" asChild>
-                          <a href={startup.founder_linkedin} target="_blank" rel="noopener noreferrer">
-                            <Linkedin className="w-4 h-4 mr-2" />
-                            LinkedIn
-                          </a>
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* Additional Founders */}
-                {startup.founder_names && startup.founder_names.length > 0 && (
-                  <div className="pb-4 border-b">
-                    <h4 className="text-sm font-semibold mb-3 text-muted-foreground">ADDITIONAL FOUNDERS</h4>
-                    <div className="flex flex-wrap gap-2">
-                      {startup.founder_names.map((founder, index) => (
-                        <Badge key={index} variant="secondary" className="text-sm py-1">
-                          <Users className="w-3 h-3 mr-1" />
-                          {founder}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Contact Information */}
-                <div>
-                  <h4 className="text-sm font-semibold mb-3 text-muted-foreground">CONTACT INFORMATION</h4>
-                  <div className="space-y-2">
-                    {startup.contact_email && (
-                      <div className="flex items-center gap-2">
-                        <MessageSquare className="w-4 h-4 text-muted-foreground" />
-                        <a href={`mailto:${startup.contact_email}`} className="text-sm hover:underline">
-                          {startup.contact_email}
-                        </a>
-                      </div>
-                    )}
-                    {startup.contact_phone && (
-                      <div className="flex items-center gap-2">
-                        <MessageSquare className="w-4 h-4 text-muted-foreground" />
-                        <a href={`tel:${startup.contact_phone}`} className="text-sm hover:underline">
-                          {startup.contact_phone}
-                        </a>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Team Size Summary */}
-                {(startup.team_size || startup.full_time_team_members) && (
-                  <div className="pt-4 border-t">
-                    <h4 className="text-sm font-semibold mb-3 text-muted-foreground">TEAM SIZE</h4>
-                    <div className="grid grid-cols-2 gap-4">
-                      {startup.team_size && (
-                        <div>
-                          <p className="text-2xl font-bold text-primary">{startup.team_size}</p>
-                          <p className="text-xs text-muted-foreground">Total Team Members</p>
-                        </div>
-                      )}
-                      {startup.full_time_team_members && (
-                        <div>
-                          <p className="text-2xl font-bold text-primary">{startup.full_time_team_members}</p>
-                          <p className="text-xs text-muted-foreground">Full-Time Employees</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {!startup.founder_first_name && !startup.founder_last_name && (!startup.founder_names || startup.founder_names.length === 0) && (
-                  <p className="text-sm text-muted-foreground">No team information available</p>
-                )}
-              </CardContent>
-            </Card>
           </TabsContent>
 
           <TabsContent value="communications" className="space-y-6">

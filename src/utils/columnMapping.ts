@@ -71,42 +71,117 @@ export function mapJurorColumn(columnName: string): string | null {
 
 /**
  * Maps a column name from Excel/CSV to a startup field name
+ * Uses specific-first matching to avoid ambiguous mappings
  */
 export function mapStartupColumn(columnName: string): string | null {
   const lower = columnName.toLowerCase();
   
-  // Name / Company name
-  if ((lower.includes('name') || lower.includes('company')) && !lower.includes('founder') && !lower.includes('contact')) {
+  // === HIGHEST PRIORITY: Exact/Specific Matches ===
+  
+  // "Startup name" or "Startup Name" → name
+  if ((lower.includes('startup') && lower.includes('name')) || lower === 'startup name') {
     return 'name';
   }
   
-  // Description / About / Value Proposition
-  if (lower.includes('description') || lower.includes('about') || lower.includes('summary') || lower.includes('value proposition')) {
-    return 'description';
+  // "First name" (without "founder") → founder_first_name
+  if (lower === 'first name' || (lower.includes('first') && !lower.includes('founder') && !lower.includes('contact'))) {
+    return 'founder_first_name';
   }
   
-  // Founder first name
+  // "Last name" (without "founder") → founder_last_name
+  if (lower === 'last name' || (lower.includes('last') && !lower.includes('founder') && !lower.includes('contact'))) {
+    return 'founder_last_name';
+  }
+  
+  // "Your LinkedIn profile" or personal LinkedIn → founder_linkedin
+  if ((lower.includes('your') && lower.includes('linkedin')) || (lower.includes('linkedin') && lower.includes('profile') && !lower.includes('company'))) {
+    return 'founder_linkedin';
+  }
+  
+  // Founder first name with "founder" keyword
   if (lower.includes('founder') && (lower.includes('first') || lower.includes('given'))) {
     return 'founder_first_name';
   }
   
-  // Founder last name
+  // Founder last name with "founder" keyword
   if (lower.includes('founder') && (lower.includes('last') || lower.includes('family') || lower.includes('surname'))) {
     return 'founder_last_name';
   }
   
-  // Founder LinkedIn
+  // Founder LinkedIn with "founder" keyword
   if (lower.includes('founder') && lower.includes('linkedin')) {
     return 'founder_linkedin';
   }
   
+  // "What is your value proposition?" → description
+  if (lower.includes('value') && lower.includes('proposition')) {
+    return 'description';
+  }
+  
+  // "Funding Stage" → stage
+  if (lower.includes('funding') && lower.includes('stage')) {
+    return 'stage';
+  }
+  
+  // "What is the capital raising?" or "capital raising" → funding_goal
+  if (lower.includes('capital') && (lower.includes('raising') || lower.includes('raise'))) {
+    return 'funding_goal';
+  }
+  
+  // "Where is your company registered?" → location
+  if ((lower.includes('where') && lower.includes('company')) || (lower.includes('registered') && !lower.includes('when'))) {
+    return 'location';
+  }
+  
+  // "Choose region" or "Select region" → regions (array)
+  if ((lower.includes('choose') || lower.includes('select')) && lower.includes('region')) {
+    return 'regions';
+  }
+  
+  // "What industry..." → verticals (array)
+  if (lower.includes('what') && lower.includes('industry')) {
+    return 'verticals';
+  }
+  
+  // "Describe business model" → business_model
+  if (lower.includes('describe') && lower.includes('business')) {
+    return 'business_model';
+  }
+  
+  // "How many people on team?" → team_size
+  if (lower.includes('how') && lower.includes('many') && lower.includes('people')) {
+    return 'team_size';
+  }
+  
+  // "When company registered" → founded_year
+  if (lower.includes('when') && (lower.includes('company') || lower.includes('registered'))) {
+    return 'founded_year';
+  }
+  
+  // "Startup website" → website
+  if (lower.includes('startup') && lower.includes('website')) {
+    return 'website';
+  }
+  
+  // "Pitch+Deck" or "Pitch Deck" → pitch_deck_url
+  if (lower.includes('pitch') && lower.includes('deck')) {
+    return 'pitch_deck_url';
+  }
+  
+  // "Aurora internal score" → internal_score
+  if (lower.includes('aurora') || (lower.includes('internal') && lower.includes('score'))) {
+    return 'internal_score';
+  }
+  
+  // === MEDIUM PRIORITY: Field-Specific Matches ===
+  
   // Serviceable Obtainable Market (SOM)
-  if (lower.includes('serviceable') || lower.includes('obtainable') || lower.includes('som') || (lower.includes('market') && lower.includes('size'))) {
+  if (lower.includes('serviceable') || lower.includes('obtainable') || lower.includes('som')) {
     return 'serviceable_obtainable_market';
   }
   
-  // Full-time team members
-  if (lower.includes('full') && lower.includes('time')) {
+  // Full-time team members (check FIRST before general "team")
+  if ((lower.includes('full') || lower.includes('full-time')) && lower.includes('team')) {
     return 'full_time_team_members';
   }
   
@@ -126,37 +201,44 @@ export function mapStartupColumn(columnName: string): string | null {
   }
   
   // Business risks and mitigation
-  if (lower.includes('risk') || (lower.includes('business') && lower.includes('mitigation'))) {
+  if (lower.includes('risk') || lower.includes('mitigation')) {
     return 'business_risks_mitigation';
   }
   
-  // Industry / Sector / Vertical
-  if (lower.includes('industry') || lower.includes('sector') || lower.includes('vertical')) {
-    return 'industry';
+  // === LOWER PRIORITY: Generic Matches ===
+  
+  // Description / About / Summary
+  if (lower.includes('description') || lower.includes('about') || lower.includes('summary')) {
+    return 'description';
   }
   
-  // Stage
+  // Industry / Sector / Vertical (more generic)
+  if (lower.includes('industry') || lower.includes('sector') || lower.includes('vertical')) {
+    return 'verticals';
+  }
+  
+  // Stage (generic)
   if (lower.includes('stage')) {
     return 'stage';
   }
   
-  // Location / Region
+  // Location / Region (generic)
   if (lower.includes('location') || lower.includes('region') || lower.includes('based')) {
     return 'location';
   }
   
-  // Founded year (also handles "When company registered")
-  if (lower.includes('founded') || lower.includes('year') || (lower.includes('when') && lower.includes('registered')) || (lower.includes('company') && lower.includes('registered'))) {
+  // Founded year (generic)
+  if (lower.includes('founded') || lower.includes('year')) {
     return 'founded_year';
   }
   
-  // Team size
-  if (lower.includes('team')) {
+  // Team size (generic - comes AFTER full_time_team_members check)
+  if (lower.includes('team') && lower.includes('size')) {
     return 'team_size';
   }
   
-  // Funding goal
-  if (lower.includes('goal')) {
+  // Funding goal (generic)
+  if (lower.includes('goal') || lower.includes('funding')) {
     return 'funding_goal';
   }
   
@@ -166,7 +248,7 @@ export function mapStartupColumn(columnName: string): string | null {
   }
   
   // Website / URL
-  if (lower.includes('website') || lower.includes('url')) {
+  if (lower.includes('website') || (lower.includes('url') && !lower.includes('linkedin') && !lower.includes('demo'))) {
     return 'website';
   }
   
@@ -180,9 +262,16 @@ export function mapStartupColumn(columnName: string): string | null {
     return 'contact_phone';
   }
   
-  // Founder names
-  if (lower.includes('founder')) {
-    return 'founder_names';
+  // Company LinkedIn (not founder)
+  if (lower.includes('linkedin') && lower.includes('company')) {
+    return 'linkedin_url';
+  }
+  
+  // === LOWEST PRIORITY: Last Resort ===
+  
+  // Generic "name" - only if nothing else matched
+  if (lower.includes('name') && !lower.includes('first') && !lower.includes('last') && !lower.includes('founder') && !lower.includes('contact')) {
+    return 'name';
   }
   
   // Status
