@@ -13,6 +13,12 @@ interface Juror {
   email: string;
   job_title?: string;
   company?: string;
+  linkedin_url?: string;
+  calendly_link?: string;
+  preferred_stages?: string[];
+  target_verticals?: string[];
+  preferred_regions?: string[];
+  evaluation_limit?: number;
 }
 
 interface CSVUploadModalProps {

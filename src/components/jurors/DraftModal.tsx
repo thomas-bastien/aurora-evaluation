@@ -16,6 +16,12 @@ interface Juror {
   email: string;
   job_title?: string;
   company?: string;
+  linkedin_url?: string;
+  calendly_link?: string;
+  preferred_stages?: string[];
+  target_verticals?: string[];
+  preferred_regions?: string[];
+  evaluation_limit?: number;
 }
 
 interface DuplicateMatch {
@@ -133,7 +139,7 @@ export function DraftModal({ open, onOpenChange, draftData, onImportComplete }: 
     const emails = validData.map(j => j.email);
     const { data: existingJurors, error } = await supabase
       .from('jurors')
-      .select('id, name, email, job_title, company')
+      .select('id, name, email, job_title, company, linkedin_url, calendly_link, preferred_stages, target_verticals, preferred_regions, evaluation_limit')
       .in('email', emails);
 
     if (error) throw error;
@@ -162,7 +168,13 @@ export function DraftModal({ open, onOpenChange, draftData, onImportComplete }: 
         name: entry.name!.trim(),
         email: entry.email!.trim(),
         job_title: entry.job_title?.trim() || null,
-        company: entry.company?.trim() || null
+        company: entry.company?.trim() || null,
+        linkedin_url: entry.linkedin_url?.trim() || null,
+        calendly_link: entry.calendly_link?.trim() || null,
+        preferred_stages: entry.preferred_stages || null,
+        target_verticals: entry.target_verticals || null,
+        preferred_regions: entry.preferred_regions || null,
+        evaluation_limit: entry.evaluation_limit || null,
       }));
 
       // Step 1: Check for internal duplicates first
@@ -183,7 +195,13 @@ export function DraftModal({ open, onOpenChange, draftData, onImportComplete }: 
           name: j.name,
           email: j.email,
           job_title: j.job_title || null,
-          company: j.company || null
+          company: j.company || null,
+          linkedin_url: j.linkedin_url || null,
+          calendly_link: j.calendly_link || null,
+          preferred_stages: j.preferred_stages || null,
+          target_verticals: j.target_verticals || null,
+          preferred_regions: j.preferred_regions || null,
+          evaluation_limit: j.evaluation_limit || null,
         }));
         internalDups.forEach(dup => {
           const selected = internalDuplicateResolution === 'first' 
@@ -193,7 +211,13 @@ export function DraftModal({ open, onOpenChange, draftData, onImportComplete }: 
             name: selected.name,
             email: selected.email,
             job_title: selected.job_title || null,
-            company: selected.company || null
+            company: selected.company || null,
+            linkedin_url: selected.linkedin_url || null,
+            calendly_link: selected.calendly_link || null,
+            preferred_stages: selected.preferred_stages || null,
+            target_verticals: selected.target_verticals || null,
+            preferred_regions: selected.preferred_regions || null,
+            evaluation_limit: selected.evaluation_limit || null,
           });
         });
       }
@@ -231,7 +255,13 @@ export function DraftModal({ open, onOpenChange, draftData, onImportComplete }: 
             .update({
               name: dup.incoming.name,
               job_title: dup.incoming.job_title,
-              company: dup.incoming.company
+              company: dup.incoming.company,
+              linkedin_url: dup.incoming.linkedin_url,
+              calendly_link: dup.incoming.calendly_link,
+              preferred_stages: dup.incoming.preferred_stages,
+              target_verticals: dup.incoming.target_verticals,
+              preferred_regions: dup.incoming.preferred_regions,
+              evaluation_limit: dup.incoming.evaluation_limit,
             })
             .eq('email', dup.incoming.email);
 
@@ -369,6 +399,18 @@ export function DraftModal({ open, onOpenChange, draftData, onImportComplete }: 
                           <div>Name: {entry.name}</div>
                           <div>Job Title: {entry.job_title || '—'}</div>
                           <div>Company: {entry.company || '—'}</div>
+                          {entry.linkedin_url && <div>LinkedIn: {entry.linkedin_url}</div>}
+                          {entry.calendly_link && <div>Calendly: {entry.calendly_link}</div>}
+                          {entry.preferred_stages && entry.preferred_stages.length > 0 && (
+                            <div>Stages: {entry.preferred_stages.join(', ')}</div>
+                          )}
+                          {entry.target_verticals && entry.target_verticals.length > 0 && (
+                            <div>Verticals: {entry.target_verticals.join(', ')}</div>
+                          )}
+                          {entry.preferred_regions && entry.preferred_regions.length > 0 && (
+                            <div>Regions: {entry.preferred_regions.join(', ')}</div>
+                          )}
+                          {entry.evaluation_limit && <div>Eval Limit: {entry.evaluation_limit}</div>}
                         </div>
                       </div>
                     ))}
@@ -432,7 +474,13 @@ export function DraftModal({ open, onOpenChange, draftData, onImportComplete }: 
                 const hasChanges = 
                   dup.existing.name !== dup.incoming.name ||
                   dup.existing.job_title !== dup.incoming.job_title ||
-                  dup.existing.company !== dup.incoming.company;
+                  dup.existing.company !== dup.incoming.company ||
+                  dup.existing.linkedin_url !== dup.incoming.linkedin_url ||
+                  dup.existing.calendly_link !== dup.incoming.calendly_link ||
+                  JSON.stringify(dup.existing.preferred_stages) !== JSON.stringify(dup.incoming.preferred_stages) ||
+                  JSON.stringify(dup.existing.target_verticals) !== JSON.stringify(dup.incoming.target_verticals) ||
+                  JSON.stringify(dup.existing.preferred_regions) !== JSON.stringify(dup.incoming.preferred_regions) ||
+                  dup.existing.evaluation_limit !== dup.incoming.evaluation_limit;
 
                 return (
                   <div key={index} className="border rounded-lg p-4 bg-muted/50">
@@ -462,6 +510,39 @@ export function DraftModal({ open, onOpenChange, draftData, onImportComplete }: 
                             <span className="text-muted-foreground">Company:</span>
                             <span>{dup.existing.company || '—'}</span>
                             {dup.existing.company === dup.incoming.company && (
+                              <CheckCircle className="h-3 w-3 text-green-500" />
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-muted-foreground">LinkedIn:</span>
+                            <span className="truncate max-w-[150px]">{dup.existing.linkedin_url || '—'}</span>
+                            {dup.existing.linkedin_url === dup.incoming.linkedin_url && (
+                              <CheckCircle className="h-3 w-3 text-green-500" />
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-muted-foreground">Calendly:</span>
+                            <span className="truncate max-w-[150px]">{dup.existing.calendly_link || '—'}</span>
+                            {dup.existing.calendly_link === dup.incoming.calendly_link && (
+                              <CheckCircle className="h-3 w-3 text-green-500" />
+                            )}
+                          </div>
+                          <div className="flex items-start gap-2">
+                            <span className="text-muted-foreground">Stages:</span>
+                            <span className="flex-1">{dup.existing.preferred_stages?.join(', ') || '—'}</span>
+                          </div>
+                          <div className="flex items-start gap-2">
+                            <span className="text-muted-foreground">Verticals:</span>
+                            <span className="flex-1">{dup.existing.target_verticals?.join(', ') || '—'}</span>
+                          </div>
+                          <div className="flex items-start gap-2">
+                            <span className="text-muted-foreground">Regions:</span>
+                            <span className="flex-1">{dup.existing.preferred_regions?.join(', ') || '—'}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-muted-foreground">Eval Limit:</span>
+                            <span>{dup.existing.evaluation_limit || '—'}</span>
+                            {dup.existing.evaluation_limit === dup.incoming.evaluation_limit && (
                               <CheckCircle className="h-3 w-3 text-green-500" />
                             )}
                           </div>
@@ -495,6 +576,51 @@ export function DraftModal({ open, onOpenChange, draftData, onImportComplete }: 
                               {dup.incoming.company || '—'}
                             </span>
                             {dup.existing.company !== dup.incoming.company && (
+                              <AlertTriangle className="h-3 w-3 text-orange-600" />
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-muted-foreground">LinkedIn:</span>
+                            <span className={`truncate max-w-[150px] ${dup.existing.linkedin_url !== dup.incoming.linkedin_url ? 'font-semibold text-orange-600' : ''}`}>
+                              {dup.incoming.linkedin_url || '—'}
+                            </span>
+                            {dup.existing.linkedin_url !== dup.incoming.linkedin_url && (
+                              <AlertTriangle className="h-3 w-3 text-orange-600" />
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-muted-foreground">Calendly:</span>
+                            <span className={`truncate max-w-[150px] ${dup.existing.calendly_link !== dup.incoming.calendly_link ? 'font-semibold text-orange-600' : ''}`}>
+                              {dup.incoming.calendly_link || '—'}
+                            </span>
+                            {dup.existing.calendly_link !== dup.incoming.calendly_link && (
+                              <AlertTriangle className="h-3 w-3 text-orange-600" />
+                            )}
+                          </div>
+                          <div className="flex items-start gap-2">
+                            <span className="text-muted-foreground">Stages:</span>
+                            <span className={`flex-1 ${JSON.stringify(dup.existing.preferred_stages) !== JSON.stringify(dup.incoming.preferred_stages) ? 'font-semibold text-orange-600' : ''}`}>
+                              {dup.incoming.preferred_stages?.join(', ') || '—'}
+                            </span>
+                          </div>
+                          <div className="flex items-start gap-2">
+                            <span className="text-muted-foreground">Verticals:</span>
+                            <span className={`flex-1 ${JSON.stringify(dup.existing.target_verticals) !== JSON.stringify(dup.incoming.target_verticals) ? 'font-semibold text-orange-600' : ''}`}>
+                              {dup.incoming.target_verticals?.join(', ') || '—'}
+                            </span>
+                          </div>
+                          <div className="flex items-start gap-2">
+                            <span className="text-muted-foreground">Regions:</span>
+                            <span className={`flex-1 ${JSON.stringify(dup.existing.preferred_regions) !== JSON.stringify(dup.incoming.preferred_regions) ? 'font-semibold text-orange-600' : ''}`}>
+                              {dup.incoming.preferred_regions?.join(', ') || '—'}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-muted-foreground">Eval Limit:</span>
+                            <span className={dup.existing.evaluation_limit !== dup.incoming.evaluation_limit ? 'font-semibold text-orange-600' : ''}>
+                              {dup.incoming.evaluation_limit || '—'}
+                            </span>
+                            {dup.existing.evaluation_limit !== dup.incoming.evaluation_limit && (
                               <AlertTriangle className="h-3 w-3 text-orange-600" />
                             )}
                           </div>
@@ -583,46 +709,128 @@ export function DraftModal({ open, onOpenChange, draftData, onImportComplete }: 
                     )}
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-sm font-medium">Name *</label>
-                      <Input
-                        value={entry.name || ''}
-                        onChange={(e) => updateEntry(index, 'name', e.target.value)}
-                        className={entryErrors.some(e => e.field === 'name') ? 'border-destructive' : ''}
-                      />
-                      {entryErrors.filter(e => e.field === 'name').map(error => (
-                        <p key={error.field} className="text-xs text-destructive mt-1">{error.message}</p>
-                      ))}
+                  {/* Basic Info Section */}
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-sm font-medium">Name *</label>
+                        <Input
+                          value={entry.name || ''}
+                          onChange={(e) => updateEntry(index, 'name', e.target.value)}
+                          className={entryErrors.some(e => e.field === 'name') ? 'border-destructive' : ''}
+                        />
+                        {entryErrors.filter(e => e.field === 'name').map(error => (
+                          <p key={error.field} className="text-xs text-destructive mt-1">{error.message}</p>
+                        ))}
+                      </div>
+
+                      <div>
+                        <label className="text-sm font-medium">Email *</label>
+                        <Input
+                          type="email"
+                          value={entry.email || ''}
+                          onChange={(e) => updateEntry(index, 'email', e.target.value)}
+                          className={entryErrors.some(e => e.field === 'email') ? 'border-destructive' : ''}
+                        />
+                        {entryErrors.filter(e => e.field === 'email').map(error => (
+                          <p key={error.field} className="text-xs text-destructive mt-1">{error.message}</p>
+                        ))}
+                      </div>
+
+                      <div>
+                        <label className="text-sm font-medium">Job Title</label>
+                        <Input
+                          value={entry.job_title || ''}
+                          onChange={(e) => updateEntry(index, 'job_title', e.target.value)}
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-sm font-medium">Company</label>
+                        <Input
+                          value={entry.company || ''}
+                          onChange={(e) => updateEntry(index, 'company', e.target.value)}
+                        />
+                      </div>
                     </div>
 
-                    <div>
-                      <label className="text-sm font-medium">Email *</label>
-                      <Input
-                        type="email"
-                        value={entry.email || ''}
-                        onChange={(e) => updateEntry(index, 'email', e.target.value)}
-                        className={entryErrors.some(e => e.field === 'email') ? 'border-destructive' : ''}
-                      />
-                      {entryErrors.filter(e => e.field === 'email').map(error => (
-                        <p key={error.field} className="text-xs text-destructive mt-1">{error.message}</p>
-                      ))}
+                    {/* Links Section */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-sm font-medium">LinkedIn URL</label>
+                        <Input
+                          value={entry.linkedin_url || ''}
+                          onChange={(e) => updateEntry(index, 'linkedin_url', e.target.value)}
+                          placeholder="https://linkedin.com/in/..."
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-sm font-medium">Calendly Link</label>
+                        <Input
+                          value={entry.calendly_link || ''}
+                          onChange={(e) => updateEntry(index, 'calendly_link', e.target.value)}
+                          placeholder="https://calendly.com/..."
+                        />
+                      </div>
                     </div>
 
-                    <div>
-                      <label className="text-sm font-medium">Job Title</label>
-                      <Input
-                        value={entry.job_title || ''}
-                        onChange={(e) => updateEntry(index, 'job_title', e.target.value)}
-                      />
-                    </div>
+                    {/* Preferences Section */}
+                    <div className="space-y-2">
+                      <div>
+                        <label className="text-sm font-medium">Preferred Stages</label>
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {entry.preferred_stages && entry.preferred_stages.length > 0 ? (
+                            entry.preferred_stages.map((stage, i) => (
+                              <Badge key={i} variant="secondary" className="text-xs">
+                                {stage}
+                              </Badge>
+                            ))
+                          ) : (
+                            <span className="text-xs text-muted-foreground">None specified</span>
+                          )}
+                        </div>
+                      </div>
 
-                    <div>
-                      <label className="text-sm font-medium">Company</label>
-                      <Input
-                        value={entry.company || ''}
-                        onChange={(e) => updateEntry(index, 'company', e.target.value)}
-                      />
+                      <div>
+                        <label className="text-sm font-medium">Target Verticals</label>
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {entry.target_verticals && entry.target_verticals.length > 0 ? (
+                            entry.target_verticals.map((vertical, i) => (
+                              <Badge key={i} variant="secondary" className="text-xs">
+                                {vertical}
+                              </Badge>
+                            ))
+                          ) : (
+                            <span className="text-xs text-muted-foreground">None specified</span>
+                          )}
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="text-sm font-medium">Preferred Regions</label>
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {entry.preferred_regions && entry.preferred_regions.length > 0 ? (
+                            entry.preferred_regions.map((region, i) => (
+                              <Badge key={i} variant="secondary" className="text-xs">
+                                {region}
+                              </Badge>
+                            ))
+                          ) : (
+                            <span className="text-xs text-muted-foreground">None specified</span>
+                          )}
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="text-sm font-medium">Evaluation Limit</label>
+                        <Input
+                          type="number"
+                          value={entry.evaluation_limit || ''}
+                          onChange={(e) => updateEntry(index, 'evaluation_limit', e.target.value)}
+                          placeholder="Max evaluations (optional)"
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
