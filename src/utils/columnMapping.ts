@@ -82,6 +82,17 @@ export function mapStartupColumn(columnName: string): string | null {
   if ((lower.includes('startup') && lower.includes('name')) || lower === 'startup name') {
     return 'name';
   }
+
+  // "Startup website" → website (BEFORE generic website)
+  if (lower.includes('startup') && lower.includes('website')) {
+    return 'website';
+  }
+
+  // Company LinkedIn (company page) - BEFORE founder LinkedIn
+  if ((lower.includes('company') && lower.includes('linkedin')) || 
+      (lower.includes('startup') && lower.includes('linkedin'))) {
+    return 'linkedin_url';
+  }
   
   // "First name" (without "founder") → founder_first_name
   if (lower === 'first name' || (lower.includes('first') && !lower.includes('founder') && !lower.includes('contact'))) {
@@ -133,14 +144,21 @@ export function mapStartupColumn(columnName: string): string | null {
     return 'location';
   }
   
-  // "Choose region" or "Select region" → regions (array)
-  if ((lower.includes('choose') || lower.includes('select')) && lower.includes('region')) {
-    return 'regions';
+  // "Choose region" or "Select region" → region (single text)
+  if (lower === 'choose region' || lower === 'select region' || 
+      ((lower.includes('choose') || lower.includes('select')) && lower.includes('region'))) {
+    return 'region';
   }
   
-  // "What industry..." → verticals (array)
-  if (lower.includes('what') && lower.includes('industry')) {
+  // "What industry or industries..." → verticals (array)
+  if ((lower.includes('what industry') || lower.includes('industries does your startup')) ||
+      (lower.includes('what') && lower.includes('industry') && lower.includes('industries'))) {
     return 'verticals';
+  }
+  
+  // Single "Industry" field (exact match) → industry (single)
+  if (lower === 'industry') {
+    return 'industry';
   }
   
   // "Describe business model" → business_model
@@ -164,13 +182,32 @@ export function mapStartupColumn(columnName: string): string | null {
   }
   
   // "Pitch+Deck" or "Pitch Deck" → pitch_deck_url
-  if (lower.includes('pitch') && lower.includes('deck')) {
+  if (lower === 'pitch+deck' || lower === 'pitch deck' || 
+      (lower.includes('pitch') && (lower.includes('deck') || lower.includes('+deck')))) {
     return 'pitch_deck_url';
   }
+
+  // Demo URL
+  if (lower.includes('demo') && (lower.includes('url') || lower.includes('link'))) {
+    return 'demo_url';
+  }
   
-  // "Aurora internal score" → internal_score
-  if (lower.includes('aurora') || (lower.includes('internal') && lower.includes('score'))) {
+  // "Aurora internal score (out of 100)" → internal_score
+  if (lower.includes('aurora internal score') || 
+      (lower.includes('internal') && lower.includes('score') && lower.includes('100'))) {
     return 'internal_score';
+  }
+
+  // "What is the capital you are raising?" → funding_goal
+  if (lower.includes('what is the capital you are raising') ||
+      (lower.includes('capital') && lower.includes('raising'))) {
+    return 'funding_goal';
+  }
+
+  // "How many new countries do you plan to enter this year?" → countries_expansion_plan
+  if (lower.includes('how many new countries') || 
+      (lower.includes('countries') && lower.includes('plan to enter'))) {
+    return 'countries_expansion_plan';
   }
   
   // === MEDIUM PRIORITY: Field-Specific Matches ===
@@ -212,8 +249,8 @@ export function mapStartupColumn(columnName: string): string | null {
     return 'description';
   }
   
-  // Industry / Sector / Vertical (more generic)
-  if (lower.includes('industry') || lower.includes('sector') || lower.includes('vertical')) {
+  // Industry / Sector / Vertical (more generic - for multi-select)
+  if (lower.includes('industr') || lower.includes('sector') || lower.includes('vertical')) {
     return 'verticals';
   }
   
@@ -258,13 +295,28 @@ export function mapStartupColumn(columnName: string): string | null {
   }
   
   // Contact phone
-  if (lower.includes('phone')) {
+  if (lower.includes('phone') || lower.includes('telephone') || lower.includes('mobile')) {
     return 'contact_phone';
   }
   
-  // Company LinkedIn (not founder)
-  if (lower.includes('linkedin') && lower.includes('company')) {
+  // LinkedIn URL (generic company LinkedIn - fallback)
+  if (lower.includes('linkedin') && !lower.includes('founder') && !lower.includes('your')) {
     return 'linkedin_url';
+  }
+
+  // Demo URL (generic)
+  if (lower.includes('demo')) {
+    return 'demo_url';
+  }
+
+  // Business model (generic)
+  if (lower.includes('business') && lower.includes('model')) {
+    return 'business_model';
+  }
+
+  // Regions array (generic)
+  if (lower.includes('region') && lower.includes('s')) {
+    return 'regions';
   }
   
   // === LOWEST PRIORITY: Last Resort ===

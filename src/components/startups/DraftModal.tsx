@@ -35,6 +35,15 @@ interface Startup {
   countries_operating?: string;
   countries_expansion_plan?: string;
   business_risks_mitigation?: string;
+  linkedin_url?: string;
+  pitch_deck_url?: string;
+  demo_url?: string;
+  business_model?: string;
+  internal_score?: number;
+  region?: string;
+  regions?: string[];
+  verticals?: string[];
+  investment_currency?: string;
 }
 
 interface ValidationError {
@@ -75,12 +84,24 @@ export function DraftModal({ open, onOpenChange, draftData, onImportComplete }: 
       errors.push({ field: 'website', message: 'Website must start with http:// or https://' });
     }
 
+    if (entry.linkedin_url && !entry.linkedin_url.startsWith('http')) {
+      errors.push({ field: 'linkedin_url', message: 'LinkedIn URL must start with http:// or https://' });
+    }
+
+    if (entry.pitch_deck_url && !entry.pitch_deck_url.startsWith('http')) {
+      errors.push({ field: 'pitch_deck_url', message: 'Pitch deck URL must start with http:// or https://' });
+    }
+
     if (entry.founded_year && (entry.founded_year < 1900 || entry.founded_year > new Date().getFullYear())) {
       errors.push({ field: 'founded_year', message: 'Invalid founded year' });
     }
 
     if (entry.team_size && entry.team_size < 1) {
       errors.push({ field: 'team_size', message: 'Team size must be at least 1' });
+    }
+
+    if (entry.internal_score && (entry.internal_score < 0 || entry.internal_score > 100)) {
+      errors.push({ field: 'internal_score', message: 'Internal score must be between 0 and 100' });
     }
 
     return errors;
@@ -159,7 +180,10 @@ export function DraftModal({ open, onOpenChange, draftData, onImportComplete }: 
   };
 
   const industries = ['Technology', 'Healthcare', 'Finance', 'Education', 'E-commerce', 'SaaS', 'AI/ML', 'Biotech', 'CleanTech', 'Other'];
+  const verticals = ['FinTech', 'HealthTech', 'EdTech', 'PropTech', 'RetailTech', 'AgriTech', 'CleanTech', 'DeepTech', 'B2B SaaS', 'Consumer', 'Enterprise', 'Other'];
   const stages = ['Pre-Seed', 'Seed', 'Series A', 'Series B', 'Series C', 'Growth', 'IPO'];
+  const regions = ['UK', 'Europe', 'North America', 'Asia', 'Middle East', 'Africa', 'Latin America', 'Oceania'];
+  const currencies = ['GBP', 'USD', 'EUR'];
   const statuses = ['pending', 'under_review', 'selected', 'rejected'];
 
   return (
@@ -287,11 +311,77 @@ export function DraftModal({ open, onOpenChange, draftData, onImportComplete }: 
                     </div>
 
                     <div>
+                      <label className="text-sm font-medium">Website</label>
+                      <Input
+                        value={entry.website || ''}
+                        onChange={(e) => updateEntry(index, 'website', e.target.value)}
+                        placeholder="https://..."
+                        className={entryErrors.some(e => e.field === 'website') ? 'border-destructive' : ''}
+                      />
+                      {entryErrors.filter(e => e.field === 'website').map(error => (
+                        <p key={error.field} className="text-xs text-destructive mt-1">{error.message}</p>
+                      ))}
+                    </div>
+
+                    <div>
+                      <label className="text-sm font-medium">Company LinkedIn</label>
+                      <Input
+                        value={entry.linkedin_url || ''}
+                        onChange={(e) => updateEntry(index, 'linkedin_url', e.target.value)}
+                        placeholder="https://linkedin.com/company/..."
+                        className={entryErrors.some(e => e.field === 'linkedin_url') ? 'border-destructive' : ''}
+                      />
+                      {entryErrors.filter(e => e.field === 'linkedin_url').map(error => (
+                        <p key={error.field} className="text-xs text-destructive mt-1">{error.message}</p>
+                      ))}
+                    </div>
+
+                    <div>
+                      <label className="text-sm font-medium">Contact Phone</label>
+                      <Input
+                        value={entry.contact_phone || ''}
+                        onChange={(e) => updateEntry(index, 'contact_phone', e.target.value)}
+                        placeholder="+44..."
+                      />
+                    </div>
+
+                    <div>
                       <label className="text-sm font-medium">Location</label>
                       <Input
                         value={entry.location || ''}
                         onChange={(e) => updateEntry(index, 'location', e.target.value)}
                       />
+                    </div>
+
+                    <div>
+                      <label className="text-sm font-medium">Region</label>
+                      <Select
+                        value={entry.region || ''}
+                        onValueChange={(value) => updateEntry(index, 'region', value)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Choose region" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {regions.map(region => (
+                            <SelectItem key={region} value={region}>{region}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div>
+                      <label className="text-sm font-medium">Founded Year</label>
+                      <Input
+                        type="number"
+                        value={entry.founded_year || ''}
+                        onChange={(e) => updateEntry(index, 'founded_year', parseInt(e.target.value) || undefined)}
+                        placeholder="2020"
+                        className={entryErrors.some(e => e.field === 'founded_year') ? 'border-destructive' : ''}
+                      />
+                      {entryErrors.filter(e => e.field === 'founded_year').map(error => (
+                        <p key={error.field} className="text-xs text-destructive mt-1">{error.message}</p>
+                      ))}
                     </div>
 
                     <div>
@@ -305,6 +395,37 @@ export function DraftModal({ open, onOpenChange, draftData, onImportComplete }: 
                       {entryErrors.filter(e => e.field === 'contact_email').map(error => (
                         <p key={error.field} className="text-xs text-destructive mt-1">{error.message}</p>
                       ))}
+                    </div>
+
+                    <div className="col-span-3">
+                      <label className="text-sm font-medium">Verticals (Industries)</label>
+                      <Input
+                        value={Array.isArray(entry.verticals) ? entry.verticals.join(', ') : entry.verticals || ''}
+                        onChange={(e) => updateEntry(index, 'verticals', e.target.value.split(',').map(v => v.trim()).filter(Boolean))}
+                        placeholder="e.g., FinTech, HealthTech, SaaS"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-sm font-medium">Pitch Deck URL</label>
+                      <Input
+                        value={entry.pitch_deck_url || ''}
+                        onChange={(e) => updateEntry(index, 'pitch_deck_url', e.target.value)}
+                        placeholder="https://..."
+                        className={entryErrors.some(e => e.field === 'pitch_deck_url') ? 'border-destructive' : ''}
+                      />
+                      {entryErrors.filter(e => e.field === 'pitch_deck_url').map(error => (
+                        <p key={error.field} className="text-xs text-destructive mt-1">{error.message}</p>
+                      ))}
+                    </div>
+
+                    <div>
+                      <label className="text-sm font-medium">Demo URL</label>
+                      <Input
+                        value={entry.demo_url || ''}
+                        onChange={(e) => updateEntry(index, 'demo_url', e.target.value)}
+                        placeholder="https://..."
+                      />
                     </div>
 
                     <div>
@@ -353,15 +474,76 @@ export function DraftModal({ open, onOpenChange, draftData, onImportComplete }: 
                     </div>
 
                     <div>
-                      <label className="text-sm font-medium">Expansion Plans</label>
+                      <label className="text-sm font-medium">Target Countries for Expansion</label>
                       <Input
                         value={entry.countries_expansion_plan || ''}
                         onChange={(e) => updateEntry(index, 'countries_expansion_plan', e.target.value)}
-                        placeholder="Future expansion countries"
+                        placeholder="e.g., France, Spain, Italy"
                       />
                     </div>
 
                     <div className="col-span-3">
+                      <label className="text-sm font-medium">Business Model</label>
+                      <Textarea
+                        value={entry.business_model || ''}
+                        onChange={(e) => updateEntry(index, 'business_model', e.target.value)}
+                        rows={2}
+                        placeholder="Describe how the startup generates revenue"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-sm font-medium">Funding Goal (Raising)</label>
+                      <Input
+                        type="number"
+                        value={entry.funding_goal || ''}
+                        onChange={(e) => updateEntry(index, 'funding_goal', parseInt(e.target.value) || undefined)}
+                        placeholder="Amount in currency"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-sm font-medium">Funding Raised</label>
+                      <Input
+                        type="number"
+                        value={entry.funding_raised || ''}
+                        onChange={(e) => updateEntry(index, 'funding_raised', parseInt(e.target.value) || undefined)}
+                        placeholder="Amount already raised"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-sm font-medium">Currency</label>
+                      <Select
+                        value={entry.investment_currency || 'GBP'}
+                        onValueChange={(value) => updateEntry(index, 'investment_currency', value)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {currencies.map(currency => (
+                            <SelectItem key={currency} value={currency}>{currency}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div>
+                      <label className="text-sm font-medium">Internal Score (0-100)</label>
+                      <Input
+                        type="number"
+                        value={entry.internal_score || ''}
+                        onChange={(e) => updateEntry(index, 'internal_score', parseInt(e.target.value) || undefined)}
+                        placeholder="0-100"
+                        className={entryErrors.some(e => e.field === 'internal_score') ? 'border-destructive' : ''}
+                      />
+                      {entryErrors.filter(e => e.field === 'internal_score').map(error => (
+                        <p key={error.field} className="text-xs text-destructive mt-1">{error.message}</p>
+                      ))}
+                    </div>
+
+                    <div className="col-span-2">
                       <label className="text-sm font-medium">Business Risks & Mitigation</label>
                       <Textarea
                         value={entry.business_risks_mitigation || ''}
@@ -383,7 +565,7 @@ export function DraftModal({ open, onOpenChange, draftData, onImportComplete }: 
                         <SelectContent>
                           {statuses.map(status => (
                             <SelectItem key={status} value={status}>
-                              {status.charAt(0).toUpperCase() + status.slice(1).replace('-', ' ')}
+                              {status.charAt(0).toUpperCase() + status.slice(1).replace('_', ' ')}
                             </SelectItem>
                           ))}
                         </SelectContent>
