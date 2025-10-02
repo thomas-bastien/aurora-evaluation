@@ -7,6 +7,7 @@ import { Upload, FileText } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { normalizeStage } from '@/utils/stageUtils';
 import * as XLSX from 'xlsx';
+import { mapStartupColumn, parseArrayField, parseNumericField } from '@/utils/columnMapping';
 
 interface Startup {
   name: string;
@@ -62,8 +63,10 @@ export function CSVUploadModal({ open, onOpenChange, onDataParsed }: CSVUploadMo
       return result;
     };
 
-    const headers = parseCSVLine(lines[0]).map(h => h.toLowerCase());
+    const headers = parseCSVLine(lines[0]);
     const data: Partial<Startup>[] = [];
+
+    console.log('CSV Headers found:', headers);
 
     for (let i = 1; i < lines.length; i++) {
       const values = parseCSVLine(lines[i]);
@@ -71,55 +74,39 @@ export function CSVUploadModal({ open, onOpenChange, onDataParsed }: CSVUploadMo
 
       headers.forEach((header, index) => {
         const value = values[index] || '';
-        switch (header) {
-          case 'name':
-            startup.name = value;
-            break;
-          case 'description':
-            startup.description = value;
-            break;
-          case 'industry':
-            startup.industry = value;
-            break;
-          case 'stage':
-            startup.stage = normalizeStage(value);
-            break;
-          case 'location':
-            startup.location = value;
-            break;
-          case 'founded_year':
-            startup.founded_year = value ? parseInt(value) : undefined;
-            break;
-          case 'team_size':
-            startup.team_size = value ? parseInt(value) : undefined;
-            break;
-          case 'funding_goal':
-            startup.funding_goal = value ? parseInt(value) : undefined;
-            break;
-          case 'funding_raised':
-            startup.funding_raised = value ? parseInt(value) : undefined;
-            break;
-          case 'website':
-            startup.website = value;
-            break;
-          case 'contact_email':
-            startup.contact_email = value;
-            break;
-          case 'contact_phone':
-            startup.contact_phone = value;
-            break;
-          case 'founder_names':
-            startup.founder_names = value ? value.split(';').map(n => n.trim()) : [];
-            break;
-          case 'status':
-            startup.status = value || 'pending';
-            break;
+        const mappedField = mapStartupColumn(header);
+        
+        if (mappedField && value) {
+          switch (mappedField) {
+            case 'stage':
+              startup.stage = normalizeStage(value);
+              break;
+            case 'founded_year':
+            case 'team_size':
+            case 'funding_goal':
+            case 'funding_raised':
+              startup[mappedField] = parseNumericField(value);
+              break;
+            case 'founder_names':
+              startup.founder_names = parseArrayField(value);
+              break;
+            case 'status':
+              startup.status = value || 'pending';
+              break;
+            default:
+              startup[mappedField] = value;
+          }
         }
       });
 
       if (startup.name) {
         data.push(startup);
       }
+    }
+
+    console.log(`CSV parsed: ${data.length} valid startups from ${lines.length - 1} rows`);
+    if (data.length > 0) {
+      console.log('Sample startup:', data[0]);
     }
 
     return data;
@@ -135,34 +122,61 @@ export function CSVUploadModal({ open, onOpenChange, onDataParsed }: CSVUploadMo
           const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
           const jsonData: any[] = XLSX.utils.sheet_to_json(firstSheet);
           
+          if (jsonData.length === 0) {
+            console.warn('Excel file has no data rows');
+            resolve([]);
+            return;
+          }
+
+          // Log detected columns for debugging
+          const columnNames = Object.keys(jsonData[0]);
+          console.log('Excel columns found:', columnNames);
+          
           const parsed: Partial<Startup>[] = jsonData.map((row: any) => {
             const startup: Partial<Startup> = {};
             
-            // Handle different possible column names and data types
-            startup.name = row.name || row.Name || row.NAME || '';
-            startup.description = row.description || row.Description || '';
-            startup.industry = row.industry || row.Industry || '';
-            startup.stage = normalizeStage(row.stage || row.Stage || '');
-            startup.location = row.location || row.Location || '';
-            startup.founded_year = row.founded_year || row['Founded Year'] || row.founded_year ? parseInt(String(row.founded_year || row['Founded Year'])) : undefined;
-            startup.team_size = row.team_size || row['Team Size'] ? parseInt(String(row.team_size || row['Team Size'])) : undefined;
-            startup.funding_goal = row.funding_goal || row['Funding Goal'] ? parseInt(String(row.funding_goal || row['Funding Goal'])) : undefined;
-            startup.funding_raised = row.funding_raised || row['Funding Raised'] ? parseInt(String(row.funding_raised || row['Funding Raised'])) : undefined;
-            startup.website = row.website || row.Website || '';
-            startup.contact_email = row.contact_email || row['Contact Email'] || row.email || '';
-            startup.contact_phone = row.contact_phone || row['Contact Phone'] || row.phone || '';
-            
-            // Handle founder names (semicolon-separated)
-            const founderNames = row.founder_names || row['Founder Names'] || row.founders || '';
-            startup.founder_names = founderNames ? String(founderNames).split(';').map((n: string) => n.trim()) : [];
-            
-            startup.status = row.status || row.Status || 'pending';
+            // Iterate through all columns and map them dynamically
+            Object.keys(row).forEach(columnName => {
+              const mappedField = mapStartupColumn(columnName);
+              const value = row[columnName];
+              
+              if (mappedField && value) {
+                switch (mappedField) {
+                  case 'stage':
+                    startup.stage = normalizeStage(String(value));
+                    break;
+                  case 'founded_year':
+                  case 'team_size':
+                  case 'funding_goal':
+                  case 'funding_raised':
+                    startup[mappedField] = parseNumericField(value);
+                    break;
+                  case 'founder_names':
+                    startup.founder_names = parseArrayField(value);
+                    break;
+                  case 'status':
+                    startup.status = String(value) || 'pending';
+                    break;
+                  default:
+                    startup[mappedField] = String(value).trim();
+                }
+              }
+            });
             
             return startup;
           }).filter(s => s.name);
           
+          console.log(`Excel parsed: ${parsed.length} valid startups from ${jsonData.length} rows`);
+          if (parsed.length > 0) {
+            console.log('Sample startup:', parsed[0]);
+          } else if (jsonData.length > 0) {
+            console.warn('No valid startups found. Sample row data:', jsonData[0]);
+            console.warn('Required field: name');
+          }
+          
           resolve(parsed);
         } catch (error) {
+          console.error('Error parsing Excel:', error);
           reject(error);
         }
       };
@@ -202,7 +216,7 @@ export function CSVUploadModal({ open, onOpenChange, onDataParsed }: CSVUploadMo
       if (parsedData.length === 0) {
         toast({
           title: "No data found",
-          description: "The file appears to be empty or invalid.",
+          description: "Could not find required field (name). Check console for detected columns.",
           variant: "destructive",
         });
         return;

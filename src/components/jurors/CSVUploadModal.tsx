@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Upload, FileText } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import * as XLSX from 'xlsx';
+import { mapJurorColumn, parseArrayField, parseNumericField } from '@/utils/columnMapping';
 
 interface Juror {
   name: string;
@@ -51,8 +52,10 @@ export function CSVUploadModal({ open, onOpenChange, onDataParsed }: CSVUploadMo
       return result;
     };
 
-    const headers = parseCSVLine(lines[0]).map(h => h.toLowerCase());
+    const headers = parseCSVLine(lines[0]);
     const data: Partial<Juror>[] = [];
+
+    console.log('CSV Headers found:', headers);
 
     for (let i = 1; i < lines.length; i++) {
       const values = parseCSVLine(lines[i]);
@@ -60,26 +63,33 @@ export function CSVUploadModal({ open, onOpenChange, onDataParsed }: CSVUploadMo
 
       headers.forEach((header, index) => {
         const value = values[index] || '';
-        switch (header) {
-          case 'name':
-            juror.name = value;
-            break;
-          case 'email':
-            juror.email = value;
-            break;
-          case 'job_title':
-          case 'job title':
-            juror.job_title = value;
-            break;
-          case 'company':
-            juror.company = value;
-            break;
+        const mappedField = mapJurorColumn(header);
+        
+        if (mappedField && value) {
+          switch (mappedField) {
+            case 'evaluation_limit':
+            case 'meeting_limit':
+              juror[mappedField] = parseNumericField(value);
+              break;
+            case 'preferred_stages':
+            case 'target_verticals':
+            case 'preferred_regions':
+              juror[mappedField] = parseArrayField(value);
+              break;
+            default:
+              juror[mappedField] = value;
+          }
         }
       });
 
       if (juror.name && juror.email) {
         data.push(juror);
       }
+    }
+
+    console.log(`CSV parsed: ${data.length} valid jurors from ${lines.length - 1} rows`);
+    if (data.length > 0) {
+      console.log('Sample juror:', data[0]);
     }
 
     return data;
@@ -95,20 +105,55 @@ export function CSVUploadModal({ open, onOpenChange, onDataParsed }: CSVUploadMo
           const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
           const jsonData: any[] = XLSX.utils.sheet_to_json(firstSheet);
           
-          const parsed: Partial<Juror>[] = jsonData.map((row: any) => {
+          if (jsonData.length === 0) {
+            console.warn('Excel file has no data rows');
+            resolve([]);
+            return;
+          }
+
+          // Log detected columns for debugging
+          const columnNames = Object.keys(jsonData[0]);
+          console.log('Excel columns found:', columnNames);
+          
+          const parsed: Partial<Juror>[] = jsonData.map((row: any, index: number) => {
             const juror: Partial<Juror> = {};
             
-            // Handle different possible column names
-            juror.name = row.name || row.Name || row.NAME || '';
-            juror.email = row.email || row.Email || row.EMAIL || '';
-            juror.job_title = row.job_title || row['job title'] || row['Job Title'] || row.job_title || row.JOB_TITLE || '';
-            juror.company = row.company || row.Company || row.COMPANY || '';
+            // Iterate through all columns and map them dynamically
+            Object.keys(row).forEach(columnName => {
+              const mappedField = mapJurorColumn(columnName);
+              const value = row[columnName];
+              
+              if (mappedField && value) {
+                switch (mappedField) {
+                  case 'evaluation_limit':
+                  case 'meeting_limit':
+                    juror[mappedField] = parseNumericField(value);
+                    break;
+                  case 'preferred_stages':
+                  case 'target_verticals':
+                  case 'preferred_regions':
+                    juror[mappedField] = parseArrayField(value);
+                    break;
+                  default:
+                    juror[mappedField] = String(value).trim();
+                }
+              }
+            });
             
             return juror;
           }).filter(j => j.name && j.email);
           
+          console.log(`Excel parsed: ${parsed.length} valid jurors from ${jsonData.length} rows`);
+          if (parsed.length > 0) {
+            console.log('Sample juror:', parsed[0]);
+          } else if (jsonData.length > 0) {
+            console.warn('No valid jurors found. Sample row data:', jsonData[0]);
+            console.warn('Required fields: name and email');
+          }
+          
           resolve(parsed);
         } catch (error) {
+          console.error('Error parsing Excel:', error);
           reject(error);
         }
       };
@@ -148,7 +193,7 @@ export function CSVUploadModal({ open, onOpenChange, onDataParsed }: CSVUploadMo
       if (parsedData.length === 0) {
         toast({
           title: "No data found",
-          description: "The file appears to be empty or invalid.",
+          description: "Could not find required fields (name and email). Check console for detected columns.",
           variant: "destructive",
         });
         return;
