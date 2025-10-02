@@ -36,6 +36,15 @@ interface Startup {
   other_vertical_description?: string;
   regions?: string[];
   internal_score?: number;
+  founder_first_name?: string;
+  founder_last_name?: string;
+  founder_linkedin?: string;
+  serviceable_obtainable_market?: string;
+  full_time_team_members?: number;
+  paying_customers_per_year?: string;
+  countries_operating?: string;
+  countries_expansion_plan?: string;
+  business_risks_mitigation?: string;
 }
 
 interface StartupFormModalProps {
@@ -481,9 +490,26 @@ export function StartupFormModal({
           <div>
             <Label>Founders</Label>
             <div className="space-y-2">
-              <div className="flex gap-2">
+              <div className="grid grid-cols-3 gap-2">
                 <Input
-                  placeholder="Add founder name"
+                  placeholder="First name"
+                  value={formData.founder_first_name || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, founder_first_name: e.target.value }))}
+                />
+                <Input
+                  placeholder="Last name"
+                  value={formData.founder_last_name || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, founder_last_name: e.target.value }))}
+                />
+                <Input
+                  placeholder="LinkedIn URL"
+                  value={formData.founder_linkedin || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, founder_linkedin: e.target.value }))}
+                />
+              </div>
+              <div className="flex gap-2 mt-2">
+                <Input
+                  placeholder="Add additional founder names"
                   value={founderInput}
                   onChange={(e) => setFounderInput(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addFounder())}
@@ -510,6 +536,70 @@ export function StartupFormModal({
                   ))}
                 </div>
               )}
+            </div>
+          </div>
+
+          {/* New Juror Evaluation Fields */}
+          <div className="border-t pt-4">
+            <h3 className="text-lg font-semibold mb-4">Market & Traction</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="serviceable_obtainable_market">Serviceable Obtainable Market</Label>
+                <Input
+                  id="serviceable_obtainable_market"
+                  value={formData.serviceable_obtainable_market || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, serviceable_obtainable_market: e.target.value }))}
+                  placeholder="e.g., $10M-$100M"
+                />
+              </div>
+              <div>
+                <Label htmlFor="paying_customers_per_year">Paying Customers/Year</Label>
+                <Input
+                  id="paying_customers_per_year"
+                  value={formData.paying_customers_per_year || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, paying_customers_per_year: e.target.value }))}
+                  placeholder="e.g., 100-500"
+                />
+              </div>
+              <div>
+                <Label htmlFor="countries_operating">Countries Operating</Label>
+                <Input
+                  id="countries_operating"
+                  value={formData.countries_operating || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, countries_operating: e.target.value }))}
+                  placeholder="e.g., UK, US, Germany"
+                />
+              </div>
+              <div>
+                <Label htmlFor="countries_expansion_plan">Expansion Plans</Label>
+                <Input
+                  id="countries_expansion_plan"
+                  value={formData.countries_expansion_plan || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, countries_expansion_plan: e.target.value }))}
+                  placeholder="Future markets"
+                />
+              </div>
+              <div>
+                <Label htmlFor="full_time_team_members">Full-Time Team Members</Label>
+                <Input
+                  id="full_time_team_members"
+                  type="number"
+                  min="0"
+                  value={formData.full_time_team_members || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, full_time_team_members: parseInt(e.target.value) || undefined }))}
+                />
+              </div>
+            </div>
+            
+            <div className="mt-4">
+              <Label htmlFor="business_risks_mitigation">Business Risks & Mitigation</Label>
+              <Textarea
+                id="business_risks_mitigation"
+                value={formData.business_risks_mitigation || ''}
+                onChange={(e) => setFormData(prev => ({ ...prev, business_risks_mitigation: e.target.value }))}
+                rows={3}
+                placeholder="Key risks and how they plan to mitigate them"
+              />
             </div>
           </div>
 

@@ -7,23 +7,32 @@ import { Upload, FileText } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { normalizeStage } from '@/utils/stageUtils';
 import * as XLSX from 'xlsx';
-import { mapStartupColumn, parseArrayField, parseNumericField } from '@/utils/columnMapping';
+import { mapStartupColumn, parseArrayField, parseNumericField, parseYearField } from '@/utils/columnMapping';
 
 interface Startup {
   name: string;
-  description: string;
-  industry: string;
-  stage: string;
-  location: string;
-  founded_year: number;
-  team_size: number;
-  funding_goal: number;
-  funding_raised: number;
-  website: string;
-  contact_email: string;
-  contact_phone: string;
-  founder_names: string[];
-  status: string;
+  description?: string;
+  industry?: string;
+  stage?: string;
+  location?: string;
+  founded_year?: number;
+  team_size?: number;
+  funding_goal?: number;
+  funding_raised?: number;
+  website?: string;
+  contact_email?: string;
+  contact_phone?: string;
+  founder_names?: string[];
+  status?: string;
+  founder_first_name?: string;
+  founder_last_name?: string;
+  founder_linkedin?: string;
+  serviceable_obtainable_market?: string;
+  full_time_team_members?: number;
+  paying_customers_per_year?: string;
+  countries_operating?: string;
+  countries_expansion_plan?: string;
+  business_risks_mitigation?: string;
 }
 
 interface CSVUploadModalProps {
@@ -82,10 +91,13 @@ export function CSVUploadModal({ open, onOpenChange, onDataParsed }: CSVUploadMo
               startup.stage = normalizeStage(value);
               break;
             case 'founded_year':
+              startup.founded_year = parseYearField(value);
+              break;
             case 'team_size':
             case 'funding_goal':
             case 'funding_raised':
-              startup[mappedField] = parseNumericField(value);
+            case 'full_time_team_members':
+              (startup as any)[mappedField] = parseNumericField(value);
               break;
             case 'founder_names':
               startup.founder_names = parseArrayField(value);
@@ -94,7 +106,7 @@ export function CSVUploadModal({ open, onOpenChange, onDataParsed }: CSVUploadMo
               startup.status = value || 'pending';
               break;
             default:
-              startup[mappedField] = value;
+              (startup as any)[mappedField] = value;
           }
         }
       });
@@ -146,10 +158,13 @@ export function CSVUploadModal({ open, onOpenChange, onDataParsed }: CSVUploadMo
                     startup.stage = normalizeStage(String(value));
                     break;
                   case 'founded_year':
+                    startup.founded_year = parseYearField(value);
+                    break;
                   case 'team_size':
                   case 'funding_goal':
                   case 'funding_raised':
-                    startup[mappedField] = parseNumericField(value);
+                  case 'full_time_team_members':
+                    (startup as any)[mappedField] = parseNumericField(value);
                     break;
                   case 'founder_names':
                     startup.founder_names = parseArrayField(value);
@@ -158,7 +173,7 @@ export function CSVUploadModal({ open, onOpenChange, onDataParsed }: CSVUploadMo
                     startup.status = String(value) || 'pending';
                     break;
                   default:
-                    startup[mappedField] = String(value).trim();
+                    (startup as any)[mappedField] = String(value).trim();
                 }
               }
             });

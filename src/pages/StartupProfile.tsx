@@ -45,6 +45,15 @@ interface Startup {
   other_vertical_description: string | null;
   regions: string[] | null;
   internal_score: number | null;
+  founder_first_name: string | null;
+  founder_last_name: string | null;
+  founder_linkedin: string | null;
+  serviceable_obtainable_market: string | null;
+  full_time_team_members: number | null;
+  paying_customers_per_year: string | null;
+  countries_operating: string | null;
+  countries_expansion_plan: string | null;
+  business_risks_mitigation: string | null;
 }
 
 const StartupProfile = () => {
@@ -243,8 +252,9 @@ const StartupProfile = () => {
         </div>
 
         <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="market">Market & Traction</TabsTrigger>
             <TabsTrigger value="documents">Documents</TabsTrigger>
             <TabsTrigger value="evaluations">Evaluations</TabsTrigger>
             <TabsTrigger value="team">Team</TabsTrigger>
@@ -259,9 +269,14 @@ const StartupProfile = () => {
                   <CardTitle>Company Details</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <p className="text-foreground leading-relaxed">
-                    {startup.description || 'No description available'}
-                  </p>
+                  {startup.description && (
+                    <div className="pb-4 border-b">
+                      <h4 className="text-sm font-semibold mb-2 text-muted-foreground">VALUE PROPOSITION</h4>
+                      <p className="text-foreground leading-relaxed">
+                        {startup.description}
+                      </p>
+                    </div>
+                  )}
                   
                   <div className="grid grid-cols-2 gap-4">
                     {startup.founded_year && (
@@ -309,6 +324,15 @@ const StartupProfile = () => {
                       </div>
                     )}
                   </div>
+
+                  {startup.business_risks_mitigation && (
+                    <div className="pt-4 border-t">
+                      <h4 className="text-sm font-semibold mb-2 text-muted-foreground">BUSINESS RISKS & MITIGATION</h4>
+                      <p className="text-sm text-foreground leading-relaxed">
+                        {startup.business_risks_mitigation}
+                      </p>
+                    </div>
+                  )}
 
                   <div className="pt-4 flex gap-4">
                     {startup.website && (
@@ -382,6 +406,111 @@ const StartupProfile = () => {
             </div>
           </TabsContent>
 
+          <TabsContent value="market" className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Market Presence */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Market Presence</CardTitle>
+                  <CardDescription>Geographic reach and market positioning</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {startup.serviceable_obtainable_market && (
+                    <div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <DollarSign className="w-4 h-4 text-primary" />
+                        <span className="text-sm font-semibold">Serviceable Obtainable Market</span>
+                      </div>
+                      <p className="text-lg font-bold text-primary ml-6">{startup.serviceable_obtainable_market}</p>
+                      <p className="text-xs text-muted-foreground ml-6">Target addressable market size</p>
+                    </div>
+                  )}
+                  
+                  {startup.countries_operating && (
+                    <div className="pt-4 border-t">
+                      <div className="flex items-center gap-2 mb-2">
+                        <MapPin className="w-4 h-4 text-muted-foreground" />
+                        <span className="text-sm font-semibold">Currently Operating</span>
+                      </div>
+                      <p className="text-sm ml-6">{startup.countries_operating}</p>
+                    </div>
+                  )}
+                  
+                  {startup.countries_expansion_plan && (
+                    <div className="pt-4 border-t">
+                      <div className="flex items-center gap-2 mb-2">
+                        <MapPin className="w-4 h-4 text-muted-foreground" />
+                        <span className="text-sm font-semibold">Expansion Plans</span>
+                      </div>
+                      <p className="text-sm ml-6">{startup.countries_expansion_plan}</p>
+                    </div>
+                  )}
+
+                  {!startup.serviceable_obtainable_market && !startup.countries_operating && !startup.countries_expansion_plan && (
+                    <p className="text-sm text-muted-foreground">No market data available</p>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Traction & Customers */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Traction & Growth</CardTitle>
+                  <CardDescription>Customer base and growth metrics</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {startup.paying_customers_per_year && (
+                    <div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <Users className="w-4 h-4 text-primary" />
+                        <span className="text-sm font-semibold">Paying Customers/Year</span>
+                      </div>
+                      <p className="text-lg font-bold text-primary ml-6">{startup.paying_customers_per_year}</p>
+                      <p className="text-xs text-muted-foreground ml-6">
+                        {startup.paying_customers_per_year.includes('-') 
+                          ? 'Annual paying customer range' 
+                          : 'Annual paying customers'}
+                      </p>
+                    </div>
+                  )}
+
+                  {startup.full_time_team_members && (
+                    <div className="pt-4 border-t">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Users className="w-4 h-4 text-muted-foreground" />
+                        <span className="text-sm font-semibold">Full-Time Team</span>
+                      </div>
+                      <p className="text-lg font-bold ml-6">{startup.full_time_team_members}</p>
+                      <p className="text-xs text-muted-foreground ml-6">
+                        Full-time employees
+                        {startup.team_size && ` (${startup.team_size} total team size)`}
+                      </p>
+                    </div>
+                  )}
+
+                  {startup.funding_raised && (
+                    <div className="pt-4 border-t">
+                      <div className="flex items-center gap-2 mb-2">
+                        <DollarSign className="w-4 h-4 text-muted-foreground" />
+                        <span className="text-sm font-semibold">Funding Progress</span>
+                      </div>
+                      <p className="text-lg font-bold ml-6">{formatFunding(startup.funding_raised)}</p>
+                      <p className="text-xs text-muted-foreground ml-6">
+                        {startup.funding_goal 
+                          ? `of ${formatFunding(startup.funding_goal)} goal` 
+                          : 'Total funding raised'}
+                      </p>
+                    </div>
+                  )}
+
+                  {!startup.paying_customers_per_year && !startup.full_time_team_members && !startup.funding_raised && (
+                    <p className="text-sm text-muted-foreground">No traction data available</p>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
           <TabsContent value="documents" className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <Card>
@@ -439,49 +568,98 @@ const StartupProfile = () => {
           </TabsContent>
 
           <TabsContent value="team" className="space-y-6">
-            {startup.founder_names && startup.founder_names.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {startup.founder_names.map((founder, index) => (
-                  <Card key={index}>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <Users className="w-5 h-5" />
-                        {founder}
-                      </CardTitle>
-                      <CardDescription>Founder</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-2">
-                        {startup.contact_email && (
-                          <div className="flex items-center gap-2">
-                            <MessageSquare className="w-4 h-4 text-muted-foreground" />
-                            <a href={`mailto:${startup.contact_email}`} className="text-sm hover:underline">
-                              {startup.contact_email}
-                            </a>
-                          </div>
-                        )}
-                        {startup.contact_phone && (
-                          <div className="flex items-center gap-2">
-                            <MessageSquare className="w-4 h-4 text-muted-foreground" />
-                            <a href={`tel:${startup.contact_phone}`} className="text-sm hover:underline">
-                              {startup.contact_phone}
-                            </a>
-                          </div>
-                        )}
+            <Card>
+              <CardHeader>
+                <CardTitle>Team & Founders</CardTitle>
+                <CardDescription>Leadership and contact information</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Primary Founder */}
+                {(startup.founder_first_name || startup.founder_last_name) && (
+                  <div className="pb-4 border-b">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <h4 className="text-lg font-semibold">
+                          {startup.founder_first_name} {startup.founder_last_name}
+                        </h4>
+                        <p className="text-sm text-muted-foreground">Primary Founder</p>
                       </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            ) : (
-              <Card>
-                <CardContent className="p-8 text-center">
-                  <Users className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-foreground mb-2">No Team Information</h3>
-                  <p className="text-muted-foreground">Team member information has not been provided for this startup.</p>
-                </CardContent>
-              </Card>
-            )}
+                      {startup.founder_linkedin && (
+                        <Button variant="outline" size="sm" asChild>
+                          <a href={startup.founder_linkedin} target="_blank" rel="noopener noreferrer">
+                            <Linkedin className="w-4 h-4 mr-2" />
+                            LinkedIn
+                          </a>
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Additional Founders */}
+                {startup.founder_names && startup.founder_names.length > 0 && (
+                  <div className="pb-4 border-b">
+                    <h4 className="text-sm font-semibold mb-3 text-muted-foreground">ADDITIONAL FOUNDERS</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {startup.founder_names.map((founder, index) => (
+                        <Badge key={index} variant="secondary" className="text-sm py-1">
+                          <Users className="w-3 h-3 mr-1" />
+                          {founder}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Contact Information */}
+                <div>
+                  <h4 className="text-sm font-semibold mb-3 text-muted-foreground">CONTACT INFORMATION</h4>
+                  <div className="space-y-2">
+                    {startup.contact_email && (
+                      <div className="flex items-center gap-2">
+                        <MessageSquare className="w-4 h-4 text-muted-foreground" />
+                        <a href={`mailto:${startup.contact_email}`} className="text-sm hover:underline">
+                          {startup.contact_email}
+                        </a>
+                      </div>
+                    )}
+                    {startup.contact_phone && (
+                      <div className="flex items-center gap-2">
+                        <MessageSquare className="w-4 h-4 text-muted-foreground" />
+                        <a href={`tel:${startup.contact_phone}`} className="text-sm hover:underline">
+                          {startup.contact_phone}
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Team Size Summary */}
+                {(startup.team_size || startup.full_time_team_members) && (
+                  <div className="pt-4 border-t">
+                    <h4 className="text-sm font-semibold mb-3 text-muted-foreground">TEAM SIZE</h4>
+                    <div className="grid grid-cols-2 gap-4">
+                      {startup.team_size && (
+                        <div>
+                          <p className="text-2xl font-bold text-primary">{startup.team_size}</p>
+                          <p className="text-xs text-muted-foreground">Total Team Members</p>
+                        </div>
+                      )}
+                      {startup.full_time_team_members && (
+                        <div>
+                          <p className="text-2xl font-bold text-primary">{startup.full_time_team_members}</p>
+                          <p className="text-xs text-muted-foreground">Full-Time Employees</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {!startup.founder_first_name && !startup.founder_last_name && (!startup.founder_names || startup.founder_names.length === 0) && (
+                  <p className="text-sm text-muted-foreground">No team information available</p>
+                )}
+              </CardContent>
+            </Card>
           </TabsContent>
 
           <TabsContent value="communications" className="space-y-6">

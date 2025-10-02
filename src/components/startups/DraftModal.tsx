@@ -13,19 +13,28 @@ import { normalizeStage } from '@/utils/stageUtils';
 
 interface Startup {
   name: string;
-  description: string;
-  industry: string;
-  stage: string;
-  location: string;
-  founded_year: number;
-  team_size: number;
-  funding_goal: number;
-  funding_raised: number;
-  website: string;
-  contact_email: string;
-  contact_phone: string;
-  founder_names: string[];
-  status: string;
+  description?: string;
+  industry?: string;
+  stage?: string;
+  location?: string;
+  founded_year?: number;
+  team_size?: number;
+  funding_goal?: number;
+  funding_raised?: number;
+  website?: string;
+  contact_email?: string;
+  contact_phone?: string;
+  founder_names?: string[];
+  status?: string;
+  founder_first_name?: string;
+  founder_last_name?: string;
+  founder_linkedin?: string;
+  serviceable_obtainable_market?: string;
+  full_time_team_members?: number;
+  paying_customers_per_year?: string;
+  countries_operating?: string;
+  countries_expansion_plan?: string;
+  business_risks_mitigation?: string;
 }
 
 interface ValidationError {
@@ -243,11 +252,37 @@ export function DraftModal({ open, onOpenChange, draftData, onImportComplete }: 
                     </div>
 
                     <div className="col-span-3">
-                      <label className="text-sm font-medium">Description</label>
+                      <label className="text-sm font-medium">Description (Value Proposition)</label>
                       <Textarea
                         value={entry.description || ''}
                         onChange={(e) => updateEntry(index, 'description', e.target.value)}
                         rows={2}
+                        placeholder="Startup's value proposition and pitch"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-sm font-medium">Founder First Name</label>
+                      <Input
+                        value={entry.founder_first_name || ''}
+                        onChange={(e) => updateEntry(index, 'founder_first_name', e.target.value)}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-sm font-medium">Founder Last Name</label>
+                      <Input
+                        value={entry.founder_last_name || ''}
+                        onChange={(e) => updateEntry(index, 'founder_last_name', e.target.value)}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-sm font-medium">Founder LinkedIn</label>
+                      <Input
+                        value={entry.founder_linkedin || ''}
+                        onChange={(e) => updateEntry(index, 'founder_linkedin', e.target.value)}
+                        placeholder="https://linkedin.com/in/..."
                       />
                     </div>
 
@@ -270,6 +305,70 @@ export function DraftModal({ open, onOpenChange, draftData, onImportComplete }: 
                       {entryErrors.filter(e => e.field === 'contact_email').map(error => (
                         <p key={error.field} className="text-xs text-destructive mt-1">{error.message}</p>
                       ))}
+                    </div>
+
+                    <div>
+                      <label className="text-sm font-medium">Serviceable Market</label>
+                      <Input
+                        value={entry.serviceable_obtainable_market || ''}
+                        onChange={(e) => updateEntry(index, 'serviceable_obtainable_market', e.target.value)}
+                        placeholder="e.g., $10M-$100M"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-sm font-medium">Team Size</label>
+                      <Input
+                        type="number"
+                        value={entry.team_size || ''}
+                        onChange={(e) => updateEntry(index, 'team_size', parseInt(e.target.value) || undefined)}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-sm font-medium">Full-Time Members</label>
+                      <Input
+                        type="number"
+                        value={entry.full_time_team_members || ''}
+                        onChange={(e) => updateEntry(index, 'full_time_team_members', parseInt(e.target.value) || undefined)}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-sm font-medium">Paying Customers/Year</label>
+                      <Input
+                        value={entry.paying_customers_per_year || ''}
+                        onChange={(e) => updateEntry(index, 'paying_customers_per_year', e.target.value)}
+                        placeholder="e.g., 100-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-sm font-medium">Countries Operating</label>
+                      <Input
+                        value={entry.countries_operating || ''}
+                        onChange={(e) => updateEntry(index, 'countries_operating', e.target.value)}
+                        placeholder="e.g., UK, US, Germany"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-sm font-medium">Expansion Plans</label>
+                      <Input
+                        value={entry.countries_expansion_plan || ''}
+                        onChange={(e) => updateEntry(index, 'countries_expansion_plan', e.target.value)}
+                        placeholder="Future expansion countries"
+                      />
+                    </div>
+
+                    <div className="col-span-3">
+                      <label className="text-sm font-medium">Business Risks & Mitigation</label>
+                      <Textarea
+                        value={entry.business_risks_mitigation || ''}
+                        onChange={(e) => updateEntry(index, 'business_risks_mitigation', e.target.value)}
+                        rows={2}
+                        placeholder="Key risks and mitigation strategies"
+                      />
                     </div>
 
                     <div>

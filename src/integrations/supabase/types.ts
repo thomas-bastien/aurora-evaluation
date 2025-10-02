@@ -1026,15 +1026,22 @@ export type Database = {
       startups: {
         Row: {
           business_model: string | null
+          business_risks_mitigation: string | null
           contact_email: string | null
           contact_phone: string | null
+          countries_expansion_plan: string | null
+          countries_operating: string | null
           country: string | null
           created_at: string
           created_by: string | null
           demo_url: string | null
           description: string | null
           founded_year: number | null
+          founder_first_name: string | null
+          founder_last_name: string | null
+          founder_linkedin: string | null
           founder_names: string[] | null
+          full_time_team_members: number | null
           funding_goal: number | null
           funding_raised: number | null
           id: string
@@ -1046,9 +1053,11 @@ export type Database = {
           location: string | null
           name: string
           other_vertical_description: string | null
+          paying_customers_per_year: string | null
           pitch_deck_url: string | null
           region: string | null
           regions: string[] | null
+          serviceable_obtainable_market: string | null
           stage: string | null
           status: string | null
           team_size: number | null
@@ -1059,15 +1068,22 @@ export type Database = {
         }
         Insert: {
           business_model?: string | null
+          business_risks_mitigation?: string | null
           contact_email?: string | null
           contact_phone?: string | null
+          countries_expansion_plan?: string | null
+          countries_operating?: string | null
           country?: string | null
           created_at?: string
           created_by?: string | null
           demo_url?: string | null
           description?: string | null
           founded_year?: number | null
+          founder_first_name?: string | null
+          founder_last_name?: string | null
+          founder_linkedin?: string | null
           founder_names?: string[] | null
+          full_time_team_members?: number | null
           funding_goal?: number | null
           funding_raised?: number | null
           id?: string
@@ -1079,9 +1095,11 @@ export type Database = {
           location?: string | null
           name: string
           other_vertical_description?: string | null
+          paying_customers_per_year?: string | null
           pitch_deck_url?: string | null
           region?: string | null
           regions?: string[] | null
+          serviceable_obtainable_market?: string | null
           stage?: string | null
           status?: string | null
           team_size?: number | null
@@ -1092,15 +1110,22 @@ export type Database = {
         }
         Update: {
           business_model?: string | null
+          business_risks_mitigation?: string | null
           contact_email?: string | null
           contact_phone?: string | null
+          countries_expansion_plan?: string | null
+          countries_operating?: string | null
           country?: string | null
           created_at?: string
           created_by?: string | null
           demo_url?: string | null
           description?: string | null
           founded_year?: number | null
+          founder_first_name?: string | null
+          founder_last_name?: string | null
+          founder_linkedin?: string | null
           founder_names?: string[] | null
+          full_time_team_members?: number | null
           funding_goal?: number | null
           funding_raised?: number | null
           id?: string
@@ -1112,9 +1137,11 @@ export type Database = {
           location?: string | null
           name?: string
           other_vertical_description?: string | null
+          paying_customers_per_year?: string | null
           pitch_deck_url?: string | null
           region?: string | null
           regions?: string[] | null
+          serviceable_obtainable_market?: string | null
           stage?: string | null
           status?: string | null
           team_size?: number | null
