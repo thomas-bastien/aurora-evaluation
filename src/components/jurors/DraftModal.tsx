@@ -4,15 +4,23 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertCircle, CheckCircle } from 'lucide-react';
+import { AlertCircle, CheckCircle, AlertTriangle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Label } from '@/components/ui/label';
 
 interface Juror {
+  id?: string;
   name: string;
   email: string;
   job_title?: string;
   company?: string;
+}
+
+interface DuplicateMatch {
+  existing: Juror;
+  incoming: Juror;
 }
 
 interface ValidationError {
@@ -31,6 +39,9 @@ export function DraftModal({ open, onOpenChange, draftData, onImportComplete }: 
   const [editableData, setEditableData] = useState<Partial<Juror>[]>([]);
   const [validationErrors, setValidationErrors] = useState<Record<number, ValidationError[]>>({});
   const [isImporting, setIsImporting] = useState(false);
+  const [duplicates, setDuplicates] = useState<DuplicateMatch[]>([]);
+  const [showDuplicateReview, setShowDuplicateReview] = useState(false);
+  const [duplicateResolution, setDuplicateResolution] = useState<'skip' | 'update' | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -85,6 +96,29 @@ export function DraftModal({ open, onOpenChange, draftData, onImportComplete }: 
   const totalEntries = editableData.length;
   const validEntries = totalEntries - Object.keys(validationErrors).length;
 
+  const detectDuplicates = async (validData: Juror[]) => {
+    const emails = validData.map(j => j.email);
+    const { data: existingJurors, error } = await supabase
+      .from('jurors')
+      .select('id, name, email, job_title, company')
+      .in('email', emails);
+
+    if (error) throw error;
+
+    const existingEmails = new Set(existingJurors?.map(j => j.email.toLowerCase()) || []);
+    const newJurors = validData.filter(j => !existingEmails.has(j.email.toLowerCase()));
+    const duplicateMatches: DuplicateMatch[] = [];
+
+    validData.forEach(incoming => {
+      const existing = existingJurors?.find(e => e.email.toLowerCase() === incoming.email.toLowerCase());
+      if (existing) {
+        duplicateMatches.push({ existing, incoming });
+      }
+    });
+
+    return { newJurors, duplicateMatches };
+  };
+
   const handleImport = async () => {
     if (hasErrors) return;
 
@@ -98,49 +132,246 @@ export function DraftModal({ open, onOpenChange, draftData, onImportComplete }: 
         company: entry.company?.trim() || null
       }));
 
-      const { error } = await supabase
-        .from('jurors')
-        .insert(validData);
+      // Detect duplicates
+      const { newJurors, duplicateMatches } = await detectDuplicates(validData);
 
-      if (error) throw error;
+      // If duplicates found and user hasn't decided yet, show review UI
+      if (duplicateMatches.length > 0 && !duplicateResolution) {
+        setDuplicates(duplicateMatches);
+        setShowDuplicateReview(true);
+        setIsImporting(false);
+        return;
+      }
+
+      // Process based on resolution
+      let importedCount = 0;
+      let updatedCount = 0;
+
+      // Insert new jurors
+      if (newJurors.length > 0) {
+        const { error } = await supabase
+          .from('jurors')
+          .insert(newJurors);
+
+        if (error) throw error;
+        importedCount = newJurors.length;
+      }
+
+      // Update duplicates if user chose to update
+      if (duplicateResolution === 'update' && duplicates.length > 0) {
+        for (const dup of duplicates) {
+          const { error } = await supabase
+            .from('jurors')
+            .update({
+              name: dup.incoming.name,
+              job_title: dup.incoming.job_title,
+              company: dup.incoming.company
+            })
+            .eq('email', dup.incoming.email);
+
+          if (error) throw error;
+          updatedCount++;
+        }
+      }
+
+      // Show success message
+      const messages = [];
+      if (importedCount > 0) messages.push(`${importedCount} new juror${importedCount > 1 ? 's' : ''} imported`);
+      if (updatedCount > 0) messages.push(`${updatedCount} existing juror${updatedCount > 1 ? 's' : ''} updated`);
+      if (duplicateResolution === 'skip' && duplicates.length > 0) {
+        messages.push(`${duplicates.length} duplicate${duplicates.length > 1 ? 's' : ''} skipped`);
+      }
 
       toast({
         title: "Import successful",
-        description: `${validData.length} jurors have been imported.`,
+        description: messages.join(', ') + '.',
       });
 
       onImportComplete();
       onOpenChange(false);
+      
+      // Reset state
+      setDuplicates([]);
+      setShowDuplicateReview(false);
+      setDuplicateResolution(null);
     } catch (error: any) {
       console.error('Import error:', error);
       
-      // Check if it's a duplicate email constraint violation
-      if (error?.code === '23505' && error?.message?.includes('jurors_email_key')) {
-        toast({
-          title: "Duplicate email found",
-          description: "One or more jurors with these email addresses already exist in the system.",
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "Import failed",
-          description: "There was an error importing the jurors. Please try again.",
-          variant: "destructive",
-        });
-      }
+      toast({
+        title: "Import failed",
+        description: "There was an error importing the jurors. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setIsImporting(false);
     }
+  };
+
+  const handleProceedWithResolution = () => {
+    if (!duplicateResolution) {
+      toast({
+        title: "Please select an option",
+        description: "Choose how to handle duplicate emails before proceeding.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (duplicateResolution === 'skip' || duplicateResolution === 'update') {
+      handleImport();
+    }
+  };
+
+  const handleCancelDuplicateReview = () => {
+    setShowDuplicateReview(false);
+    setDuplicates([]);
+    setDuplicateResolution(null);
+    setIsImporting(false);
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Review Draft Imports</DialogTitle>
+          <DialogTitle>
+            {showDuplicateReview ? 'Review Duplicate Emails' : 'Review Draft Imports'}
+          </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4">
+        {showDuplicateReview ? (
+          <div className="space-y-4">
+            <Alert variant="destructive">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>
+                {duplicates.length} duplicate email{duplicates.length > 1 ? 's' : ''} found. 
+                The following emails already exist in the system.
+              </AlertDescription>
+            </Alert>
+
+            <div className="space-y-4 max-h-[40vh] overflow-y-auto">
+              {duplicates.map((dup, index) => {
+                const hasChanges = 
+                  dup.existing.name !== dup.incoming.name ||
+                  dup.existing.job_title !== dup.incoming.job_title ||
+                  dup.existing.company !== dup.incoming.company;
+
+                return (
+                  <div key={index} className="border rounded-lg p-4 bg-muted/50">
+                    <div className="mb-3">
+                      <p className="font-semibold text-sm text-muted-foreground">{dup.existing.email}</p>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <h4 className="text-sm font-semibold">Existing in Database</h4>
+                        <div className="space-y-1 text-sm">
+                          <div className="flex items-center gap-2">
+                            <span className="text-muted-foreground">Name:</span>
+                            <span>{dup.existing.name}</span>
+                            {dup.existing.name === dup.incoming.name && (
+                              <CheckCircle className="h-3 w-3 text-green-500" />
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-muted-foreground">Job Title:</span>
+                            <span>{dup.existing.job_title || '—'}</span>
+                            {dup.existing.job_title === dup.incoming.job_title && (
+                              <CheckCircle className="h-3 w-3 text-green-500" />
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-muted-foreground">Company:</span>
+                            <span>{dup.existing.company || '—'}</span>
+                            {dup.existing.company === dup.incoming.company && (
+                              <CheckCircle className="h-3 w-3 text-green-500" />
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <h4 className="text-sm font-semibold">In Your Upload</h4>
+                        <div className="space-y-1 text-sm">
+                          <div className="flex items-center gap-2">
+                            <span className="text-muted-foreground">Name:</span>
+                            <span className={dup.existing.name !== dup.incoming.name ? 'font-semibold text-orange-600' : ''}>
+                              {dup.incoming.name}
+                            </span>
+                            {dup.existing.name !== dup.incoming.name && (
+                              <AlertTriangle className="h-3 w-3 text-orange-600" />
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-muted-foreground">Job Title:</span>
+                            <span className={dup.existing.job_title !== dup.incoming.job_title ? 'font-semibold text-orange-600' : ''}>
+                              {dup.incoming.job_title || '—'}
+                            </span>
+                            {dup.existing.job_title !== dup.incoming.job_title && (
+                              <AlertTriangle className="h-3 w-3 text-orange-600" />
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-muted-foreground">Company:</span>
+                            <span className={dup.existing.company !== dup.incoming.company ? 'font-semibold text-orange-600' : ''}>
+                              {dup.incoming.company || '—'}
+                            </span>
+                            {dup.existing.company !== dup.incoming.company && (
+                              <AlertTriangle className="h-3 w-3 text-orange-600" />
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {hasChanges && (
+                      <div className="mt-2 text-xs text-orange-600">
+                        ⚠️ Data differs from existing record
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="border rounded-lg p-4 bg-background">
+              <h4 className="text-sm font-semibold mb-3">How would you like to proceed?</h4>
+              <RadioGroup value={duplicateResolution || ''} onValueChange={(value) => setDuplicateResolution(value as 'skip' | 'update')}>
+                <div className="flex items-start space-x-2 mb-3">
+                  <RadioGroupItem value="skip" id="skip" />
+                  <Label htmlFor="skip" className="cursor-pointer">
+                    <div className="font-medium">Skip duplicates</div>
+                    <div className="text-sm text-muted-foreground">
+                      Only import {validEntries - duplicates.length} new juror{validEntries - duplicates.length !== 1 ? 's' : ''}
+                    </div>
+                  </Label>
+                </div>
+                <div className="flex items-start space-x-2">
+                  <RadioGroupItem value="update" id="update" />
+                  <Label htmlFor="update" className="cursor-pointer">
+                    <div className="font-medium">Update duplicates with new data</div>
+                    <div className="text-sm text-muted-foreground">
+                      Import {validEntries - duplicates.length} new juror{validEntries - duplicates.length !== 1 ? 's' : ''} and update {duplicates.length} existing record{duplicates.length !== 1 ? 's' : ''}
+                    </div>
+                  </Label>
+                </div>
+              </RadioGroup>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-4 border-t">
+              <Button variant="outline" onClick={handleCancelDuplicateReview}>
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleProceedWithResolution}
+                disabled={!duplicateResolution || isImporting}
+                className="min-w-24"
+              >
+                {isImporting ? 'Processing...' : 'Proceed'}
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-4">
           <Alert>
             <CheckCircle className="h-4 w-4" />
             <AlertDescription>
@@ -220,19 +451,20 @@ export function DraftModal({ open, onOpenChange, draftData, onImportComplete }: 
             })}
           </div>
 
-          <div className="flex justify-end gap-2 pt-4 border-t">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
-            </Button>
-            <Button 
-              onClick={handleImport} 
-              disabled={hasErrors || isImporting}
-              className="min-w-24"
-            >
-              {isImporting ? 'Importing...' : `Import ${validEntries} Jurors`}
-            </Button>
+            <div className="flex justify-end gap-2 pt-4 border-t">
+              <Button variant="outline" onClick={() => onOpenChange(false)}>
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleImport} 
+                disabled={hasErrors || isImporting}
+                className="min-w-24"
+              >
+                {isImporting ? 'Importing...' : `Import ${validEntries} Jurors`}
+              </Button>
+            </div>
           </div>
-        </div>
+        )}
       </DialogContent>
     </Dialog>
   );
