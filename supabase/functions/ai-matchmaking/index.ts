@@ -25,6 +25,7 @@ interface MatchmakingRequest {
     preferred_regions: string[];
   }>;
   roundType: 'screening' | 'pitching';
+  seed?: number;
 }
 
 interface AIMatchScore {
@@ -46,7 +47,7 @@ serve(async (req) => {
   }
 
   try {
-    const { startup, jurors, roundType }: MatchmakingRequest = await req.json();
+    const { startup, jurors, roundType, seed }: MatchmakingRequest = await req.json();
     
     if (!startup || !jurors || jurors.length === 0) {
       return new Response(
@@ -62,7 +63,7 @@ serve(async (req) => {
 
     // Build the AI prompt
     const systemPrompt = `You are an expert VC matchmaking analyst specializing in ${roundType} round evaluations. 
-Analyze the compatibility between jurors and a startup for evaluation purposes.
+Analyze the compatibility between jurors and a startup for evaluation purposes.${seed ? ` Use seed ${seed} for deterministic results.` : ''}
 
 Consider:
 1. Semantic similarity in verticals (not just exact matches) - e.g., "AI/ML" ≈ "Artificial Intelligence", "HealthTech" ≈ "Medical Technology"

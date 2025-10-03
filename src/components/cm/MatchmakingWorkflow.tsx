@@ -4,11 +4,14 @@ import { getMatchmakingCounts } from '@/utils/countsUtils';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle, Building2, Users, CheckCircle2, Eye, Check, Wand2, Mail, Send, Calendar } from "lucide-react";
+import { AlertCircle, Building2, Users, CheckCircle2, Eye, Check, Wand2, Mail, Send, Calendar, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { StartupAssignmentModal } from "@/components/matchmaking/StartupAssignmentModal";
 import { AssignmentSummary } from "@/components/matchmaking/AssignmentSummary";
 import { AutoAssignmentReviewPanel } from "@/components/matchmaking/AutoAssignmentReviewPanel";
+import { EnhancedAutoAssignmentPanel } from "@/components/matchmaking/EnhancedAutoAssignmentPanel";
+import { MatchmakingConfigPanel } from "@/components/matchmaking/MatchmakingConfigPanel";
+import { generateExplainableSuggestions, Startup as ExplainableStartup, Juror as ExplainableJuror } from "@/utils/explainableMatchmakingEngine";
 import { SendSchedulingEmailsModal } from "@/components/cm/SendSchedulingEmailsModal";
 import { AssignmentNotificationModal } from "@/components/cm/AssignmentNotificationModal";
 import { StatusBadge } from "@/components/common/StatusBadge";
@@ -41,6 +44,8 @@ interface Juror {
   target_verticals?: string[];
   preferred_stages?: string[];
   evaluation_limit?: number | null;
+  thesis_keywords?: string[];
+  fund_focus?: string;
 }
 
 interface Assignment {
@@ -72,6 +77,9 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
   const [showSchedulingEmailModal, setShowSchedulingEmailModal] = useState(false);
   const [showAssignmentNotificationModal, setShowAssignmentNotificationModal] = useState(false);
   const [sendingEmails, setSendingEmails] = useState(false);
+  const [showEnhancedAutoPanel, setShowEnhancedAutoPanel] = useState(false);
+  const [enhancedSuggestions, setEnhancedSuggestions] = useState<any>(null);
+  const [generatingSuggestions, setGeneratingSuggestions] = useState(false);
   
   // Communication tracking state
   const [communicationStats, setCommunicationStats] = useState({
@@ -158,10 +166,10 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
         return acc;
       }, {} as Record<string, string>) || {};
 
-      // Fetch jurors/VCs with evaluation_limit
+      // Fetch jurors/VCs with evaluation_limit and new fields
       const { data: jurorsData, error: jurorsError } = await supabase
         .from('jurors')
-        .select('id, name, email, company, job_title, calendly_link, preferred_regions, target_verticals, preferred_stages, evaluation_limit')
+        .select('id, name, email, company, job_title, calendly_link, preferred_regions, target_verticals, preferred_stages, evaluation_limit, thesis_keywords, fund_focus')
         .not('user_id', 'is', null)
         .order('name');
 
@@ -270,6 +278,77 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
       ...newAssignments
     ]);
     setShowAssignmentModal(false);
+  };
+
+  const handleGenerateExplainableSuggestions = async () => {
+    setGeneratingSuggestions(true);
+    try {
+      const startupData: ExplainableStartup[] = (startups || []).map(s => ({
+        id: s.id,
+        name: s.name,
+        verticals: s.verticals || [],
+        stage: s.stage || '',
+        regions: s.regions || [],
+        internal_score: undefined,
+      }));
+
+      const jurorData: ExplainableJuror[] = (jurors || []).map(j => ({
+        id: j.id,
+        name: j.name,
+        target_verticals: j.target_verticals || [],
+        preferred_stages: j.preferred_stages || [],
+        preferred_regions: j.preferred_regions || [],
+        evaluation_limit: j.evaluation_limit || undefined,
+        thesis_keywords: j.thesis_keywords || [],
+        fund_focus: j.fund_focus || undefined,
+      }));
+
+      const roundName = currentRound === 'screeningRound' ? 'screening' : 'pitching';
+      const result = await generateExplainableSuggestions(
+        startupData,
+        jurorData,
+        roundName
+      );
+
+      setEnhancedSuggestions(result);
+      setShowEnhancedAutoPanel(true);
+    } catch (error) {
+      console.error('Error generating suggestions:', error);
+      toast.error('Failed to generate assignment suggestions');
+    } finally {
+      setGeneratingSuggestions(false);
+    }
+  };
+
+  const handleBulkAssign = async (newAssignments: { juror_id: string; startup_id: string }[]) => {
+    try {
+      const enriched = newAssignments.map(a => {
+        const startup = startups.find(s => s.id === a.startup_id);
+        const juror = jurors.find(j => j.id === a.juror_id);
+        return {
+          ...a,
+          startup_name: startup?.name || '',
+          juror_name: juror?.name || '',
+          status: 'assigned',
+        };
+      });
+
+      setAssignments(prev => {
+        const existingMap = new Map(prev.map(a => [`${a.startup_id}-${a.juror_id}`, a]));
+        enriched.forEach(a => {
+          const key = `${a.startup_id}-${a.juror_id}`;
+          existingMap.set(key, a);
+        });
+        return Array.from(existingMap.values());
+      });
+
+      setShowEnhancedAutoPanel(false);
+      setEnhancedSuggestions(null);
+      toast.success(`${newAssignments.length} assignments added`);
+    } catch (error) {
+      console.error('Error applying bulk assignments:', error);
+      toast.error('Failed to apply assignments');
+    }
   };
 
   const handleConfirmAssignments = async () => {
@@ -898,7 +977,18 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
               );
             })()}
 
-            <Button 
+            <MatchmakingConfigPanel roundName={currentRound === 'screeningRound' ? 'screening' : 'pitching'} />
+            <Button
+              onClick={handleGenerateExplainableSuggestions}
+              variant="outline"
+              disabled={generatingSuggestions || jurors.length === 0}
+              className="flex items-center gap-2"
+            >
+              <Zap className="w-4 h-4" />
+              {generatingSuggestions ? 'Generating...' : 'Generate Suggestions'}
+            </Button>
+
+            <Button
               onClick={handleViewSummary}
               variant="outline"
               disabled={assignments.length === 0}
@@ -1112,6 +1202,36 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
         assignments={assignments}
         onSendNotifications={sendAssignmentNotifications}
       />
+
+      {/* Enhanced Auto-Assignment Panel */}
+      {enhancedSuggestions && (
+        <EnhancedAutoAssignmentPanel
+          suggestions={enhancedSuggestions.suggestions}
+          whyNotAssigned={enhancedSuggestions.whyNotAssigned}
+          allStartups={startups.map(s => ({
+            id: s.id,
+            name: s.name,
+            verticals: s.verticals || [],
+            stage: s.stage || '',
+            regions: s.regions || [],
+          }))}
+          open={showEnhancedAutoPanel}
+          onOpenChange={setShowEnhancedAutoPanel}
+          onApprove={handleBulkAssign}
+          onCancel={() => {
+            setShowEnhancedAutoPanel(false);
+            setEnhancedSuggestions(null);
+          }}
+          config={{
+            top_k_per_juror: 3,
+            vertical_weight: 40,
+            stage_weight: 20,
+            region_weight: 20,
+            thesis_weight: 10,
+            load_penalty_weight: 10,
+          }}
+        />
+      )}
     </div>
   );
 };

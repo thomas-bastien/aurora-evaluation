@@ -444,6 +444,51 @@ export type Database = {
         }
         Relationships: []
       }
+      juror_conflicts: {
+        Row: {
+          conflict_type: string
+          created_at: string
+          id: string
+          juror_id: string
+          notes: string | null
+          startup_id: string
+          updated_at: string
+        }
+        Insert: {
+          conflict_type: string
+          created_at?: string
+          id?: string
+          juror_id: string
+          notes?: string | null
+          startup_id: string
+          updated_at?: string
+        }
+        Update: {
+          conflict_type?: string
+          created_at?: string
+          id?: string
+          juror_id?: string
+          notes?: string | null
+          startup_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "juror_conflicts_juror_id_fkey"
+            columns: ["juror_id"]
+            isOneToOne: false
+            referencedRelation: "jurors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "juror_conflicts_startup_id_fkey"
+            columns: ["startup_id"]
+            isOneToOne: false
+            referencedRelation: "startups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       jurors: {
         Row: {
           calendly_link: string | null
@@ -451,6 +496,7 @@ export type Database = {
           created_at: string
           email: string
           evaluation_limit: number | null
+          fund_focus: string | null
           id: string
           invitation_expires_at: string | null
           invitation_sent_at: string | null
@@ -462,6 +508,7 @@ export type Database = {
           preferred_regions: string[] | null
           preferred_stages: string[] | null
           target_verticals: string[] | null
+          thesis_keywords: string[] | null
           updated_at: string
           user_id: string | null
         }
@@ -471,6 +518,7 @@ export type Database = {
           created_at?: string
           email: string
           evaluation_limit?: number | null
+          fund_focus?: string | null
           id?: string
           invitation_expires_at?: string | null
           invitation_sent_at?: string | null
@@ -482,6 +530,7 @@ export type Database = {
           preferred_regions?: string[] | null
           preferred_stages?: string[] | null
           target_verticals?: string[] | null
+          thesis_keywords?: string[] | null
           updated_at?: string
           user_id?: string | null
         }
@@ -491,6 +540,7 @@ export type Database = {
           created_at?: string
           email?: string
           evaluation_limit?: number | null
+          fund_focus?: string | null
           id?: string
           invitation_expires_at?: string | null
           invitation_sent_at?: string | null
@@ -502,6 +552,7 @@ export type Database = {
           preferred_regions?: string[] | null
           preferred_stages?: string[] | null
           target_verticals?: string[] | null
+          thesis_keywords?: string[] | null
           updated_at?: string
           user_id?: string | null
         }
@@ -540,6 +591,54 @@ export type Database = {
           stage_entered_at?: string
           stage_status?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      matchmaking_config: {
+        Row: {
+          created_at: string
+          deterministic_seed: number | null
+          id: string
+          load_penalty_weight: number
+          region_weight: number
+          round_name: string
+          stage_weight: number
+          target_jurors_per_startup: number
+          thesis_weight: number
+          top_k_per_juror: number
+          updated_at: string
+          use_ai_enhancement: boolean
+          vertical_weight: number
+        }
+        Insert: {
+          created_at?: string
+          deterministic_seed?: number | null
+          id?: string
+          load_penalty_weight?: number
+          region_weight?: number
+          round_name: string
+          stage_weight?: number
+          target_jurors_per_startup?: number
+          thesis_weight?: number
+          top_k_per_juror?: number
+          updated_at?: string
+          use_ai_enhancement?: boolean
+          vertical_weight?: number
+        }
+        Update: {
+          created_at?: string
+          deterministic_seed?: number | null
+          id?: string
+          load_penalty_weight?: number
+          region_weight?: number
+          round_name?: string
+          stage_weight?: number
+          target_jurors_per_startup?: number
+          thesis_weight?: number
+          top_k_per_juror?: number
+          updated_at?: string
+          use_ai_enhancement?: boolean
+          vertical_weight?: number
         }
         Relationships: []
       }
