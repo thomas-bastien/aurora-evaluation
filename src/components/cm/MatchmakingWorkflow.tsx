@@ -8,13 +8,13 @@ import { AlertCircle, Building2, Users, CheckCircle2, Eye, Check, Wand2, Mail, S
 import { toast } from "sonner";
 import { StartupAssignmentModal } from "@/components/matchmaking/StartupAssignmentModal";
 import { AssignmentSummary } from "@/components/matchmaking/AssignmentSummary";
-import { AutoAssignmentReviewPanel } from "@/components/matchmaking/AutoAssignmentReviewPanel";
+
 import { EnhancedAutoAssignmentPanel } from "@/components/matchmaking/EnhancedAutoAssignmentPanel";
 import { generateExplainableSuggestions, Startup as ExplainableStartup, Juror as ExplainableJuror } from "@/utils/explainableMatchmakingEngine";
 import { SendSchedulingEmailsModal } from "@/components/cm/SendSchedulingEmailsModal";
 import { AssignmentNotificationModal } from "@/components/cm/AssignmentNotificationModal";
 import { StatusBadge } from "@/components/common/StatusBadge";
-import { generateAutoAssignments, AutoAssignmentProposal, WorkloadDistribution } from '@/utils/autoAssignmentEngine';
+
 
 interface Startup {
   id: string;
@@ -66,13 +66,10 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
   const [selectedStartup, setSelectedStartup] = useState<Startup | null>(null);
   const [showAssignmentModal, setShowAssignmentModal] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
-  const [showAutoAssignmentReview, setShowAutoAssignmentReview] = useState(false);
-  const [autoAssignmentProposals, setAutoAssignmentProposals] = useState<AutoAssignmentProposal[]>([]);
-  const [workloadDistribution, setWorkloadDistribution] = useState<WorkloadDistribution[]>([]);
   const [isConfirmed, setIsConfirmed] = useState(false);
   const [isEmailsSent, setIsEmailsSent] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [autoAssignLoading, setAutoAssignLoading] = useState(false);
+  
   const [showSchedulingEmailModal, setShowSchedulingEmailModal] = useState(false);
   const [showAssignmentNotificationModal, setShowAssignmentNotificationModal] = useState(false);
   const [sendingEmails, setSendingEmails] = useState(false);
@@ -620,83 +617,6 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
     setShowSummary(true);
   };
 
-  const handleAutoAssign = async () => {
-    try {
-      setAutoAssignLoading(true);
-      
-      // Find unassigned startups
-      const requiredAssignments = 3;
-      const unassignedStartups = startups.filter(startup => 
-        startup.roundStatus !== 'rejected' && 
-        getStartupAssignmentCount(startup.id) < requiredAssignments
-      );
-
-      if (unassignedStartups.length === 0) {
-        toast.error('All startups are already fully assigned');
-        return;
-      }
-
-      // Convert data to engine format
-      const engineStartups = unassignedStartups.map(s => ({
-        id: s.id,
-        name: s.name,
-        industry: s.industry || '',
-        stage: s.stage || '',
-        region: s.location || '', // Use location as region fallback
-        verticals: s.industry ? [s.industry] : [],
-        regions: s.location ? [s.location] : []
-      }));
-
-      const engineJurors = jurors.map(j => ({
-        id: j.id,
-        name: j.name,
-        email: j.email,
-        company: j.company,
-        job_title: j.job_title,
-        preferred_regions: j.preferred_regions || [],
-        target_verticals: j.target_verticals || [],
-        preferred_stages: j.preferred_stages || [],
-        evaluation_limit: j.evaluation_limit || null
-      }));
-
-      // Generate auto-assignment proposals
-      const roundName = currentRound === 'screeningRound' ? 'screening' : 'pitching';
-      const { proposals, workloadDistribution: distribution } = await generateAutoAssignments(
-        engineStartups,
-        engineJurors,
-        assignments,
-        roundName
-      );
-
-      if (proposals.length === 0) {
-        toast.error('No auto-assignments could be generated');
-        return;
-      }
-
-      setAutoAssignmentProposals(proposals);
-      setWorkloadDistribution(distribution);
-      setShowAutoAssignmentReview(true);
-
-      toast.success(`Generated assignments for ${proposals.length} startups`);
-    } catch (error) {
-      console.error('Error generating auto-assignments:', error);
-      toast.error('Failed to generate auto-assignments');
-    } finally {
-      setAutoAssignLoading(false);
-    }
-  };
-
-  const handleAutoAssignmentApprove = (newAssignments: Assignment[]) => {
-    setAssignments(prev => [...prev, ...newAssignments]);
-    setShowAutoAssignmentReview(false);
-    toast.success(`Applied ${newAssignments.length} auto-assignments successfully`);
-  };
-
-  const handleAutoAssignmentCancel = () => {
-    setShowAutoAssignmentReview(false);
-    setAutoAssignmentProposals([]);
-    setWorkloadDistribution([]);
-  };
 
   const sendAssignmentNotifications = async (filters?: { excludeAlreadyNotified: boolean }) => {
     setSendingNotifications(true);
@@ -952,30 +872,6 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
 
           {/* Action Buttons */}
           <div className="flex gap-4 mb-6">
-            {/* Auto-Assign Button - Only show when there are unassigned startups */}
-            {(() => {
-              const requiredAssignments = 3;
-              const unassignedCount = startups.filter(startup => 
-                startup.roundStatus !== 'rejected' && 
-                getStartupAssignmentCount(startup.id) < requiredAssignments
-              ).length;
-              
-              return unassignedCount > 0 && (
-                <Button 
-                  onClick={handleAutoAssign}
-                  variant="outline"
-                  disabled={autoAssignLoading || jurors.length === 0}
-                  className="flex items-center gap-2"
-                >
-                  <Wand2 className="w-4 h-4" />
-                  {autoAssignLoading 
-                    ? 'Generating...' 
-                    : `Auto-Assign Remaining (${unassignedCount})`
-                  }
-                </Button>
-              );
-            })()}
-
             <Button
               onClick={handleGenerateExplainableSuggestions}
               variant="outline"
@@ -1173,15 +1069,6 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
         isConfirmed={isConfirmed}
       />
 
-      {/* Auto-Assignment Review Panel */}
-      <AutoAssignmentReviewPanel
-        proposals={autoAssignmentProposals}
-        workloadDistribution={workloadDistribution}
-        open={showAutoAssignmentReview}
-        onOpenChange={setShowAutoAssignmentReview}
-        onApprove={handleAutoAssignmentApprove}
-        onCancel={handleAutoAssignmentCancel}
-      />
 
       {/* Send Scheduling Emails Modal */}
       <SendSchedulingEmailsModal
