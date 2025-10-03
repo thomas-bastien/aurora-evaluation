@@ -8,6 +8,8 @@ import { useToast } from '@/hooks/use-toast';
 import { normalizeStage } from '@/utils/stageUtils';
 import * as XLSX from 'xlsx';
 import { mapStartupColumn, parseArrayField, parseNumericField, parseYearField } from '@/utils/columnMapping';
+import { supabase } from '@/integrations/supabase/client';
+import { Loader2 } from 'lucide-react';
 
 interface Startup {
   name: string;
@@ -49,6 +51,7 @@ interface CSVUploadModalProps {
 
 export function CSVUploadModal({ open, onOpenChange, onDataParsed }: CSVUploadModalProps) {
   const [isDragging, setIsDragging] = useState(false);
+  const [isEnhancing, setIsEnhancing] = useState(false);
   const { toast } = useToast();
 
   const parseCSV = (csvText: string): Partial<Startup>[] => {
@@ -297,12 +300,51 @@ export function CSVUploadModal({ open, onOpenChange, onDataParsed }: CSVUploadMo
         return;
       }
 
-      onDataParsed(parsedData);
+      // Call AI enhancement
+      setIsEnhancing(true);
+      try {
+        const { data: enhancementData, error: enhanceError } = await supabase.functions.invoke('enhance-startup-data', {
+          body: { startups: parsedData }
+        });
+
+        if (enhanceError) {
+          console.error('Enhancement error:', enhanceError);
+          toast({
+            title: "AI Enhancement Failed",
+            description: "Proceeding with original data. You can still review and edit.",
+            variant: "default",
+          });
+          onDataParsed(parsedData);
+        } else {
+          // Pass enhanced data with suggestions
+          const enhancedStartups = enhancementData.enhancements.map((e: any) => ({
+            ...e.enhanced,
+            _aiSuggestions: e.suggestions
+          }));
+          onDataParsed(enhancedStartups);
+          
+          const totalSuggestions = enhancementData.enhancements.reduce(
+            (sum: number, e: any) => sum + e.suggestions.length, 
+            0
+          );
+          
+          toast({
+            title: "✨ AI Enhanced",
+            description: `${parsedData.length} startups loaded with ${totalSuggestions} AI suggestions.`,
+          });
+        }
+      } catch (enhanceError) {
+        console.error('Enhancement failed:', enhanceError);
+        onDataParsed(parsedData);
+        toast({
+          title: "Using original data",
+          description: "AI enhancement unavailable. You can still review and edit manually.",
+        });
+      } finally {
+        setIsEnhancing(false);
+      }
+
       onOpenChange(false);
-      toast({
-        title: "File uploaded successfully",
-        description: `${parsedData.length} startups loaded for review.`,
-      });
     } catch (error) {
       toast({
         title: "Error parsing file",
@@ -332,37 +374,49 @@ export function CSVUploadModal({ open, onOpenChange, onDataParsed }: CSVUploadMo
         </DialogHeader>
         
         <div className="space-y-4">
-          <div
-            className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
-              isDragging ? 'border-primary bg-primary/10' : 'border-muted-foreground/25'
-            }`}
-            onDragOver={(e) => {
-              e.preventDefault();
-              setIsDragging(true);
-            }}
-            onDragLeave={() => setIsDragging(false)}
-            onDrop={handleDrop}
-          >
-            <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-            <p className="text-sm text-muted-foreground mb-2">
-              Drag and drop your CSV or Excel file here, or click to select
-            </p>
-            <Input
-              id="file-upload"
-              type="file"
-              accept=".csv,.xlsx"
-              className="hidden"
-              onChange={handleFileSelect}
-            />
-            <Button 
-              variant="outline" 
-              className="cursor-pointer"
-              onClick={() => document.getElementById('file-upload')?.click()}
+          {isEnhancing ? (
+            <div className="border-2 border-primary rounded-lg p-8 text-center bg-primary/5">
+              <Loader2 className="h-8 w-8 mx-auto mb-3 text-primary animate-spin" />
+              <p className="text-sm font-medium text-primary mb-1">
+                ✨ AI is reviewing and improving your data...
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Fixing URLs, matching dropdown values, and improving data quality
+              </p>
+            </div>
+          ) : (
+            <div
+              className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
+                isDragging ? 'border-primary bg-primary/10' : 'border-muted-foreground/25'
+              }`}
+              onDragOver={(e) => {
+                e.preventDefault();
+                setIsDragging(true);
+              }}
+              onDragLeave={() => setIsDragging(false)}
+              onDrop={handleDrop}
             >
-              <FileText className="h-4 w-4 mr-2" />
-              Choose File
-            </Button>
-          </div>
+              <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground mb-2">
+                Drag and drop your CSV or Excel file here, or click to select
+              </p>
+              <Input
+                id="file-upload"
+                type="file"
+                accept=".csv,.xlsx"
+                className="hidden"
+                onChange={handleFileSelect}
+              />
+              <Button 
+                variant="outline" 
+                className="cursor-pointer"
+                onClick={() => document.getElementById('file-upload')?.click()}
+              >
+                <FileText className="h-4 w-4 mr-2" />
+                Choose File
+              </Button>
+            </div>
+          )}
           
           <p className="text-xs text-muted-foreground">
             Make sure your file includes headers that match the startup schema. 

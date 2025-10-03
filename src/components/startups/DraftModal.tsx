@@ -6,7 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertCircle, CheckCircle } from 'lucide-react';
+import { AlertCircle, CheckCircle, Sparkles, Check, X } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { supabase } from '@/integrations/supabase/client';
@@ -14,6 +14,14 @@ import { useToast } from '@/hooks/use-toast';
 import { normalizeStage } from '@/utils/stageUtils';
 import { VERTICAL_OPTIONS, STAGE_OPTIONS, REGION_OPTIONS } from '@/constants/jurorPreferences';
 import { BUSINESS_MODELS } from '@/constants/startupConstants';
+
+interface AISuggestion {
+  field: string;
+  original: any;
+  suggested: any;
+  confidence: number;
+  reason: string;
+}
 
 interface Startup {
   name: string;
@@ -47,6 +55,7 @@ interface Startup {
   regions?: string[];
   verticals?: string[];
   investment_currency?: string;
+  _aiSuggestions?: AISuggestion[];
 }
 
 interface ValidationError {
@@ -64,6 +73,7 @@ interface DraftModalProps {
 export function DraftModal({ open, onOpenChange, draftData, onImportComplete }: DraftModalProps) {
   const [editableData, setEditableData] = useState<Partial<Startup>[]>([]);
   const [validationErrors, setValidationErrors] = useState<Record<number, ValidationError[]>>({});
+  const [rejectedSuggestions, setRejectedSuggestions] = useState<Set<string>>(new Set());
   const [isImporting, setIsImporting] = useState(false);
   const { toast } = useToast();
 
@@ -145,17 +155,84 @@ export function DraftModal({ open, onOpenChange, draftData, onImportComplete }: 
   const totalEntries = editableData.length;
   const validEntries = totalEntries - Object.keys(validationErrors).length;
 
+  const totalSuggestions = editableData.reduce((sum, entry) => 
+    sum + (entry._aiSuggestions?.length || 0), 0
+  );
+  const activeSuggestions = editableData.reduce((sum, entry, idx) => {
+    const suggestions = entry._aiSuggestions || [];
+    return sum + suggestions.filter(s => 
+      !rejectedSuggestions.has(`${idx}-${s.field}`)
+    ).length;
+  }, 0);
+
+  const acceptSuggestion = (entryIndex: number, suggestion: AISuggestion) => {
+    const newData = [...editableData];
+    newData[entryIndex] = { 
+      ...newData[entryIndex], 
+      [suggestion.field]: suggestion.suggested 
+    };
+    setEditableData(newData);
+    validateAllEntries(newData);
+    
+    toast({
+      title: "Suggestion applied",
+      description: `${suggestion.field} updated`,
+    });
+  };
+
+  const rejectSuggestion = (entryIndex: number, suggestion: AISuggestion) => {
+    const key = `${entryIndex}-${suggestion.field}`;
+    setRejectedSuggestions(prev => new Set([...prev, key]));
+  };
+
+  const acceptAllSuggestions = () => {
+    const newData = editableData.map((entry, idx) => {
+      const suggestions = entry._aiSuggestions || [];
+      const updates: any = {};
+      
+      suggestions.forEach(s => {
+        const key = `${idx}-${s.field}`;
+        if (!rejectedSuggestions.has(key)) {
+          updates[s.field] = s.suggested;
+        }
+      });
+      
+      return { ...entry, ...updates };
+    });
+    
+    setEditableData(newData);
+    validateAllEntries(newData);
+    
+    toast({
+      title: "All suggestions applied",
+      description: `${activeSuggestions} AI suggestions accepted`,
+    });
+  };
+
+  const getConfidenceBadge = (confidence: number) => {
+    if (confidence >= 0.9) {
+      return <Badge variant="default" className="bg-green-500">High Confidence</Badge>;
+    } else if (confidence >= 0.7) {
+      return <Badge variant="secondary" className="bg-yellow-500 text-black">Medium Confidence</Badge>;
+    } else {
+      return <Badge variant="outline" className="border-red-500 text-red-500">Low Confidence</Badge>;
+    }
+  };
+
   const handleImport = async () => {
     if (hasErrors) return;
 
     setIsImporting(true);
     try {
-      // Filter out entries without names and ensure required fields
-      const validData = editableData.filter(entry => entry.name?.trim()).map(entry => ({
-        ...entry,
-        name: entry.name!,
-        status: entry.status || 'pending'
-      }));
+      // Filter out entries without names and ensure required fields, remove AI metadata
+      const validData = editableData.filter(entry => entry.name?.trim()).map(entry => {
+        const { _aiSuggestions, ...cleanEntry } = entry;
+        return {
+          ...cleanEntry,
+          name: cleanEntry.name!,
+          status: cleanEntry.status || 'pending'
+        };
+      });
 
       const { error } = await supabase
         .from('startups')
@@ -221,6 +298,26 @@ export function DraftModal({ open, onOpenChange, draftData, onImportComplete }: 
         </DialogHeader>
 
         <div className="space-y-4">
+          {totalSuggestions > 0 && (
+            <Alert className="bg-primary/5 border-primary/20">
+              <Sparkles className="h-4 w-4 text-primary" />
+              <AlertDescription className="flex items-center justify-between">
+                <span>
+                  ✨ {activeSuggestions} AI suggestions available to improve data quality
+                </span>
+                {activeSuggestions > 0 && (
+                  <Button 
+                    size="sm" 
+                    variant="default"
+                    onClick={acceptAllSuggestions}
+                  >
+                    Accept All Suggestions
+                  </Button>
+                )}
+              </AlertDescription>
+            </Alert>
+          )}
+
           <Alert>
             <CheckCircle className="h-4 w-4" />
             <AlertDescription>
@@ -233,6 +330,9 @@ export function DraftModal({ open, onOpenChange, draftData, onImportComplete }: 
             {editableData.map((entry, index) => {
               const entryErrors = validationErrors[index] || [];
               const hasEntryErrors = entryErrors.length > 0;
+              const aiSuggestions = (entry._aiSuggestions || []).filter(s => 
+                !rejectedSuggestions.has(`${index}-${s.field}`)
+              );
 
               return (
                 <div key={index} className={`border rounded-lg p-4 ${hasEntryErrors ? 'border-destructive' : 'border-border'}`}>
@@ -251,7 +351,55 @@ export function DraftModal({ open, onOpenChange, draftData, onImportComplete }: 
                         Valid
                       </Badge>
                     )}
+                    {aiSuggestions.length > 0 && (
+                      <Badge variant="outline" className="border-primary text-primary">
+                        <Sparkles className="h-3 w-3 mr-1" />
+                        {aiSuggestions.length} AI suggestion{aiSuggestions.length > 1 ? 's' : ''}
+                      </Badge>
+                    )}
                   </div>
+
+                  {aiSuggestions.length > 0 && (
+                    <div className="mb-4 space-y-2 p-3 bg-primary/5 rounded-lg border border-primary/20">
+                      <p className="text-sm font-medium text-primary flex items-center gap-2">
+                        <Sparkles className="h-4 w-4" />
+                        AI Suggestions for this entry:
+                      </p>
+                      {aiSuggestions.map((suggestion, sIdx) => (
+                        <div key={sIdx} className="flex items-start gap-2 text-sm bg-background p-2 rounded">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="font-medium">{suggestion.field}:</span>
+                              {getConfidenceBadge(suggestion.confidence)}
+                            </div>
+                            <div className="text-muted-foreground text-xs space-y-1">
+                              <div>Original: <span className="line-through">{JSON.stringify(suggestion.original)}</span></div>
+                              <div>Suggested: <span className="text-primary font-medium">{JSON.stringify(suggestion.suggested)}</span></div>
+                              <div>Reason: {suggestion.reason}</div>
+                            </div>
+                          </div>
+                          <div className="flex gap-1">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-7 w-7 p-0 text-green-600 hover:text-green-700 hover:bg-green-50"
+                              onClick={() => acceptSuggestion(index, suggestion)}
+                            >
+                              <Check className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-7 w-7 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                              onClick={() => rejectSuggestion(index, suggestion)}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
 
                   <div className="grid grid-cols-3 gap-4">
                     <div>

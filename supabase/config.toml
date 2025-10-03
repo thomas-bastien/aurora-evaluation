@@ -110,3 +110,6 @@ verify_jwt = false
 
 [functions.reset-cohort-data]
 verify_jwt = false
+
+[functions.enhance-startup-data]
+verify_jwt = false
