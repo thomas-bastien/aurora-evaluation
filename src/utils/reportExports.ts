@@ -1,6 +1,7 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { supabase } from '@/integrations/supabase/client';
+import type { RoundInsights } from '@/hooks/useRoundInsights';
 
 export interface StartupAnalytics {
   id: string;
@@ -383,4 +384,248 @@ function downloadFile(content: string, filename: string, mimeType: string): void
 
 function getDateString(): string {
   return new Date().toISOString().split('T')[0];
+}
+
+// AI Insights Export Functions
+export function exportAIInsightsCSV(insights: RoundInsights, roundName: string): void {
+  const sections: string[][] = [];
+  
+  // Executive Summary
+  sections.push(['EXECUTIVE SUMMARY']);
+  insights.executive_summary.forEach(item => {
+    sections.push([item]);
+  });
+  sections.push(['']);
+  
+  // Cohort Patterns
+  sections.push(['COHORT PATTERNS', 'Category', 'Finding', 'Percentage', 'Significance']);
+  insights.cohort_patterns.forEach(pattern => {
+    sections.push([
+      '',
+      pattern.category,
+      pattern.finding,
+      `${pattern.percentage}%`,
+      pattern.significance.toUpperCase()
+    ]);
+  });
+  sections.push(['']);
+  
+  // Outliers
+  if (insights.outliers.length > 0) {
+    sections.push(['OUTLIERS', 'Startup', 'Type', 'Score', 'Variance', 'Explanation']);
+    insights.outliers.forEach(outlier => {
+      sections.push([
+        '',
+        outlier.startup_name,
+        outlier.type,
+        outlier.score.toFixed(2),
+        outlier.score_variance.toFixed(2),
+        outlier.explanation
+      ]);
+    });
+    sections.push(['']);
+  }
+  
+  // Bias Check
+  if (insights.bias_check.length > 0) {
+    sections.push(['BIAS CHECK', 'Juror', 'Pattern', 'Avg Score', 'Cohort Avg', 'Deviation', 'Assessment']);
+    insights.bias_check.forEach(bias => {
+      sections.push([
+        '',
+        bias.juror_name,
+        bias.pattern,
+        bias.avg_score_given.toFixed(2),
+        bias.cohort_avg.toFixed(2),
+        bias.deviation.toFixed(2),
+        bias.assessment
+      ]);
+    });
+    sections.push(['']);
+  }
+  
+  // Risk Themes
+  if (insights.risk_themes.length > 0) {
+    sections.push(['RISK THEMES', 'Theme', 'Frequency', 'Examples']);
+    insights.risk_themes.forEach(theme => {
+      sections.push([
+        '',
+        theme.theme,
+        theme.frequency.toString(),
+        theme.examples.join('; ')
+      ]);
+    });
+  }
+
+  const csvContent = sections
+    .map(row => row.map(cell => `"${cell}"`).join(','))
+    .join('\n');
+
+  downloadFile(csvContent, `ai-insights-${roundName}-${getDateString()}.csv`, 'text/csv');
+}
+
+export function exportAIInsightsPDF(insights: RoundInsights, roundName: string): void {
+  const doc = new jsPDF();
+  let yPos = 20;
+  
+  // Header
+  doc.setFontSize(20);
+  doc.text('AI-Generated Insights Report', 20, yPos);
+  yPos += 10;
+  
+  doc.setFontSize(12);
+  doc.text(`Round: ${roundName.charAt(0).toUpperCase() + roundName.slice(1)}`, 20, yPos);
+  yPos += 7;
+  doc.text(`Generated: ${new Date(insights.generated_at).toLocaleString()}`, 20, yPos);
+  yPos += 15;
+  
+  // Executive Summary
+  doc.setFontSize(14);
+  doc.text('Executive Summary', 20, yPos);
+  yPos += 8;
+  
+  doc.setFontSize(10);
+  insights.executive_summary.forEach((item, index) => {
+    const lines = doc.splitTextToSize(`• ${item}`, 170);
+    lines.forEach((line: string) => {
+      if (yPos > 270) {
+        doc.addPage();
+        yPos = 20;
+      }
+      doc.text(line, 20, yPos);
+      yPos += 5;
+    });
+  });
+  yPos += 10;
+  
+  // Cohort Patterns
+  if (yPos > 250) {
+    doc.addPage();
+    yPos = 20;
+  }
+  
+  doc.setFontSize(14);
+  doc.text('Cohort-Wide Patterns', 20, yPos);
+  yPos += 10;
+  
+  const cohortData = insights.cohort_patterns.map(pattern => [
+    pattern.category,
+    pattern.finding,
+    `${pattern.percentage}%`,
+    pattern.significance.toUpperCase()
+  ]);
+  
+  autoTable(doc, {
+    head: [['Category', 'Finding', 'Percentage', 'Significance']],
+    body: cohortData,
+    startY: yPos,
+    styles: { fontSize: 8 },
+    headStyles: { fillColor: [59, 130, 246] }
+  });
+  
+  yPos = (doc as any).lastAutoTable.finalY + 15;
+  
+  // Outliers
+  if (insights.outliers.length > 0) {
+    if (yPos > 250) {
+      doc.addPage();
+      yPos = 20;
+    }
+    
+    doc.setFontSize(14);
+    doc.text('Outliers & Anomalies', 20, yPos);
+    yPos += 10;
+    
+    const outlierData = insights.outliers.map(outlier => [
+      outlier.startup_name,
+      outlier.type,
+      outlier.score.toFixed(2),
+      outlier.score_variance.toFixed(2),
+      outlier.explanation
+    ]);
+    
+    autoTable(doc, {
+      head: [['Startup', 'Type', 'Score', 'Variance', 'Explanation']],
+      body: outlierData,
+      startY: yPos,
+      styles: { fontSize: 7 },
+      headStyles: { fillColor: [59, 130, 246] },
+      columnStyles: { 4: { cellWidth: 60 } }
+    });
+    
+    yPos = (doc as any).lastAutoTable.finalY + 15;
+  }
+  
+  // Bias Check
+  if (insights.bias_check.length > 0) {
+    if (yPos > 250) {
+      doc.addPage();
+      yPos = 20;
+    }
+    
+    doc.setFontSize(14);
+    doc.text('Bias & Consistency Check', 20, yPos);
+    yPos += 10;
+    
+    const biasData = insights.bias_check.map(bias => [
+      bias.juror_name,
+      bias.pattern,
+      bias.avg_score_given.toFixed(2),
+      bias.cohort_avg.toFixed(2),
+      bias.deviation.toFixed(2),
+      bias.assessment
+    ]);
+    
+    autoTable(doc, {
+      head: [['Juror', 'Pattern', 'Avg Score', 'Cohort Avg', 'Deviation', 'Assessment']],
+      body: biasData,
+      startY: yPos,
+      styles: { fontSize: 7 },
+      headStyles: { fillColor: [59, 130, 246] }
+    });
+    
+    yPos = (doc as any).lastAutoTable.finalY + 15;
+  }
+  
+  // Risk Themes
+  if (insights.risk_themes.length > 0) {
+    if (yPos > 250) {
+      doc.addPage();
+      yPos = 20;
+    }
+    
+    doc.setFontSize(14);
+    doc.text('Common Risk Themes', 20, yPos);
+    yPos += 10;
+    
+    const riskData = insights.risk_themes.map(theme => [
+      theme.theme,
+      theme.frequency.toString(),
+      theme.examples.slice(0, 2).join('; ')
+    ]);
+    
+    autoTable(doc, {
+      head: [['Theme', 'Frequency', 'Examples']],
+      body: riskData,
+      startY: yPos,
+      styles: { fontSize: 8 },
+      headStyles: { fillColor: [59, 130, 246] },
+      columnStyles: { 2: { cellWidth: 80 } }
+    });
+  }
+  
+  // Footer
+  const pageCount = doc.getNumberOfPages();
+  for (let i = 1; i <= pageCount; i++) {
+    doc.setPage(i);
+    doc.setFontSize(8);
+    doc.setTextColor(150);
+    doc.text(
+      '🔒 Confidential - Internal Use Only | AI-Generated Analysis',
+      doc.internal.pageSize.getWidth() / 2,
+      doc.internal.pageSize.getHeight() - 10,
+      { align: 'center' }
+    );
+  }
+
+  doc.save(`ai-insights-${roundName}-${getDateString()}.pdf`);
 }

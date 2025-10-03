@@ -33,6 +33,7 @@ import {
   type StartupAnalytics as ExportStartupAnalytics
 } from "@/utils/reportExports";
 import { EvaluationDecisionReportCard } from "@/components/cm/EvaluationDecisionReportCard";
+import { AIInsightsReport } from "@/components/cm/AIInsightsReport";
 
 interface ReportingDocumentationProps {
   currentRound: 'screeningRound' | 'pitchingRound';
@@ -411,6 +412,9 @@ export const ReportingDocumentation = ({ currentRound }: ReportingDocumentationP
 
   return (
     <div className="space-y-6">
+      {/* AI Insights Report */}
+      <AIInsightsReport currentRound={currentRound} />
+      
       {/* Real-Time Analytics */}
       <Card>
         <CardHeader>
