@@ -6,6 +6,7 @@ export interface Startup {
   stage: string;
   verticals?: string[];
   regions?: string[];
+  description?: string;
 }
 
 export interface Juror {
@@ -35,6 +36,15 @@ export interface AutoAssignmentProposal {
     jurorName: string;
     fitScore: number;
     reasoning: string;
+    aiScore?: number;
+    aiConfidence?: number;
+    aiRecommendation?: string;
+    aiReasoning?: {
+      vertical_match: { score: number; explanation: string };
+      stage_match: { score: number; explanation: string };
+      region_match: { score: number; explanation: string };
+      contextual_fit: { score: number; explanation: string };
+    };
   }[];
 }
 
@@ -154,13 +164,14 @@ function calculateTargetAssignments(
 }
 
 /**
- * Generate auto-assignment proposals for unassigned startups
+ * Generate AI-enhanced auto-assignment proposals for unassigned startups
  */
 export async function generateAutoAssignments(
   unassignedStartups: Startup[],
   jurors: Juror[],
   existingAssignments: Assignment[],
-  roundName: 'screening' | 'pitching'
+  roundName: 'screening' | 'pitching',
+  useAI: boolean = true
 ): Promise<{
   proposals: AutoAssignmentProposal[];
   workloadDistribution: WorkloadDistribution[];
@@ -181,12 +192,55 @@ export async function generateAutoAssignments(
 
   // Process each unassigned startup
   for (const startup of unassignedStartups) {
+    let aiScores: any = null;
+
+    // Try AI-enhanced matchmaking if enabled
+    if (useAI) {
+      try {
+        const { data: aiData, error: aiError } = await supabase.functions.invoke('ai-matchmaking', {
+          body: {
+            startup: {
+              id: startup.id,
+              name: startup.name,
+              verticals: startup.verticals || [],
+              stage: startup.stage || 'N/A',
+              regions: startup.regions || [],
+              description: startup.description || ''
+            },
+            jurors: jurors.map(j => ({
+              id: j.id,
+              name: j.name,
+              company: j.company || '',
+              job_title: j.job_title || '',
+              target_verticals: j.target_verticals || [],
+              preferred_stages: j.preferred_stages || [],
+              preferred_regions: j.preferred_regions || []
+            })),
+            roundType: roundName
+          }
+        });
+
+        if (!aiError && aiData?.success && aiData?.scores) {
+          aiScores = aiData.scores;
+          console.log(`AI matchmaking success for ${startup.name}: ${aiScores.length} jurors scored`);
+        } else {
+          console.warn(`AI matchmaking skipped for ${startup.name}:`, aiError);
+        }
+      } catch (error) {
+        console.error(`AI matchmaking error for ${startup.name}:`, error);
+      }
+    }
+
     const jurorScores: Array<{
       juror: Juror;
       totalScore: number;
       fitScore: number;
       reasoning: string;
       workloadPenalty: number;
+      aiScore?: number;
+      aiConfidence?: number;
+      aiRecommendation?: string;
+      aiReasoning?: any;
     }> = [];
 
     // Calculate scores for each juror
@@ -207,7 +261,14 @@ export async function generateAutoAssignments(
         ? -2 * (currentLoad - targetAssignments) // Moderate penalty
         : 0;
       
-      const totalScore = fitScore + interestBonus + workloadPenalty;
+      // Get AI score if available
+      const aiMatch = aiScores?.find((s: any) => s.juror_id === juror.id);
+      const aiScore = aiMatch?.compatibility_score || 0;
+      
+      // Combine scores: 70% AI, 30% rule-based (if AI available)
+      const totalScore = aiScores 
+        ? (aiScore * 0.7) + ((fitScore + interestBonus) * 3 * 0.3) + workloadPenalty
+        : fitScore + interestBonus + workloadPenalty;
       
       let fullReasoning = reasoning;
       if (interestBonus > 0) {
@@ -222,7 +283,11 @@ export async function generateAutoAssignments(
         totalScore,
         fitScore,
         reasoning: fullReasoning,
-        workloadPenalty
+        workloadPenalty,
+        aiScore: aiMatch?.compatibility_score,
+        aiConfidence: aiMatch?.confidence,
+        aiRecommendation: aiMatch?.recommendation,
+        aiReasoning: aiMatch?.reasoning
       });
     }
 
@@ -240,11 +305,15 @@ export async function generateAutoAssignments(
     proposals.push({
       startupId: startup.id,
       startupName: startup.name,
-      proposedJurors: selectedJurors.map(({ juror, totalScore, reasoning }) => ({
+      proposedJurors: selectedJurors.map(({ juror, totalScore, reasoning, aiScore, aiConfidence, aiRecommendation, aiReasoning }) => ({
         jurorId: juror.id,
         jurorName: juror.name,
         fitScore: totalScore,
-        reasoning
+        reasoning,
+        aiScore,
+        aiConfidence,
+        aiRecommendation,
+        aiReasoning
       }))
     });
   }

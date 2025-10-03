@@ -6,8 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Search, Building2, Mail, User, Star, Target, MapPin } from "lucide-react";
+import { Search, Building2, Mail, User, Star, Target, MapPin, Sparkles, TrendingUp } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from '@/integrations/supabase/client';
 
 interface Startup {
   id: string;
@@ -62,9 +63,50 @@ export const StartupAssignmentModal = ({
   const [selectedJurorIds, setSelectedJurorIds] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [jurorAssignmentCounts, setJurorAssignmentCounts] = useState<Map<string, number>>(new Map());
+  const [aiScores, setAiScores] = useState<any>(null);
+  const [loadingAI, setLoadingAI] = useState(false);
+  const [useAI, setUseAI] = useState(true);
   const { toast } = useToast();
 
-  // Initialize selected jurors from existing assignments
+  // Fetch AI scores on modal open
+  useEffect(() => {
+    if (open && useAI && jurors.length > 0) {
+      setLoadingAI(true);
+      supabase.functions.invoke('ai-matchmaking', {
+        body: {
+          startup: {
+            id: startup.id,
+            name: startup.name,
+            verticals: startup.verticals || [],
+            stage: startup.stage || 'N/A',
+            regions: startup.regions || [],
+            description: startup.description || ''
+          },
+          jurors: jurors.map(j => ({
+            id: j.id,
+            name: j.name,
+            company: j.company || '',
+            job_title: j.job_title || '',
+            target_verticals: j.target_verticals || [],
+            preferred_stages: j.preferred_stages || [],
+            preferred_regions: j.preferred_regions || []
+          })),
+          roundType: currentRound === 'screeningRound' ? 'screening' : 'pitching'
+        }
+      }).then(({ data, error }) => {
+        setLoadingAI(false);
+        if (!error && data?.success && data?.scores) {
+          setAiScores(data.scores);
+          console.log('AI scores loaded:', data.scores.length);
+        } else {
+          console.warn('AI matchmaking failed, using rule-based only');
+        }
+      }).catch(err => {
+        console.error('AI matchmaking error:', err);
+        setLoadingAI(false);
+      });
+    }
+  }, [open, useAI]);
   useEffect(() => {
     setSelectedJurorIds(existingAssignments.map(a => a.juror_id));
   }, [existingAssignments]);
@@ -170,10 +212,19 @@ export const StartupAssignmentModal = ({
     return 4;
   };
 
-  // Sort jurors by fit score (highest first)
+  // Sort jurors by combined AI + rule-based score
   const sortedJurors = filteredJurors.sort((a, b) => {
     const scoreA = calculateFitScore(a).score;
     const scoreB = calculateFitScore(b).score;
+    
+    if (aiScores && useAI) {
+      const aiA = aiScores.find((s: any) => s.juror_id === a.id)?.compatibility_score || 0;
+      const aiB = aiScores.find((s: any) => s.juror_id === b.id)?.compatibility_score || 0;
+      const combinedA = (aiA * 0.7) + (scoreA * 3 * 0.3);
+      const combinedB = (aiB * 0.7) + (scoreB * 3 * 0.3);
+      return combinedB - combinedA;
+    }
+    
     return scoreB - scoreA;
   });
 
@@ -300,26 +351,48 @@ export const StartupAssignmentModal = ({
         {/* Selection Summary */}
         <div className="mb-4 p-3 bg-primary/5 rounded-lg">
           <div className="flex items-center justify-between">
-            <span className="text-sm font-medium">
-              Selected: {selectedJurorIds.length} jurors
-            </span>
-            <span className="text-sm text-muted-foreground">
-              {selectedJurorIds.length >= 3 ? (
-                <span className="text-success">✓ Minimum requirement met</span>
-              ) : selectedJurorIds.length > 0 ? (
-                <span className="text-warning">⚠️ Below minimum (3 recommended)</span>
-              ) : (
-                <span className="text-muted-foreground">No jurors selected</span>
+            <div>
+              <span className="text-sm font-medium">
+                Selected: {selectedJurorIds.length} jurors
+              </span>
+              {loadingAI && (
+                <span className="ml-2 text-xs text-muted-foreground">
+                  <Sparkles className="w-3 h-3 inline mr-1" />
+                  AI analyzing...
+                </span>
               )}
-            </span>
+            </div>
+            <div className="flex items-center gap-3">
+              <label className="flex items-center gap-2 text-xs cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={useAI}
+                  onChange={(e) => setUseAI(e.target.checked)}
+                  className="rounded"
+                />
+                <Sparkles className="w-3 h-3" />
+                AI Enhanced
+              </label>
+              <span className="text-sm text-muted-foreground">
+                {selectedJurorIds.length >= 3 ? (
+                  <span className="text-success">✓ Minimum requirement met</span>
+                ) : selectedJurorIds.length > 0 ? (
+                  <span className="text-warning">⚠️ Below minimum (3 recommended)</span>
+                ) : (
+                  <span className="text-muted-foreground">No jurors selected</span>
+                )}
+              </span>
+            </div>
           </div>
         </div>
 
         {/* Jurors List */}
         <div className="space-y-3 max-h-96 overflow-y-auto">
-          {sortedJurors.map((juror) => {
+          {sortedJurors.map((juror, index) => {
             const isSelected = selectedJurorIds.includes(juror.id);
             const { score, matches, breakdown } = calculateFitScore(juror);
+            const aiMatch = aiScores?.find((s: any) => s.juror_id === juror.id);
+            const isAITopPick = useAI && aiScores && index < 3;
             
             return (
               <div
@@ -341,10 +414,21 @@ export const StartupAssignmentModal = ({
                       <div className="flex items-center gap-2">
                         <User className="w-4 h-4 text-muted-foreground" />
                         <span className="font-medium">{juror.name}</span>
+                        {isAITopPick && (
+                          <Badge variant="secondary" className="text-xs">
+                            <Sparkles className="w-3 h-3 mr-1" />
+                            AI Pick
+                          </Badge>
+                        )}
                       </div>
                       {/* Prominent Fit Score Badge */}
                       <div className={`px-3 py-1 rounded-full border font-semibold text-sm ${getScoreColor(score)}`}>
                         {score}/10
+                        {aiMatch && (
+                          <span className="ml-2 text-xs opacity-70">
+                            AI: {Math.round(aiMatch.compatibility_score)}
+                          </span>
+                        )}
                       </div>
                     </div>
                     
@@ -357,10 +441,33 @@ export const StartupAssignmentModal = ({
                       </div>
                     </div>
 
+                    {/* AI Reasoning */}
+                    {aiMatch && useAI && (
+                      <div className="mt-3 p-2 bg-blue-50 border border-blue-200 rounded text-xs">
+                        <div className="font-semibold text-blue-900 mb-1 flex items-center gap-1">
+                          <TrendingUp className="w-3 h-3" />
+                          AI Analysis ({aiMatch.recommendation || 'Recommended'})
+                          <span className="ml-auto text-xs opacity-70">
+                            Confidence: {Math.round((aiMatch.confidence || 0) * 100)}%
+                          </span>
+                        </div>
+                        {aiMatch.reasoning && (
+                          <div className="space-y-1 text-blue-800">
+                            {aiMatch.reasoning.vertical_match && (
+                              <div>• {aiMatch.reasoning.vertical_match.explanation}</div>
+                            )}
+                            {aiMatch.reasoning.contextual_fit && (
+                              <div>• {aiMatch.reasoning.contextual_fit.explanation}</div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
                     {/* Score Breakdown */}
                     {score > 0 && (
                       <div className="mt-3">
-                        <div className="text-xs text-muted-foreground mb-2">Fit Score Breakdown:</div>
+                        <div className="text-xs text-muted-foreground mb-2">Rule-based Score Breakdown:</div>
                         <div className="flex flex-wrap gap-2">
                           <div className={`flex items-center gap-1 px-2 py-1 rounded text-xs ${matches.region ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
                             <MapPin className="w-2 h-2" />
@@ -387,7 +494,7 @@ export const StartupAssignmentModal = ({
                     )}
 
                     {/* Zero Score Message */}
-                    {score === 0 && (
+                    {score === 0 && !aiMatch && (
                       <div className="mt-2 text-xs text-muted-foreground italic">
                         No criteria matches found
                       </div>
