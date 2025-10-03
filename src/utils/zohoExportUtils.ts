@@ -16,8 +16,6 @@ interface Startup {
   team_size?: number;
   funding_goal?: number;
   funding_raised?: number;
-  total_investment_received?: number;
-  investment_currency?: string;
   linkedin_url?: string;
   pitch_deck_url?: string;
   demo_url?: string;
@@ -312,7 +310,7 @@ export async function generateStartupsCSV(): Promise<string> {
   if (error) throw error;
 
   const rows: string[] = [
-    'Account Name,Website,Phone,Industry,Description,Stage,Country,Region,Business_Model,Founded_Year,Team_Size,Funding_Goal,Funding_Raised,Total_Investment,Currency,LinkedIn,Aurora_Screening_Avg_Score,Aurora_Pitching_Avg_Score,Aurora_Overall_Avg_Score,Aurora_Profile_Link,Aurora_ID,Notes'
+    'Account Name,Website,Phone,Industry,Description,Stage,Country,Region,Business_Model,Founded_Year,Team_Size,Funding_Goal,Funding_Raised,LinkedIn,Aurora_Screening_Avg_Score,Aurora_Pitching_Avg_Score,Aurora_Overall_Avg_Score,Aurora_Profile_Link,Aurora_ID,Notes'
   ];
 
   for (let i = 0; i < (startups?.length || 0); i++) {
@@ -364,8 +362,6 @@ export async function generateStartupsCSV(): Promise<string> {
       escapeCSVField(startup.team_size || ''),
       escapeCSVField(startup.funding_goal || ''),
       escapeCSVField(startup.funding_raised || ''),
-      escapeCSVField(startup.total_investment_received || ''),
-      escapeCSVField(startup.investment_currency || ''),
       escapeCSVField(startup.linkedin_url || ''),
       screeningAvg ? screeningAvg.toFixed(2) : '',
       pitchingAvg ? pitchingAvg.toFixed(2) : '',

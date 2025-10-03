@@ -54,7 +54,6 @@ interface Startup {
   region?: string;
   regions?: string[];
   verticals?: string[];
-  investment_currency?: string;
   _aiSuggestions?: AISuggestion[];
 }
 
@@ -259,7 +258,6 @@ export function DraftModal({ open, onOpenChange, draftData, onImportComplete }: 
     }
   };
 
-  const currencies = ['GBP', 'USD', 'EUR'];
   const statuses = ['pending', 'under_review', 'selected', 'rejected'];
 
   const toggleVertical = (index: number, vertical: string) => {
@@ -696,23 +694,6 @@ export function DraftModal({ open, onOpenChange, draftData, onImportComplete }: 
                         onChange={(e) => updateEntry(index, 'funding_raised', parseInt(e.target.value) || undefined)}
                         placeholder="Amount already raised"
                       />
-                    </div>
-
-                    <div>
-                      <label className="text-sm font-medium">Currency</label>
-                      <Select
-                        value={entry.investment_currency || 'GBP'}
-                        onValueChange={(value) => updateEntry(index, 'investment_currency', value)}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {currencies.map(currency => (
-                            <SelectItem key={currency} value={currency}>{currency}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
                     </div>
 
                     <div>

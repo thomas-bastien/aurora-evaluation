@@ -28,8 +28,6 @@ interface Startup {
   founder_names: string[];
   status: string;
   linkedin_url?: string;
-  total_investment_received?: number;
-  investment_currency?: string;
   business_model?: string[];
   verticals?: string[];
   other_vertical_description?: string;
@@ -70,8 +68,7 @@ export function StartupFormModal({
       status: 'pending',
       verticals: [],
       regions: [],
-      business_model: [],
-      investment_currency: 'GBP'
+      business_model: []
     }
   );
 
@@ -87,8 +84,7 @@ export function StartupFormModal({
         status: 'pending',
         verticals: [],
         regions: [],
-        business_model: [],
-        investment_currency: 'GBP'
+        business_model: []
       });
     }
   }, [initialData, mode, open]);
@@ -101,7 +97,7 @@ export function StartupFormModal({
     };
     onSubmit(normalizedData);
     if (mode === 'create') {
-      setFormData({ founder_names: [], status: 'pending', verticals: [], regions: [], business_model: [], investment_currency: 'GBP' });
+      setFormData({ founder_names: [], status: 'pending', verticals: [], regions: [], business_model: [] });
       setFounderInput('');
     }
     onOpenChange(false);
@@ -473,43 +469,6 @@ export function StartupFormModal({
                 value={formData.funding_raised || ''}
                 onChange={(e) => setFormData(prev => ({ ...prev, funding_raised: parseInt(e.target.value) || undefined }))}
               />
-            </div>
-          </div>
-
-          {/* Total Investment Received */}
-          <div>
-            <Label htmlFor="total_investment">Total Investment Received</Label>
-            <div className="flex gap-2">
-              <div className="flex-1">
-                <Input
-                  id="total_investment"
-                  type="number"
-                  min="0"
-                  value={formData.total_investment_received || ''}
-                  onChange={(e) => setFormData(prev => ({ 
-                    ...prev, 
-                    total_investment_received: parseInt(e.target.value) || undefined 
-                  }))}
-                  placeholder="Investment amount"
-                />
-              </div>
-              <div className="w-32">
-                <Select
-                  value={formData.investment_currency || 'GBP'}
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, investment_currency: value }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {CURRENCIES.map(currency => (
-                      <SelectItem key={currency.code} value={currency.code}>
-                        {currency.symbol} {currency.code}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
             </div>
           </div>
 

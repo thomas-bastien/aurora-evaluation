@@ -35,8 +35,6 @@ interface Startup {
   status: string | null;
   founder_names: string[] | null;
   linkedin_url: string | null;
-  total_investment_received: number | null;
-  investment_currency: string | null;
   business_model: string[] | null;
   verticals: string[] | null;
   other_vertical_description: string | null;
@@ -211,29 +209,11 @@ export default function StartupsList() {
       }
     }
 
-    if (investmentMinFilter) {
-      const min = parseFloat(investmentMinFilter);
-      if (!isNaN(min)) {
-        filtered = filtered.filter(startup => 
-          startup.total_investment_received && startup.total_investment_received >= min
-        );
-      }
-    }
-
-    if (investmentMaxFilter) {
-      const max = parseFloat(investmentMaxFilter);
-      if (!isNaN(max)) {
-        filtered = filtered.filter(startup => 
-          startup.total_investment_received && startup.total_investment_received <= max
-        );
-      }
-    }
-
     setFilteredStartups(filtered);
   }, [
     startups, searchTerm, industryFilter, stageFilter, statusFilter, 
     businessModelFilter, verticalFilter, regionFilter, hasLinkedInFilter, 
-    investmentMinFilter, investmentMaxFilter, roundStatuses, selectedRound
+    roundStatuses, selectedRound
   ]);
 
   const formatFunding = (amount: number | null, currency: string | null = 'USD') => {
@@ -800,12 +780,6 @@ export default function StartupsList() {
                   </div>
                   
                   <div className="space-y-2">
-                    {startup.total_investment_received && (
-                      <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                        <DollarSign className="h-3 w-3" />
-                        <span>{formatFunding(startup.total_investment_received, startup.investment_currency)} raised</span>
-                      </div>
-                    )}
                     {startup.funding_goal && (
                       <div className="flex items-center gap-1 text-sm text-muted-foreground">
                         <DollarSign className="h-3 w-3" />

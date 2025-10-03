@@ -37,8 +37,6 @@ interface Startup {
   contact_phone: string | null;
   key_metrics: any;
   linkedin_url: string | null;
-  total_investment_received: number | null;
-  investment_currency: string | null;
   business_model: string[] | null;
   verticals: string[] | null;
   other_vertical_description: string | null;
@@ -311,14 +309,6 @@ const StartupProfile = () => {
                       <div className="flex items-center gap-2">
                         <DollarSign className="w-4 h-4 text-muted-foreground" />
                         <span className="text-sm">{formatFunding(startup.funding_raised)} raised</span>
-                      </div>
-                    )}
-                    {startup.total_investment_received && (
-                      <div className="flex items-center gap-2">
-                        <DollarSign className="w-4 h-4 text-muted-foreground" />
-                        <span className="text-sm">
-                          {formatFunding(startup.total_investment_received, startup.investment_currency)} total investment
-                        </span>
                       </div>
                     )}
                     {startup.business_model && (
