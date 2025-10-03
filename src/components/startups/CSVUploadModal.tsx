@@ -201,6 +201,16 @@ export function CSVUploadModal({ open, onOpenChange, onDataParsed }: CSVUploadMo
                     (startup as any)[mappedField] = String(value).trim();
                     if (rowIndex === 0) console.log(`  ✓ Countries expansion plan set to: "${(startup as any)[mappedField]}"`);
                     break;
+                  case 'internal_score':
+                    // Scale down from 0-100 to 0-10 and parse as number
+                    const scoreValue = parseNumericField(value);
+                    if (scoreValue !== undefined) {
+                      (startup as any)[mappedField] = scoreValue / 10;
+                      if (rowIndex === 0) {
+                        console.log(`  ✓ Internal score scaled: ${value} → ${(startup as any)[mappedField]}`);
+                      }
+                    }
+                    break;
                   case 'status':
                     startup.status = String(value) || 'pending';
                     break;
