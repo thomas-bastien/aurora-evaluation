@@ -188,9 +188,6 @@ const StartupProfile = () => {
               </Button>
               <div>
                 <h1 className="text-3xl font-bold text-foreground mb-2">{startup.name}</h1>
-                <p className="text-lg text-muted-foreground mb-4">
-                  {startup.description || 'No description available'}
-                </p>
                 <div className="flex items-center gap-4 mb-4">
                   {startup.business_model && startup.business_model.length > 0 && (
                     <div className="flex gap-2">
