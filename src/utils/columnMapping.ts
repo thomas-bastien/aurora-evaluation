@@ -129,8 +129,8 @@ export function mapStartupColumn(columnName: string): string | null {
     return 'description';
   }
   
-  // "Funding Stage" → stage
-  if (lower.includes('funding') && lower.includes('stage')) {
+  // "Funding Stage" or "Startup stage" → stage
+  if ((lower.includes('startup') || lower.includes('funding')) && lower.includes('stage')) {
     return 'stage';
   }
   
@@ -144,9 +144,9 @@ export function mapStartupColumn(columnName: string): string | null {
     return 'location';
   }
   
-  // "Choose region" or "Select region" → region (single text)
-  if (lower === 'choose region' || lower === 'select region' || 
-      ((lower.includes('choose') || lower.includes('select')) && lower.includes('region'))) {
+  // "Choose region" or "Select region" or just "Region" → region (single text)
+  if (lower === 'choose region' || lower === 'select region' || lower === 'region' ||
+      ((lower.includes('choose') || lower.includes('select')) && lower.includes('region') && !lower.includes('s'))) {
     return 'region';
   }
   
@@ -161,8 +161,8 @@ export function mapStartupColumn(columnName: string): string | null {
     return 'verticals';
   }
   
-  // "Describe business model" → business_model
-  if (lower.includes('describe') && lower.includes('business')) {
+  // "Describe business model" or "Business model" → business_model
+  if (lower.includes('business') && lower.includes('model')) {
     return 'business_model';
   }
   
@@ -217,8 +217,9 @@ export function mapStartupColumn(columnName: string): string | null {
     return 'serviceable_obtainable_market';
   }
   
-  // Full-time team members (check FIRST before general "team")
-  if ((lower.includes('full') || lower.includes('full-time')) && lower.includes('team')) {
+  // Full-time team members - expanded to catch more variations
+  if ((lower.includes('full') || lower.includes('full-time')) && 
+      (lower.includes('team') || (lower.includes('engaged') && lower.includes('company')))) {
     return 'full_time_team_members';
   }
   
@@ -232,8 +233,8 @@ export function mapStartupColumn(columnName: string): string | null {
     return 'countries_operating';
   }
   
-  // Countries expansion plan
-  if (lower.includes('countries') && (lower.includes('expansion') || lower.includes('expand') || lower.includes('plan'))) {
+  // Countries expansion plan - handle "enter" keyword
+  if (lower.includes('countries') && (lower.includes('expansion') || lower.includes('expand') || lower.includes('plan') || lower.includes('enter'))) {
     return 'countries_expansion_plan';
   }
   

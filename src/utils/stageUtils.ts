@@ -8,6 +8,9 @@ export function normalizeStage(stage: string | null | undefined): string | null 
   switch (normalized) {
     case 'pre-seed':
     case 'preseed':
+    case 'pre seed':
+    case 'pre-seed (with functionable mvp)':
+    case 'pre seed (with functionable mvp)':
       return 'Pre-Seed';
     case 'seed':
       return 'Seed';
