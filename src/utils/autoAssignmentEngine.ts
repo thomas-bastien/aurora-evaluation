@@ -3,9 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 export interface Startup {
   id: string;
   name: string;
-  industry: string;
   stage: string;
-  region?: string;
   verticals?: string[];
   regions?: string[];
 }
@@ -54,25 +52,28 @@ export interface WorkloadDistribution {
 
 /**
  * Calculate 10-point compatibility score between juror and startup
+ * Aligned with matchmakingUtils.ts logic but with different point scale
  */
 export function calculateFitScore(juror: Juror, startup: Startup): { score: number; reasoning: string } {
   let score = 0;
   const reasons: string[] = [];
 
-  // Region match (+4 points)
-  if (juror.preferred_regions?.length && startup.region) {
-    if (juror.preferred_regions.includes(startup.region)) {
-      score += 4;
-      reasons.push(`Region match (${startup.region})`);
-    }
+  // Region match (+4 points) - check if ANY startup region matches
+  const startupRegions = startup.regions || [];
+  const jurorRegions = juror.preferred_regions || [];
+  const regionMatches = startupRegions.filter(r => jurorRegions.includes(r));
+  if (regionMatches.length > 0) {
+    score += 4;
+    reasons.push(`Region match (${regionMatches.join(', ')})`);
   }
 
-  // Vertical/Industry match (+3 points)
-  if (juror.target_verticals?.length && startup.industry) {
-    if (juror.target_verticals.includes(startup.industry)) {
-      score += 3;
-      reasons.push(`Industry match (${startup.industry})`);
-    }
+  // Vertical match (+3 points) - check if ANY startup vertical matches
+  const startupVerticals = startup.verticals || [];
+  const jurorVerticals = juror.target_verticals || [];
+  const verticalMatches = startupVerticals.filter(v => jurorVerticals.includes(v));
+  if (verticalMatches.length > 0) {
+    score += 3;
+    reasons.push(`Vertical match (${verticalMatches.join(', ')})`);
   }
 
   // Stage match (+3 points)

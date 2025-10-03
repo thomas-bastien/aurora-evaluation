@@ -54,7 +54,8 @@ export const REGION_OPTIONS = [
   'Europe',
   'Latin America (LATAM)',
   'Middle East & North Africa (MENA)',
-  'North America'
+  'North America',
+  'Other'
 ] as const;
 
 export type AuroraVertical = typeof AURORA_VERTICALS[number];
