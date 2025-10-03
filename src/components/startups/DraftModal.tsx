@@ -73,11 +73,14 @@ export function DraftModal({ open, onOpenChange, draftData, onImportComplete }: 
   const [validationErrors, setValidationErrors] = useState<Record<number, ValidationError[]>>({});
   const [rejectedSuggestions, setRejectedSuggestions] = useState<Set<string>>(new Set());
   const [isImporting, setIsImporting] = useState(false);
+  const [selectedIndices, setSelectedIndices] = useState<Set<number>>(new Set());
   const { toast } = useToast();
 
   useEffect(() => {
     setEditableData([...draftData]);
     validateAllEntries([...draftData]);
+    // Select all by default
+    setSelectedIndices(new Set(draftData.map((_, idx) => idx)));
   }, [draftData]);
 
   const validateEntry = (entry: Partial<Startup>, index: number): ValidationError[] => {
@@ -207,6 +210,33 @@ export function DraftModal({ open, onOpenChange, draftData, onImportComplete }: 
     });
   };
 
+  const toggleSelection = (index: number) => {
+    setSelectedIndices(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(index)) {
+        newSet.delete(index);
+      } else {
+        newSet.add(index);
+      }
+      return newSet;
+    });
+  };
+
+  const selectAll = () => {
+    setSelectedIndices(new Set(editableData.map((_, idx) => idx)));
+  };
+
+  const deselectAll = () => {
+    setSelectedIndices(new Set());
+  };
+
+  const selectAllValid = () => {
+    const validIndices = editableData
+      .map((_, idx) => idx)
+      .filter(idx => !validationErrors[idx]);
+    setSelectedIndices(new Set(validIndices));
+  };
+
   const getConfidenceBadge = (confidence: number) => {
     if (confidence >= 0.9) {
       return <Badge variant="default" className="bg-green-500">High Confidence</Badge>;
@@ -218,29 +248,40 @@ export function DraftModal({ open, onOpenChange, draftData, onImportComplete }: 
   };
 
   const handleImport = async () => {
-    if (hasErrors) return;
+    if (selectedIndices.size === 0) {
+      toast({
+        title: "No startups selected",
+        description: "Please select at least one startup to import.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     setIsImporting(true);
     try {
-      // Filter out entries without names and ensure required fields, remove AI metadata
-      const validData = editableData.filter(entry => entry.name?.trim()).map(entry => {
-        const { _aiSuggestions, ...cleanEntry } = entry;
-        return {
-          ...cleanEntry,
-          name: cleanEntry.name!,
-          status: cleanEntry.status || 'pending'
-        };
-      });
+      // Filter by selected indices and valid names, remove AI metadata
+      const selectedData = editableData
+        .map((entry, idx) => ({ entry, idx }))
+        .filter(({ idx }) => selectedIndices.has(idx))
+        .map(({ entry }) => {
+          const { _aiSuggestions, ...cleanEntry } = entry;
+          return {
+            ...cleanEntry,
+            name: cleanEntry.name!,
+            status: cleanEntry.status || 'pending'
+          };
+        })
+        .filter(entry => entry.name?.trim());
 
       const { error } = await supabase
         .from('startups')
-        .insert(validData);
+        .insert(selectedData);
 
       if (error) throw error;
 
       toast({
         title: "Import successful",
-        description: `${editableData.length} startups have been imported.`,
+        description: `${selectedData.length} of ${editableData.length} startups imported successfully.`,
       });
 
       onImportComplete();
@@ -258,6 +299,10 @@ export function DraftModal({ open, onOpenChange, draftData, onImportComplete }: 
   };
 
   const statuses = ['pending', 'under_review', 'selected', 'rejected'];
+
+  const selectedValidEntries = Array.from(selectedIndices).filter(idx => !validationErrors[idx]).length;
+  const allSelected = selectedIndices.size === editableData.length && editableData.length > 0;
+  const someSelected = selectedIndices.size > 0 && selectedIndices.size < editableData.length;
 
   const toggleVertical = (index: number, vertical: string) => {
     const newData = [...editableData];
@@ -295,6 +340,39 @@ export function DraftModal({ open, onOpenChange, draftData, onImportComplete }: 
         </DialogHeader>
 
         <div className="space-y-4">
+          {/* Selection Controls */}
+          <div className="flex items-center justify-between gap-4 p-3 bg-muted/50 rounded-lg">
+            <div className="flex items-center gap-3">
+              <Checkbox
+                id="select-all"
+                checked={allSelected}
+                ref={(el) => {
+                  if (el) {
+                    (el as any).indeterminate = someSelected;
+                  }
+                }}
+                onCheckedChange={(checked) => {
+                  if (checked) {
+                    selectAll();
+                  } else {
+                    deselectAll();
+                  }
+                }}
+              />
+              <label htmlFor="select-all" className="text-sm font-medium cursor-pointer">
+                Select All ({selectedIndices.size} of {editableData.length} selected)
+              </label>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                onClick={selectAllValid}
+                variant="outline"
+                size="sm"
+              >
+                Select Valid Only
+              </Button>
+            </div>
+          </div>
           {totalSuggestions > 0 && (
             <Alert className="bg-primary/5 border-primary/20">
               <Sparkles className="h-4 w-4 text-primary" />
@@ -332,8 +410,21 @@ export function DraftModal({ open, onOpenChange, draftData, onImportComplete }: 
               );
 
               return (
-                <div key={index} className={`border rounded-lg p-4 ${hasEntryErrors ? 'border-destructive' : 'border-border'}`}>
-                  <div className="flex items-center gap-2 mb-4">
+                <div 
+                  key={index} 
+                  className={`border rounded-lg p-4 transition-colors ${
+                    hasEntryErrors ? 'border-destructive' : 
+                    selectedIndices.has(index) ? 'bg-accent/5 border-accent' : 
+                    'bg-background opacity-60 border-border'
+                  }`}
+                >
+                  <div className="flex items-center gap-3 mb-4">
+                    <Checkbox
+                      id={`select-${index}`}
+                      checked={selectedIndices.has(index)}
+                      onCheckedChange={() => toggleSelection(index)}
+                      disabled={hasEntryErrors}
+                    />
                     <h3 className="text-lg font-semibold">
                       {entry.name || `Startup ${index + 1}`}
                     </h3>
@@ -740,10 +831,10 @@ export function DraftModal({ open, onOpenChange, draftData, onImportComplete }: 
             </Button>
             <Button 
               onClick={handleImport} 
-              disabled={hasErrors || isImporting}
+              disabled={selectedValidEntries === 0 || isImporting}
               className="min-w-24"
             >
-              {isImporting ? 'Importing...' : `Import ${validEntries} Startups`}
+              {isImporting ? 'Importing...' : `Import ${selectedValidEntries} of ${validEntries} Startups`}
             </Button>
           </div>
         </div>
