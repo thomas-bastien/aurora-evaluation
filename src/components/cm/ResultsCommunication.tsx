@@ -167,7 +167,7 @@ export const ResultsCommunication = ({ currentRound }: ResultsCommunicationProps
           id: startup.id,
           name: startup.name,
           email: startup.contact_email || 'no-email@example.com',
-          industry: startup.industry || 'N/A',
+          verticals: startup.verticals?.join(', ') || 'N/A',
           averageScore,
           isSelected: roundStatus === 'selected',
           roundStatus,

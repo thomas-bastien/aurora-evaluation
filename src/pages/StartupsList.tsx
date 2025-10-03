@@ -173,7 +173,7 @@ export default function StartupsList() {
     }
 
     if (industryFilter && industryFilter !== 'all') {
-      filtered = filtered.filter(startup => startup.industry === industryFilter);
+      filtered = filtered.filter(startup => startup.verticals?.includes(industryFilter));
     }
 
     if (stageFilter && stageFilter !== 'all') {

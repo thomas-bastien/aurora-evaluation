@@ -27,13 +27,13 @@ interface AssignedStartup {
   name: string;
   description: string;
   verticalsText: string;
+  regionsText: string;
   stage: string;
   contact_email: string;
   website: string;
   pitch_deck_url: string;
   demo_url: string;
   location: string;
-  region: string;
   country: string;
   linkedin_url: string;
   evaluation_status: 'not_started' | 'draft' | 'completed';
@@ -135,10 +135,10 @@ export const StartupsEvaluationList = ({ startups, loading, onEvaluationUpdate, 
                         {startup.stage}
                       </Badge>
                     )}
-                    {startup.region && (
+                    {startup.regionsText && (
                       <Badge variant="outline">
                         <MapPin className="w-3 h-3 mr-1" />
-                        {startup.region}
+                        {startup.regionsText}
                       </Badge>
                     )}
                     {startup.country && (

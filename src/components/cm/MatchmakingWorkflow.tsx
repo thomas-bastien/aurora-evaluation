@@ -983,8 +983,8 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-2">
                           <h4 className="font-semibold">{startup.name}</h4>
-                          <Badge variant={startup.industry ? "secondary" : "outline"}>
-                            {startup.industry || "No Industry"}
+                          <Badge variant={(startup.verticals?.length > 0) ? "secondary" : "outline"}>
+                            {startup.verticals?.join(', ') || "No Verticals"}
                           </Badge>
                           <Badge variant={startup.stage ? "outline" : "secondary"}>
                             {startup.stage || "No Stage"}

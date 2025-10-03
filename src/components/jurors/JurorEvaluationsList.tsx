@@ -27,7 +27,7 @@ interface Evaluation {
   startup: {
     id: string;
     name: string;
-    industry: string | null;
+    verticals: string[] | null;
     stage: string | null;
   } | null;
 }
@@ -146,8 +146,8 @@ export function JurorEvaluationsList({ jurorUserId }: JurorEvaluationsListProps)
               <Building className="h-4 w-4 text-muted-foreground" />
               <div>
                 <p className="font-medium text-sm">{evaluation.startup?.name || 'Unknown Startup'}</p>
-                {evaluation.startup?.industry && (
-                  <p className="text-xs text-muted-foreground">{evaluation.startup.industry}</p>
+                {evaluation.startup?.verticals && evaluation.startup.verticals.length > 0 && (
+                  <p className="text-xs text-muted-foreground">{evaluation.startup.verticals.join(', ')}</p>
                 )}
               </div>
             </div>

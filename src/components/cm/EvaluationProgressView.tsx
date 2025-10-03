@@ -29,10 +29,10 @@ interface StartupEvaluation {
   id: string;
   name: string;
   description: string;
-  industry: string;
+  verticals: string[];
+  regions: string[];
   stage: string;
   location: string;
-  region: string;
   evaluationsReceived: number;
   totalAssigned: number;
   averageScore: number | null;
@@ -43,7 +43,7 @@ interface StartupEvaluation {
   lastUpdated: string;
 }
 
-type SortField = 'rank' | 'name' | 'averageScore' | 'evaluationsReceived' | 'stage' | 'region';
+type SortField = 'rank' | 'name' | 'averageScore' | 'evaluationsReceived' | 'stage';
 type SortDirection = 'asc' | 'desc';
 
 interface EvaluationProgressViewProps {
@@ -238,10 +238,10 @@ export const EvaluationProgressView = ({ currentRound = 'screening' }: Evaluatio
           id: startup.id,
           name: startup.name,
           description: startup.description || '',
-          industry: startup.industry || 'N/A',
+          verticals: startup.verticals || [],
+          regions: startup.regions || [],
           stage: startup.stage || 'N/A',
           location: startup.location || 'N/A',
-          region: startup.region || 'N/A',
           evaluationsReceived: submittedEvaluations.length,
           totalAssigned: assignments.length,
           averageScore,
@@ -291,7 +291,7 @@ export const EvaluationProgressView = ({ currentRound = 'screening' }: Evaluatio
     if (searchTerm) {
       filtered = filtered.filter(startup => 
         startup.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        startup.industry.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        startup.verticals.join(' ').toLowerCase().includes(searchTerm.toLowerCase()) ||
         startup.description.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
@@ -301,7 +301,7 @@ export const EvaluationProgressView = ({ currentRound = 'screening' }: Evaluatio
     }
 
     if (regionFilter !== 'all') {
-      filtered = filtered.filter(startup => startup.region === regionFilter);
+      filtered = filtered.filter(startup => startup.regions.includes(regionFilter));
     }
 
     if (statusFilter !== 'all') {
@@ -409,7 +409,7 @@ export const EvaluationProgressView = ({ currentRound = 'screening' }: Evaluatio
   }
 
   const uniqueStages = [...new Set(startups.map(s => s.stage))].filter(s => s !== 'N/A');
-  const uniqueRegions = [...new Set(startups.map(s => s.region))].filter(r => r !== 'N/A');
+  const uniqueRegions = [...new Set(startups.flatMap(s => s.regions))].filter(r => r && r !== 'N/A');
 
   return (
     <TooltipProvider>
@@ -519,7 +519,7 @@ export const EvaluationProgressView = ({ currentRound = 'screening' }: Evaluatio
                 <SortableHeader field="stage">Stage</SortableHeader>
               </div>
               <div className="col-span-1">
-                <SortableHeader field="region">Region</SortableHeader>
+                <span className="text-sm font-medium text-muted-foreground">Regions</span>
               </div>
               <div className="col-span-2">
                 <SortableHeader field="evaluationsReceived">Evaluations</SortableHeader>
@@ -545,14 +545,14 @@ export const EvaluationProgressView = ({ currentRound = 'screening' }: Evaluatio
                   <div className="col-span-3">
                     <div>
                       <h4 className="font-semibold text-foreground">{startup.name}</h4>
-                      <p className="text-sm text-muted-foreground">{startup.industry}</p>
+                      <p className="text-sm text-muted-foreground">{startup.verticals.join(', ') || 'N/A'}</p>
                     </div>
                   </div>
                   <div className="col-span-1">
                     <Badge variant="outline">{startup.stage}</Badge>
                   </div>
                   <div className="col-span-1">
-                    <span className="text-sm">{startup.region}</span>
+                    <span className="text-sm">{startup.regions.join(', ') || 'N/A'}</span>
                   </div>
                   <div className="col-span-2">
                     <div className="flex items-center gap-2">

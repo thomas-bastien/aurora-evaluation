@@ -19,13 +19,13 @@ interface AssignedStartup {
   name: string;
   description: string;
   verticalsText: string;
+  regionsText: string;
   stage: string;
   contact_email: string;
   website: string;
   pitch_deck_url: string;
   demo_url: string;
   location: string;
-  region: string;
   country: string;
   linkedin_url: string;
   evaluation_status: 'not_started' | 'draft' | 'completed';
@@ -89,7 +89,7 @@ const EvaluationDashboard = () => {
             pitch_deck_url,
             demo_url,
             location,
-            region,
+            regions,
             country,
             linkedin_url
           )
@@ -126,13 +126,13 @@ const EvaluationDashboard = () => {
           name: startup.name,
           description: startup.description || '',
           verticalsText: Array.isArray(startup.verticals) ? startup.verticals.join(', ') : '',
+          regionsText: Array.isArray(startup.regions) ? startup.regions.join(', ') : '',
           stage: startup.stage || '',
           contact_email: startup.contact_email || '',
           website: startup.website || '',
           pitch_deck_url: startup.pitch_deck_url || '',
           demo_url: startup.demo_url || '',
           location: startup.location || '',
-          region: startup.region || '',
           country: startup.country || '',
           linkedin_url: startup.linkedin_url || '',
           evaluation_status,

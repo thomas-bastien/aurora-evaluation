@@ -17,14 +17,14 @@ export const useRoundData = (roundName: string) => {
               .from('screening_evaluations')
               .select(`
                 *,
-                startups!startup_id(id, name, industry, stage, region, status),
+                startups!startup_id(id, name, verticals, regions, stage, location, status),
                 jurors!evaluator_id(id, name, email, company)
               `)
           : supabase
               .from('pitching_evaluations')
               .select(`
                 *,
-                startups!startup_id(id, name, industry, stage, region, status),
+                startups!startup_id(id, name, verticals, regions, stage, location, status),
                 jurors!evaluator_id(id, name, email, company)
               `),
         roundName === 'screening'
@@ -32,14 +32,14 @@ export const useRoundData = (roundName: string) => {
               .from('screening_assignments')
               .select(`
                 *,
-                startups!startup_id(id, name, industry, stage, region, status),
+                startups!startup_id(id, name, verticals, regions, stage, location, status),
                 jurors!juror_id(id, name, email, company)
               `)
           : supabase
               .from('pitching_assignments')
               .select(`
                 *,
-                startups!startup_id(id, name, industry, stage, region, status),
+                startups!startup_id(id, name, verticals, regions, stage, location, status),
                 jurors!juror_id(id, name, email, company)
               `)
       ]);
@@ -125,7 +125,7 @@ export const useRoundData = (roundName: string) => {
             .from('screening_evaluations')
             .select(`
               *,
-              startups!startup_id(id, name, industry, stage, region),
+              startups!startup_id(id, name, verticals, regions, stage, location),
               jurors!evaluator_id(id, name, email)
             `)
             .eq('status', 'submitted')
@@ -133,7 +133,7 @@ export const useRoundData = (roundName: string) => {
             .from('pitching_evaluations')
             .select(`
               *,
-              startups!startup_id(id, name, industry, stage, region),
+              startups!startup_id(id, name, verticals, regions, stage, location),
               jurors!evaluator_id(id, name, email)
             `)
             .eq('status', 'submitted');
