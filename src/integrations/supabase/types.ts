@@ -1025,7 +1025,7 @@ export type Database = {
       }
       startups: {
         Row: {
-          business_model: string | null
+          business_model: string[] | null
           business_risks_mitigation: string | null
           contact_email: string | null
           contact_phone: string | null
@@ -1045,7 +1045,6 @@ export type Database = {
           funding_goal: number | null
           funding_raised: number | null
           id: string
-          industry: string | null
           internal_score: number | null
           investment_currency: string | null
           key_metrics: Json | null
@@ -1067,7 +1066,7 @@ export type Database = {
           website: string | null
         }
         Insert: {
-          business_model?: string | null
+          business_model?: string[] | null
           business_risks_mitigation?: string | null
           contact_email?: string | null
           contact_phone?: string | null
@@ -1087,7 +1086,6 @@ export type Database = {
           funding_goal?: number | null
           funding_raised?: number | null
           id?: string
-          industry?: string | null
           internal_score?: number | null
           investment_currency?: string | null
           key_metrics?: Json | null
@@ -1109,7 +1107,7 @@ export type Database = {
           website?: string | null
         }
         Update: {
-          business_model?: string | null
+          business_model?: string[] | null
           business_risks_mitigation?: string | null
           contact_email?: string | null
           contact_phone?: string | null
@@ -1129,7 +1127,6 @@ export type Database = {
           funding_goal?: number | null
           funding_raised?: number | null
           id?: string
-          industry?: string | null
           internal_score?: number | null
           investment_currency?: string | null
           key_metrics?: Json | null

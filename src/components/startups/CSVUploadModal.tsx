@@ -12,7 +12,6 @@ import { mapStartupColumn, parseArrayField, parseNumericField, parseYearField } 
 interface Startup {
   name: string;
   description?: string;
-  industry?: string;
   stage?: string;
   location?: string;
   founded_year?: number;
@@ -33,6 +32,12 @@ interface Startup {
   countries_operating?: string;
   countries_expansion_plan?: string;
   business_risks_mitigation?: string;
+  linkedin_url?: string;
+  pitch_deck_url?: string;
+  demo_url?: string;
+  business_model?: string[];
+  regions?: string[];
+  verticals?: string[];
 }
 
 interface CSVUploadModalProps {
@@ -102,6 +107,7 @@ export function CSVUploadModal({ open, onOpenChange, onDataParsed }: CSVUploadMo
             case 'founder_names':
             case 'regions':
             case 'verticals':
+            case 'business_model':
               (startup as any)[mappedField] = parseArrayField(value);
               break;
             case 'status':
@@ -171,6 +177,7 @@ export function CSVUploadModal({ open, onOpenChange, onDataParsed }: CSVUploadMo
                   case 'founder_names':
                   case 'regions':
                   case 'verticals':
+                  case 'business_model':
                     (startup as any)[mappedField] = parseArrayField(value);
                     break;
                   case 'status':

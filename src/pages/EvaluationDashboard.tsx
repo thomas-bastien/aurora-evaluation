@@ -18,7 +18,7 @@ interface AssignedStartup {
   id: string;
   name: string;
   description: string;
-  industry: string;
+  verticalsText: string;
   stage: string;
   contact_email: string;
   website: string;
@@ -125,7 +125,7 @@ const EvaluationDashboard = () => {
           id: startup.id,
           name: startup.name,
           description: startup.description || '',
-          industry: startup.industry || '',
+          verticalsText: Array.isArray(startup.verticals) ? startup.verticals.join(', ') : '',
           stage: startup.stage || '',
           contact_email: startup.contact_email || '',
           website: startup.website || '',
@@ -149,7 +149,7 @@ const EvaluationDashboard = () => {
     }
   };
   const filteredStartups = assignedStartups.filter(startup => {
-    const matchesSearch = startup.name.toLowerCase().includes(searchTerm.toLowerCase()) || startup.industry.toLowerCase().includes(searchTerm.toLowerCase()) || startup.description.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = startup.name.toLowerCase().includes(searchTerm.toLowerCase()) || startup.verticalsText.toLowerCase().includes(searchTerm.toLowerCase()) || startup.description.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesFilter = filterStatus === 'all' || startup.evaluation_status === filterStatus;
     return matchesSearch && matchesFilter;
   });
@@ -231,7 +231,7 @@ const EvaluationDashboard = () => {
               <div className="flex-1">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input placeholder="Search startups by name, industry, or description..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10" />
+                  <Input placeholder="Search startups by name, verticals, or description..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10" />
                 </div>
               </div>
               <div className="flex gap-2">

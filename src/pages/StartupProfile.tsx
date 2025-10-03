@@ -22,7 +22,6 @@ interface Startup {
   id: string;
   name: string;
   description: string | null;
-  industry: string | null;
   stage: string | null;
   website: string | null;
   location: string | null;
@@ -40,7 +39,7 @@ interface Startup {
   linkedin_url: string | null;
   total_investment_received: number | null;
   investment_currency: string | null;
-  business_model: string | null;
+  business_model: string[] | null;
   verticals: string[] | null;
   other_vertical_description: string | null;
   regions: string[] | null;
@@ -193,8 +192,12 @@ const StartupProfile = () => {
                   {startup.description || 'No description available'}
                 </p>
                 <div className="flex items-center gap-4 mb-4">
-                  {startup.business_model && (
-                    <Badge variant="secondary">{startup.business_model}</Badge>
+                  {startup.business_model && startup.business_model.length > 0 && (
+                    <div className="flex gap-2">
+                      {startup.business_model.slice(0,1).map((model, idx) => (
+                        <Badge key={idx} variant="secondary">{model}</Badge>
+                      ))}
+                    </div>
                   )}
                   {startup.verticals && startup.verticals.length > 0 && (
                     <div className="flex gap-2">

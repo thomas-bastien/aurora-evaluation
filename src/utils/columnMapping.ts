@@ -156,9 +156,9 @@ export function mapStartupColumn(columnName: string): string | null {
     return 'verticals';
   }
   
-  // Single "Industry" field (exact match) → industry (single)
+  // Single "Industry" field (exact match) → verticals (array)
   if (lower === 'industry') {
-    return 'industry';
+    return 'verticals';
   }
   
   // "Describe business model" → business_model

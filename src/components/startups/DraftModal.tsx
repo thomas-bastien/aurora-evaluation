@@ -14,7 +14,6 @@ import { normalizeStage } from '@/utils/stageUtils';
 interface Startup {
   name: string;
   description?: string;
-  industry?: string;
   stage?: string;
   location?: string;
   founded_year?: number;
@@ -38,7 +37,7 @@ interface Startup {
   linkedin_url?: string;
   pitch_deck_url?: string;
   demo_url?: string;
-  business_model?: string;
+  business_model?: string[];
   internal_score?: number;
   region?: string;
   regions?: string[];
@@ -228,7 +227,7 @@ export function DraftModal({ open, onOpenChange, draftData, onImportComplete }: 
 
                   <div className="grid grid-cols-3 gap-4">
                     <div>
-                      <label className="text-sm font-medium">Name *</label>
+                      <label className="text-sm font-medium">Company Name *</label>
                       <Input
                         value={entry.name || ''}
                         onChange={(e) => updateEntry(index, 'name', e.target.value)}
@@ -239,22 +238,6 @@ export function DraftModal({ open, onOpenChange, draftData, onImportComplete }: 
                       ))}
                     </div>
 
-                    <div>
-                      <label className="text-sm font-medium">Industry</label>
-                      <Select
-                        value={entry.industry || ''}
-                        onValueChange={(value) => updateEntry(index, 'industry', value)}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select industry" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {industries.map(industry => (
-                            <SelectItem key={industry} value={industry}>{industry}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
 
                     <div>
                       <label className="text-sm font-medium">Stage</label>
@@ -286,7 +269,7 @@ export function DraftModal({ open, onOpenChange, draftData, onImportComplete }: 
                     </div>
 
                     <div>
-                      <label className="text-sm font-medium">Founder First Name</label>
+                      <label className="text-sm font-medium">First Name</label>
                       <Input
                         value={entry.founder_first_name || ''}
                         onChange={(e) => updateEntry(index, 'founder_first_name', e.target.value)}
@@ -294,7 +277,7 @@ export function DraftModal({ open, onOpenChange, draftData, onImportComplete }: 
                     </div>
 
                     <div>
-                      <label className="text-sm font-medium">Founder Last Name</label>
+                      <label className="text-sm font-medium">Last Name</label>
                       <Input
                         value={entry.founder_last_name || ''}
                         onChange={(e) => updateEntry(index, 'founder_last_name', e.target.value)}
@@ -485,10 +468,10 @@ export function DraftModal({ open, onOpenChange, draftData, onImportComplete }: 
                     <div className="col-span-3">
                       <label className="text-sm font-medium">Business Model</label>
                       <Textarea
-                        value={entry.business_model || ''}
-                        onChange={(e) => updateEntry(index, 'business_model', e.target.value)}
+                        value={(entry.business_model || []).join(', ')}
+                        onChange={(e) => updateEntry(index, 'business_model', e.target.value.split(',').map(v => v.trim()).filter(Boolean))}
                         rows={2}
-                        placeholder="Describe how the startup generates revenue"
+                        placeholder="e.g., B2B, SaaS"
                       />
                     </div>
 

@@ -36,7 +36,7 @@ export const StartupList = () => {
           const mappedStartups = data.map(startup => ({
             id: startup.id,
             name: startup.name,
-            category: startup.industry || 'Unknown',
+            category: (startup.verticals && startup.verticals.length > 0 ? startup.verticals[0] : 'Unknown'),
             stage: startup.stage || 'Unknown',
             fundingRaised: startup.funding_raised ? `$${(startup.funding_raised / 1000000).toFixed(1)}M` : 'N/A',
             teamSize: startup.team_size || 0,

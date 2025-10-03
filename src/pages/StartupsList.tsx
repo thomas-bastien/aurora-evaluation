@@ -26,7 +26,7 @@ interface Startup {
   id: string;
   name: string;
   description: string | null;
-  industry: string | null;
+  industry?: string | null;
   stage: string | null;
   location: string | null;
   founded_year: number | null;
@@ -37,7 +37,7 @@ interface Startup {
   linkedin_url: string | null;
   total_investment_received: number | null;
   investment_currency: string | null;
-  business_model: string | null;
+  business_model: string[] | null;
   verticals: string[] | null;
   other_vertical_description: string | null;
   regions: string[] | null;
@@ -188,7 +188,7 @@ export default function StartupsList() {
     }
 
     if (businessModelFilter && businessModelFilter !== 'all') {
-      filtered = filtered.filter(startup => startup.business_model === businessModelFilter);
+      filtered = filtered.filter(startup => (startup.business_model || []).includes(businessModelFilter));
     }
 
     if (verticalFilter && verticalFilter !== 'all') {
@@ -253,7 +253,7 @@ export default function StartupsList() {
   const industries = [...new Set(startups.filter(s => s.industry).map(s => s.industry))];
   const stages = [...new Set(startups.filter(s => s.stage).map(s => s.stage))];
   const statuses = ['not_evaluated', 'draft', 'submitted'];  // Use evaluation-based statuses
-  const businessModels = [...new Set(startups.filter(s => s.business_model).map(s => s.business_model))];
+  const businessModels = [...new Set(startups.flatMap(s => s.business_model || []))];
   const allVerticals = startups.flatMap(s => s.verticals || []);
   const uniqueVerticals = [...new Set(allVerticals)];
   const allRegions = startups.flatMap(s => s.regions || []);
@@ -293,10 +293,14 @@ export default function StartupsList() {
 
   const handleFormSubmit = async (data: Partial<Startup>) => {
     try {
+      const payload: any = { ...data };
+      if (payload.business_model && !Array.isArray(payload.business_model)) {
+        payload.business_model = [payload.business_model];
+      }
       if (editingStartup) {
         const { error } = await supabase
           .from('startups')
-          .update(data)
+          .update(payload)
           .eq('id', editingStartup.id);
         
         if (error) throw error;
@@ -746,9 +750,9 @@ export default function StartupsList() {
                 
                 <CardContent className="space-y-4">
                   <div className="flex items-center gap-2 flex-wrap text-sm">
-                    {startup.business_model && (
+                    {startup.business_model && startup.business_model.length > 0 && (
                       <Badge variant="secondary" className="text-xs">
-                        {startup.business_model}
+                        {startup.business_model[0]}
                       </Badge>
                     )}
                     {startup.stage && (
