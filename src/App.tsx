@@ -32,13 +32,19 @@ import { DemoProvider } from "@/contexts/DemoContext";
 
 const queryClient = new QueryClient();
 
-// Component to properly redirect from /admin to /selection
+// Component to properly redirect from /admin and legacy routes to /selection
 const AdminRedirect = () => {
   const navigate = useNavigate();
   
   useEffect(() => {
-    console.log('AdminRedirect: Redirecting to /selection?round=screening');
-    navigate('/selection?round=screening', { replace: true });
+    const path = window.location.pathname;
+    if (path === '/screening/applications') {
+      console.log('AdminRedirect: Redirecting to /selection?round=screening&tab=startup-selection');
+      navigate('/selection?round=screening&tab=startup-selection', { replace: true });
+    } else {
+      console.log('AdminRedirect: Redirecting to /selection?round=screening');
+      navigate('/selection?round=screening', { replace: true });
+    }
   }, [navigate]);
   
   return (
@@ -50,7 +56,7 @@ const AdminRedirect = () => {
       flexDirection: 'column' 
     }}>
       <h2>Redirecting...</h2>
-      <p>The Admin page has been moved to Selection.</p>
+      <p>The page has been moved to Selection.</p>
     </div>
   );
 };
@@ -168,6 +174,12 @@ const App = () => (
                 <RoleGuard allowedRoles={['admin']}>
                   <EmailManagementPage />
                 </RoleGuard>
+              </ProtectedRoute>
+            } />
+            {/* Redirect legacy routes */}
+            <Route path="/screening/applications" element={
+              <ProtectedRoute>
+                <AdminRedirect />
               </ProtectedRoute>
             } />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

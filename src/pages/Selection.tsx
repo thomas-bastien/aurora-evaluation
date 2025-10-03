@@ -124,7 +124,9 @@ const Selection = () => {
         </div>
 
         {/* Selection Tabs */}
-        <Tabs defaultValue="matchmaking" className="space-y-6">
+        <Tabs defaultValue="matchmaking" value={searchParams.get('tab') || 'matchmaking'} 
+              onValueChange={(value) => setSearchParams({ round: currentRoundName, tab: value })} 
+              className="space-y-6">
           <TabsList className={`grid w-full ${currentRound === 'pitchingRound' ? 'grid-cols-6' : 'grid-cols-5'}`}>
             <TabsTrigger value="matchmaking" className="flex items-center gap-2">
               <Network className="w-4 h-4" />

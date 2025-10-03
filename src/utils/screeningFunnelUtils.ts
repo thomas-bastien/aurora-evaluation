@@ -110,7 +110,7 @@ export const getEvaluationsStepData = async (): Promise<FunnelStepData> => {
     numerator: completedCount,
     denominator: expectedCount,
     percentage,
-    route: "/selection?round=screening&tab=evaluation-results",
+    route: "/selection?round=screening&tab=juror-progress",
     status: percentage === 100 ? 'completed' : percentage > 0 ? 'in-progress' : 'pending'
   };
 };
