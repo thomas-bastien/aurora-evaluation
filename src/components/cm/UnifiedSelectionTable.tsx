@@ -39,10 +39,8 @@ interface UnifiedStartupData {
   id: string;
   name: string;
   description: string;
-  industry: string;
   stage: string;
   location: string;
-  region: string;
   verticals: string[];
   regions: string[];
   pitch_deck_url: string | null;
@@ -284,12 +282,8 @@ export const UnifiedSelectionTable = ({
           id: startup.id,
           name: startup.name,
           description: startup.description || '',
-          industry: startup.industry || 'N/A',
           stage: startup.stage || 'N/A',
           location: startup.location || 'N/A',
-          region: startup.regions && startup.regions.length > 0 
-            ? startup.regions.join(', ') 
-            : 'N/A',
           verticals: startup.verticals || [],
           regions: startup.regions || [],
           pitch_deck_url: startup.pitch_deck_url,
@@ -356,7 +350,7 @@ export const UnifiedSelectionTable = ({
     if (searchTerm) {
       filtered = filtered.filter(startup => 
         startup.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        startup.industry.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        startup.verticals.join(', ').toLowerCase().includes(searchTerm.toLowerCase()) ||
         startup.description.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
@@ -367,7 +361,7 @@ export const UnifiedSelectionTable = ({
 
     if (regionFilter !== 'all') {
       filtered = filtered.filter(startup => 
-        startup.region.includes(regionFilter) || startup.region === regionFilter
+        startup.regions.some(r => r === regionFilter)
       );
     }
 
@@ -640,9 +634,7 @@ export const UnifiedSelectionTable = ({
 
   const uniqueStages = [...new Set(startups.map(s => s.stage))].filter(s => s !== 'N/A');
   const uniqueRegions = [...new Set(
-    startups.flatMap(s => 
-      s.region !== 'N/A' ? s.region.split(', ') : []
-    )
+    startups.flatMap(s => s.regions)
   )];
   const selectedCount = startups.filter(s => s.isSelected).length;
 
@@ -671,7 +663,7 @@ export const UnifiedSelectionTable = ({
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
               <Input
-                placeholder="Search startups by name, industry, or description..."
+                placeholder="Search startups by name, verticals, or description..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
@@ -854,7 +846,7 @@ export const UnifiedSelectionTable = ({
                       <td className="p-4">
                         <div>
                           <div className="font-medium">{startup.name}</div>
-                          <div className="text-sm text-muted-foreground">{startup.industry}</div>
+                          <div className="text-sm text-muted-foreground">{startup.verticals.join(', ') || 'N/A'}</div>
                         </div>
                       </td>
                       <td className="p-4">
@@ -863,7 +855,7 @@ export const UnifiedSelectionTable = ({
                         </Badge>
                       </td>
                       <td className="p-4">
-                        <span className="text-sm">{startup.region}</span>
+                        <span className="text-sm">{startup.regions.join(', ') || 'N/A'}</span>
                       </td>
                       <td className="p-4">
                         <div className="flex items-center gap-2">
