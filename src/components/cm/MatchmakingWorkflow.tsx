@@ -10,7 +10,6 @@ import { StartupAssignmentModal } from "@/components/matchmaking/StartupAssignme
 import { AssignmentSummary } from "@/components/matchmaking/AssignmentSummary";
 import { AutoAssignmentReviewPanel } from "@/components/matchmaking/AutoAssignmentReviewPanel";
 import { EnhancedAutoAssignmentPanel } from "@/components/matchmaking/EnhancedAutoAssignmentPanel";
-import { MatchmakingConfigPanel } from "@/components/matchmaking/MatchmakingConfigPanel";
 import { generateExplainableSuggestions, Startup as ExplainableStartup, Juror as ExplainableJuror } from "@/utils/explainableMatchmakingEngine";
 import { SendSchedulingEmailsModal } from "@/components/cm/SendSchedulingEmailsModal";
 import { AssignmentNotificationModal } from "@/components/cm/AssignmentNotificationModal";
@@ -977,7 +976,6 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
               );
             })()}
 
-            <MatchmakingConfigPanel roundName={currentRound === 'screeningRound' ? 'screening' : 'pitching'} />
             <Button
               onClick={handleGenerateExplainableSuggestions}
               variant="outline"

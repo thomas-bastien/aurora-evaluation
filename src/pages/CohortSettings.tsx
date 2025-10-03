@@ -15,6 +15,8 @@ import { useToast } from '@/hooks/use-toast';
 import { ZohoExportTab } from '@/components/cohort/ZohoExportTab';
 import { CohortResetConfirmationModal } from '@/components/cohort/CohortResetConfirmationModal';
 import { useCohortReset } from '@/hooks/useCohortReset';
+import { MatchmakingConfigCard } from '@/components/cohort/MatchmakingConfigCard';
+import { Settings } from 'lucide-react';
 export default function CohortSettings() {
   const navigate = useNavigate();
   const {
@@ -112,6 +114,10 @@ export default function CohortSettings() {
             <Calendar className="w-4 h-4" />
             Cohort Configuration
           </TabsTrigger>
+          <TabsTrigger value="matchmaking" className="flex items-center gap-2">
+            <Settings className="w-4 h-4" />
+            Matchmaking Scoring
+          </TabsTrigger>
           <TabsTrigger value="export" className="flex items-center gap-2">
             <Download className="w-4 h-4" />
             Zoho Export
@@ -195,6 +201,10 @@ export default function CohortSettings() {
               </CardContent>
             </Card>
           </div>
+        </TabsContent>
+
+        <TabsContent value="matchmaking">
+          <MatchmakingConfigCard />
         </TabsContent>
 
         <TabsContent value="export">
