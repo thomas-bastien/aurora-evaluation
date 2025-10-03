@@ -34,7 +34,6 @@ interface Startup {
   pitch_deck_url: string | null;
   founder_names: string[] | null;
   contact_email: string | null;
-  contact_phone: string | null;
   key_metrics: any;
   linkedin_url: string | null;
   business_model: string[] | null;
@@ -447,16 +446,32 @@ const StartupProfile = () => {
               </CardContent>
             </Card>
 
-            {/* Team Block */}
+            {/* Team & Founders Block */}
             <Card>
               <CardHeader>
-                <CardTitle>Team</CardTitle>
-                <CardDescription>Founder and team information</CardDescription>
+                <CardTitle>Team & Founders</CardTitle>
+                <CardDescription>Team size, composition, and founder information</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-4">
                     <div>
+                      <h4 className="text-sm font-semibold mb-3 text-muted-foreground">TEAM OVERVIEW</h4>
+                      {startup.team_size && (
+                        <div className="flex items-center gap-2 mb-2">
+                          <Users className="w-4 h-4 text-muted-foreground" />
+                          <span className="text-sm">{startup.team_size} total team members</span>
+                        </div>
+                      )}
+                      {startup.full_time_team_members && (
+                        <div className="flex items-center gap-2">
+                          <Users className="w-4 h-4 text-muted-foreground" />
+                          <span className="text-sm">{startup.full_time_team_members} full-time members</span>
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className="pt-4 border-t">
                       <h4 className="text-sm font-semibold mb-3 text-muted-foreground">FOUNDER</h4>
                       {(startup.founder_first_name || startup.founder_last_name) && (
                         <div className="flex items-center gap-2 mb-2">
@@ -491,7 +506,7 @@ const StartupProfile = () => {
                     <div>
                       <h4 className="text-sm font-semibold mb-3 text-muted-foreground">CONTACT</h4>
                       {startup.contact_email && (
-                        <div className="flex items-center gap-2 mb-2">
+                        <div className="flex items-center gap-2">
                           <MessageSquare className="w-4 h-4 text-muted-foreground" />
                           <a 
                             href={`mailto:${startup.contact_email}`}
@@ -499,11 +514,6 @@ const StartupProfile = () => {
                           >
                             {startup.contact_email}
                           </a>
-                        </div>
-                      )}
-                      {startup.contact_phone && (
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm">{startup.contact_phone}</span>
                         </div>
                       )}
                     </div>

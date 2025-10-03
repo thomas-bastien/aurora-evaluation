@@ -5,7 +5,6 @@ interface Startup {
   id: string;
   name: string;
   website?: string;
-  contact_phone?: string;
   verticals?: string[];
   description?: string;
   stage?: string;
@@ -310,7 +309,7 @@ export async function generateStartupsCSV(): Promise<string> {
   if (error) throw error;
 
   const rows: string[] = [
-    'Account Name,Website,Phone,Industry,Description,Stage,Country,Region,Business_Model,Founded_Year,Team_Size,Funding_Goal,Funding_Raised,LinkedIn,Aurora_Screening_Avg_Score,Aurora_Pitching_Avg_Score,Aurora_Overall_Avg_Score,Aurora_Profile_Link,Aurora_ID,Notes'
+    'Account Name,Website,Industry,Description,Stage,Country,Region,Business_Model,Founded_Year,Team_Size,Funding_Goal,Funding_Raised,LinkedIn,Aurora_Screening_Avg_Score,Aurora_Pitching_Avg_Score,Aurora_Overall_Avg_Score,Aurora_Profile_Link,Aurora_ID,Notes'
   ];
 
   for (let i = 0; i < (startups?.length || 0); i++) {
@@ -351,7 +350,6 @@ export async function generateStartupsCSV(): Promise<string> {
     rows.push([
       escapeCSVField(startup.name),
       escapeCSVField(startup.website || ''),
-      escapeCSVField(startup.contact_phone || ''),
       escapeCSVField(industry),
       escapeCSVField(startup.description || ''),
       escapeCSVField(startup.stage || ''),

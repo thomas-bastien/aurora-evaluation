@@ -32,7 +32,6 @@ export function generateCSVTemplate(): string {
     'pitch_deck_url',
     'demo_url',
     'linkedin_url',
-    'contact_phone',
     'founder_names',
     'status'
   ];
@@ -59,7 +58,6 @@ export function generateCSVTemplate(): string {
       'https://drive.google.com/file/d/example-deck',
       'https://demo.techflow.com',
       'https://linkedin.com/company/techflow',
-      '+1-555-0123',
       'Jane Smith;John Doe',
       'pending'
     ],
@@ -68,7 +66,6 @@ export function generateCSVTemplate(): string {
       'EcoMart',
       'Sustainable e-commerce marketplace connecting eco-friendly brands',
       'hello@ecomart.io',
-      '',
       '',
       '',
       '',
@@ -109,7 +106,6 @@ export function generateCSVTemplate(): string {
       '',
       '',
       'https://linkedin.com/company/healthtrack-ai',
-      '+44-20-1234-5678',
       'Dr. Sarah Chen;Michael O\'Connor',
       'under_review'
     ]

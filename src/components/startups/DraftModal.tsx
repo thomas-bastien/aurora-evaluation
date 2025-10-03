@@ -34,7 +34,6 @@ interface Startup {
   funding_raised?: number;
   website?: string;
   contact_email?: string;
-  contact_phone?: string;
   founder_names?: string[];
   status?: string;
   founder_first_name?: string;
@@ -491,15 +490,6 @@ export function DraftModal({ open, onOpenChange, draftData, onImportComplete }: 
                       {entryErrors.filter(e => e.field === 'linkedin_url').map(error => (
                         <p key={error.field} className="text-xs text-destructive mt-1">{error.message}</p>
                       ))}
-                    </div>
-
-                    <div>
-                      <label className="text-sm font-medium">Contact Phone</label>
-                      <Input
-                        value={entry.contact_phone || ''}
-                        onChange={(e) => updateEntry(index, 'contact_phone', e.target.value)}
-                        placeholder="+44..."
-                      />
                     </div>
 
                     <div>

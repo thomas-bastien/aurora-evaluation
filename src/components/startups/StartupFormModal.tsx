@@ -24,7 +24,6 @@ interface Startup {
   funding_raised: number;
   website: string;
   contact_email: string;
-  contact_phone: string;
   founder_names: string[];
   status: string;
   linkedin_url?: string;
@@ -427,26 +426,14 @@ export function StartupFormModal({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="team_size">Team Size</Label>
-              <Input
-                id="team_size"
-                type="number"
-                min="1"
-                value={formData.team_size || ''}
-                onChange={(e) => setFormData(prev => ({ ...prev, team_size: parseInt(e.target.value) || undefined }))}
-              />
-            </div>
-            <div>
-              <Label htmlFor="website">Website</Label>
-              <Input
-                id="website"
-                type="url"
-                value={formData.website || ''}
-                onChange={(e) => setFormData(prev => ({ ...prev, website: e.target.value }))}
-              />
-            </div>
+          <div>
+            <Label htmlFor="website">Website</Label>
+            <Input
+              id="website"
+              type="url"
+              value={formData.website || ''}
+              onChange={(e) => setFormData(prev => ({ ...prev, website: e.target.value }))}
+            />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -472,28 +459,42 @@ export function StartupFormModal({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="contact_email">Contact Email</Label>
-              <Input
-                id="contact_email"
-                type="email"
-                value={formData.contact_email || ''}
-                onChange={(e) => setFormData(prev => ({ ...prev, contact_email: e.target.value }))}
-              />
-            </div>
-            <div>
-              <Label htmlFor="contact_phone">Contact Phone</Label>
-              <Input
-                id="contact_phone"
-                value={formData.contact_phone || ''}
-                onChange={(e) => setFormData(prev => ({ ...prev, contact_phone: e.target.value }))}
-              />
-            </div>
+          <div>
+            <Label htmlFor="contact_email">Contact Email</Label>
+            <Input
+              id="contact_email"
+              type="email"
+              value={formData.contact_email || ''}
+              onChange={(e) => setFormData(prev => ({ ...prev, contact_email: e.target.value }))}
+            />
           </div>
 
-          <div>
-            <Label>Founders</Label>
+          {/* Team & Founders Section */}
+          <div className="border-t pt-4">
+            <h3 className="text-lg font-semibold mb-4">Team & Founders</h3>
+            <div className="grid grid-cols-2 gap-4 mb-4">
+              <div>
+                <Label htmlFor="team_size">Team Size</Label>
+                <Input
+                  id="team_size"
+                  type="number"
+                  min="1"
+                  value={formData.team_size || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, team_size: parseInt(e.target.value) || undefined }))}
+                />
+              </div>
+              <div>
+                <Label htmlFor="full_time_team_members">Full-Time Team Members</Label>
+                <Input
+                  id="full_time_team_members"
+                  type="number"
+                  min="0"
+                  value={formData.full_time_team_members || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, full_time_team_members: parseInt(e.target.value) || undefined }))}
+                />
+              </div>
+            </div>
+            <Label>Founder Information</Label>
             <div className="space-y-2">
               <div className="grid grid-cols-3 gap-2">
                 <Input
@@ -582,16 +583,6 @@ export function StartupFormModal({
                   value={formData.countries_expansion_plan || ''}
                   onChange={(e) => setFormData(prev => ({ ...prev, countries_expansion_plan: e.target.value }))}
                   placeholder="Future markets"
-                />
-              </div>
-              <div>
-                <Label htmlFor="full_time_team_members">Full-Time Team Members</Label>
-                <Input
-                  id="full_time_team_members"
-                  type="number"
-                  min="0"
-                  value={formData.full_time_team_members || ''}
-                  onChange={(e) => setFormData(prev => ({ ...prev, full_time_team_members: parseInt(e.target.value) || undefined }))}
                 />
               </div>
             </div>

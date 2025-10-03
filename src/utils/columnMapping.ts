@@ -298,11 +298,6 @@ export function mapStartupColumn(columnName: string): string | null {
     return 'contact_email';
   }
   
-  // Contact phone
-  if (lower.includes('phone') || lower.includes('telephone') || lower.includes('mobile')) {
-    return 'contact_phone';
-  }
-  
   // LinkedIn URL (generic company LinkedIn - fallback)
   if (lower.includes('linkedin') && !lower.includes('founder') && !lower.includes('your')) {
     return 'linkedin_url';
