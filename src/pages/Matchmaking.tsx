@@ -12,11 +12,11 @@ import { DataInconsistencyPanel } from "@/components/matchmaking/DataInconsisten
 interface Startup {
   id: string;
   name: string;
-  industry: string;
   stage: string;
   description: string;
   location: string;
   founder_names: string[];
+  verticals?: string[];
 }
 interface Juror {
   id: string;
@@ -284,7 +284,7 @@ const Matchmaking = () => {
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-2">
                           <h3 className="font-semibold text-foreground">{startup.name}</h3>
-                          <Badge variant="outline">{startup.industry}</Badge>
+                          <Badge variant="outline">{(startup.verticals && startup.verticals.length > 0) ? startup.verticals[0] : 'N/A'}</Badge>
                           <Badge variant="outline">{startup.stage}</Badge>
                           {hasMinimumJurors ? <Badge variant="default">
                               <CheckCircle2 className="w-3 h-3 mr-1" />

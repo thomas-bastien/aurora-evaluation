@@ -23,7 +23,7 @@ interface StartupEvaluationModalProps {
     id: string;
     name: string;
     description: string;
-    industry: string;
+    verticalsText: string;
     stage: string;
     contact_email: string;
     website: string;
@@ -895,7 +895,7 @@ export const StartupEvaluationModal = ({
                     
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                       <div className="flex items-center gap-2">
-                        <Badge variant="secondary">{startup.industry}</Badge>
+                        <Badge variant="secondary">{startup.verticalsText || 'N/A'}</Badge>
                         
                       </div>
                       <div className="flex items-center gap-2">

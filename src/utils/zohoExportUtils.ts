@@ -11,7 +11,7 @@ interface Startup {
   stage?: string;
   country?: string;
   region?: string;
-  business_model?: string;
+  business_model?: string[];
   founded_year?: number;
   team_size?: number;
   funding_goal?: number;
@@ -359,7 +359,7 @@ export async function generateStartupsCSV(): Promise<string> {
       escapeCSVField(startup.stage || ''),
       escapeCSVField(startup.country || ''),
       escapeCSVField(startup.region || ''),
-      escapeCSVField(startup.business_model || ''),
+      escapeCSVField(startup.business_model && startup.business_model.length > 0 ? startup.business_model.join(', ') : ''),
       escapeCSVField(startup.founded_year || ''),
       escapeCSVField(startup.team_size || ''),
       escapeCSVField(startup.funding_goal || ''),

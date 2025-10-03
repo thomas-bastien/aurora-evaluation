@@ -16,7 +16,6 @@ import { useUserProfile } from '@/hooks/useUserProfile';
 interface Startup {
   name: string;
   description: string;
-  industry: string;
   stage: string;
   location: string;
   founded_year: number;
@@ -31,7 +30,7 @@ interface Startup {
   linkedin_url?: string;
   total_investment_received?: number;
   investment_currency?: string;
-  business_model?: string;
+  business_model?: string[];
   verticals?: string[];
   other_vertical_description?: string;
   regions?: string[];
@@ -71,6 +70,7 @@ export function StartupFormModal({
       status: 'pending',
       verticals: [],
       regions: [],
+      business_model: [],
       investment_currency: 'GBP'
     }
   );
@@ -87,6 +87,7 @@ export function StartupFormModal({
         status: 'pending',
         verticals: [],
         regions: [],
+        business_model: [],
         investment_currency: 'GBP'
       });
     }
@@ -100,7 +101,7 @@ export function StartupFormModal({
     };
     onSubmit(normalizedData);
     if (mode === 'create') {
-      setFormData({ founder_names: [], status: 'pending', verticals: [], regions: [], investment_currency: 'GBP' });
+      setFormData({ founder_names: [], status: 'pending', verticals: [], regions: [], business_model: [], investment_currency: 'GBP' });
       setFounderInput('');
     }
     onOpenChange(false);
@@ -172,6 +173,28 @@ export function StartupFormModal({
     });
   };
 
+  const toggleBusinessModel = (model: string) => {
+    setFormData(prev => {
+      const currentModels = prev.business_model || [];
+      const isSelected = currentModels.includes(model);
+      
+      if (isSelected) {
+        return {
+          ...prev,
+          business_model: currentModels.filter(m => m !== model)
+        };
+      } else {
+        if (currentModels.includes(model)) {
+          return prev;
+        }
+        return {
+          ...prev,
+          business_model: [...currentModels, model]
+        };
+      }
+    });
+  };
+
   const validateLinkedInUrl = (url: string) => {
     if (!url) return true;
     try {
@@ -200,7 +223,7 @@ export function StartupFormModal({
           <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="name">Name *</Label>
+              <Label htmlFor="name">Company Name *</Label>
               <Input
                 id="name"
                 value={formData.name || ''}
@@ -209,28 +232,19 @@ export function StartupFormModal({
               />
             </div>
             <div>
-              <Label htmlFor="business_model">
-                Business Model *
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Info className="inline w-3 h-3 ml-1 text-muted-foreground" />
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Select the primary business model for this startup</p>
-                  </TooltipContent>
-                </Tooltip>
-              </Label>
+              <Label htmlFor="stage">Stage</Label>
               <Select
-                value={formData.business_model || ''}
-                onValueChange={(value) => setFormData(prev => ({ ...prev, business_model: value }))}
-                required
+                value={formData.stage || ''}
+                onValueChange={(value) => setFormData(prev => ({ ...prev, stage: value }))}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select business model" />
+                  <SelectValue placeholder="Select stage" />
                 </SelectTrigger>
                 <SelectContent>
-                  {BUSINESS_MODELS.map(model => (
-                    <SelectItem key={model} value={model}>{model}</SelectItem>
+                  {stages.map(stage => (
+                    <SelectItem key={stage} value={stage}>
+                      {stage}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -289,6 +303,38 @@ export function StartupFormModal({
                 />
               </div>
             )}
+          </div>
+
+          {/* Business Model Multi-Select */}
+          <div>
+            <Label>
+              Business Model
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Info className="inline w-3 h-3 ml-1 text-muted-foreground" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Select all applicable business models</p>
+                </TooltipContent>
+              </Tooltip>
+            </Label>
+            <div className="grid grid-cols-2 gap-2 p-4 border rounded-lg">
+              {BUSINESS_MODELS.map(model => (
+                <div key={model} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`business-model-${model}`}
+                    checked={(formData.business_model || []).includes(model)}
+                    onCheckedChange={() => toggleBusinessModel(model)}
+                  />
+                  <Label
+                    htmlFor={`business-model-${model}`}
+                    className="text-sm font-normal cursor-pointer"
+                  >
+                    {model}
+                  </Label>
+                </div>
+              ))}
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">

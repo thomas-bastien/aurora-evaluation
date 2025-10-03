@@ -7,9 +7,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle, CheckCircle } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { normalizeStage } from '@/utils/stageUtils';
+import { VERTICAL_OPTIONS, STAGE_OPTIONS, REGION_OPTIONS } from '@/constants/jurorPreferences';
+import { BUSINESS_MODELS } from '@/constants/startupConstants';
 
 interface Startup {
   name: string;
@@ -178,12 +182,36 @@ export function DraftModal({ open, onOpenChange, draftData, onImportComplete }: 
     }
   };
 
-  const industries = ['Technology', 'Healthcare', 'Finance', 'Education', 'E-commerce', 'SaaS', 'AI/ML', 'Biotech', 'CleanTech', 'Other'];
-  const verticals = ['FinTech', 'HealthTech', 'EdTech', 'PropTech', 'RetailTech', 'AgriTech', 'CleanTech', 'DeepTech', 'B2B SaaS', 'Consumer', 'Enterprise', 'Other'];
-  const stages = ['Pre-Seed', 'Seed', 'Series A', 'Series B', 'Series C', 'Growth', 'IPO'];
-  const regions = ['UK', 'Europe', 'North America', 'Asia', 'Middle East', 'Africa', 'Latin America', 'Oceania'];
   const currencies = ['GBP', 'USD', 'EUR'];
   const statuses = ['pending', 'under_review', 'selected', 'rejected'];
+
+  const toggleVertical = (index: number, vertical: string) => {
+    const newData = [...editableData];
+    const currentVerticals = newData[index].verticals || [];
+    const isSelected = currentVerticals.includes(vertical);
+    
+    if (isSelected) {
+      newData[index].verticals = currentVerticals.filter(v => v !== vertical);
+    } else {
+      newData[index].verticals = [...currentVerticals, vertical];
+    }
+    setEditableData(newData);
+    validateAllEntries(newData);
+  };
+
+  const toggleBusinessModel = (index: number, model: string) => {
+    const newData = [...editableData];
+    const currentModels = newData[index].business_model || [];
+    const isSelected = currentModels.includes(model);
+    
+    if (isSelected) {
+      newData[index].business_model = currentModels.filter(m => m !== model);
+    } else {
+      newData[index].business_model = [...currentModels, model];
+    }
+    setEditableData(newData);
+    validateAllEntries(newData);
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -249,7 +277,7 @@ export function DraftModal({ open, onOpenChange, draftData, onImportComplete }: 
                           <SelectValue placeholder="Select stage" />
                         </SelectTrigger>
                         <SelectContent>
-                          {stages.map(stage => (
+                          {STAGE_OPTIONS.map(stage => (
                             <SelectItem key={stage} value={stage}>
                               {stage}
                             </SelectItem>
@@ -346,7 +374,7 @@ export function DraftModal({ open, onOpenChange, draftData, onImportComplete }: 
                           <SelectValue placeholder="Choose region" />
                         </SelectTrigger>
                         <SelectContent>
-                          {regions.map(region => (
+                          {REGION_OPTIONS.map(region => (
                             <SelectItem key={region} value={region}>{region}</SelectItem>
                           ))}
                         </SelectContent>
@@ -381,12 +409,26 @@ export function DraftModal({ open, onOpenChange, draftData, onImportComplete }: 
                     </div>
 
                     <div className="col-span-3">
-                      <label className="text-sm font-medium">Verticals (Industries)</label>
-                      <Input
-                        value={Array.isArray(entry.verticals) ? entry.verticals.join(', ') : entry.verticals || ''}
-                        onChange={(e) => updateEntry(index, 'verticals', e.target.value.split(',').map(v => v.trim()).filter(Boolean))}
-                        placeholder="e.g., FinTech, HealthTech, SaaS"
-                      />
+                      <label className="text-sm font-medium">Verticals</label>
+                      <div className="border rounded-lg p-3 max-h-48 overflow-y-auto">
+                        <div className="grid grid-cols-2 gap-2">
+                          {VERTICAL_OPTIONS.map(vertical => (
+                            <div key={vertical} className="flex items-center space-x-2">
+                              <Checkbox
+                                id={`${index}-vertical-${vertical}`}
+                                checked={(entry.verticals || []).includes(vertical)}
+                                onCheckedChange={() => toggleVertical(index, vertical)}
+                              />
+                              <Label
+                                htmlFor={`${index}-vertical-${vertical}`}
+                                className="text-xs font-normal cursor-pointer"
+                              >
+                                {vertical}
+                              </Label>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
                     </div>
 
                     <div>
@@ -467,12 +509,25 @@ export function DraftModal({ open, onOpenChange, draftData, onImportComplete }: 
 
                     <div className="col-span-3">
                       <label className="text-sm font-medium">Business Model</label>
-                      <Textarea
-                        value={(entry.business_model || []).join(', ')}
-                        onChange={(e) => updateEntry(index, 'business_model', e.target.value.split(',').map(v => v.trim()).filter(Boolean))}
-                        rows={2}
-                        placeholder="e.g., B2B, SaaS"
-                      />
+                      <div className="border rounded-lg p-3">
+                        <div className="grid grid-cols-2 gap-2">
+                          {BUSINESS_MODELS.map(model => (
+                            <div key={model} className="flex items-center space-x-2">
+                              <Checkbox
+                                id={`${index}-model-${model}`}
+                                checked={(entry.business_model || []).includes(model)}
+                                onCheckedChange={() => toggleBusinessModel(index, model)}
+                              />
+                              <Label
+                                htmlFor={`${index}-model-${model}`}
+                                className="text-xs font-normal cursor-pointer"
+                              >
+                                {model}
+                              </Label>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
                     </div>
 
                     <div>

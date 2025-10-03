@@ -6,8 +6,8 @@ import { Building2, Users, CheckCircle2, AlertCircle } from "lucide-react";
 interface Startup {
   id: string;
   name: string;
-  industry: string;
   stage: string;
+  verticals?: string[];
 }
 
 interface Juror {
@@ -137,7 +137,7 @@ export const AssignmentSummary = ({
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-3">
                     <h3 className="font-semibold text-foreground">{startup.name}</h3>
-                    <Badge variant="outline">{startup.industry}</Badge>
+                    <Badge variant="outline">{(startup.verticals && startup.verticals.length > 0) ? startup.verticals[0] : 'N/A'}</Badge>
                     <Badge variant="outline">{startup.stage}</Badge>
                     {hasMinimumJurors ? (
                       <Badge variant="default">

@@ -136,7 +136,7 @@ export async function generateEvaluationDecisionData(
         country: startup.country,
         vertical: (startup.verticals || [])[0] || 'N/A',
         funding_stage: startup.stage,
-        business_model: startup.business_model,
+        business_model: Array.isArray(startup.business_model) ? startup.business_model.join(', ') : (startup.business_model || 'N/A'),
         internal_score: startup.internal_score,
         screening_scores: screeningScores,
         screening_avg: screeningAvg,

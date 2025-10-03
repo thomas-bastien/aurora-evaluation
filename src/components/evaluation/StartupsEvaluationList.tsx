@@ -26,7 +26,7 @@ interface AssignedStartup {
   id: string;
   name: string;
   description: string;
-  industry: string;
+  verticalsText: string;
   stage: string;
   contact_email: string;
   website: string;
@@ -123,10 +123,10 @@ export const StartupsEvaluationList = ({ startups, loading, onEvaluationUpdate, 
                   
                   {/* Overview Tags */}
                   <div className="flex flex-wrap gap-2 mt-3">
-                    {startup.industry && (
+                    {startup.verticalsText && (
                       <Badge variant="secondary">
                         <Building2 className="w-3 h-3 mr-1" />
-                        {startup.industry}
+                        {startup.verticalsText}
                       </Badge>
                     )}
                     {startup.stage && (

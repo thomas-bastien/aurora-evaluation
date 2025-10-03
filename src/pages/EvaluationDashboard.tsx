@@ -82,7 +82,7 @@ const EvaluationDashboard = () => {
             id,
             name,
             description,
-            industry,
+            verticals,
             stage,
             contact_email,
             website,
