@@ -6,6 +6,8 @@ import { UnifiedOverviewCard } from "@/components/dashboard/UnifiedOverviewCard"
 import { FunnelStage } from "@/components/dashboard/FunnelStage";
 import { ScreeningFunnelView } from "@/components/dashboard/ScreeningFunnelView";
 import { PitchingFunnelView } from "@/components/dashboard/PitchingFunnelView";
+import { AIGuidanceBox } from "@/components/common/AIGuidanceBox";
+import { useAIGuidanceData } from "@/hooks/useAIGuidanceData";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useCohortSettings } from "@/hooks/useCohortSettings";
 import { formatDeadlineDisplay, formatDeadlineSimple, isDeadlinePassed } from "@/utils/deadlineUtils";
@@ -300,6 +302,14 @@ const Dashboard = () => {
     }
   }, [profile]);  
 
+  // Fetch AI guidance for admins
+  const { 
+    data: guidanceData, 
+    loading: guidanceLoading, 
+    error: guidanceError,
+    refetch: refetchGuidance 
+  } = useAIGuidanceData(dashboardData.activeRound);
+
   // Refresh profile when user returns to dashboard (e.g., after profile completion)
   useEffect(() => {
     const handleFocus = () => {
@@ -317,6 +327,19 @@ const Dashboard = () => {
       <DashboardHeader />
       
       <main className="max-w-7xl mx-auto px-6 py-8">
+        {/* AI Guidance Box for Admins */}
+        {profile?.role === 'admin' && (
+          <AIGuidanceBox
+            guidance={guidanceData?.guidance || null}
+            priority={guidanceData?.priority || 'medium'}
+            quickActions={guidanceData?.quickActions || []}
+            insights={guidanceData?.insights || []}
+            loading={guidanceLoading}
+            error={guidanceError}
+            onRefresh={refetchGuidance}
+          />
+        )}
+
         {/* Profile Completion Banner for VCs */}
         {profile?.role === 'vc' && (!profile.target_verticals || profile.target_verticals.length === 0 || !profile.preferred_stages || profile.preferred_stages.length === 0) && (
           <div className="mb-6">
