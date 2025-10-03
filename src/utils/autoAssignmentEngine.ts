@@ -6,6 +6,7 @@ export interface Startup {
   stage: string;
   verticals?: string[];
   regions?: string[];
+  region?: string; // Legacy field for fallback
   description?: string;
 }
 
@@ -69,7 +70,7 @@ export function calculateFitScore(juror: Juror, startup: Startup): { score: numb
   const reasons: string[] = [];
 
   // Region match (+4 points) - check if ANY startup region matches
-  const startupRegions = startup.regions || [];
+  const startupRegions = startup.regions && startup.regions.length > 0 ? startup.regions : (startup.region ? [startup.region] : []);
   const jurorRegions = juror.preferred_regions || [];
   const regionMatches = startupRegions.filter(r => jurorRegions.includes(r));
   if (regionMatches.length > 0) {

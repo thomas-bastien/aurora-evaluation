@@ -6,6 +6,7 @@ export interface Startup {
   verticals?: string[];
   stage?: string;
   regions?: string[];
+  region?: string; // Legacy field for fallback
 }
 
 export interface Juror {
@@ -44,7 +45,7 @@ export function calculateCompatibility(juror: Juror, startup: Startup): Compatib
   const jurorStages = juror.preferred_stages || [];
   const stageMatch = startupStage && jurorStages.includes(startupStage);
   
-  const startupRegions = startup.regions || [];
+  const startupRegions = startup.regions && startup.regions.length > 0 ? startup.regions : (startup.region ? [startup.region] : []);
   const jurorRegions = juror.preferred_regions || [];
   const regionMatches = startupRegions.filter(r => jurorRegions.includes(r));
   const regionMatch = regionMatches.length > 0;
