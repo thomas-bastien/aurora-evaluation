@@ -103,8 +103,8 @@ export function DraftModal({ open, onOpenChange, draftData, onImportComplete }: 
       errors.push({ field: 'team_size', message: 'Team size must be at least 1' });
     }
 
-    if (entry.internal_score && (entry.internal_score < 0 || entry.internal_score > 100)) {
-      errors.push({ field: 'internal_score', message: 'Internal score must be between 0 and 100' });
+    if (entry.internal_score && (entry.internal_score < 0 || entry.internal_score > 10)) {
+      errors.push({ field: 'internal_score', message: 'Internal score must be between 0 and 10' });
     }
 
     return errors;
@@ -170,11 +170,11 @@ export function DraftModal({ open, onOpenChange, draftData, onImportComplete }: 
 
       onImportComplete();
       onOpenChange(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Import error:', error);
       toast({
         title: "Import failed",
-        description: "There was an error importing the startups. Please try again.",
+        description: error?.message || "There was an error importing the startups. Please try again.",
         variant: "destructive",
       });
     } finally {

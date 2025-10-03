@@ -6,7 +6,8 @@ export const REGION_OPTIONS = [
   'Europe',
   'Latin America (LATAM)',
   'Middle East & North Africa (MENA)',
-  'North America'
+  'North America',
+  'Other'
 ] as const;
 
 // Use Aurora's official vertical taxonomy for consistent matchmaking
@@ -43,11 +44,11 @@ export const VERTICAL_OPTIONS = [
 ] as const;
 
 export const STAGE_OPTIONS = [
-  'Pre-seed',
+  'Pre-Seed',
   'Seed', 
   'Series A',
   'Series B',
-  'Series C+',
+  'Series C',
   'Growth',
-  'Late Stage'
+  'IPO'
 ] as const;

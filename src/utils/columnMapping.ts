@@ -205,8 +205,10 @@ export function mapStartupColumn(columnName: string): string | null {
   }
 
   // "How many new countries do you plan to enter this year?" → countries_expansion_plan
-  if (lower.includes('how many new countries') || 
-      (lower.includes('countries') && lower.includes('plan to enter'))) {
+  // Skip "score" columns that might contain keywords like "countries"
+  if ((lower.includes('how many new countries') || 
+      (lower.includes('countries') && lower.includes('plan to enter'))) &&
+      !lower.includes('score') && !lower.includes('points') && !lower.includes('rating')) {
     return 'countries_expansion_plan';
   }
   
@@ -233,8 +235,9 @@ export function mapStartupColumn(columnName: string): string | null {
     return 'countries_operating';
   }
   
-  // Countries expansion plan - handle "enter" keyword
-  if (lower.includes('countries') && (lower.includes('expansion') || lower.includes('expand') || lower.includes('plan') || lower.includes('enter'))) {
+  // Countries expansion plan - handle "enter" keyword, but skip score columns
+  if (lower.includes('countries') && (lower.includes('expansion') || lower.includes('expand') || lower.includes('plan') || lower.includes('enter')) &&
+      !lower.includes('score') && !lower.includes('points') && !lower.includes('rating')) {
     return 'countries_expansion_plan';
   }
   

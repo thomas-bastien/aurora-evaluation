@@ -111,6 +111,17 @@ export function CSVUploadModal({ open, onOpenChange, onDataParsed }: CSVUploadMo
             case 'business_model':
               (startup as any)[mappedField] = parseArrayField(value);
               break;
+            case 'internal_score':
+              // Parse with decimal support and scale from 0-100 to 0-10 if needed
+              const rawScore = parseFloat(String(value).replace(/[^0-9.]/g, ''));
+              if (!isNaN(rawScore)) {
+                // Scale down if value is > 10 (assumes 0-100 scale)
+                const scaledScore = rawScore > 10 ? rawScore / 10 : rawScore;
+                // Clamp to [0, 10]
+                (startup as any)[mappedField] = Math.max(0, Math.min(10, scaledScore));
+                if (i === 1) console.log(`  ✓ Internal score: ${value} → ${(startup as any)[mappedField]}`);
+              }
+              break;
             case 'status':
               startup.status = value || 'pending';
               break;
@@ -202,12 +213,15 @@ export function CSVUploadModal({ open, onOpenChange, onDataParsed }: CSVUploadMo
                     if (rowIndex === 0) console.log(`  ✓ Countries expansion plan set to: "${(startup as any)[mappedField]}"`);
                     break;
                   case 'internal_score':
-                    // Scale down from 0-100 to 0-10 and parse as number
-                    const scoreValue = parseNumericField(value);
-                    if (scoreValue !== undefined) {
-                      (startup as any)[mappedField] = scoreValue / 10;
+                    // Parse with decimal support and scale from 0-100 to 0-10 if needed
+                    const rawScoreValue = parseFloat(String(value).replace(/[^0-9.]/g, ''));
+                    if (!isNaN(rawScoreValue)) {
+                      // Scale down if value is > 10 (assumes 0-100 scale)
+                      const scaledScoreValue = rawScoreValue > 10 ? rawScoreValue / 10 : rawScoreValue;
+                      // Clamp to [0, 10]
+                      (startup as any)[mappedField] = Math.max(0, Math.min(10, scaledScoreValue));
                       if (rowIndex === 0) {
-                        console.log(`  ✓ Internal score scaled: ${value} → ${(startup as any)[mappedField]}`);
+                        console.log(`  ✓ Internal score: ${value} → ${(startup as any)[mappedField]}`);
                       }
                     }
                     break;

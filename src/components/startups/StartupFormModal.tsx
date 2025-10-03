@@ -207,7 +207,7 @@ export function StartupFormModal({
 
   const industries = ['Technology', 'Healthcare', 'Finance', 'Education', 'E-commerce', 'SaaS', 'AI/ML', 'Biotech', 'CleanTech', 'Other'];
   // Use aligned stage options for consistency with juror preferences
-  const stages = STAGE_OPTIONS.map(stage => stage === 'Pre-seed' ? 'Pre-Seed' : stage);
+  const stages = STAGE_OPTIONS;
   const statuses = ['pending', 'under_review', 'selected', 'rejected'];
 
   return (
