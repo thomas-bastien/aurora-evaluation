@@ -32,14 +32,13 @@ export const AURORA_VERTICALS = [
 ] as const;
 
 export const BUSINESS_MODELS = [
-  'B2B',
-  'B2C', 
-  'B2B2C',
-  'Marketplace',
-  'SaaS',
-  'Hardware',
-  'Services',
-  'Platform'
+  'B2C – Business to Consumer',
+  'B2B2C – Business to Business to Consumer',
+  'B2B – Business to Business (Enterprise & SMEs)',
+  'B2B – Business to Business (Enterprise)',
+  'B2B – Business to Business (SMEs)',
+  'D2C – Direct to Consumer',
+  'C2C – Consumer to Consumer (incl. Marketplaces/Platforms)'
 ] as const;
 
 export const CURRENCIES = [
