@@ -268,7 +268,7 @@ export async function generateAutoAssignments(
       
       // Combine scores: 70% AI, 30% rule-based (if AI available)
       const totalScore = aiScores 
-        ? (aiScore * 0.7) + ((fitScore + interestBonus) * 3 * 0.3) + workloadPenalty
+        ? (aiScore * 0.7) + ((fitScore + interestBonus) * 0.3) + workloadPenalty
         : fitScore + interestBonus + workloadPenalty;
       
       let fullReasoning = reasoning;

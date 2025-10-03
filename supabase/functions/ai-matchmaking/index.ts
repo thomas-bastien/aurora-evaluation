@@ -73,16 +73,17 @@ Consider:
 
 Return a JSON array with one object per juror containing:
 - juror_id: string
-- compatibility_score: number (0-100)
+- compatibility_score: number (0-10, where 10 = perfect match, 0 = no match)
 - confidence: number (0-1, how confident you are in this score)
 - reasoning: {
-    vertical_match: { score: number (0-100), explanation: string },
-    stage_match: { score: number (0-100), explanation: string },
-    region_match: { score: number (0-100), explanation: string },
-    contextual_fit: { score: number (0-100), explanation: string }
+    vertical_match: { score: number (0-10), explanation: string },
+    stage_match: { score: number (0-10), explanation: string },
+    region_match: { score: number (0-10), explanation: string },
+    contextual_fit: { score: number (0-10), explanation: string }
   }
 - recommendation: "Highly Recommended" | "Recommended" | "Consider" | "Not Recommended"
 
+Use a 0-10 scale where 10 = perfect match, 0 = no match. Be discerning - most scores should be 3-7.
 Be concise but specific in explanations. Focus on semantic understanding and real-world relevance.`;
 
     const userPrompt = `Startup:
