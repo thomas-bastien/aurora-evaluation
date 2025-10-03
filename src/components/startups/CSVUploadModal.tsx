@@ -13,6 +13,7 @@ interface Startup {
   name: string;
   description?: string;
   stage?: string;
+  region?: string;
   location?: string;
   founded_year?: number;
   team_size?: number;
@@ -152,7 +153,7 @@ export function CSVUploadModal({ open, onOpenChange, onDataParsed }: CSVUploadMo
           const columnNames = Object.keys(jsonData[0]);
           console.log('Excel columns found:', columnNames);
           
-          const parsed: Partial<Startup>[] = jsonData.map((row: any) => {
+          const parsed: Partial<Startup>[] = jsonData.map((row: any, rowIndex: number) => {
             const startup: Partial<Startup> = {};
             
             // Iterate through all columns and map them dynamically
@@ -160,10 +161,20 @@ export function CSVUploadModal({ open, onOpenChange, onDataParsed }: CSVUploadMo
               const mappedField = mapStartupColumn(columnName);
               const value = row[columnName];
               
+              // Debug logging for first row
+              if (rowIndex === 0) {
+                console.log(`Column: "${columnName}" → Mapped to: "${mappedField}" | Value:`, value);
+              }
+              
               if (mappedField && value) {
                 switch (mappedField) {
                   case 'stage':
                     startup.stage = normalizeStage(String(value));
+                    if (rowIndex === 0) console.log(`  ✓ Stage normalized to: "${startup.stage}"`);
+                    break;
+                  case 'region':
+                    startup.region = String(value).trim();
+                    if (rowIndex === 0) console.log(`  ✓ Region set to: "${startup.region}"`);
                     break;
                   case 'founded_year':
                     startup.founded_year = parseYearField(value);
@@ -173,12 +184,22 @@ export function CSVUploadModal({ open, onOpenChange, onDataParsed }: CSVUploadMo
                   case 'funding_raised':
                   case 'full_time_team_members':
                     (startup as any)[mappedField] = parseNumericField(value);
+                    if (rowIndex === 0 && mappedField === 'full_time_team_members') {
+                      console.log(`  ✓ Full-time members parsed to: ${(startup as any)[mappedField]}`);
+                    }
                     break;
                   case 'founder_names':
                   case 'regions':
                   case 'verticals':
                   case 'business_model':
                     (startup as any)[mappedField] = parseArrayField(value);
+                    if (rowIndex === 0 && mappedField === 'business_model') {
+                      console.log(`  ✓ Business model parsed to:`, (startup as any)[mappedField]);
+                    }
+                    break;
+                  case 'countries_expansion_plan':
+                    (startup as any)[mappedField] = String(value).trim();
+                    if (rowIndex === 0) console.log(`  ✓ Countries expansion plan set to: "${(startup as any)[mappedField]}"`);
                     break;
                   case 'status':
                     startup.status = String(value) || 'pending';
@@ -188,6 +209,10 @@ export function CSVUploadModal({ open, onOpenChange, onDataParsed }: CSVUploadMo
                 }
               }
             });
+            
+            if (rowIndex === 0) {
+              console.log('First parsed startup object:', startup);
+            }
             
             return startup;
           }).filter(s => s.name);
