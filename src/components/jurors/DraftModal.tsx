@@ -416,6 +416,7 @@ export function DraftModal({ open, onOpenChange, draftData, onImportComplete }: 
                             <div>Regions: {entry.preferred_regions.join(', ')}</div>
                           )}
                           {entry.evaluation_limit && <div>Eval Limit: {entry.evaluation_limit}</div>}
+                          {entry.meeting_limit && <div>Meeting Limit: {entry.meeting_limit}</div>}
                         </div>
                       </div>
                     ))}
@@ -485,7 +486,8 @@ export function DraftModal({ open, onOpenChange, draftData, onImportComplete }: 
                   JSON.stringify(dup.existing.preferred_stages) !== JSON.stringify(dup.incoming.preferred_stages) ||
                   JSON.stringify(dup.existing.target_verticals) !== JSON.stringify(dup.incoming.target_verticals) ||
                   JSON.stringify(dup.existing.preferred_regions) !== JSON.stringify(dup.incoming.preferred_regions) ||
-                  dup.existing.evaluation_limit !== dup.incoming.evaluation_limit;
+                  dup.existing.evaluation_limit !== dup.incoming.evaluation_limit ||
+                  dup.existing.meeting_limit !== dup.incoming.meeting_limit;
 
                 return (
                   <div key={index} className="border rounded-lg p-4 bg-muted/50">
@@ -548,6 +550,13 @@ export function DraftModal({ open, onOpenChange, draftData, onImportComplete }: 
                             <span className="text-muted-foreground">Eval Limit:</span>
                             <span>{dup.existing.evaluation_limit || '—'}</span>
                             {dup.existing.evaluation_limit === dup.incoming.evaluation_limit && (
+                              <CheckCircle className="h-3 w-3 text-green-500" />
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-muted-foreground">Meeting Limit:</span>
+                            <span>{dup.existing.meeting_limit || '—'}</span>
+                            {dup.existing.meeting_limit === dup.incoming.meeting_limit && (
                               <CheckCircle className="h-3 w-3 text-green-500" />
                             )}
                           </div>
@@ -626,6 +635,15 @@ export function DraftModal({ open, onOpenChange, draftData, onImportComplete }: 
                               {dup.incoming.evaluation_limit || '—'}
                             </span>
                             {dup.existing.evaluation_limit !== dup.incoming.evaluation_limit && (
+                              <AlertTriangle className="h-3 w-3 text-orange-600" />
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-muted-foreground">Meeting Limit:</span>
+                            <span className={dup.existing.meeting_limit !== dup.incoming.meeting_limit ? 'font-semibold text-orange-600' : ''}>
+                              {dup.incoming.meeting_limit || '—'}
+                            </span>
+                            {dup.existing.meeting_limit !== dup.incoming.meeting_limit && (
                               <AlertTriangle className="h-3 w-3 text-orange-600" />
                             )}
                           </div>
@@ -834,6 +852,16 @@ export function DraftModal({ open, onOpenChange, draftData, onImportComplete }: 
                           value={entry.evaluation_limit || ''}
                           onChange={(e) => updateEntry(index, 'evaluation_limit', e.target.value)}
                           placeholder="Max evaluations (optional)"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-sm font-medium">Pitching Calls Limit</label>
+                        <Input
+                          type="number"
+                          value={entry.meeting_limit || ''}
+                          onChange={(e) => updateEntry(index, 'meeting_limit', e.target.value)}
+                          placeholder="Max pitching calls (optional)"
                         />
                       </div>
                     </div>
