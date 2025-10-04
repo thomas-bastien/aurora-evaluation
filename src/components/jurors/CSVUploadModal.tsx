@@ -19,6 +19,7 @@ interface Juror {
   target_verticals?: string[];
   preferred_regions?: string[];
   evaluation_limit?: number;
+  meeting_limit?: number;
 }
 
 interface CSVUploadModalProps {

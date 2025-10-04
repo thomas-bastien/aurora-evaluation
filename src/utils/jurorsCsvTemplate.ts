@@ -2,12 +2,13 @@ export function generateJurorsCSVTemplate(): string {
   // Documentation rows
   const docRows = [
     '# REQUIRED FIELDS: name, email',
-    '# OPTIONAL FIELDS: job_title, company, linkedin_url, calendly_link, preferred_stages, target_verticals, preferred_regions, evaluation_limit',
+    '# OPTIONAL FIELDS: job_title, company, linkedin_url, calendly_link, preferred_stages, target_verticals, preferred_regions, evaluation_limit, meeting_limit',
     '# ARRAY FIELDS (semicolon-separated): preferred_stages, target_verticals, preferred_regions',
     '# VALID STAGES: Pre-Seed, Seed, Series A, Series B, Series C+, Growth, IPO',
     '# VALID REGIONS: Africa, Asia Pacific (APAC), Europe, Latin America (LATAM), Middle East & North Africa (MENA), North America',
     '# VALID VERTICALS: See startup template for full list (e.g., "Artificial Intelligence (AI/ML);Fintech;HealthTech & MedTech")',
     '# evaluation_limit: Number of startups this juror should evaluate (leave empty for no limit)',
+    '# meeting_limit: Number of pitching calls this juror should conduct (leave empty for no limit)',
     ''
   ];
 
@@ -21,7 +22,8 @@ export function generateJurorsCSVTemplate(): string {
     'preferred_stages',
     'target_verticals',
     'preferred_regions',
-    'evaluation_limit'
+    'evaluation_limit',
+    'meeting_limit'
   ];
 
   const exampleRows = [
@@ -36,12 +38,14 @@ export function generateJurorsCSVTemplate(): string {
       'Seed;Series A',
       'Artificial Intelligence (AI/ML);Enterprise Software;Fintech',
       'North America;Europe',
-      '10'
+      '10',
+      '5'
     ],
     // Minimal example with only required fields
     [
       'Michael Chen',
       'mchen@innovatefund.io',
+      '',
       '',
       '',
       '',
@@ -62,7 +66,8 @@ export function generateJurorsCSVTemplate(): string {
       'Pre-Seed;Seed',
       'HealthTech & MedTech;RetailTech & E-commerce',
       'Latin America (LATAM);North America',
-      '15'
+      '15',
+      '8'
     ]
   ];
 
