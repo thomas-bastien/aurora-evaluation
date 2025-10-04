@@ -62,7 +62,8 @@ Deno.serve(async (req) => {
     
     const { data: jurorData } = await supabase
       .from('jurors')
-      .select('id');
+      .select('id')
+      .not('email', 'ilike', '%@test.com'); // Exclude test accounts
 
     const startupIds = startupData?.map(s => s.id) || [];
     const jurorIds = jurorData?.map(j => j.id) || [];
@@ -198,11 +199,12 @@ Deno.serve(async (req) => {
       .select('*', { count: 'exact', head: true });
     recordsDeleted.startup_round_statuses = roundStatuses || 0;
 
-    // 13. Get juror user_ids before deleting jurors
+    // 13. Get non-test juror user_ids before deleting jurors
     const { data: jurors } = await supabase
       .from('jurors')
-      .select('user_id')
-      .not('user_id', 'is', null);
+      .select('user_id, email')
+      .not('user_id', 'is', null)
+      .not('email', 'ilike', '%@test.com'); // Exclude test accounts
 
     const jurorUserIds = jurors?.map(j => j.user_id).filter(Boolean) || [];
 
@@ -213,10 +215,11 @@ Deno.serve(async (req) => {
       .select('*', { count: 'exact', head: true });
     recordsDeleted.startups = startupsCount || 0;
 
-    // 15. Delete jurors
+    // 15. Delete non-test jurors only
     const { count: jurorsCount } = await supabase
       .from('jurors')
       .delete()
+      .not('email', 'ilike', '%@test.com') // Preserve test accounts
       .select('*', { count: 'exact', head: true });
     recordsDeleted.jurors = jurorsCount || 0;
 
