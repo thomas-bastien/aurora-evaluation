@@ -55,65 +55,86 @@ Deno.serve(async (req) => {
     // Track deleted records
     const recordsDeleted: Record<string, number> = {};
 
+    // First, fetch all startup IDs and juror IDs to use in deletion queries
+    const { data: startupData } = await supabase
+      .from('startups')
+      .select('id');
+    
+    const { data: jurorData } = await supabase
+      .from('jurors')
+      .select('id');
+
+    const startupIds = startupData?.map(s => s.id) || [];
+    const jurorIds = jurorData?.map(j => j.id) || [];
+
+    console.log(`Found ${startupIds.length} startups and ${jurorIds.length} jurors to process`);
+
+    // Early return if no data to delete
+    if (startupIds.length === 0 && jurorIds.length === 0) {
+      console.log('No startups or jurors found, nothing to delete');
+      
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          recordsDeleted: {},
+          message: 'No data to reset'
+        }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200 
+        }
+      );
+    }
+
     // Delete in proper order respecting foreign key constraints
     
     // 1. Delete evaluations first (they reference assignments and startups/jurors)
-    const { count: screeningEvals } = await supabase
-      .from('screening_evaluations')
-      .delete()
-      .in('startup_id', 
-        supabase.from('startups').select('id')
-      )
-      .select('*', { count: 'exact', head: true });
-    recordsDeleted.screening_evaluations = screeningEvals || 0;
+    if (startupIds.length > 0) {
+      const { count: screeningEvals } = await supabase
+        .from('screening_evaluations')
+        .delete()
+        .in('startup_id', startupIds)
+        .select('*', { count: 'exact', head: true });
+      recordsDeleted.screening_evaluations = screeningEvals || 0;
 
-    const { count: pitchingEvals } = await supabase
-      .from('pitching_evaluations')
-      .delete()
-      .in('startup_id',
-        supabase.from('startups').select('id')
-      )
-      .select('*', { count: 'exact', head: true });
-    recordsDeleted.pitching_evaluations = pitchingEvals || 0;
+      const { count: pitchingEvals } = await supabase
+        .from('pitching_evaluations')
+        .delete()
+        .in('startup_id', startupIds)
+        .select('*', { count: 'exact', head: true });
+      recordsDeleted.pitching_evaluations = pitchingEvals || 0;
 
-    // 2. Delete assignments
-    const { count: screeningAssigns } = await supabase
-      .from('screening_assignments')
-      .delete()
-      .in('startup_id',
-        supabase.from('startups').select('id')
-      )
-      .select('*', { count: 'exact', head: true });
-    recordsDeleted.screening_assignments = screeningAssigns || 0;
+      // 2. Delete assignments
+      const { count: screeningAssigns } = await supabase
+        .from('screening_assignments')
+        .delete()
+        .in('startup_id', startupIds)
+        .select('*', { count: 'exact', head: true });
+      recordsDeleted.screening_assignments = screeningAssigns || 0;
 
-    const { count: pitchingAssigns } = await supabase
-      .from('pitching_assignments')
-      .delete()
-      .in('startup_id',
-        supabase.from('startups').select('id')
-      )
-      .select('*', { count: 'exact', head: true });
-    recordsDeleted.pitching_assignments = pitchingAssigns || 0;
+      const { count: pitchingAssigns } = await supabase
+        .from('pitching_assignments')
+        .delete()
+        .in('startup_id', startupIds)
+        .select('*', { count: 'exact', head: true });
+      recordsDeleted.pitching_assignments = pitchingAssigns || 0;
 
-    // 3. Delete pitch requests
-    const { count: pitchReqs } = await supabase
-      .from('pitch_requests')
-      .delete()
-      .in('startup_id',
-        supabase.from('startups').select('id')
-      )
-      .select('*', { count: 'exact', head: true });
-    recordsDeleted.pitch_requests = pitchReqs || 0;
+      // 3. Delete pitch requests
+      const { count: pitchReqs } = await supabase
+        .from('pitch_requests')
+        .delete()
+        .in('startup_id', startupIds)
+        .select('*', { count: 'exact', head: true });
+      recordsDeleted.pitch_requests = pitchReqs || 0;
 
-    // 4. Delete calendar invitations
-    const { count: calInvites } = await supabase
-      .from('cm_calendar_invitations')
-      .delete()
-      .in('startup_id',
-        supabase.from('startups').select('id')
-      )
-      .select('*', { count: 'exact', head: true });
-    recordsDeleted.cm_calendar_invitations = calInvites || 0;
+      // 4. Delete calendar invitations
+      const { count: calInvites } = await supabase
+        .from('cm_calendar_invitations')
+        .delete()
+        .in('startup_id', startupIds)
+        .select('*', { count: 'exact', head: true });
+      recordsDeleted.cm_calendar_invitations = calInvites || 0;
+    }
 
     // 5. Delete communication attempts (references workflows)
     const { count: commAttempts } = await supabase
