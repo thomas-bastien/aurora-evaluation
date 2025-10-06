@@ -1,5 +1,4 @@
 import { CommunicationLifecycleTimeline } from "@/components/cm/CommunicationLifecycleTimeline";
-import { EmailAnalyticsCard } from "@/components/dashboard/EmailAnalyticsCard";
 import { EmailOverview } from "@/components/communication/EmailOverview";
 import { EmailTemplateTable } from "@/components/communication/EmailTemplateTable";
 import { EmailCommunicationsTable } from "@/components/communication/EmailCommunicationsTable";
@@ -60,10 +59,7 @@ export default function EmailManagementPage() {
               </TabsContent>
 
               <TabsContent value="analytics" className="space-y-6">
-                <div className="grid gap-6">
-                  <EmailAnalyticsCard />
-                  <CommunicationLifecycleTimeline />
-                </div>
+                <CommunicationLifecycleTimeline />
               </TabsContent>
             </Tabs>
           </div>
