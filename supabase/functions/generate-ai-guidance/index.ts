@@ -52,6 +52,25 @@ serve(async (req) => {
 
     const { role, userName, roundName, metrics }: GuidanceRequest = await req.json();
 
+    // Define valid actions based on role
+    const validActions = role === 'vc' 
+      ? [
+          { route: '/dashboard', label: 'Go to Dashboard', icon: 'BarChart3' },
+          { route: '/evaluate', label: 'Start Evaluations', icon: 'PlayCircle' },
+          { route: '/evaluate', label: 'Continue Evaluations', icon: 'CheckCircle2' },
+          { route: '/profile', label: 'Update Profile', icon: 'Users' }
+        ]
+      : [
+          { route: '/dashboard', label: 'Dashboard Overview', icon: 'BarChart3' },
+          { route: `/selection?round=${roundName}&tab=startup-selection`, label: 'Review Startups', icon: 'Users' },
+          { route: `/selection?round=${roundName}&tab=jury-progress`, label: 'Monitor Jury Progress', icon: 'CheckCircle2' },
+          { route: `/selection?round=${roundName}&tab=matchmaking`, label: 'Matchmaking', icon: 'Users' },
+          { route: `/selection?round=${roundName}&tab=communications`, label: 'Communications', icon: 'Send' },
+          { route: '/email-management', label: 'Email Templates', icon: 'Mail' }
+        ];
+
+    const actionLabels = validActions.map(a => a.label).join(', ');
+
     let systemPrompt = '';
     let userPrompt = '';
 
@@ -69,11 +88,13 @@ Progress:
 - Draft evaluations: ${metrics.draftEvaluations || 0}
 - Pending evaluations: ${metrics.pendingEvaluations || 0}
 
+Available actions: ${actionLabels}
+
 Generate personalized guidance with:
 1. A warm greeting
 2. Progress summary with encouragement
 3. Next steps suggestion
-4. 2-3 quick action buttons with labels
+4. 2-3 action labels from the available actions list
 
 Consider:
 - If 0 completed: Encourage to start
@@ -98,11 +119,13 @@ Status:
 - Pending communications: ${metrics.pendingCommunications || 0}
 - Unscheduled pitch calls: ${metrics.unscheduledPitches || 0}
 
+Available actions: ${actionLabels}
+
 Generate strategic guidance with:
 1. Status overview
 2. Bottleneck analysis
 3. Priority action recommendations
-4. 2-3 quick action buttons with labels
+4. 2-3 action labels from the available actions list
 
 Consider:
 - If completion < 30%: Flag as high priority, suggest reminders
@@ -142,16 +165,8 @@ Consider:
                 },
                 quickActions: {
                   type: 'array',
-                  items: {
-                    type: 'object',
-                    properties: {
-                      label: { type: 'string' },
-                      route: { type: 'string' },
-                      icon: { type: 'string' }
-                    },
-                    required: ['label', 'route', 'icon']
-                  },
-                  description: '2-3 actionable buttons'
+                  items: { type: 'string' },
+                  description: `Choose 2-3 action labels from: ${actionLabels}. Return ONLY the exact labels.`
                 },
                 insights: {
                   type: 'array',
@@ -183,6 +198,19 @@ Consider:
 
     const guidanceData: GuidanceResponse = JSON.parse(toolCall.function.arguments);
 
+    // Map AI-selected labels to full action objects
+    const aiLabels = guidanceData.quickActions as unknown as string[];
+    const mappedActions = aiLabels
+      .map(label => validActions.find(a => a.label === label))
+      .filter(Boolean) as QuickAction[];
+
+    // Fallback if mapping fails
+    if (mappedActions.length === 0) {
+      mappedActions.push(validActions[0]);
+    }
+
+    guidanceData.quickActions = mappedActions;
+
     return new Response(JSON.stringify(guidanceData), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
@@ -193,7 +221,7 @@ Consider:
       error: error instanceof Error ? error.message : 'Unknown error',
       guidance: 'Welcome back! Check your dashboard for the latest updates.',
       priority: 'medium',
-      quickActions: [],
+      quickActions: [{ label: 'Go to Dashboard', route: '/dashboard', icon: 'BarChart3' }],
       insights: []
     }), {
       status: 500,

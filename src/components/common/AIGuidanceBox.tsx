@@ -3,6 +3,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { toast } from '@/hooks/use-toast';
 import { 
   Sparkles, 
   RefreshCw, 
@@ -68,6 +69,37 @@ export const AIGuidanceBox = ({
   onRefresh
 }: AIGuidanceBoxProps) => {
   const navigate = useNavigate();
+
+  const handleActionClick = (action: QuickAction, index: number) => {
+    // Track click for audit
+    console.log('[AI Guidance Click]', {
+      timestamp: new Date().toISOString(),
+      label: action.label,
+      route: action.route,
+      priority: priority,
+      position: index
+    });
+
+    try {
+      // Validate route exists
+      if (!action.route || action.route === '') {
+        throw new Error('Invalid route');
+      }
+
+      navigate(action.route);
+    } catch (error) {
+      console.error('[AI Guidance Navigation Error]', {
+        action,
+        error
+      });
+      
+      toast({
+        variant: 'destructive',
+        title: 'Navigation failed',
+        description: 'Unable to navigate to this page. Please try another option.'
+      });
+    }
+  };
 
   if (loading) {
     return (
@@ -160,8 +192,9 @@ export const AIGuidanceBox = ({
                   key={index}
                   variant={index === 0 ? "default" : "outline"}
                   size="sm"
-                  onClick={() => navigate(action.route)}
+                  onClick={() => handleActionClick(action, index)}
                   className="gap-2"
+                  aria-label={`${action.label} - ${action.route}`}
                 >
                   <Icon className="h-4 w-4" />
                   {action.label}
