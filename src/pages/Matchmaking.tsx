@@ -17,6 +17,7 @@ interface Startup {
   location: string;
   founder_names: string[];
   verticals?: string[];
+  regions?: string[];
 }
 interface Juror {
   id: string;
@@ -280,32 +281,48 @@ const Matchmaking = () => {
               const assignmentCount = getStartupAssignmentCount(startup.id);
               const hasMinimumJurors = assignmentCount >= 3;
               return <div key={startup.id} className="border border-border rounded-lg p-4 hover:bg-muted/50 transition-colors">
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
-                          <h3 className="font-semibold text-foreground">{startup.name}</h3>
-                          <Badge variant="outline">{(startup.verticals && startup.verticals.length > 0) ? startup.verticals[0] : 'N/A'}</Badge>
-                          <Badge variant="outline">{startup.stage}</Badge>
-                          {hasMinimumJurors ? <Badge variant="default">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1 space-y-2">
+                        <div className="flex items-center gap-3">
+                          <h3 className="text-lg font-semibold text-foreground">{startup.name}</h3>
+                          {hasMinimumJurors ? <Badge variant="default" className="shrink-0">
                               <CheckCircle2 className="w-3 h-3 mr-1" />
                               {assignmentCount} jurors
-                            </Badge> : <Badge variant="destructive">
+                            </Badge> : <Badge variant="destructive" className="shrink-0">
                               {assignmentCount}/3 jurors
                             </Badge>}
                         </div>
-                        <p className="text-sm text-muted-foreground mb-2">
-                          {startup.description}
-                        </p>
-                        <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                          <span>{startup.location}</span>
-                          {startup.founder_names && startup.founder_names.length > 0 && <span>Founders: {startup.founder_names.join(", ")}</span>}
+                        
+                        <div className="space-y-1 text-sm">
+                          <div>
+                            <span className="font-medium text-foreground">Stage:</span>{" "}
+                            <span className="text-muted-foreground">{startup.stage || 'N/A'}</span>
+                          </div>
+                          
+                          <div>
+                            <span className="font-medium text-foreground">Verticals:</span>{" "}
+                            <span className="text-muted-foreground">
+                              {(startup.verticals && startup.verticals.length > 0) ? startup.verticals.join(", ") : 'N/A'}
+                            </span>
+                          </div>
+                          
+                          <div>
+                            <span className="font-medium text-foreground">Region:</span>{" "}
+                            <span className="text-muted-foreground">
+                              {(startup.regions && startup.regions.length > 0) ? startup.regions.join(", ") : 'N/A'}
+                            </span>
+                          </div>
+                          
+                          <div>
+                            <span className="font-medium text-foreground">Description:</span>{" "}
+                            <span className="text-muted-foreground">{startup.description || 'N/A'}</span>
+                          </div>
                         </div>
                       </div>
-                      <div className="flex gap-2">
-                        <Button variant="outline" onClick={() => handleAssignStartup(startup)}>
-                          {assignmentCount > 0 ? "Edit Assignment" : "Assign Jurors"}
-                        </Button>
-                      </div>
+                      
+                      <Button variant="outline" onClick={() => handleAssignStartup(startup)} className="shrink-0">
+                        {assignmentCount > 0 ? "Edit Assignment" : "Assign Jurors"}
+                      </Button>
                     </div>
                   </div>;
             })}
