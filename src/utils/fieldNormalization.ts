@@ -3,11 +3,11 @@
 
 export const CANONICAL_REGIONS: Record<string, string[]> = {
   'Africa': ['Africa', 'Sub-Saharan Africa', 'North Africa', 'SSA'],
-  'Asia Pacific (APAC)': ['Asia', 'APAC', 'Asia Pacific', 'SEA', 'Southeast Asia', 'East Asia', 'South Asia'],
-  'Europe': ['EU', 'Europe', 'European Union', 'EMEA'],
+  'Asia Pacific (APAC)': ['Asia', 'APAC', 'APAC (Asia + Pacific)', 'APAC ( Asia+ Pacific)', 'Asia Pacific', 'SEA', 'Southeast Asia', 'East Asia', 'South Asia'],
+  'Europe': ['EU', 'Europe', 'European Union', 'EMEA', 'CEE', 'CEE (Central and Eastern Europe)', 'CIS'],
   'Latin America (LATAM)': ['LATAM', 'Latin America', 'South America', 'Central America', 'LatAm'],
-  'Middle East & North Africa (MENA)': ['ME', 'Middle East', 'MENA', 'Gulf', 'GCC'],
-  'North America': ['NA', 'North America', 'USA', 'US', 'United States', 'Canada'],
+  'Middle East & North Africa (MENA)': ['ME', 'Middle East', 'MENA', 'MENA (Middle East + Africa)', 'Gulf', 'GCC'],
+  'North America': ['NA', 'North America', 'NORAM', 'USA', 'US', 'United States', 'Canada'],
   'Other': ['Other', 'Global', 'Worldwide', 'International', 'Multiple Regions']
 };
 
