@@ -13,8 +13,6 @@ import { toast } from "sonner";
 import { StartupsEvaluationList } from "@/components/evaluation/StartupsEvaluationList";
 import { EvaluationStats } from "@/components/evaluation/EvaluationStats";
 import { WorkflowGuide } from "@/components/common/WorkflowGuide";
-import { AIGuidanceBox } from "@/components/common/AIGuidanceBox";
-import { useAIGuidanceData } from "@/hooks/useAIGuidanceData";
 import { Search, Filter, CheckCircle, Clock, AlertCircle } from "lucide-react";
 interface AssignedStartup {
   id: string;
@@ -164,13 +162,6 @@ const EvaluationDashboard = () => {
   };
   const completionRate = stats.total > 0 ? stats.completed / stats.total * 100 : 0;
 
-  // Fetch AI guidance
-  const { 
-    data: guidanceData, 
-    loading: guidanceLoading, 
-    error: guidanceError,
-    refetch: refetchGuidance 
-  } = useAIGuidanceData(currentRound);
   if (profile?.role !== 'vc') {
     return <div className="min-h-screen bg-background">
         <DashboardHeader />
@@ -191,17 +182,6 @@ const EvaluationDashboard = () => {
       <DashboardHeader />
       
       <main className="max-w-7xl mx-auto px-6 py-8">
-        {/* AI Guidance Box */}
-        <AIGuidanceBox
-          guidance={guidanceData?.guidance || null}
-          priority={guidanceData?.priority || 'medium'}
-          quickActions={guidanceData?.quickActions || []}
-          insights={guidanceData?.insights || []}
-          loading={guidanceLoading}
-          error={guidanceError}
-          onRefresh={refetchGuidance}
-        />
-
         {/* Workflow Guide */}
         <WorkflowGuide userRole="vc" currentRound={currentRound} />
 

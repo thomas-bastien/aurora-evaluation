@@ -340,6 +340,19 @@ const Dashboard = () => {
           />
         )}
 
+        {/* AI Guidance Box for VCs */}
+        {profile?.role === 'vc' && (
+          <AIGuidanceBox
+            guidance={guidanceData?.guidance || null}
+            priority={guidanceData?.priority || 'medium'}
+            quickActions={guidanceData?.quickActions || []}
+            insights={guidanceData?.insights || []}
+            loading={guidanceLoading}
+            error={guidanceError}
+            onRefresh={refetchGuidance}
+          />
+        )}
+
         {/* Profile Completion Banner for VCs */}
         {profile?.role === 'vc' && (!profile.target_verticals || profile.target_verticals.length === 0 || !profile.preferred_stages || profile.preferred_stages.length === 0) && (
           <div className="mb-6">
