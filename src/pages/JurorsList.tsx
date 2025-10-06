@@ -20,7 +20,7 @@ import { useUserProfile } from '@/hooks/useUserProfile';
 import { CSVUploadModal } from '@/components/jurors/CSVUploadModal';
 import { DraftModal } from '@/components/jurors/DraftModal';
 import { JurorFormModal } from '@/components/jurors/JurorFormModal';
-import { downloadJurorsCSVTemplate } from '@/utils/jurorsCsvTemplate';
+import { downloadJurorTemplate } from '@/utils/jurorsCsvTemplate';
 import { JurorStatusBadge } from '@/components/common/JuryRoundStatusBadges';
 import { calculateMultipleProgressiveJurorStatuses, type ProgressiveJurorStatus } from '@/utils/juryStatusUtils';
 
@@ -563,7 +563,7 @@ export default function JurorsList() {
                    <UserCheck className="w-4 h-4 mr-2" />
                    {checkLoginReminders.isPending ? 'Checking...' : 'Check Login Reminders'}
                  </Button>
-                 <Button variant="outline" onClick={downloadJurorsCSVTemplate}>
+                 <Button variant="outline" onClick={downloadJurorTemplate}>
                    <Download className="h-4 w-4 mr-2" />
                    Download Template
                  </Button>

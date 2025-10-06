@@ -13,7 +13,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { CSVUploadModal } from '@/components/startups/CSVUploadModal';
 import { StartupFormModal } from '@/components/startups/StartupFormModal';
 import { DraftModal } from '@/components/startups/DraftModal';
-import { downloadCSVTemplate } from '@/utils/csvTemplate';
+import { downloadStartupTemplate } from '@/utils/csvTemplate';
 import { useToast } from '@/hooks/use-toast';
 import { getStageColor } from '@/utils/stageUtils';
 import { getStatusColor } from '@/utils/statusUtils';
@@ -444,7 +444,7 @@ export default function StartupsList() {
               <p className="text-muted-foreground mt-2">Manage and review startup applications</p>
             </div>
             <div className="flex gap-2">
-              <Button variant="outline" onClick={downloadCSVTemplate}>
+              <Button variant="outline" onClick={downloadStartupTemplate}>
                 <Download className="h-4 w-4 mr-2" />
                 Download Template
               </Button>
@@ -494,7 +494,7 @@ export default function StartupsList() {
             </div>
             {isAdmin && (
               <div className="flex gap-2">
-                <Button variant="outline" onClick={downloadCSVTemplate}>
+                <Button variant="outline" onClick={downloadStartupTemplate}>
                   <Download className="h-4 w-4 mr-2" />
                   Download Template
                 </Button>

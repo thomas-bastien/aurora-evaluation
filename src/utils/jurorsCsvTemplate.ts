@@ -1,80 +1,86 @@
-export function generateJurorsCSVTemplate(): string {
-  // Documentation rows
-  const docRows = [
-    '# ========================================',
-    '# JURORS CSV UPLOAD TEMPLATE',
-    '# ========================================',
-    '# REQUIRED FIELDS (must have values):',
-    '#   - name (text)',
-    '#   - email (email address)',
-    '#',
-    '# OPTIONAL FIELDS:',
-    '#   - job_title (text)',
-    '#   - company (text)',
-    '#   - fund_focus (text - investment focus area)',
-    '#   - linkedin_url (URL - LinkedIn profile)',
-    '#   - calendly_link (URL - Calendly scheduling link)',
-    '#   - evaluation_limit (number - max screening evaluations)',
-    '#   - meeting_limit (number - max pitching calls)',
-    '#   - thesis_keywords (array - semicolon-separated keywords)',
-    '#   - preferred_stages (array - semicolon-separated stages)',
-    '#   - target_verticals (array - semicolon-separated verticals)',
-    '#   - preferred_regions (array - semicolon-separated regions)',
-    '#',
-    '# ARRAY FIELDS (use semicolon ; to separate multiple values):',
-    '#   Example: "Seed;Series A;Series B"',
-    '#',
-    '# VALID FUNDING STAGES:',
-    '#   Pre-Seed, Seed, Series A, Series B, Series C+, Growth, IPO',
-    '#',
-    '# VALID REGIONS:',
-    '#   Africa',
-    '#   Asia Pacific (APAC)',
-    '#   Europe',
-    '#   Latin America (LATAM)',
-    '#   Middle East & North Africa (MENA)',
-    '#   North America',
-    '#   Other',
-    '#',
-    '# VALID VERTICALS (use exact spelling):',
-    '#   Artificial Intelligence (AI/ML)',
-    '#   Fintech',
-    '#   HealthTech & MedTech',
-    '#   Wellbeing, Longevity & Life Sciences',
-    '#   PharmTech',
-    '#   RetailTech & E-commerce',
-    '#   Enterprise Software',
-    '#   Cybersecurity',
-    '#   Productivity Tools',
-    '#   Transportation & Mobility',
-    '#   Energy & Sustainability',
-    '#   AgriTech & Food Tech',
-    '#   Media & Entertainment',
-    '#   AdTech & MarTech',
-    '#   Real Estate & PropTech',
-    '#   Education Technology (EdTech)',
-    '#   Logistics & Supply Chain',
-    '#   Construction Tech',
-    '#   Space Technology',
-    '#   Semiconductors & Hardware',
-    '#   Data Infrastructure & Analytics',
-    '#   Industrial Automation & Robotics',
-    '#   Aerospace & Defense',
-    '#   Gaming & Visual Assets',
-    '#   SportTech',
-    '#   Web3 / Blockchain / Crypto',
-    '#   TravelTech',
-    '#   No Tech, not a Venture Business',
-    '#   Others (Specify)',
-    '#',
-    '# TIPS:',
-    '#   - Leave optional fields empty (blank) if not applicable',
-    '#   - URLs must include http:// or https://',
-    '#   - Email addresses must be valid format',
-    '#   - Numbers should be whole numbers (no decimals for limits)',
-    ''
+import * as XLSX from 'xlsx';
+
+export function downloadJurorTemplate(): void {
+  // Instructions sheet content (clean, no # markers)
+  const instructions = [
+    ['========================================'],
+    ['JURORS UPLOAD TEMPLATE'],
+    ['========================================'],
+    [''],
+    ['REQUIRED FIELDS (must have values):'],
+    ['  - name (text)'],
+    ['  - email (email address)'],
+    [''],
+    ['OPTIONAL FIELDS:'],
+    ['  - job_title (text)'],
+    ['  - company (text)'],
+    ['  - fund_focus (text - investment focus area)'],
+    ['  - linkedin_url (URL - LinkedIn profile)'],
+    ['  - calendly_link (URL - Calendly scheduling link)'],
+    ['  - evaluation_limit (number - max screening evaluations)'],
+    ['  - meeting_limit (number - max pitching calls)'],
+    ['  - thesis_keywords (array - semicolon-separated keywords)'],
+    ['  - preferred_stages (array - semicolon-separated stages)'],
+    ['  - target_verticals (array - semicolon-separated verticals)'],
+    ['  - preferred_regions (array - semicolon-separated regions)'],
+    [''],
+    ['========================================'],
+    ['ARRAY FIELDS (use semicolon ; to separate multiple values):'],
+    ['  Example: "Seed;Series A;Series B"'],
+    [''],
+    ['========================================'],
+    ['VALID FUNDING STAGES:'],
+    ['  Pre-Seed, Seed, Series A, Series B, Series C+, Growth, IPO'],
+    [''],
+    ['VALID REGIONS:'],
+    ['  Africa'],
+    ['  Asia Pacific (APAC)'],
+    ['  Europe'],
+    ['  Latin America (LATAM)'],
+    ['  Middle East & North Africa (MENA)'],
+    ['  North America'],
+    ['  Other'],
+    [''],
+    ['VALID VERTICALS (use exact spelling):'],
+    ['  Artificial Intelligence (AI/ML)'],
+    ['  Fintech'],
+    ['  HealthTech & MedTech'],
+    ['  Wellbeing, Longevity & Life Sciences'],
+    ['  PharmTech'],
+    ['  RetailTech & E-commerce'],
+    ['  Enterprise Software'],
+    ['  Cybersecurity'],
+    ['  Productivity Tools'],
+    ['  Transportation & Mobility'],
+    ['  Energy & Sustainability'],
+    ['  AgriTech & Food Tech'],
+    ['  Media & Entertainment'],
+    ['  AdTech & MarTech'],
+    ['  Real Estate & PropTech'],
+    ['  Education Technology (EdTech)'],
+    ['  Logistics & Supply Chain'],
+    ['  Construction Tech'],
+    ['  Space Technology'],
+    ['  Semiconductors & Hardware'],
+    ['  Data Infrastructure & Analytics'],
+    ['  Industrial Automation & Robotics'],
+    ['  Aerospace & Defense'],
+    ['  Gaming & Visual Assets'],
+    ['  SportTech'],
+    ['  Web3 / Blockchain / Crypto'],
+    ['  TravelTech'],
+    ['  No Tech, not a Venture Business'],
+    ['  Others (Specify)'],
+    [''],
+    ['========================================'],
+    ['TIPS:'],
+    ['  - Leave optional fields empty (blank) if not applicable'],
+    ['  - URLs must include http:// or https://'],
+    ['  - Email addresses must be valid format'],
+    ['  - Numbers should be whole numbers (no decimals for limits)']
   ];
 
+  // Headers for data template
   const headers = [
     'name',
     'email',
@@ -91,6 +97,7 @@ export function generateJurorsCSVTemplate(): string {
     'meeting_limit'
   ];
 
+  // Example rows
   const exampleRows = [
     // Complete example with all preferences
     [
@@ -135,30 +142,32 @@ export function generateJurorsCSVTemplate(): string {
       '',
       'Medical Devices;Wearables;AI Health',
       'Pre-Seed;Seed',
-      'HealthTech & MedTech;RetailTech & E-commerce',
+      'HealthTech & MedTech;Wellbeing, Longevity & Life Sciences',
       'Latin America (LATAM);North America',
       '15',
       '8'
     ]
   ];
 
-  const csvContent = [
-    ...docRows,
-    headers.join(','),
-    ...exampleRows.map(row => row.map(cell => `"${cell}"`).join(','))
-  ].join('\n');
+  // Create workbook
+  const wb = XLSX.utils.book_new();
 
-  return csvContent;
-}
+  // Add Instructions sheet
+  const wsInstructions = XLSX.utils.aoa_to_sheet(instructions);
+  XLSX.utils.book_append_sheet(wb, wsInstructions, 'Instructions');
 
-export function downloadJurorsCSVTemplate(): void {
-  const csvContent = generateJurorsCSVTemplate();
-  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  // Add Data Template sheet
+  const wsData = XLSX.utils.aoa_to_sheet([headers, ...exampleRows]);
+  XLSX.utils.book_append_sheet(wb, wsData, 'Data Template');
+
+  // Generate file and trigger download
+  const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+  const blob = new Blob([wbout], { type: 'application/octet-stream' });
   const link = document.createElement('a');
   const url = URL.createObjectURL(blob);
   
   link.setAttribute('href', url);
-  link.setAttribute('download', 'jurors_template.csv');
+  link.setAttribute('download', 'juror_template.xlsx');
   link.style.visibility = 'hidden';
   
   document.body.appendChild(link);
