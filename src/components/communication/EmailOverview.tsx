@@ -318,8 +318,8 @@ export const EmailOverview = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
-              {stats.templateHealth.slice(0, 5).map(template => (
+            <div className="space-y-3 max-h-96 overflow-y-auto">
+              {stats.templateHealth.map(template => (
                 <div key={template.template_name} className="flex items-center justify-between p-2 rounded-lg border">
                   <div className="flex items-center gap-2">
                     {getHealthIcon(template.status)}

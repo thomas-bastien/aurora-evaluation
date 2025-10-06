@@ -32,6 +32,10 @@ export default function EmailManagementPage() {
                   <BarChart3 className="h-4 w-4" />
                   Overview
                 </TabsTrigger>
+                <TabsTrigger value="analytics" className="flex items-center gap-2">
+                  <Activity className="h-4 w-4" />
+                  Timeline
+                </TabsTrigger>
                 <TabsTrigger value="templates" className="flex items-center gap-2">
                   <MessageSquare className="h-4 w-4" />
                   Templates
@@ -40,14 +44,14 @@ export default function EmailManagementPage() {
                   <Mail className="h-4 w-4" />
                   Communications
                 </TabsTrigger>
-                <TabsTrigger value="analytics" className="flex items-center gap-2">
-                  <Activity className="h-4 w-4" />
-                  Timeline
-                </TabsTrigger>
               </TabsList>
 
               <TabsContent value="overview" className="space-y-6">
                 <EmailOverview />
+              </TabsContent>
+
+              <TabsContent value="analytics" className="space-y-6">
+                <CommunicationLifecycleTimeline />
               </TabsContent>
 
               <TabsContent value="templates" className="space-y-6">
@@ -56,10 +60,6 @@ export default function EmailManagementPage() {
 
               <TabsContent value="communications" className="space-y-6">
                 <EmailCommunicationsTable />
-              </TabsContent>
-
-              <TabsContent value="analytics" className="space-y-6">
-                <CommunicationLifecycleTimeline />
               </TabsContent>
             </Tabs>
           </div>
