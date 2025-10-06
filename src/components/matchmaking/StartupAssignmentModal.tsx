@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { MatchmakingCompatibility } from './MatchmakingCompatibility';
 import { findBestJurors } from '@/utils/matchmakingUtils';
+import { normalizeRegions, normalizeStages, normalizeVerticals } from '@/utils/fieldNormalization';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -164,9 +165,17 @@ export const StartupAssignmentModal = ({
       stage: 0
     };
 
+    // Normalize data before comparison
+    const normalizedStartupRegions = normalizeRegions(startup.regions || []);
+    const normalizedJurorRegions = normalizeRegions(juror.preferred_regions || []);
+    const normalizedStartupVerticals = normalizeVerticals(startup.verticals || []);
+    const normalizedJurorVerticals = normalizeVerticals(juror.target_verticals || []);
+    const normalizedStartupStage = startup.stage ? normalizeStages([startup.stage])[0] : null;
+    const normalizedJurorStages = normalizeStages(juror.preferred_stages || []);
+
     // Region match (+4 points)
-    if (juror.preferred_regions && startup.regions) {
-      const regionMatches = startup.regions.some(region => juror.preferred_regions!.includes(region));
+    if (normalizedJurorRegions.length > 0 && normalizedStartupRegions.length > 0) {
+      const regionMatches = normalizedStartupRegions.some(region => normalizedJurorRegions.includes(region));
       if (regionMatches) {
         score += 4;
         breakdown.region = 4;
@@ -175,8 +184,8 @@ export const StartupAssignmentModal = ({
     }
 
     // Vertical match (+3 points)
-    if (juror.target_verticals && startup.verticals) {
-      const verticalMatches = startup.verticals.some(vertical => juror.target_verticals!.includes(vertical));
+    if (normalizedJurorVerticals.length > 0 && normalizedStartupVerticals.length > 0) {
+      const verticalMatches = normalizedStartupVerticals.some(vertical => normalizedJurorVerticals.includes(vertical));
       if (verticalMatches) {
         score += 3;
         breakdown.vertical = 3;
@@ -185,8 +194,8 @@ export const StartupAssignmentModal = ({
     }
 
     // Stage match (+3 points)
-    if (juror.preferred_stages && startup.stage) {
-      if (juror.preferred_stages.includes(startup.stage)) {
+    if (normalizedStartupStage && normalizedJurorStages.length > 0) {
+      if (normalizedJurorStages.includes(normalizedStartupStage)) {
         score += 3;
         breakdown.stage = 3;
         matches.stage = true;

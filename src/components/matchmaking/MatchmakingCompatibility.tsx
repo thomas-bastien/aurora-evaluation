@@ -1,6 +1,7 @@
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { AlertTriangle, CheckCircle2, X } from 'lucide-react';
+import { normalizeRegions, normalizeStages, normalizeVerticals } from '@/utils/fieldNormalization';
 
 interface Startup {
   id: string;
@@ -24,20 +25,20 @@ interface CompatibilityProps {
 }
 
 export function MatchmakingCompatibility({ startup, juror }: CompatibilityProps) {
-  // Check vertical alignment
-  const startupVerticals = startup.verticals || [];
-  const jurorVerticals = juror.target_verticals || [];
+  // Normalize all data before comparison
+  const startupVerticals = normalizeVerticals(startup.verticals || []);
+  const jurorVerticals = normalizeVerticals(juror.target_verticals || []);
   const verticalMatches = startupVerticals.filter(v => jurorVerticals.includes(v));
   const hasVerticalMatch = verticalMatches.length > 0;
 
   // Check stage alignment
-  const startupStage = startup.stage;
-  const jurorStages = juror.preferred_stages || [];
+  const startupStage = startup.stage ? normalizeStages([startup.stage])[0] : null;
+  const jurorStages = normalizeStages(juror.preferred_stages || []);
   const hasStageMatch = startupStage ? jurorStages.includes(startupStage) : false;
 
   // Check region alignment  
-  const startupRegions = startup.regions || [];
-  const jurorRegions = juror.preferred_regions || [];
+  const startupRegions = normalizeRegions(startup.regions || []);
+  const jurorRegions = normalizeRegions(juror.preferred_regions || []);
   const hasRegionMatch = startupRegions.some(region => jurorRegions.includes(region));
 
   // Calculate overall compatibility score
