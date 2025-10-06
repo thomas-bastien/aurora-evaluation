@@ -29,9 +29,9 @@ export async function calculateProgressiveJurorStatus(jurorId: string): Promise<
     .from('jurors')
     .select('invitation_sent_at, user_id')
     .eq('id', jurorId)
-    .single();
+    .maybeSingle();
 
-  if (!juror?.invitation_sent_at) {
+  if (!juror || !juror?.invitation_sent_at) {
     return {
       status: 'not_invited',
       currentRound: 'screening',
@@ -123,9 +123,13 @@ export async function calculateJurorRoundStatus(
       .from('jurors')
       .select('id, user_id, invitation_sent_at')
       .eq('id', jurorId)
-      .single();
+      .maybeSingle();
 
     if (jurorError) throw jurorError;
+    
+    if (!juror) {
+      return 'pending';
+    }
 
     // Check invitation status first
     if (!juror.invitation_sent_at) {
@@ -303,12 +307,12 @@ async function calculateJuryRoundStatus(
       .from('jurors')
       .select('user_id')
       .eq('id', jurorId)
-      .single();
+      .maybeSingle();
 
     if (jurorError) throw jurorError;
 
-    // If juror doesn't have a user_id, they're inactive
-    if (!jurorData.user_id) {
+    // If juror doesn't exist or doesn't have a user_id, they're inactive
+    if (!jurorData || !jurorData.user_id) {
       return 'inactive';
     }
 
@@ -349,9 +353,18 @@ export async function getJuryAssignmentCounts(
       .from('jurors')
       .select('user_id')
       .eq('id', jurorId)
-      .single();
+      .maybeSingle();
 
     if (jurorError) throw jurorError;
+    
+    if (!jurorData) {
+      return {
+        assigned: 0,
+        completed: 0,
+        inProgress: 0,
+        notStarted: 0
+      };
+    }
 
     const assignmentTable = roundName === 'screening' ? 'screening_assignments' : 'pitching_assignments';
     const evaluationTable = roundName === 'screening' ? 'screening_evaluations' : 'pitching_evaluations';
@@ -468,9 +481,9 @@ export async function calculateMultipleProgressiveJurorStatuses(
         .from('jurors')
         .select('invitation_sent_at, user_id')
         .eq('id', juror.id)
-        .single();
+        .maybeSingle();
 
-      if (!jurorInvite?.invitation_sent_at) {
+      if (!jurorInvite || !jurorInvite?.invitation_sent_at) {
         results[juror.id] = {
           status: 'not_invited',
           currentRound: 'screening',

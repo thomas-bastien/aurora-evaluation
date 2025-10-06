@@ -44,11 +44,15 @@ const JurorOnboarding = () => {
 
     // Fetch current profile
     const fetchProfile = async () => {
-      const { data } = await supabase
+      const { data: profileData } = await supabase
         .from('profiles')
         .select('*')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
+      
+      if (profileData) {
+        setProfile(profileData);
+      }
       
       // Fetch juror data if exists
       const { data: jurorData } = await supabase

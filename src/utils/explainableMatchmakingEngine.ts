@@ -86,9 +86,9 @@ export async function fetchMatchConfig(roundName: string): Promise<MatchConfig> 
     .from('matchmaking_config')
     .select('*')
     .eq('round_name', roundName)
-    .single();
+    .maybeSingle();
 
-  if (error) {
+  if (error || !data) {
     console.error('Error fetching config:', error);
     // Return defaults
     return {
