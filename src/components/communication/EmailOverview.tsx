@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useLiveCommunicationStats } from '@/hooks/useLiveCommunicationStats';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -52,6 +53,8 @@ interface CommunicationStage {
 }
 
 export const EmailOverview = () => {
+  const { data: lifecycleData, isLoading: isLoadingLifecycle, refetch: refetchLifecycle } = useLiveCommunicationStats();
+  
   const [stats, setStats] = useState<OverviewStats>({
     totalTemplates: 0,
     activeTemplates: 0,
@@ -133,14 +136,6 @@ export const EmailOverview = () => {
         };
       }) || [];
 
-      // Communication progress by stage (simplified)
-      const stageProgress = [
-        { stage: 'Juror Onboarding', total: 100, completed: 85, progress: 85 },
-        { stage: 'Assignment Notifications', total: 300, completed: 275, progress: 92 },
-        { stage: 'Evaluation Reminders', total: 150, completed: 120, progress: 80 },
-        { stage: 'Results Communication', total: 50, completed: 30, progress: 60 }
-      ];
-
       setStats({
         totalTemplates,
         activeTemplates,
@@ -149,7 +144,7 @@ export const EmailOverview = () => {
         openRate,
         recentActivity,
         templateHealth,
-        communicationProgress: stageProgress
+        communicationProgress: []
       });
     } catch (error) {
       console.error('Error fetching overview stats:', error);
@@ -184,7 +179,7 @@ export const EmailOverview = () => {
     }
   };
 
-  if (loading) {
+  if (loading || isLoadingLifecycle) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {[...Array(6)].map((_, i) => (
@@ -200,6 +195,16 @@ export const EmailOverview = () => {
       </div>
     );
   }
+
+  // Extract communication progress from lifecycle data
+  const communicationProgress: CommunicationStage[] = lifecycleData?.stages.flatMap(stage => 
+    stage.substeps?.map(substep => ({
+      stage: substep.name,
+      total: substep.total,
+      completed: substep.completed,
+      progress: substep.total > 0 ? (substep.completed / substep.total) * 100 : 0
+    })) || []
+  ) || [];
 
   return (
     <div className="space-y-6">
@@ -264,28 +269,39 @@ export const EmailOverview = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Communication Progress */}
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="w-5 h-5" />
-              Communication Progress
-            </CardTitle>
-            <CardDescription>
-              Progress across different communication stages
-            </CardDescription>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="w-5 h-5" />
+                Communication Progress
+              </CardTitle>
+              <CardDescription>
+                Progress across different communication stages
+              </CardDescription>
+            </div>
+            <Button variant="outline" size="sm" onClick={() => refetchLifecycle()}>
+              <RefreshCw className="w-4 h-4" />
+            </Button>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {stats.communicationProgress.map(stage => (
-                <div key={stage.stage} className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="font-medium">{stage.stage}</span>
-                    <span className="text-muted-foreground">
-                      {stage.completed}/{stage.total}
-                    </span>
+              {communicationProgress.length > 0 ? (
+                communicationProgress.map(stage => (
+                  <div key={stage.stage} className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="font-medium">{stage.stage}</span>
+                      <span className="text-muted-foreground">
+                        {stage.completed}/{stage.total}
+                      </span>
+                    </div>
+                    <Progress value={stage.progress} className="h-2" />
                   </div>
-                  <Progress value={stage.progress} className="h-2" />
-                </div>
-              ))}
+                ))
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  No communication stages active yet
+                </p>
+              )}
             </div>
           </CardContent>
         </Card>
