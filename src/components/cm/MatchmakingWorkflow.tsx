@@ -1091,12 +1091,15 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
         <EnhancedAutoAssignmentPanel
           suggestions={enhancedSuggestions.suggestions}
           whyNotAssigned={enhancedSuggestions.whyNotAssigned}
-          allStartups={startups.map(s => ({
-            id: s.id,
-            name: s.name,
-            verticals: s.verticals || [],
-            stage: s.stage || '',
-            regions: s.regions || [],
+          allJurors={jurors.map(j => ({
+            id: j.id,
+            name: j.name,
+            target_verticals: j.target_verticals || [],
+            preferred_stages: j.preferred_stages || [],
+            preferred_regions: j.preferred_regions || [],
+            evaluation_limit: j.evaluation_limit,
+            thesis_keywords: j.thesis_keywords || [],
+            fund_focus: j.fund_focus || '',
           }))}
           open={showEnhancedAutoPanel}
           onOpenChange={setShowEnhancedAutoPanel}
@@ -1106,7 +1109,7 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
             setEnhancedSuggestions(null);
           }}
           config={{
-            top_k_per_juror: 3,
+            target_jurors_per_startup: 3,
             vertical_weight: 40,
             stage_weight: 20,
             region_weight: 20,

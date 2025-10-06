@@ -21,17 +21,18 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { InlineJurorSearch } from "./InlineJurorSearch";
 import {
-  JurorSuggestions,
+  StartupAssignments,
   WhyNotAssigned,
   Startup,
+  Juror,
   calculateMatchScore,
   MatchScore,
 } from "@/utils/explainableMatchmakingEngine";
 
 interface EnhancedAutoAssignmentPanelProps {
-  suggestions: JurorSuggestions[];
+  suggestions: StartupAssignments[];
   whyNotAssigned: WhyNotAssigned[];
-  allStartups: Startup[];
+  allJurors: Juror[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onApprove: (assignments: { juror_id: string; startup_id: string }[]) => void;
@@ -42,7 +43,7 @@ interface EnhancedAutoAssignmentPanelProps {
 export function EnhancedAutoAssignmentPanel({
   suggestions,
   whyNotAssigned,
-  allStartups,
+  allJurors,
   open,
   onOpenChange,
   onApprove,
@@ -55,44 +56,44 @@ export function EnhancedAutoAssignmentPanel({
   // Initialize selections (all selected by default)
   useState(() => {
     const initial = new Map<string, Set<string>>();
-    suggestions.forEach(js => {
+    suggestions.forEach(sa => {
       const selected = new Set<string>();
-      js.suggestions.forEach(slot => selected.add(slot.startup.id));
-      initial.set(js.juror.id, selected);
+      sa.suggested_jurors.forEach(slot => selected.add(slot.juror.id));
+      initial.set(sa.startup.id, selected);
     });
     setSelectedSlots(initial);
   });
 
-  const toggleSlot = (jurorId: string, startupId: string) => {
+  const toggleSlot = (startupId: string, jurorId: string) => {
     setSelectedSlots(prev => {
       const newMap = new Map(prev);
-      const jurorSet = new Set(newMap.get(jurorId) || []);
+      const startupSet = new Set(newMap.get(startupId) || []);
       
-      if (jurorSet.has(startupId)) {
-        jurorSet.delete(startupId);
+      if (startupSet.has(jurorId)) {
+        startupSet.delete(jurorId);
       } else {
-        jurorSet.add(startupId);
+        startupSet.add(jurorId);
       }
       
-      newMap.set(jurorId, jurorSet);
+      newMap.set(startupId, startupSet);
       return newMap;
     });
   };
 
-  const handleReplaceStartup = (jurorId: string, oldStartupId: string, newStartup: Startup) => {
+  const handleReplaceJuror = (startupId: string, oldJurorId: string, newJuror: Juror) => {
     setSelectedSlots(prev => {
       const newMap = new Map(prev);
-      const jurorSet = new Set(newMap.get(jurorId) || []);
-      jurorSet.delete(oldStartupId);
-      jurorSet.add(newStartup.id);
-      newMap.set(jurorId, jurorSet);
+      const startupSet = new Set(newMap.get(startupId) || []);
+      startupSet.delete(oldJurorId);
+      startupSet.add(newJuror.id);
+      newMap.set(startupId, startupSet);
       return newMap;
     });
   };
 
-  const handleAcceptRow = (jurorId: string) => {
-    const selected = selectedSlots.get(jurorId) || new Set();
-    const assignments = Array.from(selected).map(startupId => ({
+  const handleAcceptRow = (startupId: string) => {
+    const selected = selectedSlots.get(startupId) || new Set();
+    const assignments = Array.from(selected).map(jurorId => ({
       juror_id: jurorId,
       startup_id: startupId,
     }));
@@ -101,8 +102,8 @@ export function EnhancedAutoAssignmentPanel({
 
   const handleAcceptAll = () => {
     const allAssignments: { juror_id: string; startup_id: string }[] = [];
-    selectedSlots.forEach((startupIds, jurorId) => {
-      startupIds.forEach(startupId => {
+    selectedSlots.forEach((jurorIds, startupId) => {
+      jurorIds.forEach(jurorId => {
         allAssignments.push({ juror_id: jurorId, startup_id: startupId });
       });
     });
@@ -115,11 +116,13 @@ export function EnhancedAutoAssignmentPanel({
     return "bg-red-100 text-red-800";
   };
 
-  const getCapacityBadge = (current: number, limit: number) => {
-    const ratio = current / limit;
-    if (ratio >= 1) return <Badge variant="destructive">At Capacity</Badge>;
-    if (ratio >= 0.8) return <Badge className="bg-yellow-100 text-yellow-800">Near Capacity</Badge>;
-    return <Badge variant="outline">{current}/{limit}</Badge>;
+  // Calculate juror loads from selections
+  const getJurorLoad = (jurorId: string): number => {
+    let count = 0;
+    selectedSlots.forEach((jurorIds) => {
+      if (jurorIds.has(jurorId)) count++;
+    });
+    return count;
   };
 
   const totalSelected = Array.from(selectedSlots.values()).reduce(
@@ -133,7 +136,7 @@ export function EnhancedAutoAssignmentPanel({
         <DialogHeader>
           <DialogTitle>Review Auto-Assignment Suggestions</DialogTitle>
           <DialogDescription>
-            Top {config?.top_k_per_juror || 3} startups per juror based on explainable scoring.
+            Top {config?.target_jurors_per_startup || 3} jurors per startup based on explainable scoring.
             Select which assignments to approve.
           </DialogDescription>
         </DialogHeader>
@@ -144,16 +147,16 @@ export function EnhancedAutoAssignmentPanel({
             <p className="text-2xl font-bold">{totalSelected}</p>
           </Card>
           <Card className="p-3">
-            <p className="text-sm text-muted-foreground">Jurors</p>
+            <p className="text-sm text-muted-foreground">Startups</p>
             <p className="text-2xl font-bold">{suggestions.length}</p>
           </Card>
           <Card className="p-3">
             <p className="text-sm text-muted-foreground">Avg Score</p>
             <p className="text-2xl font-bold">
               {(
-                suggestions.reduce((sum, js) => 
-                  sum + js.suggestions.reduce((s, slot) => s + slot.score.total_score, 0), 0
-                ) / (suggestions.reduce((sum, js) => sum + js.suggestions.length, 0) || 1)
+                suggestions.reduce((sum, sa) => 
+                  sum + sa.suggested_jurors.reduce((s, slot) => s + slot.score.total_score, 0), 0
+                ) / (suggestions.reduce((sum, sa) => sum + sa.suggested_jurors.length, 0) || 1)
               ).toFixed(1)}
             </p>
           </Card>
@@ -161,24 +164,26 @@ export function EnhancedAutoAssignmentPanel({
 
         <ScrollArea className="h-96 pr-4">
           <div className="space-y-3">
-            {suggestions.map((js) => {
-              const jurorSelected = selectedSlots.get(js.juror.id) || new Set();
+            {suggestions.map((sa) => {
+              const startupSelected = selectedSlots.get(sa.startup.id) || new Set();
               
               return (
-                <Card key={js.juror.id} className="p-4">
+                <Card key={sa.startup.id} className="p-4">
                   <div className="flex items-start justify-between mb-3">
                     <div>
-                      <h3 className="font-semibold">{js.juror.name}</h3>
+                      <h3 className="font-semibold">{sa.startup.name}</h3>
                       <p className="text-sm text-muted-foreground">
-                        {js.juror.target_verticals?.join(', ')}
+                        {sa.startup.verticals?.join(', ')} • {sa.startup.stage}
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
-                      {getCapacityBadge(js.current_load, js.capacity_limit)}
+                      <Badge variant="outline">
+                        {startupSelected.size}/{config?.target_jurors_per_startup || 3} Jurors
+                      </Badge>
                       <Button
                         size="sm"
-                        onClick={() => handleAcceptRow(js.juror.id)}
-                        disabled={jurorSelected.size === 0}
+                        onClick={() => handleAcceptRow(sa.startup.id)}
+                        disabled={startupSelected.size === 0}
                       >
                         <CheckCircle className="h-4 w-4 mr-1" />
                         Accept Row
@@ -187,8 +192,10 @@ export function EnhancedAutoAssignmentPanel({
                   </div>
 
                   <div className="space-y-2">
-                    {js.suggestions.map((slot, idx) => {
-                      const isSelected = jurorSelected.has(slot.startup.id);
+                    {sa.suggested_jurors.map((slot, idx) => {
+                      const isSelected = startupSelected.has(slot.juror.id);
+                      const jurorLoad = getJurorLoad(slot.juror.id);
+                      const jurorCapacity = slot.juror.evaluation_limit || 10;
                       
                       return (
                         <div
@@ -202,11 +209,16 @@ export function EnhancedAutoAssignmentPanel({
                               <input
                                 type="checkbox"
                                 checked={isSelected}
-                                onChange={() => toggleSlot(js.juror.id, slot.startup.id)}
+                                onChange={() => toggleSlot(sa.startup.id, slot.juror.id)}
                                 className="mt-1"
                               />
                               <div className="flex-1">
-                                <p className="font-medium">{slot.startup.name}</p>
+                                <div className="flex items-center gap-2">
+                                  <p className="font-medium">{slot.juror.name}</p>
+                                  <Badge variant="outline" className="text-xs">
+                                    Load: {jurorLoad}/{jurorCapacity}
+                                  </Badge>
+                                </div>
                                 <TooltipProvider>
                                   <Tooltip>
                                     <TooltipTrigger asChild>
@@ -228,27 +240,9 @@ export function EnhancedAutoAssignmentPanel({
                               </div>
                             </div>
                             
-                            <div className="flex items-center gap-2">
-                              <Badge className={getScoreColor(slot.score.total_score)}>
-                                {slot.score.total_score.toFixed(1)}
-                              </Badge>
-                              <InlineJurorSearch
-                                allStartups={allStartups}
-                                currentStartupId={slot.startup.id}
-                                excludeStartupIds={Array.from(jurorSelected)}
-                                onSelect={(newStartup) => 
-                                  handleReplaceStartup(js.juror.id, slot.startup.id, newStartup)
-                                }
-                                calculateScore={(startupId) => 
-                                  calculateMatchScore(
-                                    js.juror,
-                                    allStartups.find(s => s.id === startupId)!,
-                                    js.current_load,
-                                    config
-                                  )
-                                }
-                              />
-                            </div>
+                            <Badge className={getScoreColor(slot.score.total_score)}>
+                              {slot.score.total_score.toFixed(1)}
+                            </Badge>
                           </div>
                         </div>
                       );

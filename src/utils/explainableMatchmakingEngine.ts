@@ -60,16 +60,14 @@ export interface Assignment {
   round_name: string;
 }
 
-export interface SuggestionSlot {
-  startup: Startup;
+export interface JurorSlot {
+  juror: Juror;
   score: MatchScore;
 }
 
-export interface JurorSuggestions {
-  juror: Juror;
-  suggestions: SuggestionSlot[];
-  current_load: number;
-  capacity_limit: number;
+export interface StartupAssignments {
+  startup: Startup;
+  suggested_jurors: JurorSlot[];
 }
 
 export interface WhyNotAssigned {
@@ -266,21 +264,21 @@ export function calculateMatchScore(
 }
 
 /**
- * Generate explainable suggestions for all jurors
+ * Generate explainable suggestions for all startups (startup-centric)
  */
 export async function generateExplainableSuggestions(
   startups: Startup[],
   jurors: Juror[],
   roundName: string
 ): Promise<{
-  suggestions: JurorSuggestions[];
+  suggestions: StartupAssignments[];
   whyNotAssigned: WhyNotAssigned[];
 }> {
   const config = await fetchMatchConfig(roundName);
   const conflicts = await fetchConflicts(roundName);
   const existingAssignments = await fetchExistingAssignments(roundName);
 
-  // Calculate current loads
+  // Calculate current loads for each juror
   const loadMap = new Map<string, number>();
   jurors.forEach(j => loadMap.set(j.id, 0));
   existingAssignments.forEach(a => {
@@ -288,17 +286,19 @@ export async function generateExplainableSuggestions(
     loadMap.set(a.juror_id, current + 1);
   });
 
-  const suggestions: JurorSuggestions[] = [];
+  const suggestions: StartupAssignments[] = [];
   const whyNotAssigned: WhyNotAssigned[] = [];
 
-  for (const juror of jurors) {
-    const currentLoad = loadMap.get(juror.id) || 0;
-    const capacity = juror.evaluation_limit || 10;
+  // Iterate through each startup
+  for (const startup of startups) {
+    const jurorScores: { juror: Juror; score: MatchScore }[] = [];
 
-    // Score all startups
-    const allScores: MatchScore[] = [];
-    
-    for (const startup of startups) {
+    // Score all jurors for this startup
+    for (const juror of jurors) {
+      const currentLoad = loadMap.get(juror.id) || 0;
+      const capacity = juror.evaluation_limit || 10;
+
+      // Check hard exclusions
       const exclusion = checkHardExclusions(
         juror.id,
         startup.id,
@@ -317,22 +317,36 @@ export async function generateExplainableSuggestions(
         continue;
       }
 
+      // Check capacity
+      if (currentLoad >= capacity) {
+        whyNotAssigned.push({
+          startup_id: startup.id,
+          startup_name: startup.name,
+          juror_id: juror.id,
+          juror_name: juror.name,
+          reason: `Juror at capacity (${currentLoad}/${capacity})`,
+        });
+        continue;
+      }
+
+      // Calculate score
       const score = calculateMatchScore(juror, startup, currentLoad, config);
-      allScores.push(score);
+      jurorScores.push({ juror, score });
     }
 
-    // Sort by score and take top K
-    allScores.sort((a, b) => b.total_score - a.total_score);
-    const topScores = allScores.slice(0, config.top_k_per_juror);
+    // Sort jurors by score (best match first) and take top N
+    jurorScores.sort((a, b) => b.score.total_score - a.score.total_score);
+    const topJurors = jurorScores.slice(0, config.target_jurors_per_startup);
+
+    // Update load map for selected jurors (for next startup iteration)
+    topJurors.forEach(({ juror }) => {
+      const current = loadMap.get(juror.id) || 0;
+      loadMap.set(juror.id, current + 1);
+    });
 
     suggestions.push({
-      juror,
-      suggestions: topScores.map(score => ({
-        startup: startups.find(s => s.id === score.startup_id)!,
-        score,
-      })),
-      current_load: currentLoad,
-      capacity_limit: capacity,
+      startup,
+      suggested_jurors: topJurors,
     });
   }
 
