@@ -17,7 +17,10 @@ import {
   FileText,
   Eye,
   AlertCircle,
-  MessageSquare
+  MessageSquare,
+  Sparkles,
+  RefreshCw,
+  Loader2
 } from "lucide-react";
 import { toast } from "sonner";
 import { StartupCommunicationConfirmationModal } from './StartupCommunicationConfirmationModal';
@@ -60,6 +63,8 @@ export const ResultsCommunication = ({ currentRound }: ResultsCommunicationProps
   const [pendingCommunicationType, setPendingCommunicationType] = useState<'selected' | 'rejected' | 'under-review' | null>(null);
   const [validationResult, setValidationResult] = useState<CommunicationValidationResult | null>(null);
   const [validatingEmails, setValidatingEmails] = useState(false);
+  const [generatingFeedback, setGeneratingFeedback] = useState<string | null>(null);
+  const [generationError, setGenerationError] = useState<string | null>(null);
   
 
   useEffect(() => {
@@ -193,24 +198,80 @@ export const ResultsCommunication = ({ currentRound }: ResultsCommunicationProps
     notes: string[], 
     score: number
   ): string => {
-    // This would be replaced with actual AI generation
-    return `Dear ${name} team,
+    // Placeholder for manual review - will be replaced by AI
+    return `[AI Feedback not yet generated for ${name}]
 
-Thank you for participating in our evaluation process. Here's your feedback summary:
+Click "Generate AI Feedback" to create personalized feedback based on juror evaluations.`;
+  };
 
-**Key Strengths:**
-${strengths.slice(0, 3).map(s => `• ${s}`).join('\n') || '• Strong potential identified by our evaluation panel'}
+  const formatAIFeedbackForEmail = (aiData: any, startupName: string): string => {
+    return `Dear ${startupName} team,
 
-**Areas for Improvement:**
-${improvements.slice(0, 2).map(i => `• ${i}`).join('\n') || '• Continue developing your core value proposition'}
+${aiData.overall_summary}
 
-**Overall Assessment:**
-Your startup received an average score of ${formatScore(score)}/10 from our evaluation panel. ${score >= 7 ? 'This represents strong performance across key criteria.' : 'There are opportunities to strengthen key areas of your business.'}
+**What Impressed Our Panel:**
+${aiData.strengths.map((s: string) => `• ${s}`).join('\n')}
 
-${notes.length > 0 ? `**Additional Notes:**\n${notes[0]}` : ''}
+**Opportunities for Growth:**
+${aiData.challenges.map((c: string) => `• ${c}`).join('\n')}
+
+**Recommended Next Steps:**
+${aiData.next_steps.map((n: string) => `• ${n}`).join('\n')}
+
+We appreciate your participation and wish you continued success in your journey.
 
 Best regards,
 The Aurora Evaluation Team`;
+  };
+
+  const generateAIFeedback = async (startupId: string, startupName: string) => {
+    setGeneratingFeedback(startupId);
+    setGenerationError(null);
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-founder-feedback', {
+        body: {
+          startupId,
+          roundName: currentRound === 'screeningRound' ? 'screening' : 'pitching'
+        }
+      });
+      
+      if (error) throw error;
+
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
+      if (!data.success || !data.feedback) {
+        throw new Error('Invalid response from AI service');
+      }
+      
+      const formattedFeedback = formatAIFeedbackForEmail(data.feedback, startupName);
+      
+      setStartupResults(prev => prev.map(result =>
+        result.id === startupId
+          ? { ...result, feedbackSummary: formattedFeedback, feedbackStatus: 'draft' }
+          : result
+      ));
+      
+      toast.success(`AI feedback generated for ${startupName}`);
+    } catch (error: any) {
+      console.error('Error generating feedback:', error);
+      const errorMessage = error.message || 'Failed to generate feedback';
+      setGenerationError(errorMessage);
+      
+      if (error.message?.includes('rate limit')) {
+        toast.error('AI rate limit reached. Please wait a moment and try again.');
+      } else if (error.message?.includes('credits')) {
+        toast.error('AI credits exhausted. Please contact support.');
+      } else if (error.message?.includes('No submitted evaluations')) {
+        toast.error(`${startupName} has no submitted evaluations yet.`);
+      } else {
+        toast.error(`Failed to generate feedback for ${startupName}`);
+      }
+    } finally {
+      setGeneratingFeedback(null);
+    }
   };
 
   const loadTemplates = () => {
@@ -711,7 +772,7 @@ The Aurora Team`
                     <div>
                       <h4 className="font-semibold text-foreground">{result.name}</h4>
                       <p className="text-sm text-muted-foreground">
-                        {result.industry} • Score: {formatScore(result.averageScore)}
+                        {result.email} • Score: {formatScore(result.averageScore)}
                       </p>
                     </div>
                     {result.roundStatus === 'selected' && <Badge className="bg-success text-success-foreground">Selected</Badge>}
@@ -720,21 +781,84 @@ The Aurora Team`
                     {result.roundStatus === 'pending' && <Badge variant="secondary">Pending</Badge>}
                   </div>
                   <div className="flex items-center gap-2">
-                    {getFeedbackStatusBadge(result.feedbackStatus)}
-                    <Button size="sm" variant="outline" onClick={() => handleEditFeedback(result)}>
-                      <Edit className="w-4 h-4 mr-2" />
-                      Edit
-                    </Button>
-                    {result.feedbackStatus === 'reviewed' && (
-                      <Button size="sm" onClick={() => handleApproveFeedback(result.id)}>
-                        <CheckCircle className="w-4 h-4 mr-2" />
-                        Approve
+                    <Badge 
+                      variant={
+                        result.feedbackStatus === 'draft' && result.feedbackSummary.includes('[AI Feedback not yet generated') ? 'outline' :
+                        result.feedbackStatus === 'draft' ? 'secondary' : 
+                        result.feedbackStatus === 'approved' ? 'default' : 
+                        'outline'
+                      }
+                    >
+                      {result.feedbackStatus === 'draft' && result.feedbackSummary.includes('[AI Feedback not yet generated') ? (
+                        'Not Generated'
+                      ) : result.feedbackStatus === 'draft' ? (
+                        <>
+                          <Sparkles className="h-3 w-3 mr-1" />
+                          AI Generated
+                        </>
+                      ) : result.feedbackStatus === 'reviewed' ? (
+                        <>
+                          <Edit className="h-3 w-3 mr-1" />
+                          Edited
+                        </>
+                      ) : result.feedbackStatus === 'approved' ? (
+                        <>
+                          <CheckCircle className="h-3 w-3 mr-1" />
+                          Approved
+                        </>
+                      ) : (
+                        result.feedbackStatus
+                      )}
+                    </Badge>
+                    {result.feedbackSummary.includes('[AI Feedback not yet generated') ? (
+                      <Button
+                        variant="default"
+                        size="sm"
+                        onClick={() => generateAIFeedback(result.id, result.name)}
+                        disabled={generatingFeedback === result.id}
+                      >
+                        {generatingFeedback === result.id ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Generating...
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles className="h-4 w-4 mr-2" />
+                            Generate
+                          </>
+                        )}
                       </Button>
+                    ) : (
+                      <>
+                        <Button size="sm" variant="outline" onClick={() => handleEditFeedback(result)}>
+                          <Eye className="w-4 h-4 mr-2" />
+                          Preview
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => generateAIFeedback(result.id, result.name)}
+                          disabled={generatingFeedback === result.id}
+                        >
+                          {generatingFeedback === result.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <RefreshCw className="h-4 w-4" />
+                          )}
+                        </Button>
+                        {result.feedbackStatus !== 'approved' && (
+                          <Button size="sm" onClick={() => handleApproveFeedback(result.id)}>
+                            <CheckCircle className="w-4 h-4 mr-2" />
+                            Approve
+                          </Button>
+                        )}
+                      </>
                     )}
                   </div>
                 </div>
                 <div className="bg-muted p-3 rounded text-sm">
-                  <div className="line-clamp-3">{result.feedbackSummary}</div>
+                  <div className="line-clamp-3 whitespace-pre-wrap">{result.feedbackSummary}</div>
                 </div>
               </div>
             ))}

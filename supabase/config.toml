@@ -122,3 +122,6 @@ verify_jwt = true
 
 [functions.generate-ai-guidance]
 verify_jwt = true
+
+[functions.generate-founder-feedback]
+verify_jwt = true
