@@ -3,6 +3,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 // Utility functions
 import { formatScore } from "@/lib/utils";
+import { AIFeedbackAssist } from "./AIFeedbackAssist";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -88,6 +89,15 @@ interface TextareaWithValidationProps {
   className?: string;
   validation?: { hasError: boolean; message: string };
   description?: string;
+  enableAIAssist?: boolean;
+  fieldType?: 'strengths' | 'improvement_areas' | 'pitch_development' | 'overall_notes';
+  rubric?: EvaluationSection[];
+  startupContext?: {
+    name: string;
+    vertical: string;
+    stage: string;
+  };
+  roundName?: 'screening' | 'pitching';
 }
 
 const TextareaWithValidation = ({ 
@@ -99,7 +109,12 @@ const TextareaWithValidation = ({
   disabled = false, 
   className = "",
   validation,
-  description
+  description,
+  enableAIAssist = false,
+  fieldType,
+  rubric,
+  startupContext,
+  roundName,
 }: TextareaWithValidationProps) => {
   const charCount = value.length;
   const isValid = charCount >= MIN_CHARS;
@@ -148,6 +163,22 @@ const TextareaWithValidation = ({
           </div>
         )}
       </div>
+
+      {/* AI Assist Integration */}
+      {enableAIAssist && fieldType && rubric && startupContext && roundName && (
+        <AIFeedbackAssist
+          fieldType={fieldType}
+          draftText={value}
+          rubric={rubric}
+          startupContext={startupContext}
+          roundName={roundName}
+          onInsertSuggestion={(text) => {
+            const newValue = value ? `${value}\n\n${text}` : text;
+            onChange(newValue);
+          }}
+          disabled={disabled}
+        />
+      )}
     </div>
   );
 };
@@ -1151,6 +1182,15 @@ export const StartupEvaluationModal = ({
                     }))}
                     disabled={!isEditing}
                     validation={validationErrors['improvement_areas']}
+                    enableAIAssist={true}
+                    fieldType="improvement_areas"
+                    rubric={currentRound === 'screening' ? screeningEvaluationSections : pitchingEvaluationSections}
+                    startupContext={{
+                      name: startup.name,
+                      vertical: startup.verticalsText || 'N/A',
+                      stage: startup.stage
+                    }}
+                    roundName={currentRound}
                   />
 
                   <TextareaWithValidation
@@ -1164,6 +1204,15 @@ export const StartupEvaluationModal = ({
                     }))}
                     disabled={!isEditing}
                     validation={validationErrors['pitch_development_aspects']}
+                    enableAIAssist={true}
+                    fieldType="pitch_development"
+                    rubric={currentRound === 'screening' ? screeningEvaluationSections : pitchingEvaluationSections}
+                    startupContext={{
+                      name: startup.name,
+                      vertical: startup.verticalsText || 'N/A',
+                      stage: startup.stage
+                    }}
+                    roundName={currentRound}
                   />
 
                   <div className="flex items-center space-x-3">
