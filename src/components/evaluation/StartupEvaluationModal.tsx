@@ -30,7 +30,7 @@ interface StartupEvaluationModalProps {
     pitch_deck_url: string;
     demo_url: string;
     location: string;
-    region?: string;
+    regions?: string[];
     country?: string;
     linkedin_url?: string;
     evaluation_status: 'not_started' | 'draft' | 'completed';
@@ -904,7 +904,7 @@ export const StartupEvaluationModal = ({
                       </div>
                       <div className="flex items-center gap-2">
                         <MapPin className="w-4 h-4 text-muted-foreground" />
-                        <span>{startup.region || 'N/A'} Region</span>
+                        <span>{(startup.regions || []).join(', ') || 'N/A'}</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <Globe className="w-4 h-4 text-muted-foreground" />

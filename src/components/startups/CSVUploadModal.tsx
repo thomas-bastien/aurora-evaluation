@@ -187,8 +187,15 @@ export function CSVUploadModal({ open, onOpenChange, onDataParsed }: CSVUploadMo
                     if (rowIndex === 0) console.log(`  ✓ Stage normalized to: "${startup.stage}"`);
                     break;
                   case 'region':
-                    startup.region = String(value).trim();
-                    if (rowIndex === 0) console.log(`  ✓ Region set to: "${startup.region}"`);
+                  case 'regions':
+                    // Handle both region and regions columns
+                    const regionValue = String(value).trim();
+                    if (regionValue) {
+                      startup.regions = regionValue.includes(',') 
+                        ? regionValue.split(',').map(r => r.trim())
+                        : [regionValue];
+                      if (rowIndex === 0) console.log(`  ✓ Regions set to: ${JSON.stringify(startup.regions)}`);
+                    }
                     break;
                   case 'founded_year':
                     startup.founded_year = parseYearField(value);

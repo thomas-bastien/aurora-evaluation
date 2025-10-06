@@ -285,7 +285,7 @@ export const UnifiedSelectionTable = ({
           stage: startup.stage || 'N/A',
           location: startup.location || 'N/A',
           verticals: startup.verticals || [],
-          regions: startup.regions && startup.regions.length > 0 ? startup.regions : (startup.region ? [startup.region] : []),
+          regions: startup.regions || [],
           pitch_deck_url: startup.pitch_deck_url,
           demo_url: startup.demo_url,
           contact_email: startup.contact_email,

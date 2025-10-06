@@ -39,7 +39,7 @@ export async function generateEvaluationDecisionData(
         id,
         name,
         founder_names,
-        region,
+        regions,
         country,
         verticals,
         stage,
@@ -132,7 +132,7 @@ export async function generateEvaluationDecisionData(
       results.push({
         startup_name: startup.name,
         founder_names: (startup.founder_names || []).join(', '),
-        region: startup.region,
+        region: (startup.regions || []).join(', '),
         country: startup.country,
         vertical: (startup.verticals || [])[0] || 'N/A',
         funding_stage: startup.stage,

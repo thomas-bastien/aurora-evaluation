@@ -354,7 +354,7 @@ export async function generateStartupsCSV(): Promise<string> {
       escapeCSVField(startup.description || ''),
       escapeCSVField(startup.stage || ''),
       escapeCSVField(startup.country || ''),
-      escapeCSVField(startup.region || ''),
+      escapeCSVField((startup.regions || []).join(', ')),
       escapeCSVField(startup.business_model && startup.business_model.length > 0 ? startup.business_model.join(', ') : ''),
       escapeCSVField(startup.founded_year || ''),
       escapeCSVField(startup.team_size || ''),
