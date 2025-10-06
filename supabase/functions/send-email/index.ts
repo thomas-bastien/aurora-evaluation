@@ -33,6 +33,7 @@ const corsHeaders = {
 interface SendEmailRequest {
   templateId?: string;
   templateCategory?: string;
+  communicationType?: string;
   recipientEmail: string;
   recipientType: 'juror' | 'startup' | 'admin';
   recipientId?: string;
@@ -48,6 +49,25 @@ interface EmailTemplate {
   body_template: string;
   variables: string[];
 }
+
+// Map template category to valid communication_type values
+// Valid types: 'selection', 'rejection', 'under-review', 'general'
+const mapCategoryToCommunicationType = (category?: string): string => {
+  if (!category) return 'general';
+  
+  const mapping: Record<string, string> = {
+    'juror_invitation': 'under-review',
+    'juror-reminder': 'under-review',
+    'assignment-notification': 'under-review',
+    'founder_selection': 'selection',
+    'founder_rejection': 'rejection',
+    'pitch-scheduling': 'under-review',
+    'screening-results': 'selection',
+    'pitching-results': 'selection'
+  };
+  
+  return mapping[category] || 'general';
+};
 
 const handler = async (req: Request): Promise<Response> => {
   // Handle CORS preflight requests
@@ -144,6 +164,7 @@ const handler = async (req: Request): Promise<Response> => {
         body,
         content_hash: contentHash,
         status: 'pending',
+        communication_type: requestData.communicationType || mapCategoryToCommunicationType(requestData.templateCategory),
         metadata: {
           template_category: requestData.templateCategory,
           variables: requestData.variables
