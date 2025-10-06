@@ -34,6 +34,7 @@ import {
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { useRounds, type Round } from "@/hooks/useRounds";
+import { normalizeRegions } from "@/utils/fieldNormalization";
 
 interface UnifiedStartupData {
   id: string;
@@ -285,7 +286,7 @@ export const UnifiedSelectionTable = ({
           stage: startup.stage || 'N/A',
           location: startup.location || 'N/A',
           verticals: startup.verticals || [],
-          regions: startup.regions || [],
+          regions: startup.regions ? normalizeRegions(startup.regions) : [],
           pitch_deck_url: startup.pitch_deck_url,
           demo_url: startup.demo_url,
           contact_email: startup.contact_email,

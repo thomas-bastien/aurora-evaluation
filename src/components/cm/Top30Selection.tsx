@@ -33,6 +33,7 @@ import { StatusBadge } from "@/components/common/StatusBadge";
 import { RoundStatusDisplay } from "@/components/common/RoundStatusDisplay";
 import { useToast } from "@/hooks/use-toast";
 import { useRounds, type Round } from "@/hooks/useRounds";
+import { normalizeRegions } from "@/utils/fieldNormalization";
 
 interface StartupSelection {
   id: string;
@@ -223,7 +224,7 @@ export const Top30Selection = ({ currentRound, roundInfo, isReadOnly = false, on
           description: startup.description,
           verticals: startup.verticals || [],
           stage: startup.stage,
-          regions: startup.regions || [],
+          regions: startup.regions ? normalizeRegions(startup.regions) : [],
           pitch_deck_url: startup.pitch_deck_url,
           demo_url: startup.demo_url,
           contact_email: startup.contact_email,

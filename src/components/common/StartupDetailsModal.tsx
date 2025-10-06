@@ -9,6 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Building2, MapPin, Globe, Mail, Users, Star, TrendingUp, ExternalLink } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatScore } from "@/lib/utils";
+import { normalizeRegions } from "@/utils/fieldNormalization";
 
 interface StartupDetails {
   id: string;
@@ -158,7 +159,7 @@ export const StartupDetailsModal = ({
         description: startupData.description,
         verticals: startupData.verticals || [],
         stage: startupData.stage,
-        regions: startupData.regions || [],
+        regions: startupData.regions ? normalizeRegions(startupData.regions) : [],
         pitch_deck_url: startupData.pitch_deck_url,
         demo_url: startupData.demo_url,
         contact_email: startupData.contact_email,

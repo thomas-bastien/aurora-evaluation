@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
+import { normalizeRegions } from "@/utils/fieldNormalization";
 
 interface StartupEvaluation {
   id: string;
@@ -239,7 +240,7 @@ export const EvaluationProgressView = ({ currentRound = 'screening' }: Evaluatio
           name: startup.name,
           description: startup.description || '',
           verticals: startup.verticals || [],
-          regions: startup.regions || [],
+          regions: startup.regions ? normalizeRegions(startup.regions) : [],
           stage: startup.stage || 'N/A',
           location: startup.location || 'N/A',
           evaluationsReceived: submittedEvaluations.length,

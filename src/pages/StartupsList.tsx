@@ -21,6 +21,7 @@ import { FilterPanel } from '@/components/common/FilterPanel';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { AURORA_VERTICALS, BUSINESS_MODELS, CURRENCIES } from '@/constants/startupConstants';
 import { StatusBadge } from '@/components/common/StatusBadge';
+import { normalizeRegions } from '@/utils/fieldNormalization';
 
 interface Startup {
   id: string;
@@ -120,7 +121,12 @@ export default function StartupsList() {
           console.error('Error fetching startups:', startupsError);
           setStartups([]);
         } else {
-          setStartups(startupsData || []);
+          // Normalize regions on fetch for consistent display and filtering
+          const normalizedStartups = (startupsData || []).map(startup => ({
+            ...startup,
+            regions: startup.regions ? normalizeRegions(startup.regions) : []
+          }));
+          setStartups(normalizedStartups);
         }
 
         // Fetch evaluation statuses for status display

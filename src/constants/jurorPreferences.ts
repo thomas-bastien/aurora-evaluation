@@ -1,14 +1,8 @@
 // Juror preference options for consistent use across the platform
+// Import region options from single source of truth
+import { REGION_OPTIONS } from './startupConstants';
 
-export const REGION_OPTIONS = [
-  'Africa',
-  'Asia Pacific (APAC)', 
-  'Europe',
-  'Latin America (LATAM)',
-  'Middle East & North Africa (MENA)',
-  'North America',
-  'Other'
-] as const;
+export { REGION_OPTIONS };
 
 // Use Aurora's official vertical taxonomy for consistent matchmaking
 export const VERTICAL_OPTIONS = [

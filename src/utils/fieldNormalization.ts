@@ -3,11 +3,11 @@
 
 export const CANONICAL_REGIONS: Record<string, string[]> = {
   'Africa': ['Africa', 'Sub-Saharan Africa', 'North Africa', 'SSA'],
-  'Asia Pacific (APAC)': ['Asia', 'APAC', 'APAC (Asia + Pacific)', 'APAC ( Asia+ Pacific)', 'Asia Pacific', 'SEA', 'Southeast Asia', 'East Asia', 'South Asia'],
-  'Europe': ['EU', 'Europe', 'European Union', 'EMEA', 'CEE', 'CEE (Central and Eastern Europe)', 'CIS'],
-  'Latin America (LATAM)': ['LATAM', 'Latin America', 'South America', 'Central America', 'LatAm'],
-  'Middle East & North Africa (MENA)': ['ME', 'Middle East', 'MENA', 'MENA (Middle East + Africa)', 'Gulf', 'GCC'],
-  'North America': ['NA', 'North America', 'NORAM', 'USA', 'US', 'United States', 'Canada'],
+  'Asia Pacific (APAC)': ['Asia', 'APAC', 'APAC (Asia + Pacific)', 'APAC ( Asia+ Pacific)', 'Asia Pacific', 'SEA', 'Southeast Asia', 'East Asia', 'South Asia', 'Singapore', 'Hong Kong', 'China', 'Japan', 'South Korea', 'India', 'Australia', 'New Zealand'],
+  'Europe': ['EU', 'Europe', 'European Union', 'EMEA', 'CEE', 'CEE (Central and Eastern Europe)', 'CIS', 'United Kingdom', 'UK', 'Ireland', 'Germany', 'France', 'Spain', 'Italy', 'Netherlands', 'Belgium', 'Switzerland', 'Austria', 'Sweden', 'Norway', 'Denmark', 'Finland', 'Poland', 'Czech Republic', 'Hungary', 'Portugal', 'Greece', 'Romania'],
+  'Latin America (LATAM)': ['LATAM', 'Latin America', 'South America', 'Central America', 'LatAm', 'Brazil', 'Mexico', 'Argentina', 'Chile', 'Colombia', 'Peru'],
+  'Middle East & North Africa (MENA)': ['ME', 'Middle East', 'MENA', 'MENA (Middle East + Africa)', 'Gulf', 'GCC', 'UAE', 'Saudi Arabia', 'Israel', 'Egypt', 'Turkey', 'Jordan', 'Lebanon'],
+  'North America': ['NA', 'North America', 'NORAM', 'USA', 'US', 'United States', 'Canada', 'U.S.', 'U.S.A.'],
   'Other': ['Other', 'Global', 'Worldwide', 'International', 'Multiple Regions']
 };
 

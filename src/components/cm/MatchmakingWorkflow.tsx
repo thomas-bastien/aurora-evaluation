@@ -8,7 +8,7 @@ import { AlertCircle, Building2, Users, CheckCircle2, Eye, Check, Wand2, Mail, S
 import { toast } from "sonner";
 import { StartupAssignmentModal } from "@/components/matchmaking/StartupAssignmentModal";
 import { AssignmentSummary } from "@/components/matchmaking/AssignmentSummary";
-
+import { normalizeRegions } from "@/utils/fieldNormalization";
 import { EnhancedAutoAssignmentPanel } from "@/components/matchmaking/EnhancedAutoAssignmentPanel";
 import { generateExplainableSuggestions, Startup as ExplainableStartup, Juror as ExplainableJuror } from "@/utils/explainableMatchmakingEngine";
 import { SendSchedulingEmailsModal } from "@/components/cm/SendSchedulingEmailsModal";
@@ -196,8 +196,10 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
       console.log(`Loaded ${mappedAssignments.length} existing assignments`);
 
       // Sort startups: rejected first (by name), then others (by name)
+      // Also normalize regions for consistent display
       const sortedStartups = (startupsData || []).map(startup => ({
         ...startup,
+        regions: startup.regions ? normalizeRegions(startup.regions) : [],
         roundStatus: roundStatusLookup[startup.id] || 'pending'
       })).sort((a, b) => {
         const aRejected = a.roundStatus === 'rejected';

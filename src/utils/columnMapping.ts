@@ -334,12 +334,41 @@ export function mapStartupColumn(columnName: string): string | null {
 }
 
 /**
- * Parses array-like fields (comma or semicolon separated)
+ * Parses array-like fields (comma or semicolon separated) with normalization support
  */
 export function parseArrayField(value: any): string[] {
   if (!value) return [];
   const str = String(value);
   return str.split(/[,;]/).map(item => item.trim()).filter(item => item.length > 0);
+}
+
+/**
+ * Maps common country names to canonical regions for CSV imports
+ */
+export function mapCountryToRegion(country: string): string {
+  const countryLower = country.toLowerCase().trim();
+  
+  // Europe
+  const europeanCountries = ['uk', 'united kingdom', 'ireland', 'germany', 'france', 'spain', 'italy', 'netherlands', 'belgium', 'switzerland', 'austria', 'sweden', 'norway', 'denmark', 'finland', 'poland', 'czech republic', 'hungary', 'portugal', 'greece', 'romania'];
+  if (europeanCountries.some(c => countryLower.includes(c))) return 'Europe';
+  
+  // North America
+  if (['usa', 'united states', 'us', 'u.s.', 'canada'].some(c => countryLower.includes(c))) return 'North America';
+  
+  // Asia Pacific
+  const apacCountries = ['singapore', 'hong kong', 'china', 'japan', 'south korea', 'india', 'australia', 'new zealand', 'malaysia', 'thailand', 'vietnam', 'indonesia', 'philippines'];
+  if (apacCountries.some(c => countryLower.includes(c))) return 'Asia Pacific (APAC)';
+  
+  // Middle East & North Africa
+  const menaCountries = ['uae', 'saudi arabia', 'israel', 'egypt', 'turkey', 'jordan', 'lebanon', 'qatar', 'kuwait', 'bahrain', 'oman'];
+  if (menaCountries.some(c => countryLower.includes(c))) return 'Middle East & North Africa (MENA)';
+  
+  // Latin America
+  const latamCountries = ['brazil', 'mexico', 'argentina', 'chile', 'colombia', 'peru', 'venezuela', 'ecuador'];
+  if (latamCountries.some(c => countryLower.includes(c))) return 'Latin America (LATAM)';
+  
+  // Return as-is if no match (will be normalized by fieldNormalization utility)
+  return country;
 }
 
 /**
