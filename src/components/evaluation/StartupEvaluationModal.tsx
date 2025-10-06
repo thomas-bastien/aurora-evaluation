@@ -37,6 +37,9 @@ interface StartupEvaluationModalProps {
     evaluation_status: 'not_started' | 'draft' | 'completed';
     evaluation_id?: string;
     overall_score?: number;
+    business_model?: string[];
+    team_size?: number;
+    funding_raised?: number;
   };
   open: boolean;
   onClose: () => void;
@@ -96,7 +99,15 @@ interface TextareaWithValidationProps {
     name: string;
     vertical: string;
     stage: string;
+    description?: string;
+    businessModel?: string[];
+    teamSize?: number;
+    fundingRaised?: number;
+    hasPitchDeck?: boolean;
+    hasDemo?: boolean;
   };
+  criterionScores?: Record<string, number>;
+  overallScore?: number;
   roundName?: 'screening' | 'pitching';
 }
 
@@ -114,6 +125,8 @@ const TextareaWithValidation = ({
   fieldType,
   rubric,
   startupContext,
+  criterionScores,
+  overallScore,
   roundName,
 }: TextareaWithValidationProps) => {
   const charCount = value.length;
@@ -165,12 +178,14 @@ const TextareaWithValidation = ({
       </div>
 
       {/* AI Assist Integration */}
-      {enableAIAssist && fieldType && rubric && startupContext && roundName && (
+      {enableAIAssist && fieldType && rubric && startupContext && criterionScores && overallScore !== undefined && roundName && (
         <AIFeedbackAssist
           fieldType={fieldType}
           draftText={value}
           rubric={rubric}
           startupContext={startupContext}
+          criterionScores={criterionScores}
+          overallScore={overallScore}
           roundName={roundName}
           onInsertSuggestion={(text) => {
             const newValue = value ? `${value}\n\n${text}` : text;
@@ -1188,8 +1203,16 @@ export const StartupEvaluationModal = ({
                     startupContext={{
                       name: startup.name,
                       vertical: startup.verticalsText || 'N/A',
-                      stage: startup.stage
+                      stage: startup.stage,
+                      description: startup.description?.substring(0, 200),
+                      businessModel: startup.business_model || [],
+                      teamSize: startup.team_size,
+                      fundingRaised: startup.funding_raised,
+                      hasPitchDeck: !!startup.pitch_deck_url,
+                      hasDemo: !!startup.demo_url,
                     }}
+                    criterionScores={formData.criteria_scores}
+                    overallScore={overallScore}
                     roundName={currentRound}
                   />
 
@@ -1210,8 +1233,16 @@ export const StartupEvaluationModal = ({
                     startupContext={{
                       name: startup.name,
                       vertical: startup.verticalsText || 'N/A',
-                      stage: startup.stage
+                      stage: startup.stage,
+                      description: startup.description?.substring(0, 200),
+                      businessModel: startup.business_model || [],
+                      teamSize: startup.team_size,
+                      fundingRaised: startup.funding_raised,
+                      hasPitchDeck: !!startup.pitch_deck_url,
+                      hasDemo: !!startup.demo_url,
                     }}
+                    criterionScores={formData.criteria_scores}
+                    overallScore={overallScore}
                     roundName={currentRound}
                   />
 

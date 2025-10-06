@@ -14,6 +14,7 @@ interface SuggestionRequest {
       key: string;
       title: string;
       criteria: Array<{
+        key: string;
         label: string;
         description: string;
       }>;
@@ -24,7 +25,25 @@ interface SuggestionRequest {
     name: string;
     vertical: string;
     stage: string;
+    description?: string;
+    businessModel?: string[];
+    teamSize?: number;
+    fundingRaised?: number;
+    hasPitchDeck?: boolean;
+    hasDemo?: boolean;
   };
+  criterionScores: Record<string, number>; // Juror's 1-5 scores per criterion
+  overallScore: number; // Calculated 0-10 overall score
+  relevantCriteria: Array<{
+    sectionKey: string;
+    sectionTitle: string;
+    criteriaWithScores: Array<{
+      key: string;
+      label: string;
+      description: string;
+      score: number;
+    }>;
+  }>;
   roundName: 'screening' | 'pitching';
 }
 
@@ -40,7 +59,16 @@ serve(async (req) => {
   }
 
   try {
-    const { draftText, fieldType, rubric, startupContext, roundName }: SuggestionRequest = await req.json();
+    const { 
+      draftText, 
+      fieldType, 
+      rubric, 
+      startupContext, 
+      criterionScores,
+      overallScore,
+      relevantCriteria,
+      roundName 
+    }: SuggestionRequest = await req.json();
 
     // Return empty suggestions for very short drafts
     if (!draftText || draftText.length < 10) {
@@ -55,41 +83,94 @@ serve(async (req) => {
       throw new Error('LOVABLE_API_KEY is not configured');
     }
 
-    // Build rubric context
-    const rubricContext = rubric.sections
-      .map(section => `${section.title}: ${section.guidance}`)
-      .join('\n');
+    // Build context strings
+    const startupDetails = [
+      `Name: ${startupContext.name}`,
+      `Vertical: ${startupContext.vertical}`,
+      `Stage: ${startupContext.stage}`,
+      startupContext.description && `Description: ${startupContext.description}`,
+      startupContext.businessModel && `Business Model: ${startupContext.businessModel.join(', ')}`,
+      startupContext.teamSize && `Team Size: ${startupContext.teamSize}`,
+      startupContext.fundingRaised && `Funding Raised: ${startupContext.fundingRaised}`,
+      startupContext.hasPitchDeck !== undefined && `Has Pitch Deck: ${startupContext.hasPitchDeck ? 'Yes' : 'No'}`,
+      startupContext.hasDemo !== undefined && `Has Demo: ${startupContext.hasDemo ? 'Yes' : 'No'}`,
+    ].filter(Boolean).join('\n');
+
+    // Build criterion scores context
+    const lowScoredCriteria = relevantCriteria
+      .flatMap(section => section.criteriaWithScores
+        .filter(c => c.score <= 3)
+        .map(c => `- ${section.sectionTitle} > ${c.label}: ${c.score}/5`)
+      );
+    
+    const highScoredCriteria = relevantCriteria
+      .flatMap(section => section.criteriaWithScores
+        .filter(c => c.score >= 4)
+        .map(c => `- ${section.sectionTitle} > ${c.label}: ${c.score}/5`)
+      );
 
     // System prompt
     const systemPrompt = `You are an evaluation feedback assistant for Aurora Tech Awards. Your role is to help jurors improve their feedback quality WITHOUT changing their voice or adding facts not present in their draft.
 
-Guidelines:
-- Suggest 2-3 specific improvements (max 20 words each)
-- Reference rubric criteria when relevant
-- Focus on: clarity, evidence, balance, actionability
-- NEVER suggest adding information not implied by the draft
-- Keep the juror's tone and perspective
-- Be concise and actionable
+STRICT RULES (NEVER VIOLATE):
+1. ONLY suggest improvements to EXISTING draft text - never add new claims
+2. NEVER invent startup details, metrics, or facts
+3. ONLY reference data from: juror's scores, rubric criteria, startup context provided
+4. If draft is already clear and references scores appropriately, return ZERO suggestions
 
-Common improvement patterns:
-- "Add 1-2 proof points for [claim]" when assertions lack evidence
-- "Balance: include 1 risk to pair with strengths" when only positives mentioned
-- "Make next step specific (timeline/metric)" when recommendations are vague
-- "Clarify: what specifically about [aspect]?" when feedback is too general`;
+YOUR TASK:
+- Detect misalignment between scores and feedback
+- Flag missing explanations for low scores (≤3/5)
+- Suggest adding specificity WITHOUT inventing details
+- Recommend referencing rubric criteria when relevant
 
-    // User prompt
-    const userPrompt = `Evaluation Context:
+SUGGESTION FORMAT (max 15 words):
+✅ "Explain why you scored 'Market Size' as 2/5"
+✅ "Clarify which specific competitor analysis is weak"
+❌ "Mention their competitor Acme Corp" (inventing)
+❌ "Add that market is £50M" (inventing numbers)`;
+
+    // Build field-specific user prompt
+    let userPrompt = `Evaluation Context:
 Round: ${roundName}
-Startup: ${startupContext.name} (${startupContext.vertical}, ${startupContext.stage})
+Overall Score: ${overallScore.toFixed(1)}/10
+
+Startup:
+${startupDetails}
+
 Field Type: ${fieldType}
-
-Rubric Guidance:
-${rubricContext}
-
-Current Draft Feedback:
+Current Draft:
 "${draftText}"
+`;
 
-Provide 2-3 specific, actionable suggestions to improve this feedback. Focus on clarity, evidence, and actionability.`;
+    if (fieldType === 'improvement_areas' && lowScoredCriteria.length > 0) {
+      userPrompt += `\nJuror's Low Scores (≤3/5):
+${lowScoredCriteria.join('\n')}
+
+Task: Suggest 1-2 improvements ONLY IF:
+- Draft doesn't explain WHY low-scored criteria failed
+- Draft is too generic (no rubric reference)
+- Draft is too short (<50 words) for overall score of ${overallScore.toFixed(1)}/10
+
+Return ZERO suggestions if draft already addresses low scores clearly.`;
+    } else if (fieldType === 'strengths' && highScoredCriteria.length > 0) {
+      userPrompt += `\nJuror's High Scores (≥4/5):
+${highScoredCriteria.join('\n')}
+
+Task: Suggest improvements ONLY IF:
+- Strength doesn't reference WHY criterion scored high
+- Strength is generic (could apply to any startup)
+- Missing connection to rubric criteria
+
+Be invisible if strength is specific and evidence-based.`;
+    } else {
+      userPrompt += `\nAll Criterion Scores:
+${relevantCriteria.map(section => 
+  `${section.sectionTitle}:\n${section.criteriaWithScores.map(c => `  - ${c.label}: ${c.score}/5`).join('\n')}`
+).join('\n\n')}
+
+Task: Suggest 1-2 improvements to make feedback more specific and actionable. Reference scores when relevant.`;
+    }
 
     // Call Lovable AI with structured output
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {

@@ -27,6 +27,7 @@ interface AIFeedbackAssistProps {
     key: string;
     title: string;
     criteria: Array<{
+      key: string;
       label: string;
       description: string;
     }>;
@@ -36,7 +37,15 @@ interface AIFeedbackAssistProps {
     name: string;
     vertical: string;
     stage: string;
+    description?: string;
+    businessModel?: string[];
+    teamSize?: number;
+    fundingRaised?: number;
+    hasPitchDeck?: boolean;
+    hasDemo?: boolean;
   };
+  criterionScores: Record<string, number>; // NEW: Juror's 1-5 scores per criterion
+  overallScore: number; // NEW: Calculated 0-10 overall score
   roundName: 'screening' | 'pitching';
   onInsertSuggestion: (text: string) => void;
   disabled?: boolean;
@@ -47,6 +56,8 @@ export const AIFeedbackAssist = ({
   draftText,
   rubric,
   startupContext,
+  criterionScores,
+  overallScore,
   roundName,
   onInsertSuggestion,
   disabled = false,
@@ -68,6 +79,26 @@ export const AIFeedbackAssist = ({
       roundName,
       ...data
     });
+  };
+
+  // Helper: Extract relevant criteria with scores for this field type
+  const getRelevantCriteriaWithScores = () => {
+    return rubric.map(section => {
+      const criteriaWithScores = section.criteria
+        .map(criterion => ({
+          key: criterion.key,
+          label: criterion.label,
+          description: criterion.description,
+          score: criterionScores[criterion.key] || 0,
+        }))
+        .filter(c => c.score > 0); // Only include scored criteria
+
+      return {
+        sectionKey: section.key,
+        sectionTitle: section.title,
+        criteriaWithScores,
+      };
+    }).filter(section => section.criteriaWithScores.length > 0);
   };
 
   // Fetch suggestions from edge function
@@ -96,6 +127,9 @@ export const AIFeedbackAssist = ({
           fieldType,
           rubric: { sections: rubric },
           startupContext,
+          criterionScores,
+          overallScore,
+          relevantCriteria: getRelevantCriteriaWithScores(),
           roundName,
         },
       });
