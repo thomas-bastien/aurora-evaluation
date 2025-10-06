@@ -1,4 +1,5 @@
 // Utility functions for matchmaking compatibility and consistency checks
+import { normalizeRegions, normalizeStages, normalizeVerticals } from './fieldNormalization';
 
 export interface Startup {
   id: string;
@@ -36,16 +37,17 @@ export interface CompatibilityScore {
  * Calculate compatibility score between a juror and startup
  */
 export function calculateCompatibility(juror: Juror, startup: Startup): CompatibilityScore {
-  const startupVerticals = startup.verticals || [];
-  const jurorVerticals = juror.target_verticals || [];
+  // Normalize all fields before comparison
+  const startupVerticals = normalizeVerticals(startup.verticals || []);
+  const jurorVerticals = normalizeVerticals(juror.target_verticals || []);
   const verticalMatches = startupVerticals.filter(v => jurorVerticals.includes(v));
   
-  const startupStage = startup.stage;
-  const jurorStages = juror.preferred_stages || [];
+  const startupStage = startup.stage ? normalizeStages([startup.stage])[0] : null;
+  const jurorStages = normalizeStages(juror.preferred_stages || []);
   const stageMatch = startupStage && jurorStages.includes(startupStage);
   
-  const startupRegions = startup.regions || [];
-  const jurorRegions = juror.preferred_regions || [];
+  const startupRegions = normalizeRegions(startup.regions || []);
+  const jurorRegions = normalizeRegions(juror.preferred_regions || []);
   const regionMatches = startupRegions.filter(r => jurorRegions.includes(r));
   const regionMatch = regionMatches.length > 0;
   
@@ -98,22 +100,25 @@ export interface DataInconsistency {
 export function detectDataInconsistencies(startups: Startup[], jurors: Juror[]): DataInconsistency[] {
   const inconsistencies: DataInconsistency[] = [];
 
-  // Check for startups with no matching jurors
-  const allJurorVerticals = new Set(jurors.flatMap(j => j.target_verticals || []));
-  const allJurorStages = new Set(jurors.flatMap(j => j.preferred_stages || []));
-  const allJurorRegions = new Set(jurors.flatMap(j => j.preferred_regions || []));
+  // Normalize and check for startups with no matching jurors
+  const allJurorVerticals = new Set(normalizeVerticals(jurors.flatMap(j => j.target_verticals || [])));
+  const allJurorStages = new Set(normalizeStages(jurors.flatMap(j => j.preferred_stages || [])));
+  const allJurorRegions = new Set(normalizeRegions(jurors.flatMap(j => j.preferred_regions || [])));
 
-  const startupsWithoutVerticalMatch = startups.filter(s => 
-    (s.verticals || []).every(v => !allJurorVerticals.has(v))
-  );
+  const startupsWithoutVerticalMatch = startups.filter(s => {
+    const normalizedVerticals = normalizeVerticals(s.verticals || []);
+    return normalizedVerticals.every(v => !allJurorVerticals.has(v));
+  });
 
-  const startupsWithoutStageMatch = startups.filter(s => 
-    s.stage && !allJurorStages.has(s.stage)
-  );
+  const startupsWithoutStageMatch = startups.filter(s => {
+    const normalizedStage = s.stage ? normalizeStages([s.stage])[0] : null;
+    return normalizedStage && !allJurorStages.has(normalizedStage);
+  });
 
-  const startupsWithoutRegionMatch = startups.filter(s => 
-    (s.regions || []).every(r => !allJurorRegions.has(r))
-  );
+  const startupsWithoutRegionMatch = startups.filter(s => {
+    const normalizedRegions = normalizeRegions(s.regions || []);
+    return normalizedRegions.every(r => !allJurorRegions.has(r));
+  });
 
   if (startupsWithoutVerticalMatch.length > 0) {
     inconsistencies.push({
