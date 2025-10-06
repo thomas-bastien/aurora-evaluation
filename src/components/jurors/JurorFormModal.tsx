@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { REGION_OPTIONS, VERTICAL_OPTIONS, STAGE_OPTIONS } from '@/constants/jurorPreferences';
+import { normalizeRegions, normalizeVerticals, normalizeStages } from '@/utils/fieldNormalization';
 
 interface Juror {
   id?: string;
@@ -56,7 +57,18 @@ export function JurorFormModal({
   // Update form data when initialData changes (for edit mode)
   useEffect(() => {
     if (initialData && mode === 'edit') {
-      setFormData(initialData);
+      setFormData({
+        ...initialData,
+        preferred_regions: initialData.preferred_regions 
+          ? normalizeRegions(initialData.preferred_regions) 
+          : [],
+        target_verticals: initialData.target_verticals 
+          ? normalizeVerticals(initialData.target_verticals) 
+          : [],
+        preferred_stages: initialData.preferred_stages 
+          ? normalizeStages(initialData.preferred_stages) 
+          : []
+      });
     } else if (mode === 'create') {
       setFormData({
         name: '',

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import { normalizeRegions, normalizeVerticals, normalizeStages } from '@/utils/fieldNormalization';
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -217,9 +218,9 @@ export default function JurorsList() {
           email: data.email,
           job_title: data.job_title,
           company: data.company,
-          preferred_regions: data.preferred_regions,
-          target_verticals: data.target_verticals,
-          preferred_stages: data.preferred_stages,
+          preferred_regions: data.preferred_regions ? normalizeRegions(data.preferred_regions) : null,
+          target_verticals: data.target_verticals ? normalizeVerticals(data.target_verticals) : null,
+          preferred_stages: data.preferred_stages ? normalizeStages(data.preferred_stages) : null,
           linkedin_url: data.linkedin_url
         };
         
@@ -280,9 +281,9 @@ export default function JurorsList() {
           email: data.email!,
           job_title: data.job_title || null,
           company: data.company || null,
-          preferred_regions: data.preferred_regions || null,
-          target_verticals: data.target_verticals || null,
-          preferred_stages: data.preferred_stages || null,
+          preferred_regions: data.preferred_regions ? normalizeRegions(data.preferred_regions) : null,
+          target_verticals: data.target_verticals ? normalizeVerticals(data.target_verticals) : null,
+          preferred_stages: data.preferred_stages ? normalizeStages(data.preferred_stages) : null,
           linkedin_url: data.linkedin_url || null
         };
         
