@@ -422,7 +422,7 @@ export const JurorProgressMonitoring = ({ currentRound }: JurorProgressMonitorin
             id,
             name,
             description,
-            industry,
+            verticals,
             stage,
             location,
             founder_names,
@@ -889,7 +889,7 @@ export const JurorProgressMonitoring = ({ currentRound }: JurorProgressMonitorin
                           </div>
                         </div>
                         <CardDescription>
-                          {assignment.startups?.industry} • {assignment.startups?.stage} • {assignment.startups?.location}
+                          {assignment.startups?.verticals?.join(', ') || 'N/A'} • {assignment.startups?.stage} • {assignment.startups?.location}
                         </CardDescription>
                       </CardHeader>
                     <CardContent>
