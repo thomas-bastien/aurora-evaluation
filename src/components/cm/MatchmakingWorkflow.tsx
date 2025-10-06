@@ -963,43 +963,57 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
                       : ''
                 }`}>
                   <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
-                          <h4 className="font-semibold">{startup.name}</h4>
-                          <Badge variant={(startup.verticals?.length > 0) ? "secondary" : "outline"}>
-                            {startup.verticals?.join(', ') || "No Verticals"}
-                          </Badge>
-                          <Badge variant={startup.stage ? "outline" : "secondary"}>
-                            {startup.stage || "No Stage"}
-                          </Badge>
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1 space-y-2">
+                        <div className="flex items-center gap-3">
+                          <h4 className="text-lg font-semibold text-foreground">{startup.name}</h4>
                           
-                          {/* Round-specific status badge using StatusBadge component */}
+                          {/* Round-specific status badge */}
                           <StatusBadge status={startup.roundStatus || 'pending'} roundName={currentRound === 'screeningRound' ? 'screening' : 'pitching'} />
                           
                           {/* Assignment count badge with visual warnings */}
                           {assignmentCount === 0 ? (
-                            <Badge variant="destructive" className="flex items-center gap-1">
+                            <Badge variant="destructive" className="flex items-center gap-1 shrink-0">
                               <AlertCircle className="w-3 h-3" />
                               Unassigned
                             </Badge>
                           ) : assignmentCount < requiredAssignments ? (
-                            <Badge variant="outline" className="bg-warning/10 text-warning border-warning/20 flex items-center gap-1">
+                            <Badge variant="outline" className="bg-warning/10 text-warning border-warning/20 flex items-center gap-1 shrink-0">
                               <AlertCircle className="w-3 h-3" />
                               ⚠️ {assignmentCount}/3 jurors
                             </Badge>
                           ) : (
-                            <Badge variant="default" className="flex items-center gap-1">
+                            <Badge variant="default" className="flex items-center gap-1 shrink-0">
                               <CheckCircle2 className="w-3 h-3" />
                               {assignmentCount} jurors
                             </Badge>
                           )}
                         </div>
 
-                        <div className="text-sm text-muted-foreground space-y-1">
-                          <p><strong>Location:</strong> {startup.location || "Not specified"}</p>
-                          <p><strong>Founders:</strong> {startup.founder_names?.join(", ") || "Not specified"}</p>
-                          <p><strong>Description:</strong> {startup.description || "No description available"}</p>
+                        <div className="space-y-1 text-sm">
+                          <div>
+                            <span className="font-medium text-foreground">Stage:</span>{" "}
+                            <span className="text-muted-foreground">{startup.stage || 'N/A'}</span>
+                          </div>
+                          
+                          <div>
+                            <span className="font-medium text-foreground">Verticals:</span>{" "}
+                            <span className="text-muted-foreground">
+                              {(startup.verticals && startup.verticals.length > 0) ? startup.verticals.join(", ") : 'N/A'}
+                            </span>
+                          </div>
+                          
+                          <div>
+                            <span className="font-medium text-foreground">Region:</span>{" "}
+                            <span className="text-muted-foreground">
+                              {(startup.regions && startup.regions.length > 0) ? startup.regions.join(", ") : 'N/A'}
+                            </span>
+                          </div>
+                          
+                          <div>
+                            <span className="font-medium text-foreground">Description:</span>{" "}
+                            <span className="text-muted-foreground">{startup.description || 'N/A'}</span>
+                          </div>
                         </div>
                       </div>
 
