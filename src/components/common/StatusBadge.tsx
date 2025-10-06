@@ -36,7 +36,7 @@ export function StatusBadge({ status, roundName, showRoundContext, className, is
   return (
     <Badge 
       variant="outline"
-      className={`${colorClasses} ${className || ''} flex items-center`}
+      className={`${colorClasses} ${className || ''} flex items-center transition-smooth`}
     >
       {getStatusIcon()}
       {label}

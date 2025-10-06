@@ -187,14 +187,14 @@ const EvaluationDashboard = () => {
 
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground mb-2">
+          <h1 className="text-3xl font-bold text-foreground mb-2 font-headline">
             {currentRound === 'screening' ? 'Screening' : 'Pitching'} Round - Evaluate Startups
           </h1>
           <div className="space-y-2">
-            <p className="text-lg text-muted-foreground">
+            <p className="text-lg text-muted-foreground font-body">
               <strong>Juror Workflow:</strong> Evaluate the startups assigned to you by Community Managers.
             </p>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-muted-foreground font-body">
               {currentRound === 'screening' 
                 ? 'Complete screening evaluations by reviewing pitch decks and providing scores and feedback for each assigned startup.'
                 : 'Join scheduled pitch calls and complete pitching evaluations after each presentation to help determine final selections.'
@@ -203,18 +203,18 @@ const EvaluationDashboard = () => {
           </div>
           
           {/* Progress Overview */}
-          <Card className="mb-6">
+          <Card className="mb-6 shadow-soft hover:shadow-brand transition-smooth">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between mb-4">
                 <div>
-                  <h3 className="text-lg font-semibold">Evaluation Progress</h3>
-                  <p className="text-sm text-muted-foreground">
+                  <h3 className="text-lg font-semibold font-headline">Evaluation Progress</h3>
+                  <p className="text-sm text-muted-foreground font-body">
                     {stats.completed} of {stats.total} evaluations completed
                   </p>
                 </div>
                 <div className="text-right">
-                  <div className="text-2xl font-bold text-primary">{Math.round(completionRate)}%</div>
-                  <div className="text-xs text-muted-foreground">Complete</div>
+                  <div className="text-2xl font-bold text-primary font-headline">{Math.round(completionRate)}%</div>
+                  <div className="text-xs text-muted-foreground font-body">Complete</div>
                 </div>
               </div>
               <Progress value={completionRate} className="h-2" />
@@ -226,29 +226,29 @@ const EvaluationDashboard = () => {
         <EvaluationStats stats={stats} />
 
         {/* Filters and Search */}
-        <Card className="mb-6">
+        <Card className="mb-6 shadow-soft hover:shadow-brand transition-smooth">
           <CardContent className="pt-6">
             <div className="flex flex-col sm:flex-row gap-4">
               <div className="flex-1">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input placeholder="Search startups by name, verticals, or description..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10" />
+                  <Input placeholder="Search startups by name, verticals, or description..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-smooth" />
                 </div>
               </div>
               <div className="flex gap-2">
-                <Button variant={filterStatus === 'all' ? 'default' : 'outline'} size="sm" onClick={() => setFilterStatus('all')} className="flex items-center gap-2">
+                <Button variant={filterStatus === 'all' ? 'default' : 'outline'} size="sm" onClick={() => setFilterStatus('all')} className="flex items-center gap-2 transition-smooth">
                   <Filter className="w-4 h-4" />
                   All ({stats.total})
                 </Button>
-                <Button variant={filterStatus === 'not_started' ? 'default' : 'outline'} size="sm" onClick={() => setFilterStatus('not_started')} className="flex items-center gap-2">
+                <Button variant={filterStatus === 'not_started' ? 'default' : 'outline'} size="sm" onClick={() => setFilterStatus('not_started')} className="flex items-center gap-2 transition-smooth">
                   <Clock className="w-4 h-4" />
                   Not Started ({stats.notStarted})
                 </Button>
-                <Button variant={filterStatus === 'draft' ? 'default' : 'outline'} size="sm" onClick={() => setFilterStatus('draft')} className="flex items-center gap-2">
+                <Button variant={filterStatus === 'draft' ? 'default' : 'outline'} size="sm" onClick={() => setFilterStatus('draft')} className="flex items-center gap-2 transition-smooth">
                   <Badge variant="secondary" className="w-4 h-4" />
                   Draft ({stats.draft})
                 </Button>
-                <Button variant={filterStatus === 'completed' ? 'default' : 'outline'} size="sm" onClick={() => setFilterStatus('completed')} className="flex items-center gap-2">
+                <Button variant={filterStatus === 'completed' ? 'default' : 'outline'} size="sm" onClick={() => setFilterStatus('completed')} className="flex items-center gap-2 transition-smooth">
                   <CheckCircle className="w-4 h-4" />
                   Completed ({stats.completed})
                 </Button>

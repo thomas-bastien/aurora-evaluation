@@ -71,16 +71,16 @@ const Selection = () => {
         <div className="mb-8">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h1 className="text-3xl font-bold text-foreground mb-2">Startup Selection</h1>
-              <p className="text-lg text-muted-foreground">
+              <h1 className="text-3xl font-bold text-foreground mb-2 font-headline">Startup Selection</h1>
+              <p className="text-lg text-muted-foreground font-body">
                 Manage the complete evaluation workflow and startup selection process
               </p>
             </div>
             
             {/* Global Round Selector */}
-            <Card className="p-4">
+            <Card className="p-4 shadow-soft hover:shadow-brand transition-smooth">
               <div className="flex items-center space-x-4">
-                <Label htmlFor="global-round-selector" className="text-sm font-medium">
+                <Label htmlFor="global-round-selector" className="text-sm font-medium font-body">
                   Round Navigation:
                 </Label>
                 <Select value={currentRound} onValueChange={(value: 'screeningRound' | 'pitchingRound') => handleRoundChange(value)}>

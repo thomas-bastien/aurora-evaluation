@@ -177,4 +177,22 @@ All colors MUST be HSL. ZT Bros Oskon 90s for headlines, Raleway for body text.
     border-radius: 50%;
     background: hsl(var(--primary));
   }
+  
+  /* Aurora Card Utilities */
+  .card-aurora {
+    @apply shadow-soft hover:shadow-brand transition-smooth;
+  }
+  
+  .card-aurora-interactive {
+    @apply shadow-soft hover:shadow-brand hover:scale-[1.02] transition-smooth cursor-pointer;
+  }
+  
+  /* Aurora Table Utilities */
+  .table-row-aurora {
+    @apply hover:bg-primary/5 transition-smooth cursor-pointer;
+  }
+  
+  .table-header-aurora {
+    @apply bg-gradient-primary text-primary-foreground;
+  }
 }

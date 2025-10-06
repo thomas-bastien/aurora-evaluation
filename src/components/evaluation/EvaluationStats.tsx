@@ -25,51 +25,51 @@ export const EvaluationStats = ({ stats }: EvaluationStatsProps) => {
       value: stats.total.toString(),
       subtitle: "Startups assigned to you",
       icon: FileText,
-      color: "text-blue-600"
+      color: "text-primary"
     },
     {
       title: "Completed",
       value: stats.completed.toString(),
       subtitle: "Evaluations submitted",
       icon: CheckCircle,
-      color: "text-green-600"
+      color: "text-success"
     },
     {
       title: "In Progress",
       value: stats.draft.toString(),
       subtitle: "Draft evaluations",
       icon: Clock,
-      color: "text-yellow-600"
+      color: "text-aurora-aqua"
     },
     {
       title: "Not Started",
       value: stats.notStarted.toString(),
       subtitle: "Pending evaluations",
       icon: TrendingUp,
-      color: "text-gray-600"
+      color: "text-muted-foreground"
     },
     {
       title: "Average Score",
       value: formatScore(stats.averageScore > 0 ? stats.averageScore : null, "0"),
       subtitle: "Out of 10.0",
       icon: Star,
-      color: "text-purple-600"
+      color: "text-warning"
     }
   ];
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
       {statCards.map((stat, index) => (
-        <Card key={stat.title} className="relative overflow-hidden">
+        <Card key={stat.title} className="relative overflow-hidden shadow-soft hover:shadow-brand transition-smooth">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground font-body flex items-center gap-2">
               <stat.icon className={`w-4 h-4 ${stat.color}`} />
               {stat.title}
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-0">
-            <div className="text-2xl font-bold">{stat.value}</div>
-            <p className="text-xs text-muted-foreground mt-1">{stat.subtitle}</p>
+            <div className="text-2xl font-bold font-headline">{stat.value}</div>
+            <p className="text-xs text-muted-foreground mt-1 font-body">{stat.subtitle}</p>
           </CardContent>
         </Card>
       ))}

@@ -561,15 +561,15 @@ export const JurorProgressMonitoring = ({ currentRound }: JurorProgressMonitorin
 
   return (
     <TooltipProvider>
-      <Card>
+      <Card className="shadow-soft hover:shadow-brand transition-smooth">
         <CardHeader>
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle className="flex items-center gap-2">
-              <CheckCircle className="w-5 h-5" />
+            <CardTitle className="flex items-center gap-2 font-headline">
+              <CheckCircle className="w-5 h-5 text-primary" />
               Monitor Jury Progress - {roundTitle}
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="font-body">
               <div className="space-y-1">
                 <p><strong>Community Manager Workflow:</strong> Track juror evaluation progress and send reminders.</p>
                 <p className="text-sm">
@@ -585,6 +585,7 @@ export const JurorProgressMonitoring = ({ currentRound }: JurorProgressMonitorin
             <Button
               variant="outline"
               onClick={() => setShowFilters(!showFilters)}
+              className="transition-smooth"
             >
               <Filter className="w-4 h-4 mr-2" />
               Filters
@@ -597,6 +598,7 @@ export const JurorProgressMonitoring = ({ currentRound }: JurorProgressMonitorin
                 j.canSendReminder
               ).length === 0}
               variant="outline"
+              className="transition-smooth"
             >
               <Mail className="w-4 h-4 mr-2" />
               {sendingBulkReminders ? 'Sending...' : `Remind Incomplete (${filteredJurors.filter(j => 
@@ -605,7 +607,7 @@ export const JurorProgressMonitoring = ({ currentRound }: JurorProgressMonitorin
                 j.canSendReminder
               ).length})`}
             </Button>
-            <Button variant="outline" onClick={fetchJurorProgress}>
+            <Button variant="outline" onClick={fetchJurorProgress} className="transition-smooth">
               <RotateCcw className="w-4 h-4 mr-2" />
               Refresh
             </Button>
@@ -620,18 +622,18 @@ export const JurorProgressMonitoring = ({ currentRound }: JurorProgressMonitorin
               placeholder="Search jurors by name, email, or company..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
+              className="pl-10 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-smooth font-body"
             />
           </div>
           
           {showFilters && (
-            <div className="p-4 border rounded-lg bg-muted space-y-3">
+            <div className="p-4 border rounded-lg bg-muted space-y-3 shadow-soft">
               <div>
-                <label className="text-sm font-medium mb-2 block">Status Filter</label>
+                <label className="text-sm font-medium mb-2 block font-body">Status Filter</label>
                 <select
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
-                  className="w-full p-2 border rounded"
+                  className="w-full p-2 border rounded focus:ring-2 focus:ring-primary/20 focus:border-primary transition-smooth font-body"
                 >
                   <option value="all">All Statuses</option>
                   <option value="completed">Completed</option>

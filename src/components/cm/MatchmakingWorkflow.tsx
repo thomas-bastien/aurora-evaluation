@@ -756,13 +756,13 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
 
   return (
     <div className="space-y-6">
-      <Card>
+      <Card className="shadow-soft hover:shadow-brand transition-smooth">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Users className="w-5 h-5" />
+          <CardTitle className="flex items-center gap-2 font-headline">
+            <Users className="w-5 h-5 text-primary" />
             Assign Jurors - {roundTitle}
           </CardTitle>
-          <CardDescription>
+          <CardDescription className="font-body">
             <div className="space-y-1">
               <p><strong>Community Manager Workflow:</strong> Assign jurors to startups for evaluation.</p>
               <p className="text-sm">
@@ -776,12 +776,12 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
         </CardHeader>
         <CardContent>
           {!hasCompleteData && (
-            <div className="mb-6 p-4 bg-warning/10 border border-warning/20 rounded-lg">
+            <div className="mb-6 p-4 bg-warning/10 border border-warning/20 rounded-lg shadow-soft">
               <div className="flex items-center gap-2 mb-2">
                 <AlertCircle className="w-5 h-5 text-warning" />
-                <span className="font-medium text-warning">Incomplete Data Warning</span>
+                <span className="font-medium text-warning font-headline">Incomplete Data Warning</span>
               </div>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-muted-foreground font-body">
                 {startups.length === 0 && currentRound === 'pitchingRound' && "No startups found for pitching round. Only startups selected in Screening Round will appear here. "}
                 {startups.length === 0 && currentRound === 'screeningRound' && "No startups found for this round. "}
                 {jurors.length === 0 && "No jurors available for assignment. "}
@@ -793,23 +793,23 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
 
           {/* Communication Progress */}
           {communicationStats.notificationsSent > 0 && (
-            <div className="mb-6 p-4 bg-primary/5 border border-primary/20 rounded-lg">
+            <div className="mb-6 p-4 bg-primary/5 border border-primary/20 rounded-lg shadow-soft">
               <div className="flex items-center gap-2 mb-2">
                 <Mail className="w-5 h-5 text-primary" />
-                <span className="font-medium">Assignment Notification Progress</span>
+                <span className="font-medium font-headline">Assignment Notification Progress</span>
               </div>
               <div className="grid grid-cols-3 gap-4 text-sm">
                 <div className="text-center">
-                  <div className="text-lg font-semibold text-success">{communicationStats.notificationsSent}</div>
-                  <div className="text-muted-foreground">Sent</div>
+                  <div className="text-lg font-semibold text-success font-headline">{communicationStats.notificationsSent}</div>
+                  <div className="text-muted-foreground font-body">Sent</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-lg font-semibold text-warning">{communicationStats.notificationsPending}</div>
-                  <div className="text-muted-foreground">Pending</div>
+                  <div className="text-lg font-semibold text-warning font-headline">{communicationStats.notificationsPending}</div>
+                  <div className="text-muted-foreground font-body">Pending</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-lg font-semibold text-destructive">{communicationStats.notificationsFailed}</div>
-                  <div className="text-muted-foreground">Failed</div>
+                  <div className="text-lg font-semibold text-destructive font-headline">{communicationStats.notificationsFailed}</div>
+                  <div className="text-muted-foreground font-body">Failed</div>
                 </div>
               </div>
             </div>
@@ -817,54 +817,54 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
 
           {/* Original Statistics Section */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-            <div className="bg-muted/50 p-4 rounded-lg">
+            <div className="bg-muted/50 p-4 rounded-lg shadow-soft hover:shadow-brand transition-smooth">
               <div className="flex items-center gap-2">
                 <Building2 className="w-5 h-5 text-primary" />
                 <div>
-                  <p className="text-2xl font-bold">{startups.length}</p>
-                    <p className="text-sm text-muted-foreground">
+                  <p className="text-2xl font-bold font-headline">{startups.length}</p>
+                    <p className="text-sm text-muted-foreground font-body">
                       {currentRound === 'pitchingRound' ? 'Selected Startups' : 'Startups'}
                     </p>
                 </div>
               </div>
             </div>
 
-            <div className="bg-muted/50 p-4 rounded-lg">
+            <div className="bg-muted/50 p-4 rounded-lg shadow-soft hover:shadow-brand transition-smooth">
               <div className="flex items-center gap-2">
                 <Users className="w-5 h-5 text-primary" />
                 <div>
-                  <p className="text-2xl font-bold">{jurors.length}</p>
-                  <p className="text-sm text-muted-foreground">Available Jurors</p>
+                  <p className="text-2xl font-bold font-headline">{jurors.length}</p>
+                  <p className="text-sm text-muted-foreground font-body">Available Jurors</p>
                 </div>
               </div>
             </div>
 
-            <div className="bg-muted/50 p-4 rounded-lg">
+            <div className="bg-muted/50 p-4 rounded-lg shadow-soft hover:shadow-brand transition-smooth">
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="w-5 h-5 text-success" />
                 <div>
-                  <p className="text-2xl font-bold">
+                  <p className="text-2xl font-bold font-headline">
                     {startups.filter(startup => {
                       const requiredAssignments = 3;
                       return startup.roundStatus !== 'rejected' && getStartupAssignmentCount(startup.id) >= requiredAssignments;
                     }).length}
                   </p>
-                  <p className="text-sm text-muted-foreground">Fully Assigned</p>
+                  <p className="text-sm text-muted-foreground font-body">Fully Assigned</p>
                 </div>
               </div>
             </div>
 
-            <div className="bg-muted/50 p-4 rounded-lg">
+            <div className="bg-muted/50 p-4 rounded-lg shadow-soft hover:shadow-brand transition-smooth">
               <div className="flex items-center gap-2">
                 <AlertCircle className="w-5 h-5 text-warning" />
                 <div>
-                  <p className="text-2xl font-bold">
+                  <p className="text-2xl font-bold font-headline">
                     {startups.filter(startup => {
                       const count = getStartupAssignmentCount(startup.id);
                       return startup.roundStatus !== 'rejected' && count > 0 && count < 3;
                     }).length}
                   </p>
-                  <p className="text-sm text-muted-foreground">Under-Assigned (&lt;3)</p>
+                  <p className="text-sm text-muted-foreground font-body">Under-Assigned (&lt;3)</p>
                 </div>
               </div>
             </div>
@@ -876,7 +876,7 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
               onClick={handleGenerateExplainableSuggestions}
               variant="outline"
               disabled={generatingSuggestions || jurors.length === 0}
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 transition-smooth"
             >
               <Zap className="w-4 h-4" />
               {generatingSuggestions ? 'Generating...' : 'Generate Suggestions'}
@@ -886,7 +886,7 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
               onClick={handleViewSummary}
               variant="outline"
               disabled={assignments.length === 0}
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 transition-smooth"
             >
               <Eye className="w-4 h-4" />
               View Assignment Summary
@@ -896,7 +896,7 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
               onClick={handleConfirmAssignments}
               disabled={assignments.length === 0 || isConfirmed}
               variant={isConfirmed ? "secondary" : "default"}
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 transition-smooth"
             >
               <Check className="w-4 h-4" />
               {isConfirmed ? "Assignments Confirmed" : "Confirm Assignments"}

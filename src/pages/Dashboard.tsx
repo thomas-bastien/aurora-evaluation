@@ -356,13 +356,13 @@ const Dashboard = () => {
         {/* Profile Completion Banner for VCs */}
         {profile?.role === 'vc' && (!profile.target_verticals || profile.target_verticals.length === 0 || !profile.preferred_stages || profile.preferred_stages.length === 0) && (
           <div className="mb-6">
-            <Card className="border-yellow-200 bg-yellow-50">
+            <Card className="border-warning/20 bg-warning/10 shadow-soft hover:shadow-brand transition-smooth">
               <CardHeader className="pb-4">
-                <CardTitle className="text-foreground flex items-center gap-2">
+                <CardTitle className="text-foreground flex items-center gap-2 font-headline">
                   <Users className="w-5 h-5" />
                   Complete Your Profile
                 </CardTitle>
-                <CardDescription>
+                <CardDescription className="font-body">
                   Finish setting up your profile to start evaluating startups and scheduling pitch sessions.
                 </CardDescription>
               </CardHeader>
