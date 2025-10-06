@@ -46,12 +46,17 @@ export const useLiveCommunicationStats = () => {
       }
 
       // Get participant counts
-      const [jurorsResult, startupsResult] = await Promise.all([
+      const [jurorsResult, invitedJurorsResult, startupsResult] = await Promise.all([
         supabase.from('jurors').select('id', { count: 'exact' }),
+        supabase
+          .from('jurors')
+          .select('id', { count: 'exact' })
+          .not('invitation_sent_at', 'is', null),
         supabase.from('startups').select('id', { count: 'exact' })
       ]);
 
       const totalJurors = jurorsResult.count || 0;
+      const invitedJurors = invitedJurorsResult.count || 0;
       const totalStartups = startupsResult.count || 0;
 
       // Calculate statistics by round and type
@@ -112,8 +117,8 @@ export const useLiveCommunicationStats = () => {
           substeps: [
             { 
               name: 'Juror Invites', 
-              completed: screeningJurorInvites.sent, 
-              total: Math.max(screeningJurorInvites.total, totalJurors)
+              completed: invitedJurors, 
+              total: totalJurors
             },
             { 
               name: 'Assignment Notifications', 
