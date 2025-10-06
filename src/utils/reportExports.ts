@@ -113,25 +113,33 @@ export function exportPitchAnalyticsCSV(data: PitchAnalytics[], roundName: strin
 }
 
 // PDF Export Functions
-export function exportEvaluationSummaryPDF(data: StartupAnalytics[], roundName: string, stats: any): void {
+export async function exportEvaluationSummaryPDF(data: StartupAnalytics[], roundName: string, stats: any): Promise<void> {
+  const { addAuroraBrandedHeader, addAuroraBrandedFooter, AURORA_COLORS, imageToBase64 } = await import('./pdfBranding');
   const doc = new jsPDF();
   
-  // Header
-  doc.setFontSize(20);
-  doc.text('Evaluation Summary Report', 20, 20);
+  // Load logo
+  let logoBase64: string | undefined;
+  try {
+    logoBase64 = await imageToBase64('/images/aurora-logo.png');
+  } catch (error) {
+    console.warn('Could not load Aurora logo for PDF');
+  }
   
-  doc.setFontSize(12);
-  doc.text(`Round: ${roundName.charAt(0).toUpperCase() + roundName.slice(1)}`, 20, 35);
-  doc.text(`Generated: ${new Date().toLocaleString()}`, 20, 45);
+  // Add Aurora branded header
+  addAuroraBrandedHeader(doc, 'Evaluation Summary Report', roundName, logoBase64);
   
   // Summary Statistics
-  doc.setFontSize(14);
-  doc.text('Summary Statistics', 20, 65);
+  doc.setFontSize(12);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...AURORA_COLORS.black);
+  doc.text('Summary Statistics', 15, 35);
   
   doc.setFontSize(10);
-  doc.text(`Total Startups: ${stats.totalStartups}`, 20, 80);
-  doc.text(`Completion Rate: ${stats.completionRate}%`, 20, 90);
-  doc.text(`Average Score: ${stats.averageScore.toFixed(2)}`, 20, 100);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(...AURORA_COLORS.textGray);
+  doc.text(`Total Startups: ${stats.totalStartups}`, 15, 45);
+  doc.text(`Completion Rate: ${stats.completionRate}%`, 15, 52);
+  doc.text(`Average Score: ${stats.averageScore.toFixed(2)}`, 15, 59);
   
   // Data Table
   const tableData = data.map(startup => [
@@ -146,33 +154,46 @@ export function exportEvaluationSummaryPDF(data: StartupAnalytics[], roundName: 
   autoTable(doc, {
     head: [['Startup Name', 'Status', 'Evaluations Complete', 'Total Evaluations', 'Average Score', 'Last Updated']],
     body: tableData,
-    startY: 115,
+    startY: 65,
     styles: { fontSize: 8 },
-    headStyles: { fillColor: [59, 130, 246] }
+    headStyles: { fillColor: AURORA_COLORS.primary, textColor: AURORA_COLORS.white },
+    didDrawPage: (data) => {
+      const pageCount = doc.getNumberOfPages();
+      const currentPage = (doc as any).internal.getCurrentPageInfo().pageNumber;
+      addAuroraBrandedFooter(doc, currentPage, pageCount);
+    }
   });
 
   doc.save(`evaluation-summary-${roundName}-${getDateString()}.pdf`);
 }
 
-export function exportJurorContributionPDF(data: JurorContribution[], roundName: string, stats: any): void {
+export async function exportJurorContributionPDF(data: JurorContribution[], roundName: string, stats: any): Promise<void> {
+  const { addAuroraBrandedHeader, addAuroraBrandedFooter, AURORA_COLORS, imageToBase64 } = await import('./pdfBranding');
   const doc = new jsPDF();
   
-  // Header
-  doc.setFontSize(20);
-  doc.text('Juror Contribution Report', 20, 20);
+  // Load logo
+  let logoBase64: string | undefined;
+  try {
+    logoBase64 = await imageToBase64('/images/aurora-logo.png');
+  } catch (error) {
+    console.warn('Could not load Aurora logo for PDF');
+  }
   
-  doc.setFontSize(12);
-  doc.text(`Round: ${roundName.charAt(0).toUpperCase() + roundName.slice(1)}`, 20, 35);
-  doc.text(`Generated: ${new Date().toLocaleString()}`, 20, 45);
+  // Add Aurora branded header
+  addAuroraBrandedHeader(doc, 'Juror Contribution Report', roundName, logoBase64);
   
   // Summary Statistics
-  doc.setFontSize(14);
-  doc.text('Summary Statistics', 20, 65);
+  doc.setFontSize(12);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...AURORA_COLORS.black);
+  doc.text('Summary Statistics', 15, 35);
   
   doc.setFontSize(10);
-  doc.text(`Total Jurors: ${data.length}`, 20, 80);
-  doc.text(`Average Participation: ${stats.completionRate}%`, 20, 90);
-  doc.text(`Average Score Given: ${stats.averageScore.toFixed(2)}`, 20, 100);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(...AURORA_COLORS.textGray);
+  doc.text(`Total Jurors: ${data.length}`, 15, 45);
+  doc.text(`Average Participation: ${stats.completionRate}%`, 15, 52);
+  doc.text(`Average Score Given: ${stats.averageScore.toFixed(2)}`, 15, 59);
   
   // Data Table
   const tableData = data.map(juror => [
@@ -186,33 +207,46 @@ export function exportJurorContributionPDF(data: JurorContribution[], roundName:
   autoTable(doc, {
     head: [['Juror Name', 'Evaluations Completed', 'Average Score Given', 'Participation Rate', 'Last Activity']],
     body: tableData,
-    startY: 115,
+    startY: 65,
     styles: { fontSize: 8 },
-    headStyles: { fillColor: [59, 130, 246] }
+    headStyles: { fillColor: AURORA_COLORS.primary, textColor: AURORA_COLORS.white },
+    didDrawPage: (data) => {
+      const pageCount = doc.getNumberOfPages();
+      const currentPage = (doc as any).internal.getCurrentPageInfo().pageNumber;
+      addAuroraBrandedFooter(doc, currentPage, pageCount);
+    }
   });
 
   doc.save(`juror-contribution-${roundName}-${getDateString()}.pdf`);
 }
 
-export function exportPitchAnalyticsPDF(data: PitchAnalytics[], roundName: string, stats: any): void {
+export async function exportPitchAnalyticsPDF(data: PitchAnalytics[], roundName: string, stats: any): Promise<void> {
+  const { addAuroraBrandedHeader, addAuroraBrandedFooter, AURORA_COLORS, imageToBase64 } = await import('./pdfBranding');
   const doc = new jsPDF();
   
-  // Header
-  doc.setFontSize(20);
-  doc.text('Pitch Session Analytics', 20, 20);
+  // Load logo
+  let logoBase64: string | undefined;
+  try {
+    logoBase64 = await imageToBase64('/images/aurora-logo.png');
+  } catch (error) {
+    console.warn('Could not load Aurora logo for PDF');
+  }
   
-  doc.setFontSize(12);
-  doc.text(`Round: ${roundName.charAt(0).toUpperCase() + roundName.slice(1)}`, 20, 35);
-  doc.text(`Generated: ${new Date().toLocaleString()}`, 20, 45);
+  // Add Aurora branded header
+  addAuroraBrandedHeader(doc, 'Pitch Session Analytics', roundName, logoBase64);
   
   // Summary Statistics
-  doc.setFontSize(14);
-  doc.text('Summary Statistics', 20, 65);
+  doc.setFontSize(12);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...AURORA_COLORS.black);
+  doc.text('Summary Statistics', 15, 35);
   
   doc.setFontSize(10);
-  doc.text(`Total Pitch Sessions: ${data.length}`, 20, 80);
-  doc.text(`Completion Rate: ${stats.completionRate}%`, 20, 90);
-  doc.text(`Average Score: ${stats.averageScore.toFixed(2)}`, 20, 100);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(...AURORA_COLORS.textGray);
+  doc.text(`Total Pitch Sessions: ${data.length}`, 15, 45);
+  doc.text(`Completion Rate: ${stats.completionRate}%`, 15, 52);
+  doc.text(`Average Score: ${stats.averageScore.toFixed(2)}`, 15, 59);
   
   // Data Table
   const tableData = data.map(pitch => [
@@ -226,9 +260,14 @@ export function exportPitchAnalyticsPDF(data: PitchAnalytics[], roundName: strin
   autoTable(doc, {
     head: [['Startup Name', 'Pitch Status', 'Meeting Date', 'VC Name', 'Outcome']],
     body: tableData,
-    startY: 115,
+    startY: 65,
     styles: { fontSize: 8 },
-    headStyles: { fillColor: [59, 130, 246] }
+    headStyles: { fillColor: AURORA_COLORS.primary, textColor: AURORA_COLORS.white },
+    didDrawPage: (data) => {
+      const pageCount = doc.getNumberOfPages();
+      const currentPage = (doc as any).internal.getCurrentPageInfo().pageNumber;
+      addAuroraBrandedFooter(doc, currentPage, pageCount);
+    }
   });
 
   doc.save(`pitch-analytics-${roundName}-${getDateString()}.pdf`);
@@ -463,48 +502,63 @@ export function exportAIInsightsCSV(insights: RoundInsights, roundName: string):
   downloadFile(csvContent, `ai-insights-${roundName}-${getDateString()}.csv`, 'text/csv');
 }
 
-export function exportAIInsightsPDF(insights: RoundInsights, roundName: string): void {
+export async function exportAIInsightsPDF(insights: RoundInsights, roundName: string): Promise<void> {
+  const { addAuroraBrandedHeader, addAuroraBrandedFooter, AURORA_COLORS, imageToBase64 } = await import('./pdfBranding');
   const doc = new jsPDF();
-  let yPos = 20;
   
-  // Header
-  doc.setFontSize(20);
-  doc.text('AI-Generated Insights Report', 20, yPos);
-  yPos += 10;
+  // Load logo
+  let logoBase64: string | undefined;
+  try {
+    logoBase64 = await imageToBase64('/images/aurora-logo.png');
+  } catch (error) {
+    console.warn('Could not load Aurora logo for PDF');
+  }
   
-  doc.setFontSize(12);
-  doc.text(`Round: ${roundName.charAt(0).toUpperCase() + roundName.slice(1)}`, 20, yPos);
-  yPos += 7;
-  doc.text(`Generated: ${new Date(insights.generated_at).toLocaleString()}`, 20, yPos);
-  yPos += 15;
+  let yPos = 30;
+  let currentPage = 1;
+  
+  // Add Aurora branded header
+  addAuroraBrandedHeader(doc, 'AI-Generated Insights Report', roundName, logoBase64);
   
   // Executive Summary
-  doc.setFontSize(14);
-  doc.text('Executive Summary', 20, yPos);
+  doc.setFontSize(12);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...AURORA_COLORS.black);
+  doc.text('Executive Summary', 15, yPos);
   yPos += 8;
   
   doc.setFontSize(10);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(...AURORA_COLORS.textGray);
   insights.executive_summary.forEach((item, index) => {
     const lines = doc.splitTextToSize(`• ${item}`, 170);
     lines.forEach((line: string) => {
-      if (yPos > 270) {
+      if (yPos > 250) {
+        addAuroraBrandedFooter(doc, currentPage, Math.ceil(insights.executive_summary.length / 10));
         doc.addPage();
-        yPos = 20;
+        currentPage++;
+        addAuroraBrandedHeader(doc, 'AI-Generated Insights Report', roundName, logoBase64);
+        yPos = 30;
       }
-      doc.text(line, 20, yPos);
+      doc.text(line, 15, yPos);
       yPos += 5;
     });
   });
   yPos += 10;
   
   // Cohort Patterns
-  if (yPos > 250) {
+  if (yPos > 230) {
+    addAuroraBrandedFooter(doc, currentPage, currentPage + 2);
     doc.addPage();
-    yPos = 20;
+    currentPage++;
+    addAuroraBrandedHeader(doc, 'AI-Generated Insights Report', roundName, logoBase64);
+    yPos = 30;
   }
   
-  doc.setFontSize(14);
-  doc.text('Cohort-Wide Patterns', 20, yPos);
+  doc.setFontSize(12);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...AURORA_COLORS.black);
+  doc.text('Cohort-Wide Patterns', 15, yPos);
   yPos += 10;
   
   const cohortData = insights.cohort_patterns.map(pattern => [
@@ -519,20 +573,25 @@ export function exportAIInsightsPDF(insights: RoundInsights, roundName: string):
     body: cohortData,
     startY: yPos,
     styles: { fontSize: 8 },
-    headStyles: { fillColor: [59, 130, 246] }
+    headStyles: { fillColor: AURORA_COLORS.aqua, textColor: AURORA_COLORS.white }
   });
   
   yPos = (doc as any).lastAutoTable.finalY + 15;
   
   // Outliers
   if (insights.outliers.length > 0) {
-    if (yPos > 250) {
+    if (yPos > 230) {
+      addAuroraBrandedFooter(doc, currentPage, currentPage + 2);
       doc.addPage();
-      yPos = 20;
+      currentPage++;
+      addAuroraBrandedHeader(doc, 'AI-Generated Insights Report', roundName, logoBase64);
+      yPos = 30;
     }
     
-    doc.setFontSize(14);
-    doc.text('Outliers & Anomalies', 20, yPos);
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...AURORA_COLORS.black);
+    doc.text('Outliers & Anomalies', 15, yPos);
     yPos += 10;
     
     const outlierData = insights.outliers.map(outlier => [
@@ -548,7 +607,7 @@ export function exportAIInsightsPDF(insights: RoundInsights, roundName: string):
       body: outlierData,
       startY: yPos,
       styles: { fontSize: 7 },
-      headStyles: { fillColor: [59, 130, 246] },
+      headStyles: { fillColor: AURORA_COLORS.primary, textColor: AURORA_COLORS.white },
       columnStyles: { 4: { cellWidth: 60 } }
     });
     
@@ -557,13 +616,18 @@ export function exportAIInsightsPDF(insights: RoundInsights, roundName: string):
   
   // Bias Check
   if (insights.bias_check.length > 0) {
-    if (yPos > 250) {
+    if (yPos > 230) {
+      addAuroraBrandedFooter(doc, currentPage, currentPage + 2);
       doc.addPage();
-      yPos = 20;
+      currentPage++;
+      addAuroraBrandedHeader(doc, 'AI-Generated Insights Report', roundName, logoBase64);
+      yPos = 30;
     }
     
-    doc.setFontSize(14);
-    doc.text('Bias & Consistency Check', 20, yPos);
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...AURORA_COLORS.black);
+    doc.text('Bias & Consistency Check', 15, yPos);
     yPos += 10;
     
     const biasData = insights.bias_check.map(bias => [
@@ -580,7 +644,7 @@ export function exportAIInsightsPDF(insights: RoundInsights, roundName: string):
       body: biasData,
       startY: yPos,
       styles: { fontSize: 7 },
-      headStyles: { fillColor: [59, 130, 246] }
+      headStyles: { fillColor: AURORA_COLORS.primary, textColor: AURORA_COLORS.white }
     });
     
     yPos = (doc as any).lastAutoTable.finalY + 15;
@@ -588,13 +652,18 @@ export function exportAIInsightsPDF(insights: RoundInsights, roundName: string):
   
   // Risk Themes
   if (insights.risk_themes.length > 0) {
-    if (yPos > 250) {
+    if (yPos > 230) {
+      addAuroraBrandedFooter(doc, currentPage, currentPage + 1);
       doc.addPage();
-      yPos = 20;
+      currentPage++;
+      addAuroraBrandedHeader(doc, 'AI-Generated Insights Report', roundName, logoBase64);
+      yPos = 30;
     }
     
-    doc.setFontSize(14);
-    doc.text('Common Risk Themes', 20, yPos);
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...AURORA_COLORS.black);
+    doc.text('Common Risk Themes', 15, yPos);
     yPos += 10;
     
     const riskData = insights.risk_themes.map(theme => [
@@ -608,24 +677,14 @@ export function exportAIInsightsPDF(insights: RoundInsights, roundName: string):
       body: riskData,
       startY: yPos,
       styles: { fontSize: 8 },
-      headStyles: { fillColor: [59, 130, 246] },
+      headStyles: { fillColor: AURORA_COLORS.primary, textColor: AURORA_COLORS.white },
       columnStyles: { 2: { cellWidth: 80 } }
     });
   }
   
-  // Footer
-  const pageCount = doc.getNumberOfPages();
-  for (let i = 1; i <= pageCount; i++) {
-    doc.setPage(i);
-    doc.setFontSize(8);
-    doc.setTextColor(150);
-    doc.text(
-      '🔒 Confidential - Internal Use Only | AI-Generated Analysis',
-      doc.internal.pageSize.getWidth() / 2,
-      doc.internal.pageSize.getHeight() - 10,
-      { align: 'center' }
-    );
-  }
+  // Add footer to last page
+  const totalPages = doc.getNumberOfPages();
+  addAuroraBrandedFooter(doc, totalPages, totalPages);
 
   doc.save(`ai-insights-${roundName}-${getDateString()}.pdf`);
 }

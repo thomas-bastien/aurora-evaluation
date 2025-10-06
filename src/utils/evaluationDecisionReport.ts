@@ -280,37 +280,40 @@ export function exportEvaluationDecisionCSVFull(
 /**
  * Exports evaluation decision report as PDF (landscape, color-coded)
  */
-export function exportEvaluationDecisionPDF(
+export async function exportEvaluationDecisionPDF(
   data: EvaluationDecisionRow[],
   roundName: string
-): void {
+): Promise<void> {
+  const { addAuroraBrandedHeader, addAuroraBrandedFooter, addAuroraWatermark, AURORA_COLORS, imageToBase64, getScoreColor } = await import('./pdfBranding');
+  
   const doc = new jsPDF({
     orientation: 'landscape',
     unit: 'mm',
     format: 'a4'
   });
 
-  // Header
-  doc.setFontSize(16);
-  doc.setTextColor(0, 0, 0);
-  doc.text(`Evaluation Decision Report - ${roundName}`, 14, 15);
-  
-  doc.setFontSize(10);
-  doc.setTextColor(100, 100, 100);
-  doc.text(`Generated: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`, 14, 22);
-  doc.text(`Total Startups: ${data.length}`, 14, 27);
+  // Load logo
+  let logoBase64: string | undefined;
+  try {
+    logoBase64 = await imageToBase64('/images/aurora-logo.png');
+  } catch (error) {
+    console.warn('Could not load Aurora logo for PDF');
+  }
 
-  // Watermark
-  doc.setFontSize(40);
-  doc.setTextColor(200, 200, 200);
-  doc.text('CONFIDENTIAL', 148, 105, { 
-    align: 'center', 
-    angle: 45 
-  });
+  // Add watermark
+  addAuroraWatermark(doc);
+  
+  // Add Aurora branded header
+  addAuroraBrandedHeader(doc, `Evaluation Decision Report`, roundName, logoBase64);
+  
+  // Statistics
+  doc.setFontSize(10);
+  doc.setTextColor(...AURORA_COLORS.textGray);
+  doc.text(`Total Startups: ${data.length}`, 15, 32);
 
   // Table
   autoTable(doc, {
-    startY: 32,
+    startY: 37,
     head: [[
       'Startup',
       'Founders',
@@ -348,8 +351,8 @@ export function exportEvaluationDecisionPDF(
       cellWidth: 'wrap'
     },
     headStyles: {
-      fillColor: [79, 70, 229],
-      textColor: 255,
+      fillColor: AURORA_COLORS.primary,
+      textColor: AURORA_COLORS.white,
       fontSize: 7,
       fontStyle: 'bold'
     },
@@ -375,33 +378,19 @@ export function exportEvaluationDecisionPDF(
         if (text && text !== 'N/A') {
           const score = parseFloat(text);
           if (!isNaN(score)) {
-            if (score >= 8.0) {
-              data.cell.styles.textColor = [22, 163, 74]; // green
-            } else if (score >= 6.0) {
-              data.cell.styles.textColor = [202, 138, 4]; // yellow
-            } else {
-              data.cell.styles.textColor = [220, 38, 38]; // red
-            }
+            data.cell.styles.textColor = getScoreColor(score);
           }
         } else if (text === 'N/A') {
-          data.cell.styles.textColor = [220, 38, 38]; // red for N/A
+          data.cell.styles.textColor = AURORA_COLORS.scoreRed;
           data.cell.styles.fontStyle = 'italic';
         }
       }
     },
-    margin: { top: 32, bottom: 15 },
+    margin: { top: 37, bottom: 20 },
     didDrawPage: (data) => {
-      // Footer
       const pageCount = doc.getNumberOfPages();
       const currentPage = (doc as any).internal.getCurrentPageInfo().pageNumber;
-      doc.setFontSize(8);
-      doc.setTextColor(100, 100, 100);
-      doc.text(
-        `Page ${currentPage} of ${pageCount} | Confidential - Aurora Internal Use Only`,
-        148,
-        200,
-        { align: 'center' }
-      );
+      addAuroraBrandedFooter(doc, currentPage, pageCount);
     }
   });
 
