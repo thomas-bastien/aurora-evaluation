@@ -1,64 +1,13 @@
-// Aurora's official vertical taxonomy - must match exactly
-export const AURORA_VERTICALS = [
-  'Artificial Intelligence (AI/ML)',
-  'Fintech',
-  'HealthTech & MedTech',
-  'Wellbeing, Longevity & Life Sciences',
-  'PharmTech',
-  'RetailTech & E-commerce',
-  'Enterprise Software',
-  'Cybersecurity',
-  'Productivity Tools',
-  'Transportation & Mobility',
-  'Energy & Sustainability',
-  'AgriTech & Food Tech',
-  'Media & Entertainment',
-  'AdTech & MarTech',
-  'Real Estate & PropTech',
-  'Education Technology (EdTech)',
-  'Logistics & Supply Chain',
-  'Construction Tech',
-  'Space Technology',
-  'Semiconductors & Hardware',
-  'Data Infrastructure & Analytics',
-  'Industrial Automation & Robotics',
-  'Aerospace & Defense',
-  'Gaming & Visual Assets',
-  'SportTech',
-  'Web3 / Blockchain / Crypto',
-  'TravelTech',
-  'No Tech, not a Venture Business',
-  'Others (Specify)'
-] as const;
+// Re-export from single source of truth for backward compatibility
+import { DATA_STANDARDS } from './dataStandards';
 
-export const BUSINESS_MODELS = [
-  'B2C – Business to Consumer',
-  'B2B2C – Business to Business to Consumer',
-  'B2B – Business to Business (Enterprise & SMEs)',
-  'B2B – Business to Business (Enterprise)',
-  'B2B – Business to Business (SMEs)',
-  'D2C – Direct to Consumer',
-  'C2C – Consumer to Consumer (incl. Marketplaces/Platforms)'
-] as const;
+export const AURORA_VERTICALS = DATA_STANDARDS.VERTICALS;
+export const BUSINESS_MODELS = DATA_STANDARDS.BUSINESS_MODELS;
+export const REGION_OPTIONS = DATA_STANDARDS.REGIONS;
+export const CURRENCIES = DATA_STANDARDS.CURRENCIES;
 
-export const CURRENCIES = [
-  { code: 'GBP', symbol: '£', name: 'British Pound' },
-  { code: 'EUR', symbol: '€', name: 'Euro' },
-  { code: 'USD', symbol: '$', name: 'US Dollar' },
-] as const;
-
-// Aligned region options for consistent matchmaking 
-export const REGION_OPTIONS = [
-  'Africa',
-  'Asia Pacific (APAC)', 
-  'Europe',
-  'Latin America (LATAM)',
-  'Middle East & North Africa (MENA)',
-  'North America',
-  'Other'
-] as const;
-
+// Re-export types with existing names
 export type AuroraVertical = typeof AURORA_VERTICALS[number];
 export type BusinessModel = typeof BUSINESS_MODELS[number];
-export type CurrencyCode = typeof CURRENCIES[number]['code'];
 export type RegionOption = typeof REGION_OPTIONS[number];
+export type CurrencyCode = typeof CURRENCIES[number]['code'];
