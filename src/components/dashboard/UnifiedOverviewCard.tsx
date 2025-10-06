@@ -106,7 +106,7 @@ export const UnifiedOverviewCard = ({
                 onClick={() => navigate('/email-management')}
                 className="bg-primary-foreground/10 text-primary-foreground border-primary-foreground/20 hover:bg-primary-foreground/20"
               >
-                View Full Timeline
+                Comms Dashboard
                 <ArrowRight className="w-3 h-3 ml-1" />
               </Button>
             )}
