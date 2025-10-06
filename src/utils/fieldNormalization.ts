@@ -1,24 +1,77 @@
 // Field normalization utilities for consistent matching
-// Aligned with REGION_OPTIONS, VERTICAL_OPTIONS, and STAGE_OPTIONS constants
+// Aligned with DATA_STANDARDS from src/constants/dataStandards.ts
 
+import { DATA_STANDARDS } from '@/constants/dataStandards';
+
+// Comprehensive variant mappings for regions (includes countries, abbreviations, and common aliases)
 export const CANONICAL_REGIONS: Record<string, string[]> = {
-  'Africa': ['Africa', 'Sub-Saharan Africa', 'North Africa', 'SSA'],
-  'Asia Pacific (APAC)': ['Asia', 'APAC', 'APAC (Asia + Pacific)', 'APAC ( Asia+ Pacific)', 'Asia Pacific', 'SEA', 'Southeast Asia', 'East Asia', 'South Asia', 'Singapore', 'Hong Kong', 'China', 'Japan', 'South Korea', 'India', 'Australia', 'New Zealand'],
-  'Europe': ['EU', 'Europe', 'European Union', 'EMEA', 'CEE', 'CEE (Central and Eastern Europe)', 'CIS', 'United Kingdom', 'UK', 'Ireland', 'Germany', 'France', 'Spain', 'Italy', 'Netherlands', 'Belgium', 'Switzerland', 'Austria', 'Sweden', 'Norway', 'Denmark', 'Finland', 'Poland', 'Czech Republic', 'Hungary', 'Portugal', 'Greece', 'Romania'],
-  'Latin America (LATAM)': ['LATAM', 'Latin America', 'South America', 'Central America', 'LatAm', 'Brazil', 'Mexico', 'Argentina', 'Chile', 'Colombia', 'Peru'],
-  'Middle East & North Africa (MENA)': ['ME', 'Middle East', 'MENA', 'MENA (Middle East + Africa)', 'Gulf', 'GCC', 'UAE', 'Saudi Arabia', 'Israel', 'Egypt', 'Turkey', 'Jordan', 'Lebanon'],
-  'North America': ['NA', 'North America', 'NORAM', 'USA', 'US', 'United States', 'Canada', 'U.S.', 'U.S.A.'],
-  'Other': ['Other', 'Global', 'Worldwide', 'International', 'Multiple Regions']
+  'Africa': [
+    'Africa', 'Sub-Saharan Africa', 'North Africa', 'SSA', 
+    'Eastern Africa', 'Western Africa', 'Southern Africa',
+    'Kenya', 'Nigeria', 'South Africa', 'Ghana', 'Ethiopia', 'Tanzania'
+  ],
+  'Asia Pacific (APAC)': [
+    'Asia', 'APAC', 'Asia-Pacific', 'Asia Pacific', 'APAC (Asia + Pacific)', 
+    'APAC ( Asia+ Pacific)', 'SEA', 'Southeast Asia', 'East Asia', 'South Asia',
+    'Singapore', 'Hong Kong', 'China', 'Japan', 'South Korea', 'India', 
+    'Australia', 'New Zealand', 'Indonesia', 'Vietnam', 'Thailand', 'Malaysia',
+    'Philippines', 'Taiwan', 'Pakistan', 'Bangladesh'
+  ],
+  'Europe': [
+    'EU', 'Europe', 'European Union', 'EMEA', 'CEE', 
+    'CEE (Central and Eastern Europe)', 'CIS', 'United Kingdom', 'UK', 
+    'Ireland', 'Germany', 'France', 'Spain', 'Italy', 'Netherlands', 
+    'Belgium', 'Switzerland', 'Austria', 'Sweden', 'Norway', 'Denmark', 
+    'Finland', 'Poland', 'Czech Republic', 'Hungary', 'Portugal', 'Greece', 
+    'Romania', 'Nordics', 'Scandinavia', 'Baltics', 'Estonia', 'Latvia',
+    'Lithuania', 'Slovakia', 'Bulgaria', 'Croatia', 'Slovenia'
+  ],
+  'Latin America (LATAM)': [
+    'LATAM', 'Latin America', 'South America', 'Central America', 'LatAm',
+    'Brazil', 'Mexico', 'Argentina', 'Chile', 'Colombia', 'Peru', 
+    'Caribbean', 'Venezuela', 'Ecuador', 'Uruguay', 'Bolivia', 'Costa Rica'
+  ],
+  'Middle East & North Africa (MENA)': [
+    'ME', 'Middle East', 'MENA', 'MENA (Middle East + Africa)', 
+    'Gulf', 'GCC', 'UAE', 'Saudi Arabia', 'Israel', 'Egypt', 'Turkey', 
+    'Jordan', 'Lebanon', 'Qatar', 'Kuwait', 'Bahrain', 'Oman', 'Morocco',
+    'Tunisia', 'Algeria'
+  ],
+  'North America': [
+    'NA', 'North America', 'NORAM', 'USA', 'US', 'United States', 
+    'Canada', 'U.S.', 'U.S.A.', 'America'
+  ],
+  'Other': [
+    'Other', 'Global', 'Worldwide', 'International', 'Multiple Regions',
+    'Multi-Regional'
+  ]
 };
 
+// Enhanced stage mappings (includes common aliases and variations)
 export const CANONICAL_STAGES: Record<string, string[]> = {
-  'Pre-Seed': ['Pre-Seed', 'Preseed', 'Pre seed', 'Idea', 'Concept'],
-  'Seed': ['Seed', 'Early Seed', 'Late Seed'],
-  'Series A': ['Series A', 'A', 'Post-Seed', 'Series-A', 'SeriesA'],
-  'Series B': ['Series B', 'B', 'Series-B', 'SeriesB'],
-  'Series C': ['Series C', 'C', 'Series-C', 'SeriesC', 'Series C+', 'Series D', 'D', 'Late Stage'],
-  'Growth': ['Growth', 'Expansion', 'Scale-up'],
-  'IPO': ['IPO', 'Public', 'Listed', 'Going Public']
+  'Pre-Seed': [
+    'Pre-Seed', 'Preseed', 'Pre seed', 'Pre-seed', 'Idea', 'Concept',
+    'Bootstrap', 'Pre-revenue', 'Early Stage'
+  ],
+  'Seed': [
+    'Seed', 'Early Seed', 'Late Seed', 'Seed Stage', 'Seed Round'
+  ],
+  'Series A': [
+    'Series A', 'A', 'Post-Seed', 'Series-A', 'SeriesA', 'A Round'
+  ],
+  'Series B': [
+    'Series B', 'B', 'Series-B', 'SeriesB', 'B Round'
+  ],
+  'Series C': [
+    'Series C', 'C', 'Series-C', 'SeriesC', 'Series C+', 
+    'Series D', 'D', 'Late Stage', 'Series D+', 'Series E'
+  ],
+  'Growth': [
+    'Growth', 'Expansion', 'Scale-up', 'Scaling', 'Growth Stage'
+  ],
+  'IPO': [
+    'IPO', 'Public', 'Listed', 'Going Public', 'Pre-IPO'
+  ]
 };
 
 export const CANONICAL_VERTICALS: Record<string, string[]> = {
@@ -111,4 +164,143 @@ export function normalizeStages(stages: string[]): string[] {
 
 export function normalizeVerticals(verticals: string[]): string[] {
   return [...new Set(verticals.map(normalizeVertical))];
+}
+
+// ============= Enhanced Validation Functions =============
+
+export interface NormalizationResult {
+  value: string;
+  wasNormalized: boolean;
+  originalValue: string;
+  confidence: 'high' | 'medium' | 'low';
+}
+
+/**
+ * Normalize region with detailed metadata about the normalization
+ * Useful for audit trails and data quality reports
+ */
+export function normalizeRegionWithMetadata(region: string): NormalizationResult {
+  const normalized = region.trim();
+  
+  for (const [canonical, variants] of Object.entries(CANONICAL_REGIONS)) {
+    const match = variants.find(v => v.toLowerCase() === normalized.toLowerCase());
+    if (match) {
+      return {
+        value: canonical,
+        wasNormalized: match !== canonical,
+        originalValue: region,
+        confidence: match.toLowerCase() === normalized.toLowerCase() ? 'high' : 'medium'
+      };
+    }
+  }
+  
+  // No match found
+  return {
+    value: normalized,
+    wasNormalized: false,
+    originalValue: region,
+    confidence: 'low'
+  };
+}
+
+/**
+ * Normalize stage with detailed metadata
+ */
+export function normalizeStageWithMetadata(stage: string): NormalizationResult {
+  const normalized = stage.trim();
+  
+  for (const [canonical, variants] of Object.entries(CANONICAL_STAGES)) {
+    const match = variants.find(v => v.toLowerCase() === normalized.toLowerCase());
+    if (match) {
+      return {
+        value: canonical,
+        wasNormalized: match !== canonical,
+        originalValue: stage,
+        confidence: match.toLowerCase() === normalized.toLowerCase() ? 'high' : 'medium'
+      };
+    }
+  }
+  
+  return {
+    value: normalized,
+    wasNormalized: false,
+    originalValue: stage,
+    confidence: 'low'
+  };
+}
+
+/**
+ * Normalize vertical with detailed metadata
+ */
+export function normalizeVerticalWithMetadata(vertical: string): NormalizationResult {
+  const normalized = vertical.trim();
+  
+  for (const [canonical, variants] of Object.entries(CANONICAL_VERTICALS)) {
+    const match = variants.find(v => v.toLowerCase() === normalized.toLowerCase());
+    if (match) {
+      return {
+        value: canonical,
+        wasNormalized: match !== canonical,
+        originalValue: vertical,
+        confidence: match.toLowerCase() === normalized.toLowerCase() ? 'high' : 'medium'
+      };
+    }
+  }
+  
+  return {
+    value: normalized,
+    wasNormalized: false,
+    originalValue: vertical,
+    confidence: 'low'
+  };
+}
+
+/**
+ * Validate a value against standard values from DATA_STANDARDS
+ * Returns validation result with optional suggestion
+ */
+export function validateAgainstStandard(
+  value: string,
+  standardValues: readonly string[]
+): { isValid: boolean; suggestion?: string } {
+  if (standardValues.includes(value)) {
+    return { isValid: true };
+  }
+  
+  // Find closest match using fuzzy matching
+  const normalized = value.toLowerCase();
+  const suggestion = standardValues.find(s => 
+    s.toLowerCase().includes(normalized) || 
+    normalized.includes(s.toLowerCase())
+  );
+  
+  return { isValid: false, suggestion };
+}
+
+/**
+ * Validate region against DATA_STANDARDS.REGIONS
+ */
+export function validateRegion(region: string): { isValid: boolean; suggestion?: string } {
+  return validateAgainstStandard(region, DATA_STANDARDS.REGIONS);
+}
+
+/**
+ * Validate stage against DATA_STANDARDS.STAGES
+ */
+export function validateStage(stage: string): { isValid: boolean; suggestion?: string } {
+  return validateAgainstStandard(stage, DATA_STANDARDS.STAGES);
+}
+
+/**
+ * Validate vertical against DATA_STANDARDS.VERTICALS
+ */
+export function validateVertical(vertical: string): { isValid: boolean; suggestion?: string } {
+  return validateAgainstStandard(vertical, DATA_STANDARDS.VERTICALS);
+}
+
+/**
+ * Validate business model against DATA_STANDARDS.BUSINESS_MODELS
+ */
+export function validateBusinessModel(model: string): { isValid: boolean; suggestion?: string } {
+  return validateAgainstStandard(model, DATA_STANDARDS.BUSINESS_MODELS);
 }
