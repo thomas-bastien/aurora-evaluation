@@ -221,7 +221,10 @@ export default function JurorsList() {
           preferred_regions: data.preferred_regions ? normalizeRegions(data.preferred_regions) : null,
           target_verticals: data.target_verticals ? normalizeVerticals(data.target_verticals) : null,
           preferred_stages: data.preferred_stages ? normalizeStages(data.preferred_stages) : null,
-          linkedin_url: data.linkedin_url
+          linkedin_url: data.linkedin_url,
+          calendly_link: data.calendly_link || null,
+          evaluation_limit: data.evaluation_limit ?? null,
+          meeting_limit: data.meeting_limit ?? null
         };
         
         const { error } = await supabase
@@ -284,7 +287,10 @@ export default function JurorsList() {
           preferred_regions: data.preferred_regions ? normalizeRegions(data.preferred_regions) : null,
           target_verticals: data.target_verticals ? normalizeVerticals(data.target_verticals) : null,
           preferred_stages: data.preferred_stages ? normalizeStages(data.preferred_stages) : null,
-          linkedin_url: data.linkedin_url || null
+          linkedin_url: data.linkedin_url || null,
+          calendly_link: data.calendly_link || null,
+          evaluation_limit: data.evaluation_limit ?? null,
+          meeting_limit: data.meeting_limit ?? null
         };
         
         const { error } = await supabase
