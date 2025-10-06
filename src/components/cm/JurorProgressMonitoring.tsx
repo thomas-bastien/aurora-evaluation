@@ -93,7 +93,7 @@ export const JurorProgressMonitoring = ({ currentRound }: JurorProgressMonitorin
 
   const fetchJurorProgress = async () => {
     try {
-      // Fetch jurors with their assignments based on round (only active jurors with user_id)
+      // Fetch jurors with their assignments based on round (including those without accounts)
       const assignmentTable = currentRound === 'screeningRound' ? 'screening_assignments' : 'pitching_assignments';
       const { data: jurorsData, error } = await supabase
         .from('jurors')
@@ -104,8 +104,7 @@ export const JurorProgressMonitoring = ({ currentRound }: JurorProgressMonitorin
             startup_id,
             status
           )
-        `)
-        .not('user_id', 'is', null);
+        `);
 
       if (error) throw error;
 
@@ -470,12 +469,27 @@ export const JurorProgressMonitoring = ({ currentRound }: JurorProgressMonitorin
     const incompleteJurors = filteredJurors.filter(j => 
       j.progressiveStatus.status !== 'completed' && 
       j.completionRate < 100 && 
-      (forceOverride || j.canSendReminder)
+      (forceOverride || j.canSendReminder) &&
+      j.user_id // Only include jurors with accounts
+    );
+    
+    const jurorsWithoutAccounts = filteredJurors.filter(j =>
+      j.progressiveStatus.status !== 'completed' && 
+      j.completionRate < 100 &&
+      !j.user_id
     );
     
     if (incompleteJurors.length === 0) {
-      toast.error('No eligible jurors for reminders (all complete or recently reminded)');
+      if (jurorsWithoutAccounts.length > 0) {
+        toast.error(`${jurorsWithoutAccounts.length} juror(s) haven't signed up yet and can't receive reminders`);
+      } else {
+        toast.error('No eligible jurors for reminders (all complete or recently reminded)');
+      }
       return;
+    }
+
+    if (jurorsWithoutAccounts.length > 0) {
+      toast.info(`Note: ${jurorsWithoutAccounts.length} juror(s) without accounts will be skipped`);
     }
 
     setSendingBulkReminders(true);
@@ -705,6 +719,12 @@ export const JurorProgressMonitoring = ({ currentRound }: JurorProgressMonitorin
                     <div className="flex items-center gap-3 mb-1">
                       <h4 className="font-semibold text-foreground">{juror.name}</h4>
                       <JurorStatusBadge jurorId={juror.id} progressiveStatus={juror.progressiveStatus} />
+                      {/* Not Registered Badge */}
+                      {!juror.user_id && (
+                        <Badge variant="outline" className="text-xs bg-muted">
+                          Not Registered
+                        </Badge>
+                      )}
                       {/* Reminder Status Badge */}
                       {juror.lastReminderSent && (
                         <Badge 
@@ -778,11 +798,15 @@ export const JurorProgressMonitoring = ({ currentRound }: JurorProgressMonitorin
                     size="sm" 
                     variant="outline"
                     onClick={() => handleIndividualReminderClick(juror)}
-                    disabled={juror.progressiveStatus.status === 'completed'}
-                    title={!juror.canSendReminder ? `Last reminder sent ${formatLastReminder(juror.lastReminderSent)}` : ''}
+                    disabled={!juror.user_id || juror.progressiveStatus.status === 'completed'}
+                    title={
+                      !juror.user_id ? 'Juror has not registered yet' :
+                      !juror.canSendReminder ? `Last reminder sent ${formatLastReminder(juror.lastReminderSent)}` : 
+                      ''
+                    }
                   >
                     <Mail className="w-4 h-4 mr-2" />
-                    {juror.canSendReminder ? 'Send Reminder' : 'Send Reminder (Recent)'}
+                    {!juror.user_id ? 'Not Registered' : juror.canSendReminder ? 'Send Reminder' : 'Send Reminder (Recent)'}
                   </Button>
                   <Button 
                     size="sm" 

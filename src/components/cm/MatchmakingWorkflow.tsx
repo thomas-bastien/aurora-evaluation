@@ -162,16 +162,15 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
         return acc;
       }, {} as Record<string, string>) || {};
 
-      // Fetch jurors/VCs with evaluation_limit and new fields
+      // Fetch jurors/VCs with evaluation_limit and new fields (including those without accounts)
       const { data: jurorsData, error: jurorsError } = await supabase
         .from('jurors')
-        .select('id, name, email, company, job_title, calendly_link, preferred_regions, target_verticals, preferred_stages, evaluation_limit, thesis_keywords, fund_focus')
-        .not('user_id', 'is', null)
+        .select('id, name, email, company, job_title, calendly_link, preferred_regions, target_verticals, preferred_stages, evaluation_limit, thesis_keywords, fund_focus, user_id')
         .order('name');
 
       if (jurorsError) throw jurorsError;
 
-      // Fetch existing assignments (only include active jurors with user_id)
+      // Fetch existing assignments (including jurors without accounts)
       const { data: assignmentsData, error: assignmentsError } = await supabase
         .from(assignmentTable)
         .select(`
@@ -180,8 +179,7 @@ export const MatchmakingWorkflow = ({ currentRound }: MatchmakingWorkflowProps) 
           status,
           startups!inner(name),
           jurors!inner(name, user_id)
-        `)
-        .not('jurors.user_id', 'is', null);
+        `);
 
       if (assignmentsError) throw assignmentsError;
 
