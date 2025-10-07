@@ -18,8 +18,11 @@ import { useLiveCommunicationStats } from "@/hooks/useLiveCommunicationStats";
 interface UnifiedOverviewCardProps {
   totalStartups: number;
   activeJurors: number;
+  totalJurors: number;
   activeRound: 'screening' | 'pitching';
   evaluationProgress: number;
+  completedEvaluations: number;
+  totalEvaluations: number;
   cohortName?: string;
   deadlineInfo?: string;
   nextMilestone: string;
@@ -29,8 +32,11 @@ interface UnifiedOverviewCardProps {
 export const UnifiedOverviewCard = ({
   totalStartups,
   activeJurors,
+  totalJurors,
   activeRound,
   evaluationProgress,
+  completedEvaluations,
+  totalEvaluations,
   cohortName = "Aurora Tech Awards 2025 Cohort",
   deadlineInfo,
   nextMilestone,
@@ -71,6 +77,12 @@ export const UnifiedOverviewCard = ({
     
     const remaining = activeStep.total - activeStep.completed;
     return `${remaining} ${activeStep.name.toLowerCase()} pending`;
+  };
+
+  const extractDeadlineNumber = (deadlineInfo: string | undefined): string => {
+    if (!deadlineInfo) return 'TBD';
+    const match = deadlineInfo.match(/(\d+)/);
+    return match ? match[1] : deadlineInfo;
   };
 
   const currentSteps = getCurrentSteps();
@@ -133,7 +145,7 @@ export const UnifiedOverviewCard = ({
               <div className="flex items-center justify-center gap-2 mb-1">
                 <Users className="w-4 h-4 text-primary-foreground/80" />
                 <span className="text-2xl font-bold text-primary-foreground">
-                  {activeJurors}
+                  {activeJurors}/{totalJurors}
                 </span>
               </div>
               <p className="text-xs text-primary-foreground/70">Active Jurors</p>
@@ -142,7 +154,7 @@ export const UnifiedOverviewCard = ({
               <div className="flex items-center justify-center gap-2 mb-1">
                 <TrendingUp className="w-4 h-4 text-primary-foreground/80" />
                 <span className="text-2xl font-bold text-primary-foreground">
-                  {evaluationProgress}%
+                  {completedEvaluations}/{totalEvaluations}
                 </span>
               </div>
               <p className="text-xs text-primary-foreground/70">Evaluations</p>
@@ -150,11 +162,11 @@ export const UnifiedOverviewCard = ({
             <div className="text-center">
               <div className="flex items-center justify-center gap-2 mb-1">
                 <Calendar className="w-4 h-4 text-primary-foreground/80" />
-                <span className="text-xl font-bold text-primary-foreground">
-                  {deadlineInfo || 'TBD'}
+                <span className="text-2xl font-bold text-primary-foreground">
+                  {extractDeadlineNumber(deadlineInfo)}
                 </span>
               </div>
-              <p className="text-xs text-primary-foreground/70">Days Left</p>
+              <p className="text-xs text-primary-foreground/70">Deadline</p>
             </div>
           </div>
         </div>

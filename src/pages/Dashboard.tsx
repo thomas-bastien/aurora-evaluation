@@ -380,8 +380,11 @@ const Dashboard = () => {
           <UnifiedOverviewCard
             totalStartups={dashboardData.totalStartups}
             activeJurors={dashboardData.activeJurors}
+            totalJurors={dashboardData.totalJurors}
             activeRound={dashboardData.activeRound}
             evaluationProgress={dashboardData.evaluationProgress}
+            completedEvaluations={dashboardData.activeRound === 'screening' ? dashboardData.screeningProgress.completed : dashboardData.pitchingProgress.completed}
+            totalEvaluations={dashboardData.activeRound === 'screening' ? dashboardData.screeningProgress.assignments : dashboardData.pitchingProgress.assignments}
             cohortName={cohortSettings?.cohort_name}
             deadlineInfo={dashboardData.deadlineInfo}
             nextMilestone={dashboardData.nextMilestone}
