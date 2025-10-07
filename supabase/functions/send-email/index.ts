@@ -338,10 +338,10 @@ const getDefaultContentByCategory = (category?: string) => {
             </ul>
           </div>
           
-          <p style="color: #dc2626; font-weight: 500;">⚠️ This invitation expires on <strong>{{expiry_date}}</strong></p>
+          <p style="color: #dc2626; font-weight: 500;">⚠️ This invitation expires on <strong>{{invitation_expires_at}}</strong></p>
         `,
         ctaText: 'Complete Registration',
-        ctaLink: '{{magic_link}}'
+        ctaLink: '{{invitation_link}}'
       })
     },
     
@@ -356,7 +356,7 @@ const getDefaultContentByCategory = (category?: string) => {
           <div style="background: #f0f9ff; padding: 20px; border-radius: 8px; margin: 24px 0; border-left: 4px solid #0ea5e9;">
             <h3 style="color: #0c4a6e; margin-top: 0; font-size: 18px;">Assignment Details</h3>
             <div style="color: #0369a1;">
-              {{startup_details}}
+              {{startup_names}}
             </div>
           </div>
           
