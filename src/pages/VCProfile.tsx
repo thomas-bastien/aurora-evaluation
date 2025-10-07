@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { supabase } from '@/integrations/supabase/client';
@@ -12,7 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
-import { User, Building2, Mail, Calendar, Save, Star, Target, FileText, TrendingUp, CheckCircle, Clock, AlertCircle } from 'lucide-react';
+import { User, Building2, Mail, Calendar, Save, Star, Target, FileText, TrendingUp, CheckCircle, Clock, AlertCircle, ArrowLeft } from 'lucide-react';
 import { REGION_OPTIONS, VERTICAL_OPTIONS, STAGE_OPTIONS } from '@/constants/jurorPreferences';
 interface ProfileForm {
   full_name: string;
@@ -30,6 +31,7 @@ interface EvaluationStats {
   average_score: number;
 }
 const VCProfile = () => {
+  const navigate = useNavigate();
   const {
     user
   } = useAuth();
@@ -226,10 +228,22 @@ const VCProfile = () => {
       <main className="max-w-4xl mx-auto px-6 py-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground mb-2">User Profile</h1>
-          <p className="text-lg text-muted-foreground">
-            Manage your profile information and track your evaluation progress
-          </p>
+          <div className="flex items-start gap-4">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => navigate(-1)}
+              className="mt-1"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <div>
+              <h1 className="text-3xl font-bold text-foreground mb-2">User Profile</h1>
+              <p className="text-lg text-muted-foreground">
+                Manage your profile information and track your evaluation progress
+              </p>
+            </div>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
