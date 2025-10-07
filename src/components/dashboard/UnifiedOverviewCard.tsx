@@ -60,6 +60,12 @@ export const UnifiedOverviewCard = ({
     return Math.round((completed / total) * 100);
   };
 
+  const extractDeadlineNumber = (deadlineInfo: string | undefined): string => {
+    if (!deadlineInfo) return 'TBD';
+    const match = deadlineInfo.match(/(\d+)/);
+    return match ? match[1] : deadlineInfo;
+  };
+
   const getStepIcon = (stepName: string) => {
     if (stepName.toLowerCase().includes('invite')) return Mail;
     if (stepName.toLowerCase().includes('assignment')) return Mail;
@@ -139,7 +145,7 @@ export const UnifiedOverviewCard = ({
               <div className="flex items-center justify-center gap-2 mb-1">
                 <Users className="w-4 h-4 text-primary-foreground/80" />
                 <span className="text-2xl font-bold text-primary-foreground">
-                  {activeJurors}
+                  {Math.round((activeJurors / totalJurors) * 100)}%
                 </span>
               </div>
               <p className="text-xs text-primary-foreground/70 mb-1">Active Jurors</p>
@@ -162,11 +168,14 @@ export const UnifiedOverviewCard = ({
             <div className="text-center">
               <div className="flex items-center justify-center gap-2 mb-1">
                 <Calendar className="w-4 h-4 text-primary-foreground/80" />
-                <span className="text-xl font-bold text-primary-foreground">
-                  {deadlineInfo || 'TBD'}
+                <span className="text-2xl font-bold text-primary-foreground">
+                  {extractDeadlineNumber(deadlineInfo)}
                 </span>
               </div>
-              <p className="text-xs text-primary-foreground/70">Days Left</p>
+              <p className="text-xs text-primary-foreground/70 mb-1">Deadline</p>
+              <p className="text-xs text-primary-foreground/60">
+                Days Left
+              </p>
             </div>
           </div>
         </div>
