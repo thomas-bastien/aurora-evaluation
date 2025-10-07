@@ -1,20 +1,9 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { 
-  Trophy, 
-  Users, 
-  Building2, 
-  TrendingUp, 
-  Calendar, 
-  Mail, 
-  MessageSquare, 
-  CheckCircle,
-  ArrowRight 
-} from "lucide-react";
+import { Trophy, Users, Building2, TrendingUp, Calendar, Mail, MessageSquare, CheckCircle, ArrowRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useLiveCommunicationStats } from "@/hooks/useLiveCommunicationStats";
-
 interface UnifiedOverviewCardProps {
   totalStartups: number;
   activeJurors: number;
@@ -28,7 +17,6 @@ interface UnifiedOverviewCardProps {
   nextMilestone: string;
   userRole?: 'admin' | 'vc';
 }
-
 export const UnifiedOverviewCard = ({
   totalStartups,
   activeJurors,
@@ -43,29 +31,27 @@ export const UnifiedOverviewCard = ({
   userRole
 }: UnifiedOverviewCardProps) => {
   const navigate = useNavigate();
-  const { data: lifecycleData, isLoading } = useLiveCommunicationStats();
+  const {
+    data: lifecycleData,
+    isLoading
+  } = useLiveCommunicationStats();
 
   // Get communication steps for current round
   const getCurrentSteps = () => {
     if (isLoading || !lifecycleData) return [];
-    
     const stageName = activeRound === 'screening' ? 'screening-communications' : 'pitching-communications';
     const stage = lifecycleData.stages.find(s => s.stage === stageName);
-    
     return stage?.substeps?.slice(0, 4) || [];
   };
-
   const getProgressPercentage = (completed: number, total: number) => {
     if (total === 0) return 0;
-    return Math.round((completed / total) * 100);
+    return Math.round(completed / total * 100);
   };
-
   const extractDeadlineNumber = (deadlineInfo: string | undefined): string => {
     if (!deadlineInfo) return 'TBD';
     const match = deadlineInfo.match(/(\d+)/);
     return match ? match[1] : deadlineInfo;
   };
-
   const getStepIcon = (stepName: string) => {
     if (stepName.toLowerCase().includes('invite')) return Mail;
     if (stepName.toLowerCase().includes('assignment')) return Mail;
@@ -73,22 +59,16 @@ export const UnifiedOverviewCard = ({
     if (stepName.toLowerCase().includes('result')) return CheckCircle;
     return Mail;
   };
-
   const getNextAction = () => {
     const currentSteps = getCurrentSteps();
     if (currentSteps.length === 0) return "No active communications";
-    
     const activeStep = currentSteps.find(step => step.completed < step.total);
     if (!activeStep) return "All communications complete";
-    
     const remaining = activeStep.total - activeStep.completed;
     return `${remaining} ${activeStep.name.toLowerCase()} pending`;
   };
-
   const currentSteps = getCurrentSteps();
-
-  return (
-    <Card className="bg-gradient-primary border-primary/20 shadow-elegant">
+  return <Card className="bg-gradient-primary border-primary/20 shadow-elegant">
       <CardHeader className="pb-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -105,23 +85,13 @@ export const UnifiedOverviewCard = ({
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <Badge 
-              variant={activeRound === 'screening' ? 'secondary' : 'default'} 
-              className="px-3 py-1 font-medium"
-            >
+            <Badge variant={activeRound === 'screening' ? 'secondary' : 'default'} className="px-3 py-1 font-medium">
               {activeRound === 'screening' ? 'Screening Round' : 'Pitching Round'}
             </Badge>
-            {userRole === 'admin' && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => navigate('/email-management')}
-                className="bg-primary-foreground/10 text-primary-foreground border-primary-foreground/20 hover:bg-primary-foreground/20"
-              >
+            {userRole === 'admin' && <Button variant="outline" size="sm" onClick={() => navigate('/email-management')} className="bg-primary-foreground/10 text-primary-foreground border-primary-foreground/20 hover:bg-primary-foreground/20">
                 Comms Dashboard
                 <ArrowRight className="w-3 h-3 ml-1" />
-              </Button>
-            )}
+              </Button>}
           </div>
         </div>
       </CardHeader>
@@ -145,7 +115,7 @@ export const UnifiedOverviewCard = ({
               <div className="flex items-center justify-center gap-2 mb-1">
                 <Users className="w-4 h-4 text-primary-foreground/80" />
                 <span className="text-2xl font-bold text-primary-foreground">
-                  {Math.round((activeJurors / totalJurors) * 100)}%
+                  {Math.round(activeJurors / totalJurors * 100)}%
                 </span>
               </div>
               <p className="text-xs text-primary-foreground/70 mb-1">Active Jurors</p>
@@ -172,7 +142,7 @@ export const UnifiedOverviewCard = ({
                   {extractDeadlineNumber(deadlineInfo)}
                 </span>
               </div>
-              <p className="text-xs text-primary-foreground/70 mb-1">Deadline</p>
+              
               <p className="text-xs text-primary-foreground/60">
                 Days Left
               </p>
@@ -181,18 +151,15 @@ export const UnifiedOverviewCard = ({
         </div>
 
         {/* Communications Overview Row - Admin Only */}
-        {userRole === 'admin' && (
-          <div>
+        {userRole === 'admin' && <div>
             <h4 className="text-primary-foreground/90 text-xs font-medium uppercase tracking-wide mb-3">
               Communications Overview
             </h4>
             <div className="grid grid-cols-4 gap-4">
               {currentSteps.map((step, index) => {
-                const IconComponent = getStepIcon(step.name);
-                const percentage = getProgressPercentage(step.completed, step.total);
-                
-                return (
-                  <div key={index} className="text-center">
+            const IconComponent = getStepIcon(step.name);
+            const percentage = getProgressPercentage(step.completed, step.total);
+            return <div key={index} className="text-center">
                     <div className="flex items-center justify-center gap-2 mb-1">
                       <IconComponent className="w-4 h-4 text-primary-foreground/80" />
                       <span className="text-2xl font-bold text-primary-foreground">
@@ -205,13 +172,13 @@ export const UnifiedOverviewCard = ({
                     <p className="text-xs text-primary-foreground/60">
                       {step.completed}/{step.total}
                     </p>
-                  </div>
-                );
-              })}
+                  </div>;
+          })}
 
               {/* Fill empty slots if less than 4 steps */}
-              {Array.from({ length: Math.max(0, 4 - currentSteps.length) }).map((_, index) => (
-                <div key={`empty-${index}`} className="text-center">
+              {Array.from({
+            length: Math.max(0, 4 - currentSteps.length)
+          }).map((_, index) => <div key={`empty-${index}`} className="text-center">
                   <div className="flex items-center justify-center gap-2 mb-1">
                     <Mail className="w-4 h-4 text-primary-foreground/40" />
                     <span className="text-2xl font-bold text-primary-foreground/40">
@@ -221,24 +188,19 @@ export const UnifiedOverviewCard = ({
                   <p className="text-xs text-primary-foreground/40">
                     No data
                   </p>
-                </div>
-              ))}
+                </div>)}
             </div>
-          </div>
-        )}
+          </div>}
 
         {/* Combined Footer */}
         <div className="mt-6 pt-4 border-t border-primary-foreground/20 flex items-center justify-between">
           <p className="text-sm text-primary-foreground/90">
             <span className="font-medium">Next Milestone:</span> {nextMilestone}
           </p>
-          {userRole === 'admin' && (
-            <p className="text-sm text-primary-foreground/90">
+          {userRole === 'admin' && <p className="text-sm text-primary-foreground/90">
               <span className="font-medium">Next Action:</span> {getNextAction()}
-            </p>
-          )}
+            </p>}
         </div>
       </CardContent>
-    </Card>
-  );
+    </Card>;
 };
