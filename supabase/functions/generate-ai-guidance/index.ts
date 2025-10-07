@@ -63,7 +63,7 @@ serve(async (req) => {
       : [
           { route: '/dashboard', label: 'Dashboard Overview', icon: 'BarChart3' },
           { route: `/selection?round=${roundName}&tab=startup-selection`, label: 'Review Startups', icon: 'Users' },
-          { route: `/selection?round=${roundName}&tab=jury-progress`, label: 'Monitor Jury Progress', icon: 'CheckCircle2' },
+          { route: `/selection?round=${roundName}&tab=juror-progress`, label: 'Monitor Jury Progress', icon: 'CheckCircle2' },
           { route: `/selection?round=${roundName}&tab=matchmaking`, label: 'Matchmaking', icon: 'Users' },
           { route: `/selection?round=${roundName}&tab=communications`, label: 'Communications', icon: 'Send' },
           { route: '/email-management', label: 'Email Templates', icon: 'Mail' }
