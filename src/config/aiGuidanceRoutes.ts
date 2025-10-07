@@ -48,7 +48,7 @@ export const AI_GUIDANCE_ROUTES = {
       requiresRound: true
     },
     { 
-      route: '/selection?tab=jury-progress', 
+      route: '/selection?tab=juror-progress', 
       label: 'Monitor Jury Progress', 
       icon: 'CheckCircle2',
       description: 'Track evaluation completion',
