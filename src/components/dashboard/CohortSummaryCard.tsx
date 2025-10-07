@@ -5,11 +5,8 @@ import { Trophy, Users, Building2, TrendingUp, Calendar } from "lucide-react";
 interface CohortSummaryCardProps {
   totalStartups: number;
   activeJurors: number;
-  totalJurors: number;
   activeRound: 'screening' | 'pitching';
   evaluationProgress: number;
-  completedEvaluations: number;
-  totalEvaluations: number;
   cohortName?: string;
   deadlineInfo?: string;
   nextMilestone: string;
@@ -18,21 +15,12 @@ interface CohortSummaryCardProps {
 export const CohortSummaryCard = ({
   totalStartups,
   activeJurors,
-  totalJurors,
   activeRound,
   evaluationProgress,
-  completedEvaluations,
-  totalEvaluations,
   cohortName = "Aurora Tech Awards 2025 Cohort",
   deadlineInfo,
   nextMilestone
 }: CohortSummaryCardProps) => {
-  const extractDeadlineNumber = (deadlineInfo: string | undefined): string => {
-    if (!deadlineInfo) return 'TBD';
-    const match = deadlineInfo.match(/(\d+)/);
-    return match ? match[1] : deadlineInfo;
-  };
-
   return (
     <Card className="bg-gradient-primary border-primary/20 shadow-elegant">
       <CardHeader className="pb-4">
@@ -73,7 +61,7 @@ export const CohortSummaryCard = ({
             <div className="flex items-center justify-center gap-2 mb-1">
               <Users className="w-4 h-4 text-primary-foreground/80" />
               <span className="text-2xl font-bold text-primary-foreground">
-                {activeJurors}/{totalJurors}
+                {activeJurors}
               </span>
             </div>
             <p className="text-xs text-primary-foreground/70">Active Jurors</p>
@@ -82,7 +70,7 @@ export const CohortSummaryCard = ({
             <div className="flex items-center justify-center gap-2 mb-1">
               <TrendingUp className="w-4 h-4 text-primary-foreground/80" />
               <span className="text-2xl font-bold text-primary-foreground">
-                {completedEvaluations}/{totalEvaluations}
+                {evaluationProgress}%
               </span>
             </div>
             <p className="text-xs text-primary-foreground/70">Evaluations</p>
@@ -91,10 +79,10 @@ export const CohortSummaryCard = ({
             <div className="flex items-center justify-center gap-2 mb-1">
               <Calendar className="w-4 h-4 text-primary-foreground/80" />
               <span className="text-2xl font-bold text-primary-foreground">
-                {extractDeadlineNumber(deadlineInfo)}
+                {deadlineInfo || 'No deadline set'}
               </span>
             </div>
-            <p className="text-xs text-primary-foreground/70">Deadline</p>
+            <p className="text-xs text-primary-foreground/70">Current Round</p>
           </div>
         </div>
         <div className="mt-4 pt-4 border-t border-primary-foreground/20">
