@@ -28,6 +28,7 @@ interface AssignedStartup {
   description: string;
   verticalsText: string;
   regionsText: string;
+  regions?: string[];
   stage: string;
   contact_email: string;
   website: string;

@@ -20,6 +20,7 @@ interface AssignedStartup {
   description: string;
   verticalsText: string;
   regionsText: string;
+  regions?: string[];
   stage: string;
   contact_email: string;
   website: string;
@@ -127,6 +128,7 @@ const EvaluationDashboard = () => {
           description: startup.description || '',
           verticalsText: Array.isArray(startup.verticals) ? startup.verticals.join(', ') : '',
           regionsText: Array.isArray(startup.regions) ? startup.regions.join(', ') : '',
+          regions: startup.regions || [],
           stage: startup.stage || '',
           contact_email: startup.contact_email || '',
           website: startup.website || '',
