@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -17,7 +17,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
-import { Star, Save, Send, Info, Building2, DollarSign, Users, Calendar, Globe, FileText, Video, MapPin, Linkedin, Plus, X, Edit, CheckCircle, AlertTriangle, ExternalLink } from "lucide-react";
+import { Star, Save, Send, Info, Building2, DollarSign, Users, Calendar, Globe, FileText, Video, MapPin, Linkedin, Plus, X, Edit, CheckCircle, AlertTriangle, ExternalLink, Rocket, ThumbsUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 interface StartupEvaluationModalProps {
   startup: {
@@ -1246,15 +1246,41 @@ export const StartupEvaluationModal = ({
                     roundName={currentRound}
                   />
 
-                  <div className="flex items-center space-x-3">
-                    <Switch id="pitch-session" checked={formData.wants_pitch_session} onCheckedChange={checked => setFormData(prev => ({
-                      ...prev,
-                      wants_pitch_session: checked
-                    }))} disabled={!isEditing} />
-                    <Label htmlFor="pitch-session" className="text-base font-semibold">
-                      Would you like to see this project in a pitching session?
-                    </Label>
-                  </div>
+                  <Card className="border-2 border-primary/30 bg-primary/5">
+                    <CardHeader>
+                      <div className="flex items-center gap-2">
+                        <Rocket className="h-5 w-5 text-primary" />
+                        <CardTitle className="text-lg">Pitching Round Selection</CardTitle>
+                      </div>
+                      <CardDescription>
+                        Based on your evaluation (Overall Score: {overallScore.toFixed(1)}/10), would you recommend this startup for the pitching round?
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-4">
+                          <Switch 
+                            id="pitch-session" 
+                            checked={formData.wants_pitch_session} 
+                            onCheckedChange={checked => setFormData(prev => ({
+                              ...prev,
+                              wants_pitch_session: checked
+                            }))} 
+                            disabled={!isEditing} 
+                          />
+                          <Label htmlFor="pitch-session" className="text-lg font-semibold cursor-pointer">
+                            Recommend for pitching session
+                          </Label>
+                        </div>
+                        {formData.wants_pitch_session && (
+                          <Badge variant="success" className="text-sm">
+                            <ThumbsUp className="h-3 w-3 mr-1" />
+                            Selected
+                          </Badge>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
                 </CardContent>
               </Card>
 
