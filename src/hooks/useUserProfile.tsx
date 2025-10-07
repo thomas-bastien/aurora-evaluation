@@ -11,6 +11,7 @@ interface UserProfile {
   created_at: string;
   updated_at: string;
   calendly_link: string | null;
+  linkedin_url: string | null;
   // Juror-specific fields (primary)
   target_verticals: string[] | null;
   preferred_stages: string[] | null;
@@ -52,7 +53,7 @@ export const useUserProfile = () => {
       if (profileData) {
         const { data: juror, error: jurorError } = await supabase
           .from('jurors')
-          .select('target_verticals, preferred_stages, preferred_regions, calendly_link')
+          .select('target_verticals, preferred_stages, preferred_regions, calendly_link, linkedin_url')
           .eq('user_id', user.id)
           .maybeSingle();
 
@@ -70,6 +71,7 @@ export const useUserProfile = () => {
         preferred_stages: jurorData?.preferred_stages || null,
         preferred_regions: jurorData?.preferred_regions || null,
         calendly_link: jurorData?.calendly_link || null,
+        linkedin_url: jurorData?.linkedin_url || null,
         // Legacy fields for backwards compatibility
         expertise: jurorData?.target_verticals || null,
         investment_stages: jurorData?.preferred_stages || null,

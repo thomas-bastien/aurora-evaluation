@@ -59,10 +59,10 @@ const VCProfile = () => {
         full_name: profile.full_name || '',
         organization: profile.organization || '',
         calendly_link: profile.calendly_link || '',
-        preferred_regions: [],
-        target_verticals: [],
-        preferred_stages: [],
-        linkedin_url: ''
+        preferred_regions: profile.preferred_regions || [],
+        target_verticals: profile.target_verticals || [],
+        preferred_stages: profile.preferred_stages || [],
+        linkedin_url: profile.linkedin_url || ''
       });
     }
     fetchEvaluationStats();
