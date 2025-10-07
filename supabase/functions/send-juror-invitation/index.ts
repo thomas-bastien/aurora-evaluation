@@ -129,8 +129,13 @@ const handler = async (req: Request): Promise<Response> => {
             recipientId: jurorData.id, // Now properly linking to juror record
             variables: {
               juror_name: jurorName,
-              magic_link: magicLinkUrl,
-              expiry_date: expirationDate.toDateString(),
+              invitation_link: magicLinkUrl,
+              invitation_expires_at: expirationDate.toLocaleDateString('en-US', { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+              }),
               company: company || '',
               job_title: jobTitle || ''
             },
