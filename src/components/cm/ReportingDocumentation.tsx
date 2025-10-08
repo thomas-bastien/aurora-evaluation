@@ -18,7 +18,8 @@ import {
   Clock,
   Search,
   Filter,
-  RefreshCw
+  RefreshCw,
+  ChevronDown
 } from "lucide-react";
 import { toast } from "sonner";
 import { 
@@ -34,6 +35,7 @@ import {
 } from "@/utils/reportExports";
 import { EvaluationDecisionReportCard } from "@/components/cm/EvaluationDecisionReportCard";
 import { AIInsightsReport } from "@/components/cm/AIInsightsReport";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 interface ReportingDocumentationProps {
   currentRound: 'screeningRound' | 'pitchingRound';
@@ -67,6 +69,7 @@ export const ReportingDocumentation = ({ currentRound }: ReportingDocumentationP
   const [filteredData, setFilteredData] = useState<StartupAnalytics[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [isAnalyticsOpen, setIsAnalyticsOpen] = useState(true);
 
   useEffect(() => {
     fetchRoundStats();
@@ -413,28 +416,35 @@ export const ReportingDocumentation = ({ currentRound }: ReportingDocumentationP
   return (
     <div className="space-y-6">
       {/* Real-Time Analytics */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <BarChart3 className="w-5 h-5" />
-              Real-Time Analytics - {currentRound === 'screeningRound' ? 'Screening Round' : 'Pitching Round'}
-            </CardTitle>
-            <Button
-              variant="outline" 
-              size="sm"
-              onClick={() => { fetchRoundStats(); fetchAnalyticsData(); }}
-              className="flex items-center gap-2"
-            >
-              <RefreshCw className="w-4 h-4" />
-              Refresh
-            </Button>
-          </div>
-          <CardDescription>
-            Live view of round statistics, startup evaluation progress and performance metrics
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+      <Collapsible open={isAnalyticsOpen} onOpenChange={setIsAnalyticsOpen}>
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CollapsibleTrigger asChild>
+                <Button variant="ghost" className="p-0 hover:bg-transparent">
+                  <CardTitle className="flex items-center gap-2">
+                    <ChevronDown className={`w-5 h-5 transition-transform ${isAnalyticsOpen ? '' : '-rotate-90'}`} />
+                    <BarChart3 className="w-5 h-5" />
+                    Real-Time Analytics - {currentRound === 'screeningRound' ? 'Screening Round' : 'Pitching Round'}
+                  </CardTitle>
+                </Button>
+              </CollapsibleTrigger>
+              <Button
+                variant="outline" 
+                size="sm"
+                onClick={() => { fetchRoundStats(); fetchAnalyticsData(); }}
+                className="flex items-center gap-2"
+              >
+                <RefreshCw className="w-4 h-4" />
+                Refresh
+              </Button>
+            </div>
+            <CardDescription>
+              Live view of round statistics, startup evaluation progress and performance metrics
+            </CardDescription>
+          </CardHeader>
+          <CollapsibleContent>
+            <CardContent>
           {/* Statistics Grid */}
           {loading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
@@ -567,7 +577,9 @@ export const ReportingDocumentation = ({ currentRound }: ReportingDocumentationP
             </Table>
           </div>
         </CardContent>
-      </Card>
+          </CollapsibleContent>
+        </Card>
+      </Collapsible>
 
       {/* AI Insights Report */}
       <AIInsightsReport currentRound={currentRound} />
