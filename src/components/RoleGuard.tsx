@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useViewMode } from '@/contexts/ViewModeContext';
 
 interface RoleGuardProps {
   children: React.ReactNode;
@@ -14,10 +15,16 @@ const RoleGuard = ({ children, allowedRoles, fallbackRoute = '/dashboard' }: Rol
   const { profile, loading } = useUserProfile();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { viewMode } = useViewMode();
 
   useEffect(() => {
     if (!loading && profile) {
-      if (!allowedRoles.includes(profile.role)) {
+      // If admin is in juror preview mode and the route is for VCs, allow access
+      const effectiveRole = viewMode === 'juror' && profile.role === 'admin' 
+        ? 'vc' 
+        : profile.role;
+
+      if (!allowedRoles.includes(effectiveRole)) {
         toast({
           title: "Access Denied",
           description: "You don't have permission to access this page.",
@@ -26,7 +33,7 @@ const RoleGuard = ({ children, allowedRoles, fallbackRoute = '/dashboard' }: Rol
         navigate(fallbackRoute, { replace: true });
       }
     }
-  }, [profile, loading, allowedRoles, navigate, fallbackRoute, toast]);
+  }, [profile, loading, allowedRoles, navigate, fallbackRoute, toast, viewMode]);
 
   if (loading) {
     return (
@@ -36,7 +43,16 @@ const RoleGuard = ({ children, allowedRoles, fallbackRoute = '/dashboard' }: Rol
     );
   }
 
-  if (!profile || !allowedRoles.includes(profile.role)) {
+  if (!profile) {
+    return null;
+  }
+
+  // Check effective role (considering view mode)
+  const effectiveRole = viewMode === 'juror' && profile.role === 'admin' 
+    ? 'vc' 
+    : profile.role;
+
+  if (!allowedRoles.includes(effectiveRole)) {
     return null;
   }
 

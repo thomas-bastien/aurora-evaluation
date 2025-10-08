@@ -14,6 +14,8 @@ import { StartupsEvaluationList } from "@/components/evaluation/StartupsEvaluati
 import { EvaluationStats } from "@/components/evaluation/EvaluationStats";
 import { WorkflowGuide } from "@/components/common/WorkflowGuide";
 import { Search, Filter, CheckCircle, Clock, AlertCircle } from "lucide-react";
+import { PreviewModeBanner } from "@/components/admin/PreviewModeBanner";
+import { useViewMode } from "@/contexts/ViewModeContext";
 interface AssignedStartup {
   id: string;
   name: string;
@@ -42,6 +44,7 @@ const EvaluationDashboard = () => {
   } = useUserProfile();
   const [searchParams] = useSearchParams();
   const currentRound = searchParams.get('round') as 'screening' | 'pitching' || 'screening';
+  const { viewMode, impersonatedJurorId } = useViewMode();
   const [assignedStartups, setAssignedStartups] = useState<AssignedStartup[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -55,18 +58,35 @@ const EvaluationDashboard = () => {
     try {
       setLoading(true);
 
-      // First, find the juror record for this authenticated user
-      const { data: juror, error: jurorError } = await supabase
-        .from('jurors')
-        .select('id')
-        .eq('user_id', user?.id)
-        .maybeSingle();
+      // Determine which juror ID to use: impersonated or actual user
+      let jurorId: string | null = null;
 
-      if (jurorError) throw jurorError;
-      
-      if (!juror) {
-        console.warn('No juror record found for this user');
+      if (profile?.role === 'admin' && viewMode === 'juror' && impersonatedJurorId) {
+        // Admin is previewing as a juror - use impersonated juror ID
+        jurorId = impersonatedJurorId;
+      } else {
+        // Regular user or admin in admin mode - get juror record for current user
+        const { data: juror, error: jurorError } = await supabase
+          .from('jurors')
+          .select('id')
+          .eq('user_id', user?.id)
+          .maybeSingle();
+
+        if (jurorError) throw jurorError;
+        
+        if (!juror) {
+          console.warn('No juror record found for this user');
+          setAssignedStartups([]);
+          setLoading(false);
+          return;
+        }
+
+        jurorId = juror.id;
+      }
+
+      if (!jurorId) {
         setAssignedStartups([]);
+        setLoading(false);
         return;
       }
 
@@ -95,7 +115,7 @@ const EvaluationDashboard = () => {
             linkedin_url
           )
         `)
-        .eq('juror_id', juror.id);
+        .eq('juror_id', jurorId);
 
       if (assignmentsError) throw assignmentsError;
 
@@ -182,6 +202,7 @@ const EvaluationDashboard = () => {
   }
   return <div className="min-h-screen bg-background">
       <DashboardHeader />
+      <PreviewModeBanner />
       
       <main className="max-w-7xl mx-auto px-6 py-8">
         {/* Workflow Guide */}

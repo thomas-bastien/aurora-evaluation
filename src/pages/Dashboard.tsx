@@ -12,6 +12,8 @@ import { useUserProfile } from "@/hooks/useUserProfile";
 import { useCohortSettings } from "@/hooks/useCohortSettings";
 import { formatDeadlineDisplay, formatDeadlineSimple, isDeadlinePassed } from "@/utils/deadlineUtils";
 import { useNavigate } from "react-router-dom";
+import { PreviewModeBanner } from "@/components/admin/PreviewModeBanner";
+import { useViewMode } from "@/contexts/ViewModeContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -34,6 +36,7 @@ const Dashboard = () => {
   const { profile, refreshProfile } = useUserProfile();
   const { cohortSettings } = useCohortSettings();
   const navigate = useNavigate();
+  const { viewMode, impersonatedJurorId } = useViewMode();
   const [dashboardData, setDashboardData] = useState({
     activeStartups: 0,
     activeJurors: 0,
@@ -325,6 +328,7 @@ const Dashboard = () => {
   return (
     <div className="min-h-screen bg-background">
       <DashboardHeader />
+      <PreviewModeBanner />
       
       <main className="max-w-7xl mx-auto px-6 py-8">
         {/* AI Guidance Box for Admins */}

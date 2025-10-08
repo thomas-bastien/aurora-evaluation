@@ -1,9 +1,13 @@
 import { Button } from "@/components/ui/button";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Bell, Search, Settings, User, ChevronDown, Building, Users, LogOut, Network } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuLabel, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
+import { Badge } from "@/components/ui/badge";
+import { Bell, Search, Settings, User, ChevronDown, Building, Users, LogOut, Network, Eye, Shield, CheckCircle } from "lucide-react";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { useViewMode } from "@/contexts/ViewModeContext";
+import { useState } from "react";
+import { JurorViewSelectionModal } from "@/components/admin/JurorViewSelectionModal";
 export const DashboardHeader = () => {
   const {
     profile
@@ -14,6 +18,8 @@ export const DashboardHeader = () => {
   } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const { viewMode, isImpersonating, switchToAdminView } = useViewMode();
+  const [showJurorSelectionModal, setShowJurorSelectionModal] = useState(false);
   
   const handleSignOut = async () => {
     await signOut();
@@ -21,7 +27,8 @@ export const DashboardHeader = () => {
   };
   
   const isActive = (path: string) => location.pathname === path || location.pathname.startsWith(path);
-  return <header className="bg-card border-b border-border shadow-soft">
+  return <>
+    <header className="bg-card border-b border-border shadow-soft">
       <div className="max-w-7xl mx-auto px-6 py-4">
         <div className="flex items-center justify-between">
           {/* Logo and Navigation */}
@@ -139,6 +146,47 @@ export const DashboardHeader = () => {
             <Button variant="ghost" size="icon">
               <Settings className="w-5 h-5" />
             </Button>
+
+            {/* View Mode Toggle (Admin Only) */}
+            {profile?.role === 'admin' && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="flex items-center gap-2">
+                    <Eye className="w-4 h-4" />
+                    <span className="hidden md:inline">
+                      {viewMode === 'admin' ? 'Admin View' : 'Juror Preview'}
+                    </span>
+                    <Badge 
+                      variant={viewMode === 'admin' ? 'default' : 'secondary'}
+                      className={viewMode === 'admin' ? 'bg-primary' : 'bg-warning text-warning-foreground'}
+                    >
+                      {viewMode === 'admin' ? 'Admin' : 'Preview'}
+                    </Badge>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuLabel>View Mode</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem 
+                    onClick={switchToAdminView}
+                    disabled={!isImpersonating}
+                    className="flex items-center gap-2"
+                  >
+                    <Shield className="w-4 h-4" />
+                    Admin View (Default)
+                    {viewMode === 'admin' && <CheckCircle className="w-4 h-4 ml-auto text-primary" />}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem 
+                    onClick={() => setShowJurorSelectionModal(true)}
+                    className="flex items-center gap-2"
+                  >
+                    <Eye className="w-4 h-4" />
+                    Preview as Juror...
+                    {viewMode === 'juror' && <CheckCircle className="w-4 h-4 ml-auto text-warning" />}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
             
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -190,5 +238,12 @@ export const DashboardHeader = () => {
           </div>
         </div>
       </div>
-    </header>;
+    </header>
+
+    {/* Juror Selection Modal */}
+    <JurorViewSelectionModal 
+      open={showJurorSelectionModal}
+      onOpenChange={setShowJurorSelectionModal}
+    />
+  </>;
 };

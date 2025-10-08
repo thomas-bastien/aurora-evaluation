@@ -29,6 +29,7 @@ import DemoSelection from "./pages/DemoSelection";
 import EmailManagementPage from "./pages/EmailManagement";
 import NotFound from "./pages/NotFound";
 import { DemoProvider } from "@/contexts/DemoContext";
+import { ViewModeProvider } from "@/contexts/ViewModeContext";
 
 const queryClient = new QueryClient();
 
@@ -64,10 +65,11 @@ const AdminRedirect = () => {
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
+      <ViewModeProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
@@ -186,7 +188,8 @@ const App = () => (
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
-      </TooltipProvider>
+        </TooltipProvider>
+      </ViewModeProvider>
     </AuthProvider>
   </QueryClientProvider>
 );

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { supabase } from '@/integrations/supabase/client';
+import { useViewMode } from '@/contexts/ViewModeContext';
 
 interface UseStartupAssignmentReturn {
   isAssigned: boolean;
@@ -12,58 +13,72 @@ interface UseStartupAssignmentReturn {
 export const useStartupAssignment = (startupId: string): UseStartupAssignmentReturn => {
   const { user } = useAuth();
   const { profile } = useUserProfile();
+  const { viewMode, impersonatedJurorId } = useViewMode();
   const [isAssigned, setIsAssigned] = useState(false);
   const [assignmentType, setAssignmentType] = useState<'screening' | 'pitching' | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const checkAssignment = async () => {
-      if (!user || !startupId || profile?.role === 'admin') {
-        // Admin users can see all evaluations
-        if (profile?.role === 'admin') {
-          setIsAssigned(true);
-          setAssignmentType(null);
-        } else {
-          setIsAssigned(false);
-          setAssignmentType(null);
-        }
+      // Early return for non-authenticated users or missing startup ID
+      if (!user || !startupId) {
+        setIsAssigned(false);
+        setAssignmentType(null);
+        setLoading(false);
+        return;
+      }
+
+      // Admin users in admin mode can see all evaluations
+      if (profile?.role === 'admin' && viewMode === 'admin') {
+        setIsAssigned(true);
+        setAssignmentType(null);
         setLoading(false);
         return;
       }
 
       try {
-        // First, get the juror record for the current user
-        const { data: jurorData, error: jurorError } = await supabase
-          .from('jurors')
-          .select('id')
-          .eq('user_id', user.id)
-          .maybeSingle();
+        // Determine which juror ID to use: impersonated or actual user
+        let jurorId: string | null = null;
 
-        if (jurorError && jurorError.code !== 'PGRST116') {
-          throw jurorError;
+        if (profile?.role === 'admin' && viewMode === 'juror' && impersonatedJurorId) {
+          // Admin is previewing as a juror - use impersonated juror ID
+          jurorId = impersonatedJurorId;
+        } else {
+          // Regular user or admin in admin mode - get juror record for current user
+          const { data: jurorData, error: jurorError } = await supabase
+            .from('jurors')
+            .select('id')
+            .eq('user_id', user.id)
+            .maybeSingle();
+
+          if (jurorError && jurorError.code !== 'PGRST116') {
+            throw jurorError;
+          }
+
+          jurorId = jurorData?.id || null;
         }
 
-        if (!jurorData) {
-          // User doesn't have a juror record, so they're not assigned to anything
+        if (!jurorId) {
+          // No juror record found
           setIsAssigned(false);
           setAssignmentType(null);
           setLoading(false);
           return;
         }
 
-        // Check both screening and pitching assignments using the juror ID
+        // Check both screening and pitching assignments using the determined juror ID
         const [screeningResult, pitchingResult] = await Promise.all([
           supabase
             .from('screening_assignments')
             .select('id')
             .eq('startup_id', startupId)
-            .eq('juror_id', jurorData.id)
+            .eq('juror_id', jurorId)
             .maybeSingle(),
           supabase
             .from('pitching_assignments')
             .select('id')
             .eq('startup_id', startupId)
-            .eq('juror_id', jurorData.id)
+            .eq('juror_id', jurorId)
             .maybeSingle()
         ]);
 
@@ -94,7 +109,7 @@ export const useStartupAssignment = (startupId: string): UseStartupAssignmentRet
     };
 
     checkAssignment();
-  }, [user, startupId, profile?.role]);
+  }, [user, startupId, profile?.role, viewMode, impersonatedJurorId]);
 
   return { isAssigned, assignmentType, loading };
 };
