@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Bell, Search, Settings, User, ChevronDown, Building, Users, LogOut, Network } from "lucide-react";
+import { Search, Settings, User, ChevronDown, Building, Users, LogOut, Network } from "lucide-react";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -131,14 +131,6 @@ export const DashboardHeader = () => {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
               <input type="text" placeholder="Search startups..." className="w-80 pl-10 pr-4 py-2.5 bg-muted border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-smooth" />
             </div>
-            
-            <Button variant="ghost" size="icon">
-              <Bell className="w-5 h-5" />
-            </Button>
-            
-            <Button variant="ghost" size="icon">
-              <Settings className="w-5 h-5" />
-            </Button>
             
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
