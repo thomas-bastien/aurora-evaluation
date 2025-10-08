@@ -137,9 +137,9 @@ const handler = async (req: Request): Promise<Response> => {
       console.log("CM record created:", cm.id);
     }
 
-    // Generate invitation link
-    const frontendUrl = Deno.env.get("FRONTEND_URL") || "http://localhost:5173";
-    const invitationLink = `${frontendUrl}/cm-signup?token=${cm.invitation_token}`;
+    // Generate magic link to authenticate-cm function
+    const supabaseUrl = Deno.env.get("SUPABASE_URL") || "https://fadxytngwiporjqchsem.supabase.co";
+    const invitationLink = `${supabaseUrl}/functions/v1/authenticate-cm?token=${cm.invitation_token}`;
 
     // Prepare email variables
     const emailVariables = {
@@ -150,8 +150,6 @@ const handler = async (req: Request): Promise<Response> => {
         month: "long",
         day: "numeric",
       }),
-      organization: organization || "",
-      job_title: jobTitle || "",
     };
 
     console.log("Sending invitation email to:", email, "for CM:", cm.id);
