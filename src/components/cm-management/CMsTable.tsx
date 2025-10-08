@@ -5,7 +5,7 @@ import { Edit, Trash2, Mail, CheckCircle, Clock, XCircle } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useState } from 'react';
 
-interface UnifiedUser {
+interface CommunityManager {
   id: string;
   name: string;
   email: string;
@@ -15,8 +15,6 @@ interface UnifiedUser {
   user_id: string | null;
   invitation_sent_at: string | null;
   invitation_expires_at: string | null;
-  role: 'admin' | 'cm' | 'vc';
-  source_table: 'jurors' | 'community_managers';
   permissions: {
     can_manage_startups: boolean;
     can_manage_jurors: boolean;
@@ -25,30 +23,16 @@ interface UnifiedUser {
 }
 
 interface CMsTableProps {
-  cms: UnifiedUser[];
-  onEdit: (cm: UnifiedUser) => void;
+  cms: CommunityManager[];
+  onEdit: (cm: CommunityManager) => void;
   onDelete: (id: string) => void;
-  onSendInvitation: (cm: UnifiedUser) => void;
-  onPromote?: (user: UnifiedUser) => void;
+  onSendInvitation: (cm: CommunityManager) => void;
 }
 
-export function CMsTable({ cms, onEdit, onDelete, onSendInvitation, onPromote }: CMsTableProps) {
+export function CMsTable({ cms, onEdit, onDelete, onSendInvitation }: CMsTableProps) {
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
-  const getRoleBadge = (role: string) => {
-    switch (role) {
-      case 'admin':
-        return <Badge variant="default">Admin</Badge>;
-      case 'cm':
-        return <Badge variant="secondary">Community Manager</Badge>;
-      case 'vc':
-        return <Badge variant="outline">Juror</Badge>;
-      default:
-        return <Badge variant="outline">{role}</Badge>;
-    }
-  };
-
-  const getStatus = (cm: UnifiedUser): { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline'; icon: React.ReactNode } => {
+  const getStatus = (cm: CommunityManager): { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline'; icon: React.ReactNode } => {
     if (cm.user_id) {
       return { 
         label: 'Active', 
@@ -83,7 +67,7 @@ export function CMsTable({ cms, onEdit, onDelete, onSendInvitation, onPromote }:
     };
   };
 
-  const getPermissionBadges = (permissions: UnifiedUser['permissions']) => {
+  const getPermissionBadges = (permissions: CommunityManager['permissions']) => {
     const badges = [];
     if (permissions?.can_manage_startups) badges.push('Startups');
     if (permissions?.can_manage_jurors) badges.push('Jurors');
@@ -100,7 +84,6 @@ export function CMsTable({ cms, onEdit, onDelete, onSendInvitation, onPromote }:
               <TableHead>Name</TableHead>
               <TableHead>Email</TableHead>
               <TableHead>Organization</TableHead>
-              <TableHead>Role</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Permissions</TableHead>
               <TableHead className="text-right">Actions</TableHead>
@@ -109,8 +92,8 @@ export function CMsTable({ cms, onEdit, onDelete, onSendInvitation, onPromote }:
           <TableBody>
             {cms.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center text-muted-foreground">
-                  No users found
+                <TableCell colSpan={6} className="text-center text-muted-foreground">
+                  No community managers found
                 </TableCell>
               </TableRow>
             ) : (
@@ -123,7 +106,6 @@ export function CMsTable({ cms, onEdit, onDelete, onSendInvitation, onPromote }:
                     <TableCell className="font-medium">{cm.name}</TableCell>
                     <TableCell>{cm.email}</TableCell>
                     <TableCell>{cm.organization || '—'}</TableCell>
-                    <TableCell>{getRoleBadge(cm.role)}</TableCell>
                     <TableCell>
                       <Badge variant={status.variant} className="flex items-center gap-1 w-fit">
                         {status.icon}
@@ -145,16 +127,6 @@ export function CMsTable({ cms, onEdit, onDelete, onSendInvitation, onPromote }:
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
-                        {cm.role === 'vc' && onPromote && (
-                          <Button
-                            variant="default"
-                            size="sm"
-                            onClick={() => onPromote(cm)}
-                            title="Promote to Community Manager"
-                          >
-                            Promote to CM
-                          </Button>
-                        )}
                         {!cm.user_id && (
                           <Button
                             variant="ghost"

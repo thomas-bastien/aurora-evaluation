@@ -42,7 +42,7 @@ export const DashboardHeader = () => {
               </a>
               
               {/* Show Selection Dropdown for Admin/CM users */}
-              {(profile?.role === 'admin' || profile?.role === 'cm') && (
+              {profile?.role === 'admin' && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <button className={`flex items-center gap-1 hover:text-primary transition-smooth ${isActive('/selection') ? 'text-primary' : 'text-muted-foreground'}`}>
@@ -151,7 +151,7 @@ export const DashboardHeader = () => {
               </p>
               <div className="flex items-center justify-between mt-1">
                 <span className="text-xs font-medium text-primary">
-                  {profile?.role === 'admin' ? 'Admin' : profile?.role === 'cm' ? 'Community Manager' : 'Juror'}
+                  {profile?.role === 'admin' ? 'CM' : 'Juror'}
                 </span>
                 {profile?.organization && (
                   <span className="text-xs text-muted-foreground">
@@ -167,7 +167,7 @@ export const DashboardHeader = () => {
             <User className="w-4 h-4 mr-2" />
             View Profile
           </DropdownMenuItem>
-          {(profile?.role === 'admin' || profile?.role === 'cm') && (
+          {profile?.role === 'admin' && (
             <DropdownMenuItem onClick={() => navigate('/cohort-settings')} className="cursor-pointer">
               <Settings className="w-4 h-4 mr-2" />
               Cohort Settings

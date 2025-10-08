@@ -6,7 +6,7 @@ import { useToast } from '@/hooks/use-toast';
 
 interface RoleGuardProps {
   children: React.ReactNode;
-  allowedRoles: ('admin' | 'cm' | 'vc')[];
+  allowedRoles: ('admin' | 'vc')[];
   fallbackRoute?: string;
 }
 

@@ -7,7 +7,7 @@ interface UserProfile {
   user_id: string;
   full_name: string | null;
   organization: string | null;
-  role: 'vc' | 'admin' | 'cm';
+  role: 'vc' | 'admin';
   created_at: string;
   updated_at: string;
   calendly_link: string | null;
@@ -34,19 +34,6 @@ export const useUserProfile = () => {
     }
 
     try {
-      // Fetch role from user_roles table
-      const { data: roleData, error: roleError } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', user.id)
-        .maybeSingle();
-
-      if (roleError) {
-        console.error('Error fetching role:', roleError);
-      }
-
-      const userRole = roleData?.role || 'vc';
-
       // Fetch profile data
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
@@ -77,10 +64,9 @@ export const useUserProfile = () => {
         }
       }
 
-      // Merge profile and juror data with role from user_roles
+      // Merge profile and juror data
       const mergedProfile = profileData ? {
         ...profileData,
-        role: userRole,
         target_verticals: jurorData?.target_verticals || null,
         preferred_stages: jurorData?.preferred_stages || null,
         preferred_regions: jurorData?.preferred_regions || null,
