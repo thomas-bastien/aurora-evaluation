@@ -25,6 +25,7 @@ import {
 import { toast } from "sonner";
 import { StartupCommunicationConfirmationModal } from './StartupCommunicationConfirmationModal';
 import { validateStartupCommunications, type CommunicationValidationResult } from '@/utils/startupCommunicationValidation';
+import { StatusBadge } from '@/components/common/StatusBadge';
 
 interface StartupResult {
   id: string;
@@ -775,10 +776,10 @@ The Aurora Team`
                         {result.email} • Score: {formatScore(result.averageScore)}
                       </p>
                     </div>
-                    {result.roundStatus === 'selected' && <Badge className="bg-success text-success-foreground">Selected</Badge>}
-                    {result.roundStatus === 'rejected' && <Badge className="bg-destructive text-destructive-foreground">Rejected</Badge>}
-                    {result.roundStatus === 'under-review' && <Badge className="bg-blue-100 text-blue-800">Under Review</Badge>}
-                    {result.roundStatus === 'pending' && <Badge variant="secondary">Pending</Badge>}
+                    <StatusBadge 
+                      status={result.roundStatus || 'pending'} 
+                      roundName={currentRound === 'screeningRound' ? 'screening' : 'pitching'} 
+                    />
                   </div>
                   <div className="flex items-center gap-2">
                     <Badge 

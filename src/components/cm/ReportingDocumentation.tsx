@@ -36,6 +36,7 @@ import {
 import { EvaluationDecisionReportCard } from "@/components/cm/EvaluationDecisionReportCard";
 import { AIInsightsReport } from "@/components/cm/AIInsightsReport";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { StatusBadge } from '@/components/common/StatusBadge';
 
 interface ReportingDocumentationProps {
   currentRound: 'screeningRound' | 'pitchingRound';
@@ -535,13 +536,10 @@ export const ReportingDocumentation = ({ currentRound }: ReportingDocumentationP
                     <TableRow key={startup.id}>
                       <TableCell className="font-medium">{startup.name}</TableCell>
                       <TableCell>
-                        <Badge variant={
-                          startup.status === 'selected' ? 'default' :
-                          startup.status === 'under_review' ? 'secondary' :
-                          startup.status === 'rejected' ? 'destructive' : 'outline'
-                        }>
-                          {startup.status.replace('_', ' ')}
-                        </Badge>
+                        <StatusBadge 
+                          status={startup.status} 
+                          roundName={currentRound === 'screeningRound' ? 'screening' : 'pitching'} 
+                        />
                       </TableCell>
                       <TableCell className="text-center">
                         <div className="flex items-center justify-center gap-2">
