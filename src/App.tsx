@@ -10,6 +10,8 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import RoleGuard from "@/components/RoleGuard";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
+import ResetPassword from "./pages/ResetPassword";
+import UpdatePassword from "./pages/UpdatePassword";
 import TestSignup from "./pages/TestSignup";
 import JurorOnboarding from "./pages/JurorOnboarding";
 import Dashboard from "./pages/Dashboard";
@@ -71,6 +73,8 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/update-password" element={<UpdatePassword />} />
             <Route path="/demo/*" element={
               <DemoProvider>
                 <Routes>

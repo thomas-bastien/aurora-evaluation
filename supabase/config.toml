@@ -117,6 +117,9 @@ verify_jwt = false
 [functions.enhance-startup-data]
 verify_jwt = false
 
+[functions.send-password-reset]
+verify_jwt = false
+
 [functions.generate-round-insights]
 verify_jwt = true
 
