@@ -156,6 +156,17 @@ const handler = async (req: Request): Promise<Response> => {
           .eq('id', jurorData.id);
         console.log("Linked existing user to juror record");
       }
+
+      // Ensure user_roles entry exists for existing user
+      await supabaseAdmin
+        .from('user_roles')
+        .upsert({
+          user_id: userId,
+          role: 'vc'
+        }, {
+          onConflict: 'user_id,role',
+          ignoreDuplicates: true
+        });
     } else {
       console.log("Creating new user account");
       isNewUser = true;
@@ -191,6 +202,14 @@ const handler = async (req: Request): Promise<Response> => {
           invitation_token: null // Clear token after use
         })
         .eq('id', jurorData.id);
+
+      // Create user_roles entry
+      await supabaseAdmin
+        .from('user_roles')
+        .insert({
+          user_id: userId,
+          role: 'vc'
+        });
 
       // Update profile with juror company info
       await supabaseAdmin
