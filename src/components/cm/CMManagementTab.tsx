@@ -166,6 +166,7 @@ export default function CMManagementTab() {
           organization: cm.organization,
           jobTitle: cm.job_title,
           permissions: cm.permissions,
+          isResend: true,
         },
       });
 
@@ -181,7 +182,7 @@ export default function CMManagementTab() {
       console.error("Error resending invitation:", error);
       toast({
         title: "Error",
-        description: "Failed to resend invitation",
+        description: `Failed to resend invitation to ${cm.name}`,
         variant: "destructive",
       });
     }
