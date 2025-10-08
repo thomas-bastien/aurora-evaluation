@@ -131,3 +131,9 @@ verify_jwt = true
 
 [functions.suggest-evaluation-feedback]
 verify_jwt = true
+
+[functions.send-cm-invitation]
+verify_jwt = false
+
+[functions.authenticate-cm]
+verify_jwt = false

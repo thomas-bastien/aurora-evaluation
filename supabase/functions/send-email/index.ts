@@ -57,6 +57,7 @@ const mapCategoryToCommunicationType = (category?: string): string => {
   
   const mapping: Record<string, string> = {
     'juror_invitation': 'under-review',
+    'cm_invitation': 'under-review',
     'juror-reminder': 'under-review',
     'assignment-notification': 'under-review',
     'founder_selection': 'selection',
@@ -341,6 +342,33 @@ const getDefaultContentByCategory = (category?: string) => {
           <p style="color: #dc2626; font-weight: 500;">⚠️ This invitation expires on <strong>{{invitation_expires_at}}</strong></p>
         `,
         ctaText: 'Complete Registration',
+        ctaLink: '{{invitation_link}}'
+      })
+    },
+    
+    'cm_invitation': {
+      subject: 'Welcome to Aurora Tech Awards - Community Manager Access',
+      body: createProfessionalEmailTemplate({
+        title: 'You\'re Invited as a Community Manager',
+        body: `
+          <p>Dear <strong>{{cm_name}}</strong>,</p>
+          <p>Welcome to Aurora Tech Awards! You have been granted Community Manager access to help coordinate and manage the evaluation process.</p>
+          
+          <div style="background: #f1f5f9; padding: 20px; border-radius: 8px; margin: 24px 0; border-left: 4px solid #667eea;">
+            <h3 style="color: #334155; margin-top: 0; font-size: 18px;">Your Access Includes</h3>
+            <ul style="color: #475569; margin: 0; padding-left: 20px;">
+              <li>Manage startup applications and evaluations</li>
+              <li>Coordinate jury members and assignments</li>
+              <li>Monitor evaluation progress</li>
+              <li>Access reporting and analytics</li>
+            </ul>
+          </div>
+          
+          <p>Click the button below to set up your account and access the platform.</p>
+          
+          <p style="color: #dc2626; font-weight: 500;">⚠️ This invitation expires on <strong>{{invitation_expires_at}}</strong></p>
+        `,
+        ctaText: 'Activate Account',
         ctaLink: '{{invitation_link}}'
       })
     },

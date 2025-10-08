@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Calendar, Save, Download, Trash2 } from 'lucide-react';
+import { ArrowLeft, Calendar, Save, Download, Trash2, Users, Upload, Plus, Settings } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,26 +16,20 @@ import { ZohoExportTab } from '@/components/cohort/ZohoExportTab';
 import { CohortResetConfirmationModal } from '@/components/cohort/CohortResetConfirmationModal';
 import { useCohortReset } from '@/hooks/useCohortReset';
 import { MatchmakingConfigCard } from '@/components/cohort/MatchmakingConfigCard';
-import { Settings } from 'lucide-react';
+import { CMFormModal } from '@/components/cm-management/CMFormModal';
+import { CMsTable } from '@/components/cm-management/CMsTable';
+import { CMCSVUploadModal } from '@/components/cm-management/CMCSVUploadModal';
+import { CMDraftModal } from '@/components/cm-management/CMDraftModal';
+import { downloadCMTemplate } from '@/utils/cmsCsvTemplate';
+import { supabase } from '@/integrations/supabase/client';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+
 export default function CohortSettings() {
   const navigate = useNavigate();
-  const {
-    profile: userProfile,
-    loading: profileLoading
-  } = useUserProfile();
-  const {
-    toast
-  } = useToast();
-  const {
-    cohortSettings,
-    isLoading,
-    updateCohortSettings,
-    isUpdating
-  } = useCohortSettings();
-  const {
-    resetCohort,
-    isResetting
-  } = useCohortReset();
+  const { profile: userProfile, loading: profileLoading } = useUserProfile();
+  const { toast } = useToast();
+  const { cohortSettings, isLoading, updateCohortSettings, isUpdating } = useCohortSettings();
+  const { resetCohort, isResetting } = useCohortReset();
   const [showResetModal, setShowResetModal] = useState(false);
   const [formData, setFormData] = useState<CohortSettingsInput>({
     cohort_name: '',
@@ -43,7 +37,15 @@ export default function CohortSettings() {
     pitching_deadline: null
   });
 
-  // Redirect if not admin
+  // CM Management State
+  const queryClient = useQueryClient();
+  const [cmFormOpen, setCmFormOpen] = useState(false);
+  const [cmCsvUploadOpen, setCmCsvUploadOpen] = useState(false);
+  const [cmDraftOpen, setCmDraftOpen] = useState(false);
+  const [cmDraftData, setCmDraftData] = useState<any[]>([]);
+  const [editingCM, setEditingCM] = useState<any>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+
   useEffect(() => {
     if (userProfile && userProfile.role !== 'admin') {
       navigate('/dashboard');
@@ -55,7 +57,6 @@ export default function CohortSettings() {
     }
   }, [userProfile, navigate, toast]);
 
-  // Populate form when data loads
   useEffect(() => {
     if (cohortSettings) {
       setFormData({
@@ -65,63 +66,110 @@ export default function CohortSettings() {
       });
     }
   }, [cohortSettings]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     updateCohortSettings(formData);
   };
+
   const handleInputChange = (field: keyof CohortSettingsInput, value: string | null) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
+    setFormData(prev => ({ ...prev, [field]: value }));
   };
+
   const handleResetConfirm = () => {
     if (cohortSettings) {
-      resetCohort({
-        cohortId: cohortSettings.id,
-        cohortName: cohortSettings.cohort_name
-      });
+      resetCohort({ cohortId: cohortSettings.id, cohortName: cohortSettings.cohort_name });
       setShowResetModal(false);
     }
   };
-  if (isLoading || profileLoading) {
-    return <LoadingModal open={true} title="Loading cohort settings..." />;
-  }
-  if (userProfile?.role !== 'admin') {
-    return null; // Will redirect
-  }
-  return <div className="container mx-auto py-6 px-4">
-      {/* Header */}
+
+  // CM Management
+  const { data: cms = [] } = useQuery({
+    queryKey: ['community-managers'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('community_managers').select('*').order('created_at', { ascending: false });
+      if (error) throw error;
+      return data || [];
+    }
+  });
+
+  const createCMMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const { error } = await supabase.from('community_managers').insert({ ...data, permissions: data.permissions || { can_manage_startups: true, can_manage_jurors: true, can_invite_cms: false } });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['community-managers'] });
+      toast({ title: 'Success', description: 'Community Manager added successfully' });
+    }
+  });
+
+  const updateCMMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: any }) => {
+      const { error } = await supabase.from('community_managers').update(data).eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['community-managers'] });
+      toast({ title: 'Success', description: 'CM updated successfully' });
+      setEditingCM(null);
+    }
+  });
+
+  const deleteCMMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('community_managers').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['community-managers'] });
+      toast({ title: 'Success', description: 'CM deleted successfully' });
+    }
+  });
+
+  const sendCMInvitationMutation = useMutation({
+    mutationFn: async (cm: any) => {
+      const { error } = await supabase.functions.invoke('send-cm-invitation', {
+        body: { cmName: cm.name, cmEmail: cm.email, organization: cm.organization, jobTitle: cm.job_title }
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['community-managers'] });
+      toast({ title: 'Success', description: 'Invitation sent successfully' });
+    }
+  });
+
+  const filteredCMs = cms.filter((cm: any) =>
+    cm.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    cm.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    cm.organization?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  if (isLoading || profileLoading) return <LoadingModal open={true} title="Loading cohort settings..." />;
+  if (userProfile?.role !== 'admin') return null;
+
+  return (
+    <div className="container mx-auto py-6 px-4">
       <div className="flex items-center gap-4 mb-6">
-        <Button variant="ghost" size="sm" onClick={() => navigate('/dashboard')} className="flex items-center gap-2">
-          <ArrowLeft className="w-4 h-4" />
+        <Button variant="ghost" size="sm" onClick={() => navigate('/dashboard')}>
+          <ArrowLeft className="w-4 h-4 mr-2" />
           Back to Dashboard
         </Button>
         <div>
           <h1 className="text-2xl font-bold">Cohort Settings</h1>
-          <p className="text-muted-foreground">
-            Configure cohort details and export data
-          </p>
+          <p className="text-muted-foreground">Configure cohort details and manage team</p>
         </div>
       </div>
 
       <Separator className="mb-6" />
 
-      {/* Tabbed Interface */}
       <Tabs defaultValue="configuration" className="space-y-6">
         <TabsList>
-          <TabsTrigger value="configuration" className="flex items-center gap-2">
-            <Calendar className="w-4 h-4" />
-            Cohort Configuration
-          </TabsTrigger>
-          <TabsTrigger value="matchmaking" className="flex items-center gap-2">
-            <Settings className="w-4 h-4" />
-            Matchmaking Scoring
-          </TabsTrigger>
-          <TabsTrigger value="export" className="flex items-center gap-2">
-            <Download className="w-4 h-4" />
-            Zoho Export
-          </TabsTrigger>
+          <TabsTrigger value="configuration"><Calendar className="w-4 h-4 mr-2" />Configuration</TabsTrigger>
+          <TabsTrigger value="matchmaking"><Settings className="w-4 h-4 mr-2" />Matchmaking</TabsTrigger>
+          <TabsTrigger value="cms"><Users className="w-4 h-4 mr-2" />Community Managers</TabsTrigger>
+          <TabsTrigger value="export"><Download className="w-4 h-4 mr-2" />Zoho Export</TabsTrigger>
         </TabsList>
 
         <TabsContent value="configuration">
@@ -207,11 +255,38 @@ export default function CohortSettings() {
           <MatchmakingConfigCard />
         </TabsContent>
 
+        <TabsContent value="cms">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Community Managers</CardTitle>
+                  <CardDescription>Manage CM accounts with specific permissions</CardDescription>
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={() => downloadCMTemplate()}><Download className="h-4 w-4 mr-2" />Template</Button>
+                  <Button variant="outline" onClick={() => setCmCsvUploadOpen(true)}><Upload className="h-4 w-4 mr-2" />Upload</Button>
+                  <Button onClick={() => { setEditingCM(null); setCmFormOpen(true); }}><Plus className="h-4 w-4 mr-2" />Add CM</Button>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Input placeholder="Search..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="max-w-md" />
+              <CMsTable cms={filteredCMs} onEdit={(cm) => { setEditingCM(cm); setCmFormOpen(true); }} onDelete={(id) => deleteCMMutation.mutate(id)} onSendInvitation={(cm) => sendCMInvitationMutation.mutate(cm)} />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         <TabsContent value="export">
           <ZohoExportTab />
         </TabsContent>
       </Tabs>
 
       {cohortSettings && <CohortResetConfirmationModal open={showResetModal} onOpenChange={setShowResetModal} cohortName={cohortSettings.cohort_name} onConfirm={handleResetConfirm} isLoading={isResetting} />}
-    </div>;
+      
+      <CMFormModal open={cmFormOpen} onOpenChange={(open) => { setCmFormOpen(open); if (!open) setEditingCM(null); }} onSubmit={(data) => editingCM ? updateCMMutation.mutate({ id: editingCM.id, data }) : createCMMutation.mutate(data)} initialData={editingCM} mode={editingCM ? 'edit' : 'create'} />
+      <CMCSVUploadModal open={cmCsvUploadOpen} onOpenChange={setCmCsvUploadOpen} onDataParsed={(data) => { setCmDraftData(data); setCmDraftOpen(true); }} />
+      <CMDraftModal open={cmDraftOpen} onOpenChange={setCmDraftOpen} draftData={cmDraftData} onImportComplete={() => { queryClient.invalidateQueries({ queryKey: ['community-managers'] }); setCmDraftData([]); }} />
+    </div>
+  );
 }
