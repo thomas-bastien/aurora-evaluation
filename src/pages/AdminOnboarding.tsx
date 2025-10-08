@@ -72,7 +72,10 @@ const AdminOnboarding = () => {
   }, [user, isOnboarding, navigate]);
 
   const handlePasswordUpdate = async () => {
-    if (!formData.password) return true;
+    if (!formData.password) {
+      toast.error('Password is required');
+      return false;
+    }
     
     if (formData.password !== formData.confirmPassword) {
       toast.error('Passwords do not match');
@@ -144,6 +147,12 @@ const AdminOnboarding = () => {
         return;
       }
 
+      if (!formData.password.trim()) {
+        toast.error('Password is required');
+        setLoading(false);
+        return;
+      }
+
       // Update password if provided
       const passwordSuccess = await handlePasswordUpdate();
       if (!passwordSuccess) {
@@ -192,31 +201,32 @@ const AdminOnboarding = () => {
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Password Section */}
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Set Your Password (Optional)</h3>
+              <h3 className="text-lg font-semibold">Set Your Password</h3>
               <p className="text-sm text-muted-foreground">
-                Set a password to access your account, or skip to use magic links only
+                Set a password for future logins. You'll need this to access the admin dashboard after this session.
               </p>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="password">Password</Label>
+                  <Label htmlFor="password">Password *</Label>
                   <Input
                     type="password"
                     id="password"
                     value={formData.password}
                     onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
-                    placeholder="Enter password (optional)"
+                    placeholder="Enter password (min. 6 characters)"
+                    required
                   />
                 </div>
                 <div>
-                  <Label htmlFor="confirmPassword">Confirm Password</Label>
+                  <Label htmlFor="confirmPassword">Confirm Password *</Label>
                   <Input
                     type="password"
                     id="confirmPassword"
                     value={formData.confirmPassword}
                     onChange={(e) => setFormData(prev => ({ ...prev, confirmPassword: e.target.value }))}
                     placeholder="Confirm password"
-                    disabled={!formData.password}
+                    required
                   />
                 </div>
               </div>
