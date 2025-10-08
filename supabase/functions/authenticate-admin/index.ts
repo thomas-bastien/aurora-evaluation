@@ -182,23 +182,9 @@ const handler = async (req: Request): Promise<Response> => {
       console.log('Admin user created and linked successfully');
     }
 
-    // Determine redirect path
-    let redirectPath = '/dashboard';
-    
-    // Check if profile needs completion
-    const { data: profileData } = await supabaseAdmin
-      .from('profiles')
-      .select('full_name, organization')
-      .eq('user_id', userId)
-      .maybeSingle();
-
-    // If new user or profile incomplete, send to onboarding
-    if (isNewUser || !profileData?.full_name) {
-      redirectPath = '/admin-onboarding?onboarding=true';
-      console.log('Redirecting to onboarding flow');
-    } else {
-      console.log('Redirecting to dashboard');
-    }
+    // Determine redirect path - force onboarding for activation link
+    const redirectPath = '/admin-onboarding?onboarding=true';
+    console.log('Activation link used — forcing onboarding');
 
     // Create a temporary session for the user
     const baseUrl = Deno.env.get('FRONTEND_URL') || req.headers.get('origin') || '';
