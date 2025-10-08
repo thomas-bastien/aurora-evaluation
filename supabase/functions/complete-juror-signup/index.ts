@@ -128,6 +128,25 @@ const handler = async (req: Request): Promise<Response> => {
       }
       console.log("Juror record updated successfully");
 
+      // Ensure vc role is assigned
+      console.log("Assigning vc role to user:", authData.user.id);
+      const { error: roleError } = await supabaseAdmin
+        .from('user_roles')
+        .insert({ 
+          user_id: authData.user.id, 
+          role: 'vc',
+          created_by: authData.user.id 
+        })
+        .select()
+        .single();
+        
+      if (roleError && !roleError.message.includes('duplicate')) {
+        console.error("Failed to assign vc role:", roleError);
+        // Don't fail the entire request, just log the error
+      } else {
+        console.log("VC role assigned successfully");
+      }
+
       // Update juror record with additional data
       console.log("Updating juror record with additional data for user:", authData.user.id);
       const { error: jurorDataUpdateError } = await supabaseAdmin

@@ -155,6 +155,23 @@ const handler = async (req: Request): Promise<Response> => {
           })
           .eq('id', jurorData.id);
         console.log("Linked existing user to juror record");
+        
+        // Ensure vc role is assigned for existing users
+        const { error: roleError } = await supabaseAdmin
+          .from('user_roles')
+          .insert({ 
+            user_id: userId, 
+            role: 'vc',
+            created_by: userId 
+          })
+          .select()
+          .single();
+          
+        if (roleError && !roleError.message.includes('duplicate')) {
+          console.error("Failed to assign vc role to existing user:", roleError);
+        } else {
+          console.log("VC role assigned to existing user");
+        }
       }
     } else {
       console.log("Creating new user account");
@@ -199,6 +216,23 @@ const handler = async (req: Request): Promise<Response> => {
           organization: jurorData.company || null
         })
         .eq('user_id', userId);
+        
+      // Ensure vc role is assigned for new users
+      const { error: roleError } = await supabaseAdmin
+        .from('user_roles')
+        .insert({ 
+          user_id: userId, 
+          role: 'vc',
+          created_by: userId 
+        })
+        .select()
+        .single();
+        
+      if (roleError && !roleError.message.includes('duplicate')) {
+        console.error("Failed to assign vc role to new user:", roleError);
+      } else {
+        console.log("VC role assigned to new user");
+      }
 
       console.log("New user created and linked to juror record");
     }
