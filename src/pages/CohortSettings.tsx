@@ -172,7 +172,7 @@ export default function CohortSettings() {
         <TabsList>
           <TabsTrigger value="configuration"><Calendar className="w-4 h-4 mr-2" />Configuration</TabsTrigger>
           <TabsTrigger value="matchmaking"><Settings className="w-4 h-4 mr-2" />Matchmaking</TabsTrigger>
-          <TabsTrigger value="cms"><Users className="w-4 h-4 mr-2" />Community Managers</TabsTrigger>
+          <TabsTrigger value="cms"><Users className="w-4 h-4 mr-2" />User Permissions</TabsTrigger>
           <TabsTrigger value="export"><Download className="w-4 h-4 mr-2" />Zoho Export</TabsTrigger>
         </TabsList>
 
