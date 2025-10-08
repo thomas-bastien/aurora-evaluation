@@ -199,7 +199,7 @@ const handler = async (req: Request): Promise<Response> => {
     const redirectPath = existingUser ? "/dashboard" : "/dashboard";
 
     // Generate magic link for session
-    const frontendUrl = Deno.env.get("FRONTEND_URL") || "http://localhost:5173";
+    const frontendUrl = (Deno.env.get("FRONTEND_URL") || "http://localhost:5173").replace(/\/$/, '');
     const { data: magicLinkData, error: magicLinkError } = await supabaseAdmin.auth.admin.generateLink({
       type: "magiclink",
       email: cm.email,
