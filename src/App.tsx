@@ -14,6 +14,7 @@ import ResetPassword from "./pages/ResetPassword";
 import UpdatePassword from "./pages/UpdatePassword";
 import TestSignup from "./pages/TestSignup";
 import JurorOnboarding from "./pages/JurorOnboarding";
+import AdminOnboarding from "./pages/AdminOnboarding";
 import Dashboard from "./pages/Dashboard";
 import StartupProfile from "./pages/StartupProfile";
 import StartupsList from "./pages/StartupsList";
@@ -87,6 +88,11 @@ const App = () => (
           <Route path="/juror-onboarding" element={
             <ProtectedRoute>
               <JurorOnboarding />
+            </ProtectedRoute>
+          } />
+          <Route path="/admin-onboarding" element={
+            <ProtectedRoute>
+              <AdminOnboarding />
             </ProtectedRoute>
           } />
             <Route path="/test-signup" element={<TestSignup />} />

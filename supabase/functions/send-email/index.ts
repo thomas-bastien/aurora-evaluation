@@ -57,6 +57,7 @@ const mapCategoryToCommunicationType = (category?: string): string => {
   
   const mapping: Record<string, string> = {
     'juror_invitation': 'under-review',
+    'admin_invitation': 'under-review',
     'cm_invitation': 'under-review',
     'juror-reminder': 'under-review',
     'assignment-notification': 'under-review',
@@ -369,6 +370,34 @@ const getDefaultContentByCategory = (category?: string) => {
           <p style="color: #dc2626; font-weight: 500;">⚠️ This invitation expires on <strong>{{invitation_expires_at}}</strong></p>
         `,
         ctaText: 'Activate Account',
+        ctaLink: '{{invitation_link}}'
+      })
+    },
+    
+    'admin_invitation': {
+      subject: 'Welcome to Aurora Tech Awards - Administrator Access',
+      body: createProfessionalEmailTemplate({
+        title: 'You\'re Invited as an Administrator',
+        body: `
+          <p>Dear <strong>{{admin_name}}</strong>,</p>
+          <p>Welcome to Aurora Tech Awards! You have been granted Administrator access to manage the evaluation platform.</p>
+          
+          <div style="background: #f1f5f9; padding: 20px; border-radius: 8px; margin: 24px 0; border-left: 4px solid #667eea;">
+            <h3 style="color: #334155; margin-top: 0; font-size: 18px;">Full Platform Access</h3>
+            <ul style="color: #475569; margin: 0; padding-left: 20px;">
+              <li>Manage startups, jurors, and admins</li>
+              <li>Configure cohort settings and rounds</li>
+              <li>View all evaluations and reports</li>
+              <li>Invite and manage other administrators</li>
+              <li>Monitor evaluation progress and communication</li>
+            </ul>
+          </div>
+          
+          <p>Click the button below to set up your account and access the admin dashboard.</p>
+          
+          <p style="color: #dc2626; font-weight: 500;">⚠️ This invitation expires on <strong>{{invitation_expires_at}}</strong></p>
+        `,
+        ctaText: 'Activate Admin Account',
         ctaLink: '{{invitation_link}}'
       })
     },
