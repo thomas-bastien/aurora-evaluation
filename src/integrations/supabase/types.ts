@@ -272,6 +272,54 @@ export type Database = {
         }
         Relationships: []
       }
+      community_managers: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          invitation_expires_at: string | null
+          invitation_sent_at: string | null
+          invitation_token: string | null
+          job_title: string | null
+          linkedin_url: string | null
+          name: string
+          organization: string | null
+          permissions: Json | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          invitation_expires_at?: string | null
+          invitation_sent_at?: string | null
+          invitation_token?: string | null
+          job_title?: string | null
+          linkedin_url?: string | null
+          name: string
+          organization?: string | null
+          permissions?: Json | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          invitation_expires_at?: string | null
+          invitation_sent_at?: string | null
+          invitation_token?: string | null
+          job_title?: string | null
+          linkedin_url?: string | null
+          name?: string
+          organization?: string | null
+          permissions?: Json | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       email_communications: {
         Row: {
           body: string
@@ -1256,6 +1304,30 @@ export type Database = {
           },
         ]
       }
+      user_roles: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
       vc_sessions: {
         Row: {
           created_at: string
@@ -1380,6 +1452,17 @@ export type Database = {
         Args: { round_name: string; startup_uuid: string }
         Returns: string
       }
+      get_user_role: {
+        Args: { _user_id: string }
+        Returns: Database["public"]["Enums"]["app_role"]
+      }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
       update_startup_status_for_round: {
         Args: { new_status: string; round_name: string; startup_uuid: string }
         Returns: undefined
@@ -1394,6 +1477,7 @@ export type Database = {
       }
     }
     Enums: {
+      app_role: "admin" | "cm" | "vc"
       communication_stage:
         | "juror_onboarding"
         | "assignment_notification"
@@ -1536,6 +1620,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      app_role: ["admin", "cm", "vc"],
       communication_stage: [
         "juror_onboarding",
         "assignment_notification",

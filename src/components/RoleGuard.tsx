@@ -7,7 +7,7 @@ import { useViewMode } from '@/contexts/ViewModeContext';
 
 interface RoleGuardProps {
   children: React.ReactNode;
-  allowedRoles: ('admin' | 'vc')[];
+  allowedRoles: ('admin' | 'vc' | 'cm')[];
   fallbackRoute?: string;
 }
 

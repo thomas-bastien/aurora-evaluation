@@ -34,6 +34,7 @@ import {
 
 const Dashboard = () => {
   const { profile, refreshProfile } = useUserProfile();
+  const userRole = profile?.role as 'admin' | 'vc' | 'cm' | undefined;
   const { cohortSettings } = useCohortSettings();
   const navigate = useNavigate();
   const { viewMode, impersonatedJurorId } = useViewMode();
@@ -396,7 +397,7 @@ const Dashboard = () => {
             cohortName={cohortSettings?.cohort_name}
             deadlineInfo={dashboardData.deadlineInfo}
             nextMilestone={dashboardData.nextMilestone}
-            userRole={profile?.role}
+            userRole={userRole}
           />
         </div>
 

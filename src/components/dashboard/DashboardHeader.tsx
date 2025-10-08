@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuLabel, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuGroup } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
-import { Bell, Search, Settings, User, ChevronDown, Building, Users, LogOut, Network, Eye, Shield, CheckCircle } from "lucide-react";
+import { Bell, Search, Settings, User, ChevronDown, Building, Users, LogOut, Network, Eye, Shield, CheckCircle, UserCog } from "lucide-react";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -123,6 +123,16 @@ export const DashboardHeader = () => {
                     <Users className="w-4 h-4 mr-2" />
                     Jury
                   </DropdownMenuItem>
+                  {(profile?.role === 'admin' || profile?.role === 'cm') && <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuLabel className="text-xs text-muted-foreground px-2">
+                      Team Management
+                    </DropdownMenuLabel>
+                    <DropdownMenuItem onClick={() => navigate('/community-managers')} className="cursor-pointer">
+                      <UserCog className="w-4 h-4 mr-2" />
+                      Community Managers
+                    </DropdownMenuItem>
+                  </>}
                 </DropdownMenuContent>
               </DropdownMenu>
               

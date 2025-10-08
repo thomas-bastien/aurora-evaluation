@@ -19,6 +19,8 @@ import VCProfile from "./pages/VCProfile";
 import VCsList from "./pages/VCsList";
 import JurorsList from "./pages/JurorsList";
 import JurorProfile from "./pages/JurorProfile";
+import CommunityManagersList from "./pages/CommunityManagersList";
+import CMSignup from "./pages/CMSignup";
 import Selection from "./pages/Selection";
 import SelectionMatchmaking from "./pages/SelectionMatchmaking";
 import SessionManagement from "./pages/SessionManagement";
@@ -88,6 +90,7 @@ const App = () => (
               </ProtectedRoute>
             } />
             <Route path="/test-signup" element={<TestSignup />} />
+            <Route path="/cm-signup" element={<CMSignup />} />
             <Route path="/dashboard" element={
               <ProtectedRoute>
                 <Dashboard />
@@ -113,6 +116,13 @@ const App = () => (
                 <JurorsList />
               </ProtectedRoute>
             } />
+            <Route path="/community-managers" element={
+              <ProtectedRoute>
+                <RoleGuard allowedRoles={['admin']}>
+                  <CommunityManagersList />
+                </RoleGuard>
+              </ProtectedRoute>
+            } />
             <Route path="/juror/:id" element={
               <ProtectedRoute>
                 <JurorProfile />
@@ -135,14 +145,14 @@ const App = () => (
             } />
             <Route path="/selection" element={
               <ProtectedRoute>
-                <RoleGuard allowedRoles={['admin']}>
+                <RoleGuard allowedRoles={['admin', 'cm']}>
                   <Selection />
                 </RoleGuard>
               </ProtectedRoute>
             } />
             <Route path="/selection/matchmaking" element={
               <ProtectedRoute>
-                <RoleGuard allowedRoles={['admin']} fallbackRoute="/dashboard">
+                <RoleGuard allowedRoles={['admin', 'cm']} fallbackRoute="/dashboard">
                   <SelectionMatchmaking />
                 </RoleGuard>
               </ProtectedRoute>
@@ -159,21 +169,21 @@ const App = () => (
             } />
             <Route path="/matchmaking" element={
               <ProtectedRoute>
-                <RoleGuard allowedRoles={['admin']}>
+                <RoleGuard allowedRoles={['admin', 'cm']}>
                   <Matchmaking />
                 </RoleGuard>
               </ProtectedRoute>
             } />
             <Route path="/cohort-settings" element={
               <ProtectedRoute>
-                <RoleGuard allowedRoles={['admin']}>
+                <RoleGuard allowedRoles={['admin', 'cm']}>
                   <CohortSettings />
                 </RoleGuard>
               </ProtectedRoute>
             } />
             <Route path="/email-management" element={
               <ProtectedRoute>
-                <RoleGuard allowedRoles={['admin']}>
+                <RoleGuard allowedRoles={['admin', 'cm']}>
                   <EmailManagementPage />
                 </RoleGuard>
               </ProtectedRoute>
