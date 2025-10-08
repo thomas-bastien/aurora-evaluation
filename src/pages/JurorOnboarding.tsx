@@ -164,9 +164,6 @@ const JurorOnboarding = () => {
     }
   };
 
-  const handleSkip = () => {
-    navigate('/dashboard');
-  };
 
   if (!user || !isOnboarding || dataLoading) {
     return (
@@ -322,21 +319,20 @@ const JurorOnboarding = () => {
               </div>
             </div>
 
-            <div className="flex gap-4 pt-4">
-              <Button type="submit" disabled={loading} className="flex-1">
-                {loading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Completing Setup...
-                  </>
-                ) : (
-                  'Complete Setup'
-                )}
-              </Button>
-              <Button type="button" variant="outline" onClick={handleSkip}>
-                Skip for Now
-              </Button>
-            </div>
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={loading}
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Completing Setup...
+                </>
+              ) : (
+                'Complete Setup'
+              )}
+            </Button>
           </form>
         </CardContent>
       </Card>

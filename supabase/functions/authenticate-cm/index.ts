@@ -85,6 +85,7 @@ const handler = async (req: Request): Promise<Response> => {
     const existingUser = existingUsers.users.find(user => user.email === cmData.email);
 
     let userId: string;
+    let isNewUser = false;
 
     if (existingUser) {
       console.log("Existing user found:", existingUser.id);
@@ -115,6 +116,7 @@ const handler = async (req: Request): Promise<Response> => {
       }
     } else {
       console.log("Creating new user account");
+      isNewUser = true;
       
       const tempPassword = crypto.randomUUID();
       
@@ -168,8 +170,24 @@ const handler = async (req: Request): Promise<Response> => {
       }
     }
 
+    // Determine if onboarding is needed
+    let needsOnboarding = isNewUser;
+    
+    if (!needsOnboarding) {
+      // Check if existing user has completed their profile
+      const hasCompletedProfile = !!(
+        cmData.job_title ||
+        cmData.organization ||
+        cmData.linkedin_url
+      );
+      needsOnboarding = !hasCompletedProfile;
+    }
+
     const baseUrl = Deno.env.get('FRONTEND_URL') || req.headers.get('origin') || '';
-    const redirectUrl = new URL('/dashboard', baseUrl);
+    const redirectPath = needsOnboarding ? '/cm-onboarding?onboarding=true' : '/dashboard';
+    const redirectUrl = new URL(redirectPath, baseUrl);
+    
+    console.log("Redirecting to:", redirectUrl.toString(), "needsOnboarding:", needsOnboarding);
     
     const { data: sessionData, error: sessionError } = await supabaseAdmin.auth.admin.generateLink({
       type: 'magiclink',
