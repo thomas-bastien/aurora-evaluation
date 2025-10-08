@@ -475,6 +475,39 @@ const getDefaultContentByCategory = (category?: string) => {
         ctaText: 'Schedule Your Pitch',
         ctaLink: '{{calendly_link}}'
       })
+    },
+
+    'password-reset': {
+      subject: 'Reset Your Aurora Password',
+      body: createProfessionalEmailTemplate({
+        title: 'Password Reset Request',
+        body: `
+          <p>Hello <strong>{{user_name}}</strong>,</p>
+          <p>We received a request to reset the password for your Aurora account (<strong>{{user_email}}</strong>).</p>
+          
+          <div style="background: #f0f9ff; padding: 20px; border-radius: 8px; margin: 24px 0; border-left: 4px solid #0ea5e9;">
+            <h3 style="color: #0c4a6e; margin-top: 0; font-size: 18px;">🔐 Security Notice</h3>
+            <p style="color: #0369a1; margin: 0;">This link will expire in <strong>{{expiration_time}}</strong>. After that, you'll need to request a new reset link.</p>
+          </div>
+          
+          <p>Click the button below to choose a new password:</p>
+        `,
+        ctaText: 'Reset Password',
+        ctaLink: '{{reset_link}}'
+      }) + `
+        <div style="background: #fef3c7; padding: 16px; border-radius: 8px; margin: 24px 30px; border-left: 4px solid #f59e0b;">
+          <p style="color: #92400e; margin: 0; font-size: 14px;">
+            <strong>⚠️ Didn't request this?</strong><br>
+            If you didn't request a password reset, you can safely ignore this email. Your password will remain unchanged.
+          </p>
+        </div>
+        <div style="background: white; padding: 0 30px;">
+          <p style="color: #64748b; font-size: 14px; margin-top: 24px;">
+            For security reasons, this link can only be used once. If you need to reset your password again, please request a new reset link.
+          </p>
+        </div>
+      </div>
+    </div>`
     }
   };
   
