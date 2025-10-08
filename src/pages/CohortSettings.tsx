@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Calendar, Save, Download, Trash2 } from 'lucide-react';
+import { ArrowLeft, Calendar, Save, Download, Trash2, UserCog } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,6 +17,7 @@ import { CohortResetConfirmationModal } from '@/components/cohort/CohortResetCon
 import { useCohortReset } from '@/hooks/useCohortReset';
 import { MatchmakingConfigCard } from '@/components/cohort/MatchmakingConfigCard';
 import { Settings } from 'lucide-react';
+import CMManagementTab from '@/components/cm/CMManagementTab';
 export default function CohortSettings() {
   const navigate = useNavigate();
   const {
@@ -118,6 +119,10 @@ export default function CohortSettings() {
             <Settings className="w-4 h-4" />
             Matchmaking Scoring
           </TabsTrigger>
+          <TabsTrigger value="team" className="flex items-center gap-2">
+            <UserCog className="w-4 h-4" />
+            Team Management
+          </TabsTrigger>
           <TabsTrigger value="export" className="flex items-center gap-2">
             <Download className="w-4 h-4" />
             Zoho Export
@@ -205,6 +210,10 @@ export default function CohortSettings() {
 
         <TabsContent value="matchmaking">
           <MatchmakingConfigCard />
+        </TabsContent>
+
+        <TabsContent value="team">
+          <CMManagementTab />
         </TabsContent>
 
         <TabsContent value="export">

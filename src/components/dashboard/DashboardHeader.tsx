@@ -123,16 +123,6 @@ export const DashboardHeader = () => {
                     <Users className="w-4 h-4 mr-2" />
                     Jury
                   </DropdownMenuItem>
-                  {(profile?.role === 'admin' || profile?.role === 'cm') && <>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuLabel className="text-xs text-muted-foreground px-2">
-                      Team Management
-                    </DropdownMenuLabel>
-                    <DropdownMenuItem onClick={() => navigate('/community-managers')} className="cursor-pointer">
-                      <UserCog className="w-4 h-4 mr-2" />
-                      Community Managers
-                    </DropdownMenuItem>
-                  </>}
                 </DropdownMenuContent>
               </DropdownMenu>
               
