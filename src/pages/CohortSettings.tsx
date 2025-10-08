@@ -89,7 +89,11 @@ export default function CohortSettings() {
     queryFn: async () => {
       const { data, error } = await supabase.from('community_managers').select('*').order('created_at', { ascending: false });
       if (error) throw error;
-      return data || [];
+      // Transform permissions from Json to typed object
+      return (data || []).map(cm => ({
+        ...cm,
+        permissions: cm.permissions as { can_manage_startups: boolean; can_manage_jurors: boolean; can_invite_cms: boolean; }
+      }));
     }
   });
 
