@@ -901,6 +901,39 @@ export type Database = {
         }
         Relationships: []
       }
+      role_change_audit: {
+        Row: {
+          changed_by: string
+          created_at: string | null
+          id: string
+          new_role: Database["public"]["Enums"]["app_role"]
+          permissions_granted: Json | null
+          previous_role: Database["public"]["Enums"]["app_role"]
+          reason: string | null
+          user_id: string
+        }
+        Insert: {
+          changed_by: string
+          created_at?: string | null
+          id?: string
+          new_role: Database["public"]["Enums"]["app_role"]
+          permissions_granted?: Json | null
+          previous_role: Database["public"]["Enums"]["app_role"]
+          reason?: string | null
+          user_id: string
+        }
+        Update: {
+          changed_by?: string
+          created_at?: string | null
+          id?: string
+          new_role?: Database["public"]["Enums"]["app_role"]
+          permissions_granted?: Json | null
+          previous_role?: Database["public"]["Enums"]["app_role"]
+          reason?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       rounds: {
         Row: {
           completed_at: string | null

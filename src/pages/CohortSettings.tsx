@@ -20,6 +20,7 @@ import { CMFormModal } from '@/components/cm-management/CMFormModal';
 import { CMsTable } from '@/components/cm-management/CMsTable';
 import { CMCSVUploadModal } from '@/components/cm-management/CMCSVUploadModal';
 import { CMDraftModal } from '@/components/cm-management/CMDraftModal';
+import { RolePromotionDialog } from '@/components/cm-management/RolePromotionDialog';
 import { downloadCMTemplate } from '@/utils/cmsCsvTemplate';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -45,14 +46,17 @@ export default function CohortSettings() {
   const [cmDraftData, setCmDraftData] = useState<any[]>([]);
   const [editingCM, setEditingCM] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [roleFilter, setRoleFilter] = useState<string>('all');
+  const [promotionDialogOpen, setPromotionDialogOpen] = useState(false);
+  const [userToPromote, setUserToPromote] = useState<any>(null);
 
   useEffect(() => {
-    if (userProfile && userProfile.role !== 'admin') {
+    if (userProfile && !['admin', 'cm'].includes(userProfile.role)) {
       navigate('/dashboard');
       toast({
         variant: 'destructive',
         title: 'Access Denied',
-        description: 'Only administrators can access cohort settings'
+        description: 'Only administrators and community managers can access settings'
       });
     }
   }, [userProfile, navigate, toast]);
@@ -83,17 +87,86 @@ export default function CohortSettings() {
     }
   };
 
-  // CM Management
-  const { data: cms = [] } = useQuery({
-    queryKey: ['community-managers'],
+  // Unified User Management - Fetch ALL users
+  const { data: allUsers = [] } = useQuery({
+    queryKey: ['all-platform-users'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('community_managers').select('*').order('created_at', { ascending: false });
-      if (error) throw error;
-      // Transform permissions from Json to typed object
-      return (data || []).map(cm => ({
-        ...cm,
-        permissions: cm.permissions as { can_manage_startups: boolean; can_manage_jurors: boolean; can_invite_cms: boolean; }
-      }));
+      // Fetch all user roles
+      const { data: userRolesData, error: rolesError } = await supabase
+        .from('user_roles')
+        .select('user_id, role');
+      
+      if (rolesError) throw rolesError;
+
+      // Fetch all jurors
+      const { data: jurorsData, error: jurorsError } = await supabase
+        .from('jurors')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (jurorsError) throw jurorsError;
+
+      // Fetch all community managers
+      const { data: cmsData, error: cmsError } = await supabase
+        .from('community_managers')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (cmsError) throw cmsError;
+
+      // Create a map of user roles
+      const rolesMap = new Map(userRolesData?.map(r => [r.user_id, r.role]) || []);
+
+      // Merge and normalize data
+      const unifiedUsers = [];
+
+      // Add jurors
+      for (const juror of jurorsData || []) {
+        const role = juror.user_id ? (rolesMap.get(juror.user_id) || 'vc') : 'vc';
+        unifiedUsers.push({
+          id: juror.id,
+          user_id: juror.user_id,
+          name: juror.name,
+          email: juror.email,
+          organization: juror.company,
+          job_title: juror.job_title,
+          linkedin_url: juror.linkedin_url,
+          invitation_sent_at: juror.invitation_sent_at,
+          invitation_expires_at: juror.invitation_expires_at,
+          role: role as 'admin' | 'cm' | 'vc',
+          source_table: 'jurors' as const,
+          permissions: {
+            can_manage_startups: false,
+            can_manage_jurors: false,
+            can_invite_cms: false
+          }
+        });
+      }
+
+      // Add community managers (exclude duplicates if they're also jurors)
+      for (const cm of cmsData || []) {
+        const role = cm.user_id ? (rolesMap.get(cm.user_id) || 'cm') : 'cm';
+        // Only add if not already added as juror
+        const existingUser = unifiedUsers.find(u => u.user_id && u.user_id === cm.user_id);
+        if (!existingUser) {
+          unifiedUsers.push({
+            id: cm.id,
+            user_id: cm.user_id,
+            name: cm.name,
+            email: cm.email,
+            organization: cm.organization,
+            job_title: cm.job_title,
+            linkedin_url: cm.linkedin_url,
+            invitation_sent_at: cm.invitation_sent_at,
+            invitation_expires_at: cm.invitation_expires_at,
+            role: role as 'admin' | 'cm' | 'vc',
+            source_table: 'community_managers' as const,
+            permissions: cm.permissions as { can_manage_startups: boolean; can_manage_jurors: boolean; can_invite_cms: boolean; }
+          });
+        }
+      }
+
+      return unifiedUsers;
     }
   });
 
@@ -139,19 +212,116 @@ export default function CohortSettings() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['community-managers'] });
+      queryClient.invalidateQueries({ queryKey: ['all-platform-users'] });
       toast({ title: 'Success', description: 'Invitation sent successfully' });
     }
   });
 
-  const filteredCMs = cms.filter((cm: any) =>
-    cm.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    cm.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    cm.organization?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const promoteToOMMutation = useMutation({
+    mutationFn: async ({ 
+      userId, 
+      jurorId, 
+      jurorData,
+      permissions 
+    }: { 
+      userId: string; 
+      jurorId: string; 
+      jurorData: any;
+      permissions: { can_manage_startups: boolean; can_manage_jurors: boolean; can_invite_cms: boolean; }
+    }) => {
+      // Get current user for audit
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
 
-  if (isLoading || profileLoading) return <LoadingModal open={true} title="Loading cohort settings..." />;
-  if (userProfile?.role !== 'admin') return null;
+      // Step 1: Update role in user_roles table
+      const { error: roleError } = await supabase
+        .from('user_roles')
+        .update({ role: 'cm' })
+        .eq('user_id', userId);
+      
+      if (roleError) throw roleError;
+
+      // Step 2: Create community_managers record
+      const { error: cmError } = await supabase
+        .from('community_managers')
+        .insert({
+          user_id: userId,
+          name: jurorData.name,
+          email: jurorData.email,
+          organization: jurorData.organization,
+          job_title: jurorData.job_title,
+          linkedin_url: jurorData.linkedin_url,
+          permissions: permissions
+        });
+      
+      if (cmError) throw cmError;
+
+      // Step 3: Log to audit table
+      const { error: auditError } = await supabase
+        .from('role_change_audit')
+        .insert({
+          user_id: userId,
+          changed_by: user.id,
+          previous_role: 'vc',
+          new_role: 'cm',
+          permissions_granted: permissions,
+          reason: 'Promoted from Juror to Community Manager'
+        });
+      
+      if (auditError) {
+        console.error('Failed to log audit entry:', auditError);
+        // Don't throw - audit log failure shouldn't block promotion
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['all-platform-users'] });
+      setPromotionDialogOpen(false);
+      setUserToPromote(null);
+      toast({ 
+        title: 'Success', 
+        description: 'User promoted to Community Manager successfully' 
+      });
+    },
+    onError: (error) => {
+      console.error('Promotion error:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Failed to promote user. Please try again.'
+      });
+    }
+  });
+
+  const filteredUsers = allUsers.filter((user: any) => {
+    // Search filter
+    const matchesSearch = user.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      user.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      user.organization?.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    // Role filter
+    const matchesRole = roleFilter === 'all' || user.role === roleFilter;
+    
+    return matchesSearch && matchesRole;
+  });
+
+  const handlePromoteUser = (user: any) => {
+    setUserToPromote(user);
+    setPromotionDialogOpen(true);
+  };
+
+  const handlePromoteConfirm = (permissions: { can_manage_startups: boolean; can_manage_jurors: boolean; can_invite_cms: boolean }) => {
+    if (userToPromote && userToPromote.user_id) {
+      promoteToOMMutation.mutate({
+        userId: userToPromote.user_id,
+        jurorId: userToPromote.id,
+        jurorData: userToPromote,
+        permissions
+      });
+    }
+  };
+
+  if (isLoading || profileLoading) return <LoadingModal open={true} title="Loading settings..." />;
+  if (userProfile && !['admin', 'cm'].includes(userProfile.role)) return null;
 
   return (
     <div className="container mx-auto py-6 px-4">
@@ -172,7 +342,7 @@ export default function CohortSettings() {
         <TabsList>
           <TabsTrigger value="configuration"><Calendar className="w-4 h-4 mr-2" />Configuration</TabsTrigger>
           <TabsTrigger value="matchmaking"><Settings className="w-4 h-4 mr-2" />Matchmaking</TabsTrigger>
-          <TabsTrigger value="cms"><Users className="w-4 h-4 mr-2" />Community Managers</TabsTrigger>
+          <TabsTrigger value="cms"><Users className="w-4 h-4 mr-2" />User Permissions</TabsTrigger>
           <TabsTrigger value="export"><Download className="w-4 h-4 mr-2" />Zoho Export</TabsTrigger>
         </TabsList>
 
@@ -264,19 +434,42 @@ export default function CohortSettings() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle>Community Managers</CardTitle>
-                  <CardDescription>Manage CM accounts with specific permissions</CardDescription>
+                  <CardTitle>User Permissions</CardTitle>
+                  <CardDescription>Manage all platform users and their permissions. Only admins and CMs can change permissions.</CardDescription>
                 </div>
                 <div className="flex gap-2">
                   <Button variant="outline" onClick={() => downloadCMTemplate()}><Download className="h-4 w-4 mr-2" />Template</Button>
                   <Button variant="outline" onClick={() => setCmCsvUploadOpen(true)}><Upload className="h-4 w-4 mr-2" />Upload</Button>
-                  <Button onClick={() => { setEditingCM(null); setCmFormOpen(true); }}><Plus className="h-4 w-4 mr-2" />Add CM</Button>
+                  <Button onClick={() => { setEditingCM(null); setCmFormOpen(true); }}><Plus className="h-4 w-4 mr-2" />Add User</Button>
                 </div>
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              <Input placeholder="Search..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="max-w-md" />
-              <CMsTable cms={filteredCMs} onEdit={(cm) => { setEditingCM(cm); setCmFormOpen(true); }} onDelete={(id) => deleteCMMutation.mutate(id)} onSendInvitation={(cm) => sendCMInvitationMutation.mutate(cm)} />
+              <div className="flex gap-4">
+                <Input 
+                  placeholder="Search by name, email, or organization..." 
+                  value={searchQuery} 
+                  onChange={(e) => setSearchQuery(e.target.value)} 
+                  className="max-w-md" 
+                />
+                <select 
+                  value={roleFilter} 
+                  onChange={(e) => setRoleFilter(e.target.value)}
+                  className="border rounded-md px-3 py-2"
+                >
+                  <option value="all">All Users</option>
+                  <option value="admin">Admins</option>
+                  <option value="cm">Community Managers</option>
+                  <option value="vc">Jurors</option>
+                </select>
+              </div>
+              <CMsTable 
+                cms={filteredUsers} 
+                onEdit={(cm) => { setEditingCM(cm); setCmFormOpen(true); }} 
+                onDelete={(id) => deleteCMMutation.mutate(id)} 
+                onSendInvitation={(cm) => sendCMInvitationMutation.mutate(cm)}
+                onPromote={userProfile?.role === 'admin' ? handlePromoteUser : undefined}
+              />
             </CardContent>
           </Card>
         </TabsContent>
@@ -290,7 +483,15 @@ export default function CohortSettings() {
       
       <CMFormModal open={cmFormOpen} onOpenChange={(open) => { setCmFormOpen(open); if (!open) setEditingCM(null); }} onSubmit={(data) => editingCM ? updateCMMutation.mutate({ id: editingCM.id, data }) : createCMMutation.mutate(data)} initialData={editingCM} mode={editingCM ? 'edit' : 'create'} />
       <CMCSVUploadModal open={cmCsvUploadOpen} onOpenChange={setCmCsvUploadOpen} onDataParsed={(data) => { setCmDraftData(data); setCmDraftOpen(true); }} />
-      <CMDraftModal open={cmDraftOpen} onOpenChange={setCmDraftOpen} draftData={cmDraftData} onImportComplete={() => { queryClient.invalidateQueries({ queryKey: ['community-managers'] }); setCmDraftData([]); }} />
+      <CMDraftModal open={cmDraftOpen} onOpenChange={setCmDraftOpen} draftData={cmDraftData} onImportComplete={() => { queryClient.invalidateQueries({ queryKey: ['all-platform-users'] }); setCmDraftData([]); }} />
+      
+      <RolePromotionDialog 
+        open={promotionDialogOpen}
+        onOpenChange={setPromotionDialogOpen}
+        user={userToPromote}
+        onConfirm={handlePromoteConfirm}
+        isLoading={promoteToOMMutation.isPending}
+      />
     </div>
   );
 }
