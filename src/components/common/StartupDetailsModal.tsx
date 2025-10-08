@@ -348,7 +348,7 @@ export const StartupDetailsModal = ({
                     </div>
                     <div className="text-center">
                       <div className="text-2xl font-bold text-primary">
-                        {startupDetails.totalScore || 0}
+                        {(startupDetails.totalScore || 0).toFixed(2)}
                       </div>
                       <div className="text-sm text-muted-foreground">Total Score</div>
                     </div>
