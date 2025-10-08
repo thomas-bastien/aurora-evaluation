@@ -295,17 +295,30 @@ export const getPitchingCommunicationStepData = async (): Promise<FunnelStepData
       .eq('round_id', pitchingRound.id)
       .in('status', ['selected', 'under_review', 'rejected']);
 
-    const denominator = totalPitchingStartups || 0;
-
-    // For now, assume all processed startups have been communicated
-    // This can be updated when communication tracking is implemented
-    const { count: processedStartups } = await supabase
+    // Get startups that should receive communications (selected or rejected)
+    const { data: processedStartups } = await supabase
       .from('startup_round_statuses')
-      .select('*', { count: 'exact', head: true })
+      .select('startup_id')
       .eq('round_id', pitchingRound.id)
       .in('status', ['selected', 'rejected']);
 
-    const numerator = processedStartups || 0;
+    const expectedCount = processedStartups?.length || 0;
+
+    // Get actual communications sent
+    const { data: sentCommunications } = await supabase
+      .from('email_communications')
+      .select('recipient_id')
+      .eq('recipient_type', 'startup')
+      .eq('round_name', 'pitching')
+      .in('status', ['sent', 'delivered'])
+      .in('communication_type', ['selection', 'rejection']);
+
+    // Count unique startups that have been notified
+    const uniqueNotifiedStartups = new Set(
+      sentCommunications?.map(c => c.recipient_id) || []
+    );
+    const numerator = uniqueNotifiedStartups.size;
+    const denominator = expectedCount;
     const percentage = denominator > 0 ? Math.round((numerator / denominator) * 100) : 0;
 
     return {
@@ -316,7 +329,7 @@ export const getPitchingCommunicationStepData = async (): Promise<FunnelStepData
       percentage,
       route: "/selection?round=pitching&tab=communications",
       status: percentage >= 80 ? 'completed' : percentage > 0 ? 'in-progress' : 'pending',
-      tooltip: "Completion rate = proportion of Pitching startups that have been sent their results and feedback compared to the total Pitching cohort"
+      tooltip: "Shows how many startups (selected or rejected) have been sent their Pitching results via email."
     };
   } catch (error) {
     console.error('Error fetching pitching communication data:', error);
@@ -328,7 +341,7 @@ export const getPitchingCommunicationStepData = async (): Promise<FunnelStepData
       percentage: 0,
       route: "/selection?round=pitching&tab=communications",
       status: 'pending',
-      tooltip: "Completion rate = proportion of Pitching startups that have been sent their results and feedback compared to the total Pitching cohort"
+      tooltip: "Shows how many startups (selected or rejected) have been sent their Pitching results via email."
     };
   }
 };

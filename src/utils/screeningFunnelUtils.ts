@@ -158,19 +158,10 @@ export const getSelectionStepData = async (): Promise<FunnelStepData> => {
 
 /**
  * Step 5: Results & Communication (Screening)
- * Completion % = startups communicated ÷ total startups
- * Note: This is placeholder logic - actual communication tracking would need to be implemented
+ * Completion % = startups communicated ÷ startups that need communication
  */
 export const getCommunicationStepData = async (): Promise<FunnelStepData> => {
-  // Get total startups
-  const { count: totalStartups, error: startupsError } = await supabase
-    .from('startups')
-    .select('*', { count: 'exact', head: true });
-
-  if (startupsError) throw startupsError;
-
-  // For now, we'll assume communication is complete if all startups have been processed (selected/rejected)
-  // In a real implementation, there would be a communication tracking table
+  // Get startups that should receive communications (selected or rejected)
   const { data: processedStartups, error: statusError } = await supabase
     .from('startup_round_statuses')
     .select(`
@@ -182,17 +173,37 @@ export const getCommunicationStepData = async (): Promise<FunnelStepData> => {
     .in('status', ['selected', 'rejected']);
 
   if (statusError) throw statusError;
-  const communicatedCount = processedStartups?.length || 0; // Placeholder logic
-  const totalCount = totalStartups || 0;
 
-  const percentage = totalCount > 0 ? (communicatedCount / totalCount) * 100 : 0;
+  const expectedCount = processedStartups?.length || 0;
+
+  // Get actual communications sent
+  const { data: sentCommunications, error: commError } = await supabase
+    .from('email_communications')
+    .select('recipient_id')
+    .eq('recipient_type', 'startup')
+    .eq('round_name', 'screening')
+    .in('status', ['sent', 'delivered'])
+    .in('communication_type', ['selection', 'rejection']);
+
+  if (commError) throw commError;
+
+  // Count unique startups that have been notified
+  const uniqueNotifiedStartups = new Set(
+    sentCommunications?.map(c => c.recipient_id) || []
+  );
+  const communicatedCount = uniqueNotifiedStartups.size;
+
+  // Calculate percentage based on startups that need communication
+  const percentage = expectedCount > 0 
+    ? (communicatedCount / expectedCount) * 100 
+    : 0;
 
   return {
     title: "Results & Communication",
-    description: `${communicatedCount}/${totalCount} startups notified`,
-    tooltip: "Shows how many startups have received their results and feedback.",
+    description: `${communicatedCount}/${expectedCount} startups notified`,
+    tooltip: "Shows how many startups (selected or rejected) have been sent their results via email.",
     numerator: communicatedCount,
-    denominator: totalCount,
+    denominator: expectedCount,
     percentage,
     route: "/selection?round=screening&tab=communications",
     status: percentage === 100 ? 'completed' : percentage > 0 ? 'in-progress' : 'pending'
