@@ -15,7 +15,7 @@ interface UnifiedOverviewCardProps {
   cohortName?: string;
   deadlineInfo?: string;
   nextMilestone: string;
-  userRole?: 'admin' | 'vc' | 'cm';
+  userRole?: 'admin' | 'vc';
 }
 export const UnifiedOverviewCard = ({
   totalStartups,

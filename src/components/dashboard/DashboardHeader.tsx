@@ -1,13 +1,9 @@
 import { Button } from "@/components/ui/button";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuGroup } from "@/components/ui/dropdown-menu";
-import { Badge } from "@/components/ui/badge";
-import { Bell, Search, Settings, User, ChevronDown, Building, Users, LogOut, Network, Eye, Shield, CheckCircle, UserCog } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Bell, Search, Settings, User, ChevronDown, Building, Users, LogOut, Network } from "lucide-react";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { useViewMode } from "@/contexts/ViewModeContext";
-import { useState } from "react";
-import { JurorViewSelectionModal } from "@/components/admin/JurorViewSelectionModal";
 export const DashboardHeader = () => {
   const {
     profile
@@ -18,19 +14,14 @@ export const DashboardHeader = () => {
   } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const {
-    viewMode,
-    isImpersonating,
-    switchToAdminView
-  } = useViewMode();
-  const [showJurorSelectionModal, setShowJurorSelectionModal] = useState(false);
+  
   const handleSignOut = async () => {
     await signOut();
     navigate('/auth');
   };
+  
   const isActive = (path: string) => location.pathname === path || location.pathname.startsWith(path);
-  return <>
-    <header className="bg-card border-b border-border shadow-soft">
+  return <header className="bg-card border-b border-border shadow-soft">
       <div className="max-w-7xl mx-auto px-6 py-4">
         <div className="flex items-center justify-between">
           {/* Logo and Navigation */}
@@ -51,7 +42,8 @@ export const DashboardHeader = () => {
               </a>
               
               {/* Show Selection Dropdown for Admin/CM users */}
-              {profile?.role === 'admin' && <DropdownMenu>
+              {profile?.role === 'admin' && (
+                <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <button className={`flex items-center gap-1 hover:text-primary transition-smooth ${isActive('/selection') ? 'text-primary' : 'text-muted-foreground'}`}>
                       Selection
@@ -76,10 +68,12 @@ export const DashboardHeader = () => {
                       </div>
                     </DropdownMenuItem>
                   </DropdownMenuContent>
-                </DropdownMenu>}
+                </DropdownMenu>
+              )}
               
               {/* Show Evaluate Dropdown for VC users (jurors) */}
-              {profile?.role === 'vc' && <DropdownMenu>
+              {profile?.role === 'vc' && (
+                <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <button className={`flex items-center gap-1 hover:text-primary transition-smooth ${isActive('/evaluate') ? 'text-primary' : 'text-muted-foreground'}`}>
                       Evaluate
@@ -104,7 +98,8 @@ export const DashboardHeader = () => {
                       </div>
                     </DropdownMenuItem>
                   </DropdownMenuContent>
-                </DropdownMenu>}
+                </DropdownMenu>
+              )}
               
               {/* Ecosystem Dropdown */}
               <DropdownMenu>
@@ -137,38 +132,13 @@ export const DashboardHeader = () => {
               <input type="text" placeholder="Search startups..." className="w-80 pl-10 pr-4 py-2.5 bg-muted border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-smooth" />
             </div>
             
+            <Button variant="ghost" size="icon">
+              <Bell className="w-5 h-5" />
+            </Button>
             
-            
-            
-
-            {/* View Mode Toggle (Admin Only) */}
-            {profile?.role === 'admin' && <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" className="flex items-center gap-2">
-                    <Eye className="w-4 h-4" />
-                    <span className="hidden md:inline">
-                      {viewMode === 'admin' ? 'Admin View' : 'Juror Preview'}
-                    </span>
-                    <Badge variant={viewMode === 'admin' ? 'default' : 'secondary'} className={viewMode === 'admin' ? 'bg-primary' : 'bg-warning text-warning-foreground'}>
-                      {viewMode === 'admin' ? 'Admin' : 'Preview'}
-                    </Badge>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
-                  <DropdownMenuLabel>View Mode</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={switchToAdminView} disabled={!isImpersonating} className="flex items-center gap-2">
-                    <Shield className="w-4 h-4" />
-                    Admin View (Default)
-                    {viewMode === 'admin' && <CheckCircle className="w-4 h-4 ml-auto text-primary" />}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setShowJurorSelectionModal(true)} className="flex items-center gap-2">
-                    <Eye className="w-4 h-4" />
-                    Preview as Juror...
-                    {viewMode === 'juror' && <CheckCircle className="w-4 h-4 ml-auto text-warning" />}
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>}
+            <Button variant="ghost" size="icon">
+              <Settings className="w-5 h-5" />
+            </Button>
             
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -191,9 +161,11 @@ export const DashboardHeader = () => {
                 <span className="text-xs font-medium text-primary">
                   {profile?.role === 'admin' ? 'CM' : 'Juror'}
                 </span>
-                {profile?.organization && <span className="text-xs text-muted-foreground">
+                {profile?.organization && (
+                  <span className="text-xs text-muted-foreground">
                     {profile.organization}
-                  </span>}
+                  </span>
+                )}
               </div>
             </div>
           </div>
@@ -203,10 +175,12 @@ export const DashboardHeader = () => {
             <User className="w-4 h-4 mr-2" />
             View Profile
           </DropdownMenuItem>
-          {profile?.role === 'admin' && <DropdownMenuItem onClick={() => navigate('/cohort-settings')} className="cursor-pointer">
+          {profile?.role === 'admin' && (
+            <DropdownMenuItem onClick={() => navigate('/cohort-settings')} className="cursor-pointer">
               <Settings className="w-4 h-4 mr-2" />
               Cohort Settings
-            </DropdownMenuItem>}
+            </DropdownMenuItem>
+          )}
           <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer text-destructive">
             <LogOut className="w-4 h-4 mr-2" />
             Sign Out
@@ -216,9 +190,5 @@ export const DashboardHeader = () => {
           </div>
         </div>
       </div>
-    </header>
-
-    {/* Juror Selection Modal */}
-    <JurorViewSelectionModal open={showJurorSelectionModal} onOpenChange={setShowJurorSelectionModal} />
-  </>;
+    </header>;
 };
