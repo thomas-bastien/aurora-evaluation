@@ -16,6 +16,7 @@ const JurorOnboarding = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [dataLoading, setDataLoading] = useState(true);
   const [profile, setProfile] = useState(null);
   
   const [formData, setFormData] = useState({
@@ -44,6 +45,8 @@ const JurorOnboarding = () => {
 
     // Fetch current profile
     const fetchProfile = async () => {
+      setDataLoading(true);
+      
       const { data: profileData } = await supabase
         .from('profiles')
         .select('*')
@@ -71,6 +74,8 @@ const JurorOnboarding = () => {
           calendlyLink: jurorData.calendly_link || ''
         }));
       }
+      
+      setDataLoading(false);
     };
 
     fetchProfile();
@@ -163,7 +168,7 @@ const JurorOnboarding = () => {
     navigate('/dashboard');
   };
 
-  if (!user || !isOnboarding) {
+  if (!user || !isOnboarding || dataLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
