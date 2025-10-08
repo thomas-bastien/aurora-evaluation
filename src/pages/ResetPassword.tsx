@@ -22,9 +22,9 @@ const ResetPassword = () => {
     setSuccess(false);
 
     try {
-      // Request password reset from Supabase Auth
-      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/update-password`,
+      // Request password reset via custom edge function (sends via Resend)
+      const { data, error: resetError } = await supabase.functions.invoke('send-password-reset', {
+        body: { email }
       });
 
       if (resetError) {
