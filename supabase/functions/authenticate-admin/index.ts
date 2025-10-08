@@ -104,7 +104,7 @@ const handler = async (req: Request): Promise<Response> => {
         console.log(`Created user with ID: ${userId}`);
       }
 
-      // Update profiles table if profile doesn't exist
+      // Update profiles table - create if doesn't exist, update role if it does
       const { data: existingProfile } = await supabaseAdmin
         .from('profiles')
         .select('id')
@@ -123,6 +123,21 @@ const handler = async (req: Request): Promise<Response> => {
 
         if (profileError) {
           console.error('Failed to create profile:', profileError);
+        }
+      } else {
+        // Update existing profile to admin role
+        const { error: updateError } = await supabaseAdmin
+          .from('profiles')
+          .update({
+            role: 'admin',
+            organization: adminData.organization
+          })
+          .eq('user_id', userId);
+
+        if (updateError) {
+          console.error('Failed to update profile role:', updateError);
+        } else {
+          console.log('Updated existing profile to admin role');
         }
       }
 
