@@ -200,29 +200,32 @@ const handler = async (req: Request): Promise<Response> => {
       console.log('Redirecting to dashboard');
     }
 
-    // Generate magic link session
-    console.log('Generating magic link session...');
+    // Create a temporary session for the user
+    const baseUrl = Deno.env.get('FRONTEND_URL') || req.headers.get('origin') || '';
+    const redirectUrl = new URL(redirectPath, baseUrl);
     const { data: sessionData, error: sessionError } = await supabaseAdmin.auth.admin.generateLink({
       type: 'magiclink',
-      email: adminData.email
+      email: adminData.email,
+      options: {
+        redirectTo: redirectUrl.toString()
+      }
     });
 
-    if (sessionError) {
+    if (sessionError || !sessionData.properties?.action_link) {
       console.error('Failed to generate session:', sessionError);
-      throw sessionError;
+      return new Response(
+        `<html><body><h1>Authentication Failed</h1><p>Unable to create session.</p></body></html>`,
+        { status: 500, headers: { "Content-Type": "text/html", ...corsHeaders } }
+      );
     }
 
-    // Construct final redirect URL
-    const frontendUrl = Deno.env.get('FRONTEND_URL') || 'http://localhost:5173';
-    const finalRedirectUrl = `${frontendUrl}${redirectPath}`;
-    const finalUrl = sessionData.properties.action_link.replace(/.*#/, `${finalRedirectUrl}#`);
-    
-    console.log(`Redirecting to: ${finalRedirectUrl}`);
-    
+    console.log('Magic link authentication successful, redirecting user');
+
+    // Redirect to the magic link which will authenticate the user
     return new Response(null, {
       status: 302,
       headers: {
-        'Location': finalUrl,
+        'Location': sessionData.properties.action_link,
         ...corsHeaders
       }
     });
