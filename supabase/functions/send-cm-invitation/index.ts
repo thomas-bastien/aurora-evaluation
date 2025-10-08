@@ -44,6 +44,10 @@ const handler = async (req: Request): Promise<Response> => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
+    // Set invitation expiry date (7 days from now)
+    const invitationExpiresAt = new Date();
+    invitationExpiresAt.setDate(invitationExpiresAt.getDate() + 7);
+
     // Check if CM already exists
     const { data: existingCM } = await supabaseAdmin
       .from("community_managers")
@@ -80,8 +84,6 @@ const handler = async (req: Request): Promise<Response> => {
 
       // RESEND PATH: Update existing CM with new invitation timestamps
       console.log("RESEND PATH: Updating invitation for existing CM:", existingCM.id);
-      const invitationExpiresAt = new Date();
-      invitationExpiresAt.setDate(invitationExpiresAt.getDate() + 7);
 
       const { data: updatedCM, error: updateError } = await supabaseAdmin
         .from("community_managers")
@@ -107,8 +109,6 @@ const handler = async (req: Request): Promise<Response> => {
     } else {
       // NEW CM PATH: Insert CM record with invitation token
       console.log("NEW CM PATH: Creating new CM record");
-      const invitationExpiresAt = new Date();
-      invitationExpiresAt.setDate(invitationExpiresAt.getDate() + 7);
 
       const { data: newCM, error: insertError } = await supabaseAdmin
         .from("community_managers")
