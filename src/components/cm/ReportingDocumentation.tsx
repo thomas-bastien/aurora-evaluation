@@ -412,9 +412,6 @@ export const ReportingDocumentation = ({ currentRound }: ReportingDocumentationP
 
   return (
     <div className="space-y-6">
-      {/* AI Insights Report */}
-      <AIInsightsReport currentRound={currentRound} />
-      
       {/* Real-Time Analytics */}
       <Card>
         <CardHeader>
@@ -572,6 +569,9 @@ export const ReportingDocumentation = ({ currentRound }: ReportingDocumentationP
         </CardContent>
       </Card>
 
+      {/* AI Insights Report */}
+      <AIInsightsReport currentRound={currentRound} />
+
       {/* Reports Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Evaluation Decision Report Card */}
@@ -635,36 +635,6 @@ export const ReportingDocumentation = ({ currentRound }: ReportingDocumentationP
           );
         })}
       </div>
-
-      {/* Quick Actions */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Quick Actions</CardTitle>
-          <CardDescription>Common reporting and documentation tasks</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-wrap gap-2">
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={handleExportAllData}
-              className="flex items-center gap-2"
-            >
-              <Download className="w-4 h-4" />
-              Export All Scores (CSV)
-            </Button>
-            <Button variant="outline" size="sm">
-              Email Report to Stakeholders
-            </Button>
-            <Button variant="outline" size="sm">
-              Archive {currentRound === 'screeningRound' ? 'Screening Round' : 'Pitching Round'} Data
-            </Button>
-            <Button variant="outline" size="sm">
-              Generate Executive Summary
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 };
