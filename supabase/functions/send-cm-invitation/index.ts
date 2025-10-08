@@ -112,8 +112,9 @@ const handler = async (req: Request): Promise<Response> => {
       "send-email",
       {
         body: {
-          to: email,
-          template_category: "onboarding",
+          recipientEmail: email,
+          recipientType: 'admin',
+          templateCategory: "onboarding",
           subject: "You're invited to join Aurora as a Community Manager",
           variables: emailVariables,
         },
