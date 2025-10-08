@@ -322,7 +322,7 @@ const createProfessionalEmailTemplate = (content: { title: string; body: string;
 const getDefaultContentByCategory = (category?: string) => {
   const defaults = {
     'onboarding': {
-      subject: 'Welcome to Aurora Tech Awards - Community Manager Invitation',
+      subject: 'Welcome to Aurora Tech Awards - Complete Your Registration',
       body: createProfessionalEmailTemplate({
         title: 'You\'re Invited as a Community Manager',
         body: `
@@ -330,18 +330,17 @@ const getDefaultContentByCategory = (category?: string) => {
           <p>Welcome to Aurora Tech Awards! You have been invited to join our community management team. Your role will be essential in coordinating evaluations and managing the startup selection process.</p>
           
           <div style="background: #f1f5f9; padding: 20px; border-radius: 8px; margin: 24px 0; border-left: 4px solid #667eea;">
-            <h3 style="color: #334155; margin-top: 0; font-size: 18px;">Your Responsibilities</h3>
+            <h3 style="color: #334155; margin-top: 0; font-size: 18px;">Next Steps</h3>
             <ul style="color: #475569; margin: 0; padding-left: 20px;">
-              <li>Manage juror invitations and onboarding</li>
-              <li>Coordinate startup evaluations</li>
-              <li>Monitor evaluation progress and communications</li>
-              <li>Generate reports and insights</li>
+              <li>Complete your community manager profile</li>
+              <li>Review platform features and responsibilities</li>
+              <li>Begin managing jurors and evaluations</li>
             </ul>
           </div>
           
           <p style="color: #dc2626; font-weight: 500;">⚠️ This invitation expires on <strong>{{invitation_expires_at}}</strong></p>
         `,
-        ctaText: 'Access Platform',
+        ctaText: 'Complete Registration',
         ctaLink: '{{invitation_link}}'
       })
     },

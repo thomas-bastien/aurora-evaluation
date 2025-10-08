@@ -14,175 +14,192 @@ const handler = async (req: Request): Promise<Response> => {
 
   try {
     const url = new URL(req.url);
-    const token = url.searchParams.get("token");
+    let token = url.searchParams.get("token");
 
     if (!token) {
-      console.error("No token provided in request");
-      return new Response("Missing invitation token", { status: 400 });
+      return new Response(
+        `<html><body><h1>Invalid invitation link</h1><p>No token provided.</p></body></html>`,
+        { status: 400, headers: { "Content-Type": "text/html", ...corsHeaders } }
+      );
     }
 
-    // Clean and validate token
-    const cleanToken = token.trim();
+    // Clean up URL encoding artifacts
+    token = token.replace(/^3D/i, '');
+    
+    // Validate UUID format
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    if (!uuidRegex.test(cleanToken)) {
-      console.error("Invalid token format:", cleanToken);
-      return new Response("Invalid token format", { status: 400 });
+    if (!uuidRegex.test(token)) {
+      console.error("Invalid token format:", token);
+      return new Response(
+        `<html><body><h1>Invalid invitation link</h1><p>Token format is invalid.</p></body></html>`,
+        { status: 400, headers: { "Content-Type": "text/html", ...corsHeaders } }
+      );
     }
 
-    console.log("Authenticating CM with token:", cleanToken);
+    console.log("Processing CM magic link authentication with token:", token);
 
     const supabaseAdmin = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    // Validate token and get CM data
-    const { data: cm, error: cmError } = await supabaseAdmin
+    // Validate token
+    const { data: cmData, error: tokenError } = await supabaseAdmin
       .from("community_managers")
       .select("*")
-      .eq("invitation_token", cleanToken)
+      .eq("invitation_token", token)
       .maybeSingle();
 
-    if (cmError) {
-      console.error("Error fetching CM:", cmError);
-      return new Response("Database error", { status: 500 });
+    console.log("Token validation result:", { found: !!cmData, error: tokenError?.message });
+
+    if (tokenError) {
+      console.error("Database error during token validation:", tokenError);
+      return new Response(
+        `<html><body><h1>Database Error</h1><p>Unable to validate invitation.</p></body></html>`,
+        { status: 500, headers: { "Content-Type": "text/html", ...corsHeaders } }
+      );
     }
 
-    if (!cm) {
-      console.error("No CM found with token:", cleanToken);
-      return new Response("Invalid or expired invitation token", { status: 404 });
+    if (!cmData) {
+      return new Response(
+        `<html><body><h1>Invalid Invitation</h1><p>This invitation link is not valid.</p></body></html>`,
+        { status: 400, headers: { "Content-Type": "text/html", ...corsHeaders } }
+      );
     }
 
-    // Check if invitation expired
+    // Check if token is expired
     const now = new Date();
-    const expiresAt = new Date(cm.invitation_expires_at);
-
-    if (now > expiresAt) {
-      console.log("Invitation expired, auto-renewing...");
+    const expiryDate = new Date(cmData.invitation_expires_at);
+    
+    if (now > expiryDate) {
+      console.log("Token expired, auto-regenerating and resending...");
       
-      // Auto-renew: extend expiration by 7 days
-      const newExpiresAt = new Date();
-      newExpiresAt.setDate(newExpiresAt.getDate() + 7);
-
+      // Auto-regenerate expired token
+      const newExpirationDate = new Date();
+      newExpirationDate.setDate(newExpirationDate.getDate() + 7);
+      
       const { error: updateError } = await supabaseAdmin
         .from("community_managers")
         .update({
-          invitation_expires_at: newExpiresAt.toISOString(),
-          invitation_sent_at: new Date().toISOString()
+          invitation_sent_at: new Date().toISOString(),
+          invitation_expires_at: newExpirationDate.toISOString()
         })
-        .eq("id", cm.id);
+        .eq("id", cmData.id);
 
       if (updateError) {
-        console.error("Error renewing invitation:", updateError);
-        return new Response("Failed to renew invitation", { status: 500 });
+        console.error("Failed to regenerate token:", updateError);
+        return new Response(
+          `<html><body><h1>Invitation Expired</h1><p>This invitation has expired and we couldn't automatically renew it.</p></body></html>`,
+          { status: 400, headers: { "Content-Type": "text/html", ...corsHeaders } }
+        );
       }
 
-      // Resend invitation email
-      console.log("Resending invitation email...");
-      const { error: resendError } = await supabaseAdmin.functions.invoke(
-        "send-cm-invitation",
-        {
+      // Auto-resend invitation email
+      try {
+        await supabaseAdmin.functions.invoke("send-cm-invitation", {
           body: {
-            name: cm.name,
-            email: cm.email,
-            organization: cm.organization,
-            jobTitle: cm.job_title,
-            permissions: cm.permissions,
+            name: cmData.name,
+            email: cmData.email,
+            organization: cmData.organization,
+            jobTitle: cmData.job_title,
+            permissions: cmData.permissions,
             isResend: true
           }
-        }
-      );
-
-      if (resendError) {
-        console.error("Error resending invitation:", resendError);
+        });
+        console.log("Auto-resent invitation email successfully");
+      } catch (emailError) {
+        console.error("Error auto-resending invitation email:", emailError);
       }
 
-      return new Response("Invitation expired. We've sent you a new invitation email.", { status: 410 });
+      return new Response(
+        `<html>
+          <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px;">
+            <h1 style="color: #667eea;">Invitation Renewed!</h1>
+            <p style="font-size: 18px; color: #666;">
+              Your invitation had expired, but we've automatically renewed it and sent a fresh invitation to your email.
+            </p>
+            <p style="color: #999;">
+              Please check your email for the new invitation link.
+            </p>
+          </body>
+        </html>`,
+        { status: 200, headers: { "Content-Type": "text/html", ...corsHeaders } }
+      );
     }
-
-    console.log("Valid CM invitation found:", cm.id);
 
     // Check if user already exists with this email
-    const { data: existingUsers, error: userListError } = await supabaseAdmin.auth.admin.listUsers();
-
-    if (userListError) {
-      console.error("Error listing users:", userListError);
-      return new Response("Authentication error", { status: 500 });
-    }
-
-    const existingUser = existingUsers.users.find(u => u.email === cm.email);
+    const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers();
+    const existingUser = existingUsers.users.find(user => user.email === cmData.email);
 
     let userId: string;
+    let isNewUser = false;
 
     if (existingUser) {
       console.log("Existing user found:", existingUser.id);
       userId = existingUser.id;
-
-      // Link CM record to existing user if not already linked
-      if (!cm.user_id) {
-        const { error: linkError } = await supabaseAdmin
+      
+      // If CM record isn't linked yet, link it and clear token
+      if (!cmData.user_id) {
+        await supabaseAdmin
           .from("community_managers")
-          .update({ user_id: userId })
-          .eq("id", cm.id);
-
-        if (linkError) {
-          console.error("Error linking CM to user:", linkError);
-          return new Response("Failed to link account", { status: 500 });
-        }
-
-        console.log("Linked CM record to existing user");
+          .update({ 
+            user_id: userId,
+            invitation_token: null
+          })
+          .eq("id", cmData.id);
+        console.log("Linked existing user to CM record");
       }
     } else {
       console.log("Creating new user account");
-
-      // Generate temporary password
+      isNewUser = true;
+      
+      // Generate a temporary password for the new user
       const tempPassword = crypto.randomUUID();
-
-      const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
-        email: cm.email,
+      
+      const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+        email: cmData.email,
         password: tempPassword,
         email_confirm: true,
         user_metadata: {
-          full_name: cm.name,
-          organization: cm.organization,
-          job_title: cm.job_title
+          full_name: cmData.name,
+          organization: cmData.organization,
+          job_title: cmData.job_title,
+          role: 'cm'
         }
       });
 
-      if (createError || !newUser.user) {
-        console.error("Error creating user:", createError);
-        return new Response("Failed to create account", { status: 500 });
+      if (authError || !authData.user) {
+        console.error("Failed to create user:", authError);
+        return new Response(
+          `<html><body><h1>Account Creation Failed</h1><p>Unable to create your account.</p></body></html>`,
+          { status: 500, headers: { "Content-Type": "text/html", ...corsHeaders } }
+        );
       }
 
-      userId = newUser.user.id;
-      console.log("Created new user:", userId);
+      userId = authData.user.id;
 
-      // Link CM record to new user
-      const { error: linkError } = await supabaseAdmin
+      // Link CM record to new user and clear token
+      await supabaseAdmin
         .from("community_managers")
-        .update({ user_id: userId })
-        .eq("id", cm.id);
-
-      if (linkError) {
-        console.error("Error linking CM to new user:", linkError);
-      }
-
-      // Create profile
-      const { error: profileError } = await supabaseAdmin
-        .from("profiles")
-        .upsert({
+        .update({ 
           user_id: userId,
-          full_name: cm.name,
-          organization: cm.organization
-        });
+          invitation_token: null
+        })
+        .eq("id", cmData.id);
 
-      if (profileError) {
-        console.error("Error creating profile:", profileError);
-      }
+      // Update profile with CM info
+      await supabaseAdmin
+        .from("profiles")
+        .update({
+          organization: cmData.organization || null
+        })
+        .eq("user_id", userId);
+
+      console.log("New user created and linked to CM record");
     }
 
     // Ensure user_roles entry exists
-    const { error: roleError } = await supabaseAdmin
+    await supabaseAdmin
       .from("user_roles")
       .upsert({
         user_id: userId,
@@ -191,32 +208,60 @@ const handler = async (req: Request): Promise<Response> => {
         onConflict: "user_id,role"
       });
 
-    if (roleError) {
-      console.error("Error setting user role:", roleError);
+    // Determine redirect URL based on user profile completion status
+    let redirectPath = '/dashboard';
+    
+    if (isNewUser) {
+      // New users always go to onboarding
+      redirectPath = '/cm-onboarding?onboarding=true';
+    } else {
+      // Check if existing user needs onboarding
+      const { data: cmProfile } = await supabaseAdmin
+        .from("community_managers")
+        .select("linkedin_url, organization, job_title")
+        .eq("user_id", userId)
+        .maybeSingle();
+        
+      const needsOnboarding = cmProfile && (
+        !cmProfile.linkedin_url || 
+        !cmProfile.organization ||
+        !cmProfile.job_title
+      );
+      
+      if (needsOnboarding) {
+        redirectPath = '/cm-onboarding?onboarding=true';
+      }
     }
 
-    // Determine redirect path
-    const redirectPath = existingUser ? "/dashboard" : "/dashboard";
-
-    // Generate magic link for session
-    const frontendUrl = (Deno.env.get("FRONTEND_URL") || "http://localhost:5173").replace(/\/$/, '');
-    const { data: magicLinkData, error: magicLinkError } = await supabaseAdmin.auth.admin.generateLink({
-      type: "magiclink",
-      email: cm.email,
+    // Create a temporary session for the user
+    const baseUrl = Deno.env.get('FRONTEND_URL') || req.headers.get('origin') || '';
+    const redirectUrl = new URL(redirectPath, baseUrl);
+    const { data: sessionData, error: sessionError } = await supabaseAdmin.auth.admin.generateLink({
+      type: 'magiclink',
+      email: cmData.email,
       options: {
-        redirectTo: `${frontendUrl}${redirectPath}`
+        redirectTo: redirectUrl.toString()
       }
     });
 
-    if (magicLinkError || !magicLinkData) {
-      console.error("Error generating magic link:", magicLinkError);
-      return new Response("Failed to generate session", { status: 500 });
+    if (sessionError || !sessionData.properties?.action_link) {
+      console.error("Failed to generate session:", sessionError);
+      return new Response(
+        `<html><body><h1>Authentication Failed</h1><p>Unable to create session.</p></body></html>`,
+        { status: 500, headers: { "Content-Type": "text/html", ...corsHeaders } }
+      );
     }
 
-    console.log("Magic link generated, redirecting to:", magicLinkData.properties.action_link);
+    console.log("Magic link authentication successful, redirecting user");
 
-    // Redirect to the magic link which will authenticate and redirect
-    return Response.redirect(magicLinkData.properties.action_link, 302);
+    // Redirect to the magic link which will authenticate the user
+    return new Response(null, {
+      status: 302,
+      headers: {
+        'Location': sessionData.properties.action_link,
+        ...corsHeaders
+      }
+    });
 
   } catch (error: any) {
     console.error("Error in authenticate-cm function:", error);
