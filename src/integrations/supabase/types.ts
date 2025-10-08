@@ -14,6 +14,51 @@ export type Database = {
   }
   public: {
     Tables: {
+      admins: {
+        Row: {
+          created_at: string | null
+          email: string
+          id: string
+          invitation_expires_at: string | null
+          invitation_sent_at: string | null
+          invitation_token: string | null
+          job_title: string | null
+          linkedin_url: string | null
+          name: string
+          organization: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          email: string
+          id?: string
+          invitation_expires_at?: string | null
+          invitation_sent_at?: string | null
+          invitation_token?: string | null
+          job_title?: string | null
+          linkedin_url?: string | null
+          name: string
+          organization?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          email?: string
+          id?: string
+          invitation_expires_at?: string | null
+          invitation_sent_at?: string | null
+          invitation_token?: string | null
+          job_title?: string | null
+          linkedin_url?: string | null
+          name?: string
+          organization?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       cm_calendar_invitations: {
         Row: {
           attendee_emails: Json | null
@@ -269,54 +314,6 @@ export type Database = {
           stage_entered_at?: string
           stage_status?: Database["public"]["Enums"]["workflow_status"]
           updated_at?: string
-        }
-        Relationships: []
-      }
-      community_managers: {
-        Row: {
-          created_at: string
-          email: string
-          id: string
-          invitation_expires_at: string | null
-          invitation_sent_at: string | null
-          invitation_token: string | null
-          job_title: string | null
-          linkedin_url: string | null
-          name: string
-          organization: string | null
-          permissions: Json | null
-          updated_at: string
-          user_id: string | null
-        }
-        Insert: {
-          created_at?: string
-          email: string
-          id?: string
-          invitation_expires_at?: string | null
-          invitation_sent_at?: string | null
-          invitation_token?: string | null
-          job_title?: string | null
-          linkedin_url?: string | null
-          name: string
-          organization?: string | null
-          permissions?: Json | null
-          updated_at?: string
-          user_id?: string | null
-        }
-        Update: {
-          created_at?: string
-          email?: string
-          id?: string
-          invitation_expires_at?: string | null
-          invitation_sent_at?: string | null
-          invitation_token?: string | null
-          job_title?: string | null
-          linkedin_url?: string | null
-          name?: string
-          organization?: string | null
-          permissions?: Json | null
-          updated_at?: string
-          user_id?: string | null
         }
         Relationships: []
       }
