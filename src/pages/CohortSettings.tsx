@@ -23,13 +23,25 @@ import { CMDraftModal } from '@/components/cm-management/CMDraftModal';
 import { downloadCMTemplate } from '@/utils/cmsCsvTemplate';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-
 export default function CohortSettings() {
   const navigate = useNavigate();
-  const { profile: userProfile, loading: profileLoading } = useUserProfile();
-  const { toast } = useToast();
-  const { cohortSettings, isLoading, updateCohortSettings, isUpdating } = useCohortSettings();
-  const { resetCohort, isResetting } = useCohortReset();
+  const {
+    profile: userProfile,
+    loading: profileLoading
+  } = useUserProfile();
+  const {
+    toast
+  } = useToast();
+  const {
+    cohortSettings,
+    isLoading,
+    updateCohortSettings,
+    isUpdating
+  } = useCohortSettings();
+  const {
+    resetCohort,
+    isResetting
+  } = useCohortReset();
   const [showResetModal, setShowResetModal] = useState(false);
   const [formData, setFormData] = useState<CohortSettingsInput>({
     cohort_name: '',
@@ -45,7 +57,6 @@ export default function CohortSettings() {
   const [cmDraftData, setCmDraftData] = useState<any[]>([]);
   const [editingCM, setEditingCM] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState('');
-
   useEffect(() => {
     if (userProfile && userProfile.role !== 'admin') {
       navigate('/dashboard');
@@ -56,7 +67,6 @@ export default function CohortSettings() {
       });
     }
   }, [userProfile, navigate, toast]);
-
   useEffect(() => {
     if (cohortSettings) {
       setFormData({
@@ -66,95 +76,143 @@ export default function CohortSettings() {
       });
     }
   }, [cohortSettings]);
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     updateCohortSettings(formData);
   };
-
   const handleInputChange = (field: keyof CohortSettingsInput, value: string | null) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
   };
-
   const handleResetConfirm = () => {
     if (cohortSettings) {
-      resetCohort({ cohortId: cohortSettings.id, cohortName: cohortSettings.cohort_name });
+      resetCohort({
+        cohortId: cohortSettings.id,
+        cohortName: cohortSettings.cohort_name
+      });
       setShowResetModal(false);
     }
   };
 
   // CM Management
-  const { data: cms = [] } = useQuery({
+  const {
+    data: cms = []
+  } = useQuery({
     queryKey: ['community-managers'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('community_managers').select('*').order('created_at', { ascending: false });
+      const {
+        data,
+        error
+      } = await supabase.from('community_managers').select('*').order('created_at', {
+        ascending: false
+      });
       if (error) throw error;
       // Transform permissions from Json to typed object
       return (data || []).map(cm => ({
         ...cm,
-        permissions: cm.permissions as { can_manage_startups: boolean; can_manage_jurors: boolean; can_invite_cms: boolean; }
+        permissions: cm.permissions as {
+          can_manage_startups: boolean;
+          can_manage_jurors: boolean;
+          can_invite_cms: boolean;
+        }
       }));
     }
   });
-
   const createCMMutation = useMutation({
     mutationFn: async (data: any) => {
-      const { error } = await supabase.from('community_managers').insert({ ...data, permissions: data.permissions || { can_manage_startups: true, can_manage_jurors: true, can_invite_cms: false } });
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['community-managers'] });
-      toast({ title: 'Success', description: 'Community Manager added successfully' });
-    }
-  });
-
-  const updateCMMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: any }) => {
-      const { error } = await supabase.from('community_managers').update(data).eq('id', id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['community-managers'] });
-      toast({ title: 'Success', description: 'CM updated successfully' });
-      setEditingCM(null);
-    }
-  });
-
-  const deleteCMMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from('community_managers').delete().eq('id', id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['community-managers'] });
-      toast({ title: 'Success', description: 'CM deleted successfully' });
-    }
-  });
-
-  const sendCMInvitationMutation = useMutation({
-    mutationFn: async (cm: any) => {
-      const { error } = await supabase.functions.invoke('send-cm-invitation', {
-        body: { cmName: cm.name, cmEmail: cm.email, organization: cm.organization, jobTitle: cm.job_title }
+      const {
+        error
+      } = await supabase.from('community_managers').insert({
+        ...data,
+        permissions: data.permissions || {
+          can_manage_startups: true,
+          can_manage_jurors: true,
+          can_invite_cms: false
+        }
       });
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['community-managers'] });
-      toast({ title: 'Success', description: 'Invitation sent successfully' });
+      queryClient.invalidateQueries({
+        queryKey: ['community-managers']
+      });
+      toast({
+        title: 'Success',
+        description: 'Community Manager added successfully'
+      });
     }
   });
-
-  const filteredCMs = cms.filter((cm: any) =>
-    cm.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    cm.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    cm.organization?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
+  const updateCMMutation = useMutation({
+    mutationFn: async ({
+      id,
+      data
+    }: {
+      id: string;
+      data: any;
+    }) => {
+      const {
+        error
+      } = await supabase.from('community_managers').update(data).eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ['community-managers']
+      });
+      toast({
+        title: 'Success',
+        description: 'CM updated successfully'
+      });
+      setEditingCM(null);
+    }
+  });
+  const deleteCMMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const {
+        error
+      } = await supabase.from('community_managers').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ['community-managers']
+      });
+      toast({
+        title: 'Success',
+        description: 'CM deleted successfully'
+      });
+    }
+  });
+  const sendCMInvitationMutation = useMutation({
+    mutationFn: async (cm: any) => {
+      const {
+        error
+      } = await supabase.functions.invoke('send-cm-invitation', {
+        body: {
+          cmName: cm.name,
+          cmEmail: cm.email,
+          organization: cm.organization,
+          jobTitle: cm.job_title
+        }
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ['community-managers']
+      });
+      toast({
+        title: 'Success',
+        description: 'Invitation sent successfully'
+      });
+    }
+  });
+  const filteredCMs = cms.filter((cm: any) => cm.name?.toLowerCase().includes(searchQuery.toLowerCase()) || cm.email?.toLowerCase().includes(searchQuery.toLowerCase()) || cm.organization?.toLowerCase().includes(searchQuery.toLowerCase()));
   if (isLoading || profileLoading) return <LoadingModal open={true} title="Loading cohort settings..." />;
   if (userProfile?.role !== 'admin') return null;
-
-  return (
-    <div className="container mx-auto py-6 px-4">
+  return <div className="container mx-auto py-6 px-4">
       <div className="flex items-center gap-4 mb-6">
         <Button variant="ghost" size="sm" onClick={() => navigate('/dashboard')}>
           <ArrowLeft className="w-4 h-4 mr-2" />
@@ -264,19 +322,25 @@ export default function CohortSettings() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle>Community Managers</CardTitle>
+                  <CardTitle>User Permissions</CardTitle>
                   <CardDescription>Manage CM accounts with specific permissions</CardDescription>
                 </div>
                 <div className="flex gap-2">
                   <Button variant="outline" onClick={() => downloadCMTemplate()}><Download className="h-4 w-4 mr-2" />Template</Button>
                   <Button variant="outline" onClick={() => setCmCsvUploadOpen(true)}><Upload className="h-4 w-4 mr-2" />Upload</Button>
-                  <Button onClick={() => { setEditingCM(null); setCmFormOpen(true); }}><Plus className="h-4 w-4 mr-2" />Add CM</Button>
+                  <Button onClick={() => {
+                  setEditingCM(null);
+                  setCmFormOpen(true);
+                }}><Plus className="h-4 w-4 mr-2" />Add CM</Button>
                 </div>
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              <Input placeholder="Search..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="max-w-md" />
-              <CMsTable cms={filteredCMs} onEdit={(cm) => { setEditingCM(cm); setCmFormOpen(true); }} onDelete={(id) => deleteCMMutation.mutate(id)} onSendInvitation={(cm) => sendCMInvitationMutation.mutate(cm)} />
+              <Input placeholder="Search..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="max-w-md" />
+              <CMsTable cms={filteredCMs} onEdit={cm => {
+              setEditingCM(cm);
+              setCmFormOpen(true);
+            }} onDelete={id => deleteCMMutation.mutate(id)} onSendInvitation={cm => sendCMInvitationMutation.mutate(cm)} />
             </CardContent>
           </Card>
         </TabsContent>
@@ -288,9 +352,22 @@ export default function CohortSettings() {
 
       {cohortSettings && <CohortResetConfirmationModal open={showResetModal} onOpenChange={setShowResetModal} cohortName={cohortSettings.cohort_name} onConfirm={handleResetConfirm} isLoading={isResetting} />}
       
-      <CMFormModal open={cmFormOpen} onOpenChange={(open) => { setCmFormOpen(open); if (!open) setEditingCM(null); }} onSubmit={(data) => editingCM ? updateCMMutation.mutate({ id: editingCM.id, data }) : createCMMutation.mutate(data)} initialData={editingCM} mode={editingCM ? 'edit' : 'create'} />
-      <CMCSVUploadModal open={cmCsvUploadOpen} onOpenChange={setCmCsvUploadOpen} onDataParsed={(data) => { setCmDraftData(data); setCmDraftOpen(true); }} />
-      <CMDraftModal open={cmDraftOpen} onOpenChange={setCmDraftOpen} draftData={cmDraftData} onImportComplete={() => { queryClient.invalidateQueries({ queryKey: ['community-managers'] }); setCmDraftData([]); }} />
-    </div>
-  );
+      <CMFormModal open={cmFormOpen} onOpenChange={open => {
+      setCmFormOpen(open);
+      if (!open) setEditingCM(null);
+    }} onSubmit={data => editingCM ? updateCMMutation.mutate({
+      id: editingCM.id,
+      data
+    }) : createCMMutation.mutate(data)} initialData={editingCM} mode={editingCM ? 'edit' : 'create'} />
+      <CMCSVUploadModal open={cmCsvUploadOpen} onOpenChange={setCmCsvUploadOpen} onDataParsed={data => {
+      setCmDraftData(data);
+      setCmDraftOpen(true);
+    }} />
+      <CMDraftModal open={cmDraftOpen} onOpenChange={setCmDraftOpen} draftData={cmDraftData} onImportComplete={() => {
+      queryClient.invalidateQueries({
+        queryKey: ['community-managers']
+      });
+      setCmDraftData([]);
+    }} />
+    </div>;
 }
