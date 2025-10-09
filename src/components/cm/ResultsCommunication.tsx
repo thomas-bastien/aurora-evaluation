@@ -71,7 +71,7 @@ export const ResultsCommunication = ({ currentRound }: ResultsCommunicationProps
   const [batchApproving, setBatchApproving] = useState(false);
   const [showBatchApprovalDialog, setShowBatchApprovalDialog] = useState(false);
   const [pendingBatchApproval, setPendingBatchApproval] = useState<{
-    type: 'selected' | 'rejected';
+    type: 'selected' | 'rejected' | 'top-100-feedback';
     count: number;
     startupIds: string[];
   } | null>(null);
@@ -444,8 +444,8 @@ The Aurora Tech Awards Team`
     toast.success('Feedback approved');
   };
 
-  const generateAllFeedback = async (type: 'selected' | 'rejected') => {
-    const startups = type === 'selected' ? selectedStartups : notSelectedStartups;
+  const generateAllFeedback = async (type: 'selected' | 'rejected' | 'top-100-feedback') => {
+    const startups = type === 'selected' || type === 'top-100-feedback' ? selectedStartups : notSelectedStartups;
     const startupsNeedingFeedback = startups.filter(s => 
       s.feedbackSummary.includes('[AI Feedback not yet generated')
     );
@@ -486,8 +486,8 @@ The Aurora Tech Awards Team`
     toast.success(`Generated feedback for ${successCount}/${startupsNeedingFeedback.length} startups`);
   };
 
-  const batchApproveFeedback = (type: 'selected' | 'rejected') => {
-    const startups = type === 'selected' ? selectedStartups : notSelectedStartups;
+  const batchApproveFeedback = (type: 'selected' | 'rejected' | 'top-100-feedback') => {
+    const startups = type === 'selected' || type === 'top-100-feedback' ? selectedStartups : notSelectedStartups;
     const startupsReadyForApproval = startups.filter(s => 
       !s.feedbackSummary.includes('[AI Feedback not yet generated') &&
       (s.feedbackStatus === 'draft' || s.feedbackStatus === 'reviewed')
@@ -578,8 +578,8 @@ The Aurora Tech Awards Team`
     }
   };
 
-  const enhanceAllFeedback = async (type: 'selected' | 'rejected') => {
-    const startups = type === 'selected' ? selectedStartups : notSelectedStartups;
+  const enhanceAllFeedback = async (type: 'selected' | 'rejected' | 'top-100-feedback') => {
+    const startups = type === 'selected' || type === 'top-100-feedback' ? selectedStartups : notSelectedStartups;
     const startupsToEnhance = startups.filter(s => 
       !s.feedbackSummary.includes('[AI Feedback not yet generated') &&
       s.feedbackStatus !== 'sent'
