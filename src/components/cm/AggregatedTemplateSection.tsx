@@ -6,7 +6,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Sparkles, Eye, Loader2, Mail, CheckCircle, TrendingUp, FileText } from "lucide-react";
+import { 
+  Sparkles, 
+  Eye, 
+  Loader2, 
+  Mail, 
+  CheckCircle, 
+  TrendingUp, 
+  FileText 
+} from "lucide-react";
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
