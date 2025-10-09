@@ -65,10 +65,10 @@ const escapeHtml = (text: string): string => {
  * Builds dynamic HTML sections for all VC evaluations
  * Handles unlimited number of VCs (not limited to 3)
  */
-const buildVCFeedbackSections = async (
+async function buildVCFeedbackSections(
   startupId: string,
   roundName: string
-): Promise<string> => {
+): Promise<string> {
   // Determine which table based on round
   const evaluationTable = roundName === 'screening' 
     ? 'screening_evaluations' 
