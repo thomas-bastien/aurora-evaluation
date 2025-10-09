@@ -1056,12 +1056,6 @@ The Aurora Tech Awards Team`
           rejectedStartups={notSelectedStartups}
           top100FeedbackStartups={selectedStartups}
           currentRound={currentRound}
-          templates={templates}
-          onTemplateUpdate={(type, newTemplate) => {
-            setTemplates(prev => prev.map(t => 
-              t.type === type ? { ...t, subject: newTemplate.subject, content: newTemplate.content } : t
-            ));
-          }}
           onBatchGenerateFeedback={generateAllFeedback}
           onBatchApproveFeedback={batchApproveFeedback}
           onBatchEnhanceFeedback={enhanceAllFeedback}
