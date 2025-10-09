@@ -76,11 +76,7 @@ const handler = async (req: Request): Promise<Response> => {
     // Determine recipients - use multiple TOs instead of CC
     const toEmails = [];
     
-    // Add admin first in test mode, then actual recipient
-    if (TEST_MODE && ADMIN_CC_EMAIL) {
-      toEmails.push(ADMIN_CC_EMAIL);
-    }
-    
+    // In test mode, only send to TEST_EMAIL (sandbox restriction)
     const actualRecipient = TEST_MODE ? TEST_EMAIL : startupEmail;
     toEmails.push(actualRecipient);
     
@@ -99,7 +95,7 @@ const handler = async (req: Request): Promise<Response> => {
     console.log(`📧 TO EMAILS ARRAY:`, JSON.stringify(toEmails));
     
     if (TEST_MODE) {
-      console.log(`🧪 SANDBOX MODE: Redirecting email from ${startupEmail} to ${TEST_EMAIL}, additional TO: ${ADMIN_CC_EMAIL}`);
+      console.log(`🧪 SANDBOX MODE: Redirecting email from ${startupEmail} to ${TEST_EMAIL}`);
     }
 
     const subject = "🚀 Time to Schedule Your Pitch Sessions!";
@@ -156,8 +152,8 @@ const handler = async (req: Request): Promise<Response> => {
       subject: TEST_MODE ? `[SANDBOX] ${subject}` : subject,
       html: TEST_MODE ? `
         <div style="background-color: #fff3cd; border: 1px solid #ffeaa7; padding: 12px; margin-bottom: 20px; border-radius: 4px;">
-          <strong>🧪 SANDBOX MODE:</strong> This email would normally be sent to: <strong>${startupEmail}</strong> with additional TO recipients: <strong>${assignedJurors.map(j => j.email).join(', ')}</strong><br>
-          <strong>Admin TO:</strong> ${ADMIN_CC_EMAIL}
+          <strong>🧪 SANDBOX MODE:</strong> This email would normally be sent to: <strong>${startupEmail}</strong><br>
+          <strong>Assigned jurors:</strong> ${assignedJurors.map(j => j.email).join(', ')}
         </div>
         ${htmlContent}
       ` : htmlContent,
