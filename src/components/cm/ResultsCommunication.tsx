@@ -26,6 +26,7 @@ import { toast } from "sonner";
 import { StartupCommunicationConfirmationModal } from './StartupCommunicationConfirmationModal';
 import { validateStartupCommunications, type CommunicationValidationResult } from '@/utils/startupCommunicationValidation';
 import { StatusBadge } from '@/components/common/StatusBadge';
+import { AggregatedTemplateSection } from './AggregatedTemplateSection';
 
 interface StartupResult {
   id: string;
@@ -755,6 +756,19 @@ The Aurora Team`
             <div className="text-sm text-muted-foreground">Sent</div>
           </div>
         </div>
+
+        {/* Aggregated Template Section */}
+        <AggregatedTemplateSection
+          selectedStartups={selectedStartups}
+          rejectedStartups={notSelectedStartups}
+          currentRound={currentRound}
+          templates={templates}
+          onTemplateUpdate={(type, newTemplate) => {
+            setTemplates(prev => prev.map(t => 
+              t.type === type ? { ...t, subject: newTemplate.subject, content: newTemplate.content } : t
+            ));
+          }}
+        />
 
         <Tabs defaultValue="feedback" className="space-y-6">
           <TabsList>

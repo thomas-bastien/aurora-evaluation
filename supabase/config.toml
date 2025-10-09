@@ -137,3 +137,6 @@ verify_jwt = true
 
 [functions.authenticate-admin]
 verify_jwt = false
+
+[functions.enhance-batch-communication]
+verify_jwt = true
