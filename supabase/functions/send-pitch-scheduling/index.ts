@@ -6,8 +6,8 @@ const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
 // Test mode configuration from environment
 const TEST_MODE = Deno.env.get("TEST_MODE") === "true";
-const TEST_EMAIL = "lucien98@gmail.com";
-const ADMIN_CC_EMAIL = "lucien98london@gmail.com";
+const TEST_EMAIL = "delivered@resend.dev"; // Use Resend's test address
+const ADMIN_CC_EMAIL = "lucien98@gmail.com"; // Admin monitoring email
 
 // Get appropriate "From" address based on mode
 const getFromAddress = (): string => {
@@ -76,12 +76,22 @@ const handler = async (req: Request): Promise<Response> => {
     // Determine recipients - use multiple TOs instead of CC
     const toEmails = [];
     
-    // In test mode, only send to TEST_EMAIL (sandbox restriction)
-    const actualRecipient = TEST_MODE ? TEST_EMAIL : startupEmail;
-    toEmails.push(actualRecipient);
-    
-    // Add jurors in production
-    if (!TEST_MODE && assignedJurors.length > 0) {
+    if (TEST_MODE) {
+      // In test mode, send to test addresses to simulate the real flow
+      toEmails.push(TEST_EMAIL); // Startup's test email
+      
+      // Add test addresses for each juror to simulate multi-recipient
+      assignedJurors.forEach((juror, index) => {
+        toEmails.push(`delivered+juror${index}@resend.dev`);
+      });
+      
+      // Optionally add admin for visibility
+      if (ADMIN_CC_EMAIL) {
+        toEmails.push(ADMIN_CC_EMAIL);
+      }
+    } else {
+      // Production: send to actual emails
+      toEmails.push(startupEmail);
       assignedJurors.forEach(juror => {
         if (juror.email) {
           toEmails.push(juror.email);
@@ -95,7 +105,12 @@ const handler = async (req: Request): Promise<Response> => {
     console.log(`📧 TO EMAILS ARRAY:`, JSON.stringify(toEmails));
     
     if (TEST_MODE) {
-      console.log(`🧪 SANDBOX MODE: Redirecting email from ${startupEmail} to ${TEST_EMAIL}`);
+      console.log(`🧪 TEST MODE: Using Resend test addresses`);
+      console.log(`   - Startup (would be ${startupEmail}): ${TEST_EMAIL}`);
+      console.log(`   - ${assignedJurors.length} juror test addresses`);
+      if (ADMIN_CC_EMAIL) {
+        console.log(`   - Admin monitoring: ${ADMIN_CC_EMAIL}`);
+      }
     }
 
     const subject = "🚀 Time to Schedule Your Pitch Sessions!";
@@ -149,11 +164,13 @@ const handler = async (req: Request): Promise<Response> => {
     const emailResponse = await resend.emails.send({
       from: fromAddress,
       to: toEmails,
-      subject: TEST_MODE ? `[SANDBOX] ${subject}` : subject,
+      subject: TEST_MODE ? `[TEST] ${subject}` : subject,
       html: TEST_MODE ? `
         <div style="background-color: #fff3cd; border: 1px solid #ffeaa7; padding: 12px; margin-bottom: 20px; border-radius: 4px;">
-          <strong>🧪 SANDBOX MODE:</strong> This email would normally be sent to: <strong>${startupEmail}</strong><br>
-          <strong>Assigned jurors:</strong> ${assignedJurors.map(j => j.email).join(', ')}
+          <strong>🧪 TEST MODE:</strong> Using Resend test email addresses<br>
+          <strong>Actual startup:</strong> ${startupEmail}<br>
+          <strong>Actual jurors:</strong> ${assignedJurors.map(j => `${j.name} (${j.email})`).join(', ')}<br>
+          ${ADMIN_CC_EMAIL ? `<strong>Admin monitoring:</strong> ${ADMIN_CC_EMAIL}` : ''}
         </div>
         ${htmlContent}
       ` : htmlContent,
