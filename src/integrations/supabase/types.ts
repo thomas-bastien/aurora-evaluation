@@ -866,6 +866,13 @@ export type Database = {
             referencedRelation: "startups"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "pitching_evaluations_evaluator_id_fkey"
+            columns: ["evaluator_id"]
+            isOneToOne: false
+            referencedRelation: "jurors"
+            referencedColumns: ["user_id"]
+          },
         ]
       }
       profiles: {
@@ -1038,6 +1045,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "startups"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "screening_evaluations_evaluator_id_fkey"
+            columns: ["evaluator_id"]
+            isOneToOne: false
+            referencedRelation: "jurors"
+            referencedColumns: ["user_id"]
           },
         ]
       }
