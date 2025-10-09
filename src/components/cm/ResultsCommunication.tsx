@@ -71,7 +71,7 @@ export const ResultsCommunication = ({ currentRound }: ResultsCommunicationProps
   const [batchApproving, setBatchApproving] = useState(false);
   const [showBatchApprovalDialog, setShowBatchApprovalDialog] = useState(false);
   const [pendingBatchApproval, setPendingBatchApproval] = useState<{
-    type: 'selected' | 'rejected' | 'top-100-feedback';
+    type: 'top-100-feedback';
     count: number;
     startupIds: string[];
   } | null>(null);
@@ -444,9 +444,8 @@ The Aurora Tech Awards Team`
     toast.success('Feedback approved');
   };
 
-  const generateAllFeedback = async (type: 'selected' | 'rejected' | 'top-100-feedback') => {
-    const startups = type === 'selected' || type === 'top-100-feedback' ? selectedStartups : notSelectedStartups;
-    const startupsNeedingFeedback = startups.filter(s => 
+  const generateAllFeedback = async (type: 'top-100-feedback') => {
+    const startupsNeedingFeedback = selectedStartups.filter(s =>
       s.feedbackSummary.includes('[AI Feedback not yet generated')
     );
     
@@ -486,9 +485,8 @@ The Aurora Tech Awards Team`
     toast.success(`Generated feedback for ${successCount}/${startupsNeedingFeedback.length} startups`);
   };
 
-  const batchApproveFeedback = (type: 'selected' | 'rejected' | 'top-100-feedback') => {
-    const startups = type === 'selected' || type === 'top-100-feedback' ? selectedStartups : notSelectedStartups;
-    const startupsReadyForApproval = startups.filter(s => 
+  const batchApproveFeedback = (type: 'top-100-feedback') => {
+    const startupsReadyForApproval = selectedStartups.filter(s =>
       !s.feedbackSummary.includes('[AI Feedback not yet generated') &&
       (s.feedbackStatus === 'draft' || s.feedbackStatus === 'reviewed')
     );
@@ -578,9 +576,8 @@ The Aurora Tech Awards Team`
     }
   };
 
-  const enhanceAllFeedback = async (type: 'selected' | 'rejected' | 'top-100-feedback') => {
-    const startups = type === 'selected' || type === 'top-100-feedback' ? selectedStartups : notSelectedStartups;
-    const startupsToEnhance = startups.filter(s => 
+  const enhanceAllFeedback = async (type: 'top-100-feedback') => {
+    const startupsToEnhance = selectedStartups.filter(s =>
       !s.feedbackSummary.includes('[AI Feedback not yet generated') &&
       s.feedbackStatus !== 'sent'
     );
@@ -1050,10 +1047,8 @@ The Aurora Tech Awards Team`
           </div>
         </div>
 
-        {/* Aggregated Template Section */}
+        {/* Top 100 VC Feedback Section */}
         <AggregatedTemplateSection
-          selectedStartups={selectedStartups}
-          rejectedStartups={notSelectedStartups}
           top100FeedbackStartups={selectedStartups}
           currentRound={currentRound}
           onBatchGenerateFeedback={generateAllFeedback}
