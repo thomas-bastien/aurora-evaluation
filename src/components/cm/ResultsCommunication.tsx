@@ -75,6 +75,15 @@ export const ResultsCommunication = ({ currentRound }: ResultsCommunicationProps
     count: number;
     startupIds: string[];
   } | null>(null);
+  const [enhancingFeedback, setEnhancingFeedback] = useState<string | null>(null);
+  const [enhancedFeedbackPreview, setEnhancedFeedbackPreview] = useState<{
+    startupId: string;
+    startupName: string;
+    original: string;
+    enhanced: string;
+    improvements: string[];
+  } | null>(null);
+  const [showEnhancementPreview, setShowEnhancementPreview] = useState(false);
   
 
   useEffect(() => {
@@ -499,6 +508,117 @@ The Aurora Team`
     setPendingBatchApproval(null);
   };
 
+  const enhanceSingleFeedback = async (startupId: string, startupName: string) => {
+    setEnhancingFeedback(startupId);
+    
+    try {
+      const startup = startupResults.find(s => s.id === startupId);
+      if (!startup) {
+        toast.error('Startup not found');
+        return;
+      }
+
+      if (startup.feedbackSummary.includes('[AI Feedback not yet generated')) {
+        toast.error('Please generate feedback first before enhancing');
+        return;
+      }
+
+      const { data, error } = await supabase.functions.invoke('enhance-feedback-summary', {
+        body: {
+          feedbackSummary: startup.feedbackSummary,
+          startupName: startup.name,
+          roundName: currentRound === 'screeningRound' ? 'screening' : 'pitching',
+          communicationType: startup.roundStatus === 'selected' ? 'selected' : 'rejected'
+        }
+      });
+      
+      if (error) throw error;
+
+      if (!data.success || !data.enhancedFeedback) {
+        throw new Error(data.error || 'Failed to enhance feedback');
+      }
+
+      setEnhancedFeedbackPreview({
+        startupId,
+        startupName: startup.name,
+        original: startup.feedbackSummary,
+        enhanced: data.enhancedFeedback,
+        improvements: data.improvements || []
+      });
+      setShowEnhancementPreview(true);
+      
+    } catch (error: any) {
+      console.error('Error enhancing feedback:', error);
+      
+      if (error.message?.includes('rate limit')) {
+        toast.error('AI rate limit reached. Please wait a moment and try again.');
+      } else if (error.message?.includes('credits')) {
+        toast.error('AI credits exhausted. Please contact support.');
+      } else {
+        toast.error(`Failed to enhance feedback: ${error.message || 'Unknown error'}`);
+      }
+    } finally {
+      setEnhancingFeedback(null);
+    }
+  };
+
+  const enhanceAllFeedback = async (type: 'selected' | 'rejected') => {
+    const startups = type === 'selected' ? selectedStartups : notSelectedStartups;
+    const startupsToEnhance = startups.filter(s => 
+      !s.feedbackSummary.includes('[AI Feedback not yet generated') &&
+      s.feedbackStatus !== 'sent'
+    );
+    
+    if (startupsToEnhance.length === 0) {
+      toast.info('No feedback summaries available to enhance');
+      return;
+    }
+    
+    setEnhancingFeedback(`batch-${type}`);
+    let successCount = 0;
+    
+    for (const startup of startupsToEnhance) {
+      try {
+        const { data, error } = await supabase.functions.invoke('enhance-feedback-summary', {
+          body: {
+            feedbackSummary: startup.feedbackSummary,
+            startupName: startup.name,
+            roundName: currentRound === 'screeningRound' ? 'screening' : 'pitching',
+            communicationType: type
+          }
+        });
+        
+        if (!error && data.success && data.enhancedFeedback) {
+          setStartupResults(prev => prev.map(r =>
+            r.id === startup.id
+              ? { ...r, feedbackSummary: data.enhancedFeedback, feedbackStatus: 'reviewed' }
+              : r
+          ));
+          successCount++;
+        }
+      } catch (err) {
+        console.error(`Failed to enhance feedback for ${startup.name}:`, err);
+      }
+    }
+    
+    setEnhancingFeedback(null);
+    toast.success(`Enhanced feedback for ${successCount}/${startupsToEnhance.length} startups`);
+  };
+
+  const applyEnhancement = () => {
+    if (!enhancedFeedbackPreview) return;
+    
+    setStartupResults(prev => prev.map(result =>
+      result.id === enhancedFeedbackPreview.startupId
+        ? { ...result, feedbackSummary: enhancedFeedbackPreview.enhanced, feedbackStatus: 'reviewed' }
+        : result
+    ));
+    
+    toast.success(`Enhanced feedback applied for ${enhancedFeedbackPreview.startupName}`);
+    setShowEnhancementPreview(false);
+    setEnhancedFeedbackPreview(null);
+  };
+
   // Enhanced communication sending with validation
   const initiateCommunications = async (type: 'selected' | 'rejected' | 'under-review') => {
     setValidatingEmails(true);
@@ -886,8 +1006,10 @@ The Aurora Team`
           }}
           onBatchGenerateFeedback={generateAllFeedback}
           onBatchApproveFeedback={batchApproveFeedback}
+          onBatchEnhanceFeedback={enhanceAllFeedback}
           batchGenerating={batchGenerating}
           batchApproving={batchApproving}
+          batchEnhancing={enhancingFeedback?.startsWith('batch-') || false}
         />
 
         <Tabs defaultValue="feedback" className="space-y-6">
@@ -969,6 +1091,24 @@ The Aurora Team`
                         <Button size="sm" variant="outline" onClick={() => handleEditFeedback(result)}>
                           <Eye className="w-4 h-4 mr-2" />
                           Preview
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => enhanceSingleFeedback(result.id, result.name)}
+                          disabled={enhancingFeedback === result.id || result.feedbackStatus === 'sent'}
+                        >
+                          {enhancingFeedback === result.id ? (
+                            <>
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              Enhancing...
+                            </>
+                          ) : (
+                            <>
+                              <Sparkles className="h-4 w-4 mr-2" />
+                              Enhance
+                            </>
+                          )}
                         </Button>
                         <Button
                           variant="ghost"
@@ -1159,6 +1299,100 @@ The Aurora Team`
                     Approve All
                   </>
                 )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Enhancement Preview Dialog */}
+        <Dialog open={showEnhancementPreview} onOpenChange={setShowEnhancementPreview}>
+          <DialogContent className="max-w-6xl max-h-[85vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>
+                <div className="flex items-center gap-2">
+                  <Sparkles className="h-5 w-5 text-primary" />
+                  AI-Enhanced Feedback Preview
+                </div>
+              </DialogTitle>
+              <DialogDescription>
+                Review the AI-enhanced feedback for {enhancedFeedbackPreview?.startupName}. Compare the original with the enhanced version before applying.
+              </DialogDescription>
+            </DialogHeader>
+            
+            {enhancedFeedbackPreview && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-sm font-semibold">Original Feedback</h4>
+                      <Badge variant="outline">Before</Badge>
+                    </div>
+                    <Textarea 
+                      value={enhancedFeedbackPreview.original} 
+                      readOnly 
+                      rows={15}
+                      className="font-mono text-xs bg-muted/50"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      {enhancedFeedbackPreview.original.length} characters
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-sm font-semibold">Enhanced Feedback</h4>
+                      <Badge variant="default">
+                        <Sparkles className="h-3 w-3 mr-1" />
+                        After
+                      </Badge>
+                    </div>
+                    <Textarea 
+                      value={enhancedFeedbackPreview.enhanced} 
+                      readOnly 
+                      rows={15}
+                      className="font-mono text-xs bg-primary/5 border-primary/20"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      {enhancedFeedbackPreview.enhanced.length} characters
+                    </p>
+                  </div>
+                </div>
+                
+                {enhancedFeedbackPreview.improvements.length > 0 && (
+                  <Card className="bg-blue-50 border-blue-200">
+                    <CardContent className="pt-4">
+                      <div className="flex items-start gap-2">
+                        <CheckCircle className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                        <div>
+                          <p className="text-sm font-semibold text-blue-900 mb-2">AI Improvements Applied:</p>
+                          <ul className="text-sm text-blue-800 space-y-1">
+                            {enhancedFeedbackPreview.improvements.map((improvement, idx) => (
+                              <li key={idx} className="flex items-start gap-2">
+                                <span className="text-blue-600">•</span>
+                                <span>{improvement}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+            )}
+            
+            <DialogFooter>
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setShowEnhancementPreview(false);
+                  setEnhancedFeedbackPreview(null);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button onClick={applyEnhancement}>
+                <Sparkles className="h-4 w-4 mr-2" />
+                Apply Enhancement
               </Button>
             </DialogFooter>
           </DialogContent>

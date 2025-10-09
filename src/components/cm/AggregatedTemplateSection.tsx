@@ -42,8 +42,10 @@ interface AggregatedTemplateSectionProps {
   onTemplateUpdate: (type: 'selected' | 'rejected', template: { subject: string; content: string; insights?: string }) => void;
   onBatchGenerateFeedback: (type: 'selected' | 'rejected') => Promise<void>;
   onBatchApproveFeedback: (type: 'selected' | 'rejected') => void;
+  onBatchEnhanceFeedback: (type: 'selected' | 'rejected') => Promise<void>;
   batchGenerating: boolean;
   batchApproving: boolean;
+  batchEnhancing: boolean;
 }
 
 export const AggregatedTemplateSection = ({
@@ -54,8 +56,10 @@ export const AggregatedTemplateSection = ({
   onTemplateUpdate,
   onBatchGenerateFeedback,
   onBatchApproveFeedback,
+  onBatchEnhanceFeedback,
   batchGenerating,
-  batchApproving
+  batchApproving,
+  batchEnhancing
 }: AggregatedTemplateSectionProps) => {
   const [enhancing, setEnhancing] = useState<'selected' | 'rejected' | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -355,6 +359,24 @@ export const AggregatedTemplateSection = ({
                 <>
                   <Sparkles className="h-3 w-3 mr-1" />
                   Generate Missing ({stats.missingCount})
+                </>
+              )}
+            </Button>
+            <Button
+              onClick={() => onBatchEnhanceFeedback(type)}
+              disabled={batchEnhancing || stats.generatedCount === 0}
+              size="sm"
+              variant="secondary"
+            >
+              {batchEnhancing ? (
+                <>
+                  <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                  Enhancing...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="h-3 w-3 mr-1" />
+                  Enhance All ({stats.generatedCount})
                 </>
               )}
             </Button>

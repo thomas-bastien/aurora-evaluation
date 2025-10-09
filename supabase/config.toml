@@ -140,3 +140,6 @@ verify_jwt = false
 
 [functions.enhance-batch-communication]
 verify_jwt = true
+
+[functions.enhance-feedback-summary]
+verify_jwt = true
