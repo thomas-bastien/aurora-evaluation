@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import { useImpersonation } from '@/hooks/useImpersonation';
 import { normalizeRegions, normalizeVerticals, normalizeStages } from '@/utils/fieldNormalization';
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,8 +13,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Link } from 'react-router-dom';
-import { UserCheck, Building, Users, Plus, Search, Filter, Upload, Download, Edit, Trash2, Mail } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { UserCheck, Building, Users, Plus, Search, Filter, Upload, Download, Edit, Trash2, Mail, Eye } from 'lucide-react';
 import { useCommunicationWorkflow } from '@/hooks/useCommunicationWorkflow';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
@@ -53,6 +54,8 @@ interface JurorWithStatuses extends Juror {
 export default function JurorsList() {
   const [searchParams] = useSearchParams();
   const location = useLocation();
+  const navigate = useNavigate();
+  const { startImpersonation } = useImpersonation();
   const [jurors, setJurors] = useState<JurorWithStatuses[]>([]);
   const [filteredJurors, setFilteredJurors] = useState<JurorWithStatuses[]>([]);
   const [loading, setLoading] = useState(true);
@@ -524,6 +527,11 @@ export default function JurorsList() {
     }
   };
 
+  const handleViewAsJuror = (juror: Juror) => {
+    startImpersonation(juror.id, juror.name);
+    navigate('/dashboard');
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
@@ -781,6 +789,15 @@ export default function JurorsList() {
                     <TableCell>
                       {isAdmin && (
                         <div className="flex gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => { e.stopPropagation(); handleViewAsJuror(juror); }}
+                            className="h-8 w-8 p-0"
+                            title="View as Juror"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
                           <Button
                             variant="ghost"
                             size="sm"

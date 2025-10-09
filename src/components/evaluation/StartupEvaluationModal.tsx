@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { useImpersonation } from "@/hooks/useImpersonation";
 import { supabase } from "@/integrations/supabase/client";
 // Utility functions
 import { formatScore } from "@/lib/utils";
@@ -17,7 +18,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
-import { Star, Save, Send, Info, Building2, DollarSign, Users, Calendar, Globe, FileText, Video, MapPin, Linkedin, Plus, X, Edit, CheckCircle, AlertTriangle, ExternalLink, Rocket, ThumbsUp } from "lucide-react";
+import { Star, Save, Send, Info, Building2, DollarSign, Users, Calendar, Globe, FileText, Video, MapPin, Linkedin, Plus, X, Edit, CheckCircle, AlertTriangle, ExternalLink, Rocket, ThumbsUp, Eye } from "lucide-react";
 import { cn } from "@/lib/utils";
 interface StartupEvaluationModalProps {
   startup: {
@@ -517,6 +518,7 @@ export const StartupEvaluationModal = ({
   const {
     user
   } = useAuth();
+  const { isImpersonating } = useImpersonation();
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -533,6 +535,9 @@ export const StartupEvaluationModal = ({
     investment_amount: null
   });
   const [validationErrors, setValidationErrors] = useState<TextFieldValidation>({});
+
+  // Force view mode when impersonating
+  const effectiveMode = isImpersonating ? 'view' : mode;
   useEffect(() => {
     if (open && startup.evaluation_id) {
       fetchExistingEvaluation();
@@ -540,8 +545,8 @@ export const StartupEvaluationModal = ({
       // Reset state for new evaluation
       setEvaluationStatus('not_started');
       
-      // Set editing mode based on the mode prop
-      if (mode === 'view') {
+      // Set editing mode based on the effectiveMode prop (impersonation overrides mode)
+      if (effectiveMode === 'view') {
         setIsEditing(false); // Read-only view
       } else {
         setIsEditing(true); // Edit mode for new evaluations
@@ -563,7 +568,7 @@ export const StartupEvaluationModal = ({
       setIsEditing(false);
       setEvaluationStatus('not_started');
     }
-  }, [open, startup.evaluation_id, mode]); // Add mode to dependencies
+  }, [open, startup.evaluation_id, effectiveMode, isImpersonating]); // Add effectiveMode and isImpersonating to dependencies
   const fetchExistingEvaluation = async () => {
     try {
       setLoading(true);
@@ -582,10 +587,10 @@ export const StartupEvaluationModal = ({
         // Set evaluation status based on database
         setEvaluationStatus(data.status === 'submitted' ? 'submitted' : 'draft');
         
-        // Set editing mode based on the mode prop, not database status
-        if (mode === 'view') {
+        // Set editing mode based on the effectiveMode prop (impersonation overrides), not database status
+        if (effectiveMode === 'view') {
           setIsEditing(false); // Always start in view mode if explicitly requested
-        } else if (mode === 'edit') {
+        } else if (effectiveMode === 'edit') {
           setIsEditing(true); // Always start in edit mode if explicitly requested
         }
         
@@ -895,7 +900,13 @@ export const StartupEvaluationModal = ({
                 {currentRound === 'screening' ? 'Screening' : 'Pitching'} Evaluation - {startup.name}
               </DialogTitle>
               <div className="flex items-center gap-2">
-                {mode === 'view' && (
+                {isImpersonating && (
+                  <Badge variant="warning" className="flex items-center gap-1">
+                    <Eye className="w-3 h-3" />
+                    Read-Only (Viewing as Juror)
+                  </Badge>
+                )}
+                {effectiveMode === 'view' && !isImpersonating && (
                   <Badge variant="outline" className="text-xs">
                     Read Only
                   </Badge>
@@ -1332,7 +1343,7 @@ export const StartupEvaluationModal = ({
               {mode === 'view' ? 'Close' : 'Cancel'}
             </Button>
             
-            {mode !== 'view' && (
+            {effectiveMode !== 'view' && (
               <div className="flex gap-2">
                 {/* Show different buttons based on status and editing mode */}
                 {evaluationStatus === 'not_started' && (

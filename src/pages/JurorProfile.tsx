@@ -1,13 +1,15 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from '@/integrations/supabase/client';
+import { useImpersonation } from '@/hooks/useImpersonation';
+import { useUserProfile } from '@/hooks/useUserProfile';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Building2, Mail, User, MapPin, Target, AlertCircle, Linkedin, ExternalLink, ArrowLeft } from "lucide-react";
+import { Building2, Mail, User, MapPin, Target, AlertCircle, Linkedin, ExternalLink, ArrowLeft, Eye } from "lucide-react";
 import { JurorEvaluationsList } from '@/components/jurors/JurorEvaluationsList';
 import { JurorStatusBadge } from '@/components/common/JuryRoundStatusBadges';
 import { RoundProgressTab } from '@/components/jurors/RoundProgressTab';
@@ -35,10 +37,21 @@ interface Juror {
 const JurorProfile = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { profile } = useUserProfile();
+  const { startImpersonation } = useImpersonation();
   const [juror, setJuror] = useState<Juror | null>(null);
   const [progressiveStatus, setProgressiveStatus] = useState<ProgressiveJurorStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const isAdmin = profile?.role === 'admin';
+
+  const handleViewAsJuror = () => {
+    if (juror && isAdmin) {
+      startImpersonation(juror.id, juror.name);
+      navigate('/dashboard');
+    }
+  };
 
   useEffect(() => {
     const fetchJuror = async () => {
@@ -178,6 +191,17 @@ const JurorProfile = () => {
               </div>
             </div>
             <div className="flex items-center gap-4">
+              {isAdmin && (
+                <Button
+                  onClick={handleViewAsJuror}
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center gap-2"
+                >
+                  <Eye className="w-4 h-4" />
+                  View as Juror
+                </Button>
+              )}
               {juror.company && (
                 <Badge variant="secondary">{juror.company}</Badge>
               )}

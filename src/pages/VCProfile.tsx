@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserProfile } from '@/hooks/useUserProfile';
+import { useImpersonation } from '@/hooks/useImpersonation';
 import { supabase } from '@/integrations/supabase/client';
 import { formatScore } from '@/lib/utils';
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
@@ -13,7 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
-import { User, Building2, Mail, Calendar, Save, Star, Target, FileText, TrendingUp, CheckCircle, Clock, AlertCircle, ArrowLeft } from 'lucide-react';
+import { User, Building2, Mail, Calendar, Save, Star, Target, FileText, TrendingUp, CheckCircle, Clock, AlertCircle, ArrowLeft, Eye } from 'lucide-react';
 import { REGION_OPTIONS, VERTICAL_OPTIONS, STAGE_OPTIONS } from '@/constants/jurorPreferences';
 interface ProfileForm {
   full_name: string;
@@ -38,6 +39,7 @@ const VCProfile = () => {
   const {
     profile
   } = useUserProfile();
+  const { isImpersonating } = useImpersonation();
   const [saving, setSaving] = useState(false);
   const [stats, setStats] = useState<EvaluationStats>({
     total_assigned: 0,
@@ -169,6 +171,13 @@ const VCProfile = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
+
+    // Prevent submission when impersonating
+    if (isImpersonating) {
+      toast.error('Cannot save profile while viewing as juror');
+      return;
+    }
+    
     try {
       setSaving(true);
       
@@ -258,13 +267,21 @@ const VCProfile = () => {
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleSubmit} className="space-y-6">
+                  {isImpersonating && (
+                    <div className="bg-warning/10 border border-warning rounded-lg p-4 mb-4 flex items-center gap-2">
+                      <Eye className="w-5 h-5 text-warning" />
+                      <p className="text-sm text-warning-foreground">
+                        <strong>Read-Only Mode:</strong> You cannot modify this profile while viewing as a juror.
+                      </p>
+                    </div>
+                  )}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="full_name">Full Name</Label>
                       <Input id="full_name" value={formData.full_name} onChange={e => setFormData(prev => ({
                       ...prev,
                       full_name: e.target.value
-                    }))} placeholder="Enter your full name" required />
+                    }))} placeholder="Enter your full name" required disabled={isImpersonating} />
                     </div>
 
                     <div>
@@ -272,7 +289,7 @@ const VCProfile = () => {
                       <Input id="organization" value={formData.organization} onChange={e => setFormData(prev => ({
                       ...prev,
                       organization: e.target.value
-                    }))} placeholder="Your VC firm or organization" required />
+                    }))} placeholder="Your VC firm or organization" required disabled={isImpersonating} />
                     </div>
                   </div>
 
@@ -281,7 +298,7 @@ const VCProfile = () => {
                     <Input id="calendly_link" type="url" value={formData.calendly_link} onChange={e => setFormData(prev => ({
                     ...prev,
                     calendly_link: e.target.value
-                  }))} placeholder="https://calendly.com/your-link" />
+                  }))} placeholder="https://calendly.com/your-link" disabled={isImpersonating} />
                     <p className="text-sm text-muted-foreground mt-1">
                       This will be used to schedule pitch meetings with startups
                     </p>
@@ -298,6 +315,7 @@ const VCProfile = () => {
                         linkedin_url: e.target.value
                       }))} 
                       placeholder="https://linkedin.com/in/your-profile" 
+                      disabled={isImpersonating}
                     />
                     <p className="text-sm text-muted-foreground mt-1">
                       Your LinkedIn profile for networking and credibility
@@ -367,7 +385,7 @@ const VCProfile = () => {
                   </div>
 
                   <div className="flex gap-4 pt-6">
-                    <Button type="submit" disabled={saving} className="flex items-center gap-2">
+                    <Button type="submit" disabled={saving || isImpersonating} className="flex items-center gap-2">
                       <Save className="w-4 h-4" />
                       {saving ? 'Saving...' : 'Save Profile'}
                     </Button>
