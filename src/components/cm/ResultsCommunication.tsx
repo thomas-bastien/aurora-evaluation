@@ -295,6 +295,9 @@ The Aurora Evaluation Team`;
         content: currentRound === 'screeningRound'
           ? `Congratulations! Your startup has been selected to advance to the Pitching Round of our evaluation process.
 
+**Your Feedback:**
+[FEEDBACK_SUMMARY]
+
 **Next Steps:**
 • You will receive a calendar invite for your pitch session
 • Prepare a 10-minute presentation followed by Q&A
@@ -305,6 +308,9 @@ We look forward to seeing your presentation!
 Best regards,
 The Aurora Team`
           : `Congratulations! Your startup has been selected as a Finalist in our evaluation process.
+
+**Your Feedback:**
+[FEEDBACK_SUMMARY]
 
 **What this means:**
 • You are among our top selected startups
