@@ -8,7 +8,7 @@ interface StartupValidationResult {
   roundStatus: string;
   isValid: boolean;
   skipReasons: string[];
-  communicationType: 'selected' | 'rejected' | 'under-review';
+  communicationType: 'selected' | 'rejected' | 'under-review' | 'top-100-feedback';
 }
 
 interface ValidationSummary {
@@ -22,7 +22,7 @@ interface ValidationSummary {
 interface StartupCommunicationConfirmationModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  communicationType: 'selected' | 'rejected' | 'under-review' | null;
+  communicationType: 'selected' | 'rejected' | 'under-review' | 'top-100-feedback' | null;
   currentRound: 'screeningRound' | 'pitchingRound';
   validationResults: StartupValidationResult[];
   validationSummary: ValidationSummary;
@@ -65,7 +65,8 @@ export const StartupCommunicationConfirmationModal = ({
   const communicationTypeMap = {
     'selected': 'results-selected' as const,
     'rejected': 'results-rejected' as const,
-    'under-review': 'results-under-review' as const
+    'under-review': 'results-under-review' as const,
+    'top-100-feedback': 'results-selected' as const
   };
 
   return (

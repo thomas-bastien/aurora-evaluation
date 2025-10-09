@@ -21,7 +21,7 @@ interface StartupValidationResult {
   roundStatus: string;
   isValid: boolean;
   skipReasons: string[];
-  communicationType: 'selected' | 'rejected' | 'under-review';
+  communicationType: 'selected' | 'rejected' | 'under-review' | 'top-100-feedback';
 }
 
 interface ValidationSummary {
@@ -54,7 +54,7 @@ const isValidEmail = (email: string): boolean => {
  */
 export const validateStartupCommunications = async (
   startups: StartupResult[],
-  communicationType: 'selected' | 'rejected' | 'under-review',
+  communicationType: 'selected' | 'rejected' | 'under-review' | 'top-100-feedback',
   currentRound: 'screeningRound' | 'pitchingRound'
 ): Promise<CommunicationValidationResult> => {
   
@@ -125,6 +125,9 @@ export const validateStartupCommunications = async (
         break;
       case 'under-review':
         expectedStatus = 'under-review';
+        break;
+      case 'top-100-feedback':
+        expectedStatus = 'selected';
         break;
       default:
         expectedStatus = 'pending';
@@ -210,7 +213,7 @@ export const validateStartupCommunications = async (
  */
 export const validateWithTemplateRequirements = async (
   startups: StartupResult[],
-  communicationType: 'selected' | 'rejected' | 'under-review',
+  communicationType: 'selected' | 'rejected' | 'under-review' | 'top-100-feedback',
   currentRound: 'screeningRound' | 'pitchingRound',
   requireApprovedFeedback: boolean = false
 ): Promise<CommunicationValidationResult> => {

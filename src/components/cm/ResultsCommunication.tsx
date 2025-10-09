@@ -62,7 +62,7 @@ export const ResultsCommunication = ({ currentRound }: ResultsCommunicationProps
   const [showSendDialog, setShowSendDialog] = useState(false);
   const [sendingEmails, setSendingEmails] = useState(false);
   const [showConfirmationModal, setShowConfirmationModal] = useState(false);
-  const [pendingCommunicationType, setPendingCommunicationType] = useState<'selected' | 'rejected' | 'under-review' | null>(null);
+  const [pendingCommunicationType, setPendingCommunicationType] = useState<'selected' | 'rejected' | 'under-review' | 'top-100-feedback' | null>(null);
   const [validationResult, setValidationResult] = useState<CommunicationValidationResult | null>(null);
   const [validatingEmails, setValidatingEmails] = useState(false);
   const [generatingFeedback, setGeneratingFeedback] = useState<string | null>(null);
@@ -636,7 +636,7 @@ The Aurora Tech Awards Team`
   };
 
   // Enhanced communication sending with validation
-  const initiateCommunications = async (type: 'selected' | 'rejected' | 'under-review') => {
+  const initiateCommunications = async (type: 'selected' | 'rejected' | 'under-review' | 'top-100-feedback') => {
     setValidatingEmails(true);
     try {
       // Filter startups based on type
@@ -648,6 +648,32 @@ The Aurora Tech Awards Team`
         targetResults = startupResults.filter(r => r.roundStatus === 'rejected');
       } else if (type === 'under-review') {
         targetResults = startupResults.filter(r => r.roundStatus === 'under-review' || r.roundStatus === 'pending');
+      } else if (type === 'top-100-feedback') {
+        // Only include selected startups with submitted evaluations
+        targetResults = startupResults.filter(r => r.roundStatus === 'selected');
+        
+        // Check if each startup has at least 1 submitted evaluation
+        const startupsWithEvals = await Promise.all(
+          targetResults.map(async (startup) => {
+            const { count } = await supabase
+              .from('screening_evaluations')
+              .select('*', { count: 'exact', head: true })
+              .eq('startup_id', startup.id)
+              .eq('status', 'submitted');
+            
+            return { startup, hasEvaluations: (count || 0) > 0 };
+          })
+        );
+        
+        targetResults = startupsWithEvals
+          .filter(s => s.hasEvaluations)
+          .map(s => s.startup);
+          
+        if (targetResults.length === 0) {
+          toast.error('No selected startups with submitted evaluations found');
+          setValidatingEmails(false);
+          return;
+        }
       }
 
       // NEW: Check for unapproved feedback
@@ -765,7 +791,7 @@ The Aurora Tech Awards Team`
   };
 
   // Enhanced function for individual email sending with better error handling
-  const sendIndividualEmail = async (result: StartupResult, communicationType: 'selected' | 'rejected' | 'under-review') => {
+  const sendIndividualEmail = async (result: StartupResult, communicationType: 'selected' | 'rejected' | 'under-review' | 'top-100-feedback') => {
     try {
       const { data, error } = await supabase.functions.invoke('send-individual-result', {
         body: {
@@ -964,6 +990,21 @@ The Aurora Tech Awards Team`
                 >
                   {validatingEmails ? 'Validating...' : `Send to Under Review Startups (${underReviewStartups.length})`}
                 </Button>
+
+                <div className="pt-4 mt-4 border-t border-border">
+                  <div className="text-xs text-muted-foreground mb-3 px-2">
+                    <Sparkles className="w-4 h-4 inline mr-1" />
+                    Detailed VC feedback with dynamic evaluation sections
+                  </div>
+                  <Button 
+                    className="w-full" 
+                    variant="default"
+                    onClick={() => initiateCommunications('top-100-feedback')}
+                    disabled={sendingEmails || validatingEmails}
+                  >
+                    {validatingEmails ? 'Validating...' : `Send Top 100 VC Feedback (${selectedStartups.length})`}
+                  </Button>
+                </div>
                 
                 {currentRound === 'screeningRound' && (
                   <div className="pt-4 mt-4 border-t border-border">
