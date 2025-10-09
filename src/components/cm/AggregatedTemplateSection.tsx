@@ -26,16 +26,17 @@ interface CommunicationTemplate {
 interface AggregatedTemplateSectionProps {
   selectedStartups: StartupResult[];
   rejectedStartups: StartupResult[];
+  top100FeedbackStartups: StartupResult[];
   currentRound: 'screeningRound' | 'pitchingRound';
   templates: CommunicationTemplate[];
-  onTemplateUpdate: (type: 'selected' | 'rejected', template: {
+  onTemplateUpdate: (type: 'selected' | 'rejected' | 'top-100-feedback', template: {
     subject: string;
     content: string;
     insights?: string;
   }) => void;
-  onBatchGenerateFeedback: (type: 'selected' | 'rejected') => Promise<void>;
-  onBatchApproveFeedback: (type: 'selected' | 'rejected') => void;
-  onBatchEnhanceFeedback: (type: 'selected' | 'rejected') => Promise<void>;
+  onBatchGenerateFeedback: (type: 'selected' | 'rejected' | 'top-100-feedback') => Promise<void>;
+  onBatchApproveFeedback: (type: 'selected' | 'rejected' | 'top-100-feedback') => void;
+  onBatchEnhanceFeedback: (type: 'selected' | 'rejected' | 'top-100-feedback') => Promise<void>;
   batchGenerating: boolean;
   batchApproving: boolean;
   batchEnhancing: boolean;
@@ -43,6 +44,7 @@ interface AggregatedTemplateSectionProps {
 export const AggregatedTemplateSection = ({
   selectedStartups,
   rejectedStartups,
+  top100FeedbackStartups,
   currentRound,
   templates,
   onTemplateUpdate,
@@ -53,25 +55,26 @@ export const AggregatedTemplateSection = ({
   batchApproving,
   batchEnhancing
 }: AggregatedTemplateSectionProps) => {
-  const [enhancing, setEnhancing] = useState<'selected' | 'rejected' | null>(null);
+  const [enhancing, setEnhancing] = useState<'selected' | 'rejected' | 'top-100-feedback' | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
-  const [previewType, setPreviewType] = useState<'selected' | 'rejected' | null>(null);
+  const [previewType, setPreviewType] = useState<'selected' | 'rejected' | 'top-100-feedback' | null>(null);
   const [feedbackPreviewOpen, setFeedbackPreviewOpen] = useState(false);
-  const [feedbackPreviewType, setFeedbackPreviewType] = useState<'selected' | 'rejected' | null>(null);
+  const [feedbackPreviewType, setFeedbackPreviewType] = useState<'selected' | 'rejected' | 'top-100-feedback' | null>(null);
   const [enhancedInsights, setEnhancedInsights] = useState<{
     selected?: string;
     rejected?: string;
+    'top-100-feedback'?: string;
   }>({});
-  const getTemplate = (type: 'selected' | 'rejected') => {
+  const getTemplate = (type: 'selected' | 'rejected' | 'top-100-feedback') => {
     return templates.find(t => t.type === type) || {
       subject: '',
       content: ''
     };
   };
-  const handleImproveWithAI = async (type: 'selected' | 'rejected') => {
+  const handleImproveWithAI = async (type: 'selected' | 'rejected' | 'top-100-feedback') => {
     setEnhancing(type);
     try {
-      const startups = type === 'selected' ? selectedStartups : rejectedStartups;
+      const startups = type === 'selected' ? selectedStartups : type === 'rejected' ? rejectedStartups : top100FeedbackStartups;
       const startupIds = startups.map(s => s.id);
       if (startupIds.length === 0) {
         toast.error(`No ${type} startups to enhance template for`);
@@ -116,11 +119,11 @@ export const AggregatedTemplateSection = ({
       setEnhancing(null);
     }
   };
-  const handlePreview = (type: 'selected' | 'rejected') => {
+  const handlePreview = (type: 'selected' | 'rejected' | 'top-100-feedback') => {
     setPreviewType(type);
     setPreviewOpen(true);
   };
-  const handleFeedbackPreview = (type: 'selected' | 'rejected') => {
+  const handleFeedbackPreview = (type: 'selected' | 'rejected' | 'top-100-feedback') => {
     setFeedbackPreviewType(type);
     setFeedbackPreviewOpen(true);
   };
@@ -135,26 +138,51 @@ export const AggregatedTemplateSection = ({
       total: startups.length
     };
   };
-  const renderTemplateCard = (type: 'selected' | 'rejected') => {
-    const startups = type === 'selected' ? selectedStartups : rejectedStartups;
+  const renderTemplateCard = (type: 'selected' | 'rejected' | 'top-100-feedback') => {
+    const startups = type === 'selected' ? selectedStartups : type === 'rejected' ? rejectedStartups : top100FeedbackStartups;
     const template = getTemplate(type);
     const insights = enhancedInsights[type];
     const isEnhancing = enhancing === type;
+    
+    const cardConfig = {
+      'top-100-feedback': {
+        title: 'Top 100 VC Feedback',
+        description: 'Comprehensive VC evaluation feedback with detailed sections',
+        variant: 'default' as const,
+        icon: FileText
+      },
+      'selected': {
+        title: 'Selected Startups',
+        description: 'Batch template for congratulations emails',
+        variant: 'default' as const,
+        icon: Mail
+      },
+      'rejected': {
+        title: 'Rejected Startups',
+        description: 'Batch template for feedback emails',
+        variant: 'secondary' as const,
+        icon: Mail
+      }
+    };
+    
+    const config = cardConfig[type];
+    const IconComponent = config.icon;
+    
     return <Card className="flex-1">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Mail className="h-5 w-5 text-muted-foreground" />
+              <IconComponent className="h-5 w-5 text-muted-foreground" />
               <CardTitle className="text-lg">
-                {type === 'selected' ? 'Selected Startups' : 'Rejected Startups'}
+                {config.title}
               </CardTitle>
             </div>
-            <Badge variant={type === 'selected' ? 'default' : 'secondary'}>
+            <Badge variant={config.variant}>
               {startups.length} startups
             </Badge>
           </div>
           <CardDescription>
-            Batch template for {type === 'selected' ? 'congratulations' : 'feedback'} emails
+            {config.description}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -202,7 +230,7 @@ export const AggregatedTemplateSection = ({
   };
   const renderPreviewDialog = () => {
     if (!previewType) return null;
-    const startups = previewType === 'selected' ? selectedStartups : rejectedStartups;
+    const startups = previewType === 'selected' ? selectedStartups : previewType === 'rejected' ? rejectedStartups : top100FeedbackStartups;
     const template = getTemplate(previewType);
     const previewStartups = startups.slice(0, 3);
     return <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
@@ -253,15 +281,25 @@ export const AggregatedTemplateSection = ({
       </Dialog>;
   };
   const renderFeedbackProgressSection = () => {
+    const top100Stats = getFeedbackStats(top100FeedbackStartups);
     const selectedStats = getFeedbackStats(selectedStartups);
     const rejectedStats = getFeedbackStats(rejectedStartups);
-    const renderProgressRow = (type: 'selected' | 'rejected', stats: ReturnType<typeof getFeedbackStats>) => {
+    
+    const renderProgressRow = (type: 'selected' | 'rejected' | 'top-100-feedback', stats: ReturnType<typeof getFeedbackStats>) => {
+      const rowConfig = {
+        'top-100-feedback': { label: 'Top 100 VC Feedback', icon: FileText },
+        'selected': { label: 'Selected Startups', icon: CheckCircle },
+        'rejected': { label: 'Rejected Startups', icon: Mail }
+      };
+      
+      const config = rowConfig[type];
       const progress = stats.total > 0 ? stats.approvedCount / stats.total * 100 : 0;
       return <div className="space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
+              <config.icon className="h-4 w-4 text-muted-foreground" />
               <h4 className="font-medium text-sm">
-                {type === 'selected' ? 'Selected Startups' : 'Rejected Startups'} ({stats.total})
+                {config.label} ({stats.total})
               </h4>
             </div>
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -323,6 +361,7 @@ export const AggregatedTemplateSection = ({
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
+          {renderProgressRow('top-100-feedback', top100Stats)}
           {renderProgressRow('selected', selectedStats)}
           {renderProgressRow('rejected', rejectedStats)}
         </CardContent>
@@ -330,11 +369,13 @@ export const AggregatedTemplateSection = ({
   };
   const renderFeedbackPreviewModal = () => {
     if (!feedbackPreviewType) return null;
-    const startups = feedbackPreviewType === 'selected' ? selectedStartups : rejectedStartups;
+    const startups = feedbackPreviewType === 'selected' ? selectedStartups : feedbackPreviewType === 'rejected' ? rejectedStartups : top100FeedbackStartups;
+    
+    const typeLabel = feedbackPreviewType === 'top-100-feedback' ? 'Top 100 VC Feedback' : feedbackPreviewType === 'selected' ? 'Selected' : 'Rejected';
     return <Dialog open={feedbackPreviewOpen} onOpenChange={setFeedbackPreviewOpen}>
         <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Review Feedback Summaries - {feedbackPreviewType === 'selected' ? 'Selected' : 'Rejected'} Startups</DialogTitle>
+            <DialogTitle>Review Feedback Summaries - {typeLabel} Startups</DialogTitle>
             <DialogDescription>
               Review all {startups.length} feedback summaries. Approve or regenerate as needed.
             </DialogDescription>
@@ -391,9 +432,14 @@ export const AggregatedTemplateSection = ({
           </Badge>
         </div>
         
-        <div className="flex gap-4">
-          {renderTemplateCard('selected')}
-          {renderTemplateCard('rejected')}
+        <div className="space-y-4">
+          <div className="w-full">
+            {renderTemplateCard('top-100-feedback')}
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {renderTemplateCard('selected')}
+            {renderTemplateCard('rejected')}
+          </div>
         </div>
 
         <p className="text-sm text-muted-foreground">

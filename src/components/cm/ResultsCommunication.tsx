@@ -1054,6 +1054,7 @@ The Aurora Tech Awards Team`
         <AggregatedTemplateSection
           selectedStartups={selectedStartups}
           rejectedStartups={notSelectedStartups}
+          top100FeedbackStartups={selectedStartups}
           currentRound={currentRound}
           templates={templates}
           onTemplateUpdate={(type, newTemplate) => {
