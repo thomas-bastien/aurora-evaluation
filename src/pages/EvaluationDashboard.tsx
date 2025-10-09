@@ -55,11 +55,11 @@ const EvaluationDashboard = () => {
     try {
       setLoading(true);
 
-      // First, find the juror record for this authenticated user
+      // First, find the juror record for this authenticated user (or impersonated juror)
       const { data: juror, error: jurorError } = await supabase
         .from('jurors')
         .select('id')
-        .eq('user_id', user?.id)
+        .eq('user_id', profile?.user_id)
         .maybeSingle();
 
       if (jurorError) throw jurorError;
@@ -107,7 +107,7 @@ const EvaluationDashboard = () => {
         const { data: roundEvaluations, error: evaluationsError } = await supabase
           .from(evaluationsTable)
           .select('*')
-          .eq('evaluator_id', user?.id)
+          .eq('evaluator_id', profile?.user_id)
           .in('startup_id', startupIds);
           
         if (evaluationsError) throw evaluationsError;
