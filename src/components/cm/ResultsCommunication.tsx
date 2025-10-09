@@ -67,6 +67,14 @@ export const ResultsCommunication = ({ currentRound }: ResultsCommunicationProps
   const [validatingEmails, setValidatingEmails] = useState(false);
   const [generatingFeedback, setGeneratingFeedback] = useState<string | null>(null);
   const [generationError, setGenerationError] = useState<string | null>(null);
+  const [batchGenerating, setBatchGenerating] = useState(false);
+  const [batchApproving, setBatchApproving] = useState(false);
+  const [showBatchApprovalDialog, setShowBatchApprovalDialog] = useState(false);
+  const [pendingBatchApproval, setPendingBatchApproval] = useState<{
+    type: 'selected' | 'rejected';
+    count: number;
+    startupIds: string[];
+  } | null>(null);
   
 
   useEffect(() => {
@@ -405,6 +413,86 @@ The Aurora Team`
     toast.success('Feedback approved');
   };
 
+  const generateAllFeedback = async (type: 'selected' | 'rejected') => {
+    const startups = type === 'selected' ? selectedStartups : notSelectedStartups;
+    const startupsNeedingFeedback = startups.filter(s => 
+      s.feedbackSummary.includes('[AI Feedback not yet generated')
+    );
+    
+    if (startupsNeedingFeedback.length === 0) {
+      toast.info('All startups already have feedback generated');
+      return;
+    }
+    
+    setBatchGenerating(true);
+    let successCount = 0;
+    
+    for (const startup of startupsNeedingFeedback) {
+      try {
+        const { data, error } = await supabase.functions.invoke('generate-founder-feedback', {
+          body: {
+            startupId: startup.id,
+            roundName: currentRound === 'screeningRound' ? 'screening' : 'pitching'
+          }
+        });
+        
+        if (!error && data.success && data.feedback) {
+          const formattedFeedback = formatAIFeedbackForEmail(data.feedback, startup.name);
+          
+          setStartupResults(prev => prev.map(r =>
+            r.id === startup.id
+              ? { ...r, feedbackSummary: formattedFeedback, feedbackStatus: 'draft' }
+              : r
+          ));
+          successCount++;
+        }
+      } catch (err) {
+        console.error(`Failed to generate feedback for ${startup.name}:`, err);
+      }
+    }
+    
+    setBatchGenerating(false);
+    toast.success(`Generated feedback for ${successCount}/${startupsNeedingFeedback.length} startups`);
+  };
+
+  const batchApproveFeedback = (type: 'selected' | 'rejected') => {
+    const startups = type === 'selected' ? selectedStartups : notSelectedStartups;
+    const startupsReadyForApproval = startups.filter(s => 
+      !s.feedbackSummary.includes('[AI Feedback not yet generated') &&
+      (s.feedbackStatus === 'draft' || s.feedbackStatus === 'reviewed')
+    );
+    
+    if (startupsReadyForApproval.length === 0) {
+      toast.info('No feedback summaries ready for approval');
+      return;
+    }
+    
+    setPendingBatchApproval({
+      type,
+      count: startupsReadyForApproval.length,
+      startupIds: startupsReadyForApproval.map(s => s.id)
+    });
+    setShowBatchApprovalDialog(true);
+  };
+
+  const confirmBatchApproval = () => {
+    if (!pendingBatchApproval) return;
+    
+    setBatchApproving(true);
+    
+    setStartupResults(prev => prev.map(result =>
+      pendingBatchApproval.startupIds.includes(result.id)
+        ? { ...result, feedbackStatus: 'approved' }
+        : result
+    ));
+    
+    toast.success(`Approved ${pendingBatchApproval.count} feedback summaries`);
+    
+    setBatchApproving(false);
+    setShowBatchApprovalDialog(false);
+    setPendingBatchApproval(null);
+  };
+
   // Enhanced communication sending with validation
   const initiateCommunications = async (type: 'selected' | 'rejected' | 'under-review') => {
     setValidatingEmails(true);
@@ -418,6 +506,28 @@ The Aurora Team`
         targetResults = startupResults.filter(r => r.roundStatus === 'rejected');
       } else if (type === 'under-review') {
         targetResults = startupResults.filter(r => r.roundStatus === 'under-review' || r.roundStatus === 'pending');
+      }
+
+      // NEW: Check for unapproved feedback
+      const missingCount = targetResults.filter(s => 
+        s.feedbackSummary.includes('[AI Feedback not yet generated')
+      ).length;
+      
+      const unapprovedCount = targetResults.filter(s => 
+        !s.feedbackSummary.includes('[AI Feedback not yet generated') &&
+        s.feedbackStatus !== 'approved'
+      ).length;
+      
+      if (missingCount > 0 || unapprovedCount > 0) {
+        toast.error(
+          `Cannot send emails: ${missingCount} missing feedback, ${unapprovedCount} unapproved`,
+          { 
+            description: 'Please generate and approve all feedback before sending.',
+            duration: 6000 
+          }
+        );
+        setValidatingEmails(false);
+        return;
       }
 
       // Run validation
@@ -768,6 +878,10 @@ The Aurora Team`
               t.type === type ? { ...t, subject: newTemplate.subject, content: newTemplate.content } : t
             ));
           }}
+          onBatchGenerateFeedback={generateAllFeedback}
+          onBatchApproveFeedback={batchApproveFeedback}
+          batchGenerating={batchGenerating}
+          batchApproving={batchApproving}
         />
 
         <Tabs defaultValue="feedback" className="space-y-6">
@@ -1002,6 +1116,43 @@ The Aurora Team`
               </Button>
               <Button onClick={handleSaveFeedback}>
                 Save Changes
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Batch Approval Confirmation Dialog */}
+        <Dialog open={showBatchApprovalDialog} onOpenChange={setShowBatchApprovalDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Approve Feedback Summaries?</DialogTitle>
+              <DialogDescription>
+                You are about to approve {pendingBatchApproval?.count} feedback summaries for {pendingBatchApproval?.type} startups.
+                Once approved, these feedback summaries will be ready to be sent via email.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setShowBatchApprovalDialog(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={confirmBatchApproval}
+                disabled={batchApproving}
+              >
+                {batchApproving ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Approving...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    Approve All
+                  </>
+                )}
               </Button>
             </DialogFooter>
           </DialogContent>

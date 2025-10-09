@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Sparkles, Eye, Loader2, Mail, CheckCircle, TrendingUp } from "lucide-react";
+import { Sparkles, Eye, Loader2, Mail, CheckCircle, TrendingUp, FileText } from "lucide-react";
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -16,6 +16,7 @@ interface StartupResult {
   email: string;
   averageScore: number;
   feedbackSummary: string;
+  feedbackStatus: 'draft' | 'reviewed' | 'approved' | 'sent';
 }
 
 interface CommunicationTemplate {
@@ -31,6 +32,10 @@ interface AggregatedTemplateSectionProps {
   currentRound: 'screeningRound' | 'pitchingRound';
   templates: CommunicationTemplate[];
   onTemplateUpdate: (type: 'selected' | 'rejected', template: { subject: string; content: string; insights?: string }) => void;
+  onBatchGenerateFeedback: (type: 'selected' | 'rejected') => Promise<void>;
+  onBatchApproveFeedback: (type: 'selected' | 'rejected') => void;
+  batchGenerating: boolean;
+  batchApproving: boolean;
 }
 
 export const AggregatedTemplateSection = ({
@@ -38,11 +43,17 @@ export const AggregatedTemplateSection = ({
   rejectedStartups,
   currentRound,
   templates,
-  onTemplateUpdate
+  onTemplateUpdate,
+  onBatchGenerateFeedback,
+  onBatchApproveFeedback,
+  batchGenerating,
+  batchApproving
 }: AggregatedTemplateSectionProps) => {
   const [enhancing, setEnhancing] = useState<'selected' | 'rejected' | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewType, setPreviewType] = useState<'selected' | 'rejected' | null>(null);
+  const [feedbackPreviewOpen, setFeedbackPreviewOpen] = useState(false);
+  const [feedbackPreviewType, setFeedbackPreviewType] = useState<'selected' | 'rejected' | null>(null);
   const [enhancedInsights, setEnhancedInsights] = useState<{
     selected?: string;
     rejected?: string;
@@ -116,6 +127,26 @@ export const AggregatedTemplateSection = ({
   const handlePreview = (type: 'selected' | 'rejected') => {
     setPreviewType(type);
     setPreviewOpen(true);
+  };
+
+  const handleFeedbackPreview = (type: 'selected' | 'rejected') => {
+    setFeedbackPreviewType(type);
+    setFeedbackPreviewOpen(true);
+  };
+
+  const getFeedbackStats = (startups: StartupResult[]) => {
+    const missingCount = startups.filter(s => 
+      s.feedbackSummary.includes('[AI Feedback not yet generated')
+    ).length;
+    const generatedCount = startups.filter(s => 
+      !s.feedbackSummary.includes('[AI Feedback not yet generated') && 
+      (s.feedbackStatus === 'draft' || s.feedbackStatus === 'reviewed')
+    ).length;
+    const approvedCount = startups.filter(s => 
+      s.feedbackStatus === 'approved'
+    ).length;
+    
+    return { missingCount, generatedCount, approvedCount, total: startups.length };
   };
 
   const renderTemplateCard = (type: 'selected' | 'rejected') => {
@@ -271,6 +302,180 @@ export const AggregatedTemplateSection = ({
     );
   };
 
+  const renderFeedbackProgressSection = () => {
+    const selectedStats = getFeedbackStats(selectedStartups);
+    const rejectedStats = getFeedbackStats(rejectedStartups);
+
+    const renderProgressRow = (type: 'selected' | 'rejected', stats: ReturnType<typeof getFeedbackStats>) => {
+      const progress = stats.total > 0 ? (stats.approvedCount / stats.total) * 100 : 0;
+      
+      return (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <h4 className="font-medium text-sm">
+                {type === 'selected' ? 'Selected Startups' : 'Rejected Startups'} ({stats.total})
+              </h4>
+            </div>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <span className="text-destructive">● {stats.missingCount} missing</span>
+              <span className="text-warning">● {stats.generatedCount} draft</span>
+              <span className="text-success">● {stats.approvedCount} approved</span>
+            </div>
+          </div>
+          
+          <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
+            <div 
+              className="bg-success h-full transition-all duration-500"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+
+          <div className="flex gap-2">
+            <Button
+              onClick={() => onBatchGenerateFeedback(type)}
+              disabled={batchGenerating || stats.missingCount === 0}
+              size="sm"
+              variant="outline"
+            >
+              {batchGenerating ? (
+                <>
+                  <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="h-3 w-3 mr-1" />
+                  Generate Missing ({stats.missingCount})
+                </>
+              )}
+            </Button>
+            <Button
+              onClick={() => handleFeedbackPreview(type)}
+              disabled={stats.total === 0}
+              size="sm"
+              variant="outline"
+            >
+              <Eye className="h-3 w-3 mr-1" />
+              Preview All
+            </Button>
+            <Button
+              onClick={() => onBatchApproveFeedback(type)}
+              disabled={batchApproving || stats.generatedCount === 0}
+              size="sm"
+              variant="default"
+            >
+              {batchApproving ? (
+                <>
+                  <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                  Approving...
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="h-3 w-3 mr-1" />
+                  Approve All ({stats.generatedCount})
+                </>
+              )}
+            </Button>
+          </div>
+        </div>
+      );
+    };
+
+    return (
+      <Card className="mb-6">
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <FileText className="h-5 w-5 text-primary" />
+            <CardTitle className="text-lg">Individual Feedback Summaries</CardTitle>
+          </div>
+          <CardDescription>
+            Generate and approve personalized feedback for each startup before sending
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {renderProgressRow('selected', selectedStats)}
+          {renderProgressRow('rejected', rejectedStats)}
+        </CardContent>
+      </Card>
+    );
+  };
+
+  const renderFeedbackPreviewModal = () => {
+    if (!feedbackPreviewType) return null;
+    
+    const startups = feedbackPreviewType === 'selected' ? selectedStartups : rejectedStartups;
+
+    return (
+      <Dialog open={feedbackPreviewOpen} onOpenChange={setFeedbackPreviewOpen}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Review Feedback Summaries - {feedbackPreviewType === 'selected' ? 'Selected' : 'Rejected'} Startups</DialogTitle>
+            <DialogDescription>
+              Review all {startups.length} feedback summaries. Approve or regenerate as needed.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            {startups.map((startup) => {
+              const isMissing = startup.feedbackSummary.includes('[AI Feedback not yet generated');
+              const isDraft = !isMissing && (startup.feedbackStatus === 'draft' || startup.feedbackStatus === 'reviewed');
+              const isApproved = startup.feedbackStatus === 'approved';
+
+              return (
+                <Card key={startup.id} className={
+                  isMissing ? 'border-destructive/50' :
+                  isDraft ? 'border-warning/50' :
+                  'border-success/50'
+                }>
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <CardTitle className="text-base">{startup.name}</CardTitle>
+                        <p className="text-xs text-muted-foreground">{startup.email}</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge variant={
+                          isMissing ? 'destructive' :
+                          isDraft ? 'secondary' :
+                          'default'
+                        }>
+                          {isMissing ? 'Not Generated' :
+                           isDraft ? 'Needs Approval' :
+                           'Approved'}
+                        </Badge>
+                        <Badge variant="outline">
+                          Score: {startup.averageScore.toFixed(1)}
+                        </Badge>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="bg-muted/50 rounded-md p-3 text-sm max-h-32 overflow-y-auto">
+                      {isMissing ? (
+                        <p className="text-muted-foreground italic">
+                          Feedback not yet generated. Use "Generate Missing" button to create.
+                        </p>
+                      ) : (
+                        <div className="whitespace-pre-wrap">{startup.feedbackSummary}</div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setFeedbackPreviewOpen(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    );
+  };
+
   return (
     <>
       <div className="mb-8 space-y-4">
@@ -292,7 +497,10 @@ export const AggregatedTemplateSection = ({
         </p>
       </div>
 
+      {renderFeedbackProgressSection()}
+
       {renderPreviewDialog()}
+      {renderFeedbackPreviewModal()}
     </>
   );
 };
