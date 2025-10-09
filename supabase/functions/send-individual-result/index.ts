@@ -34,7 +34,7 @@ interface IndividualResultRequest {
   startupId: string;
   startupName: string;
   recipientEmail: string;
-  communicationType: 'selected' | 'rejected' | 'under-review';
+  communicationType: 'selected' | 'rejected' | 'under-review' | 'top-100-feedback';
   roundName: string;
   feedbackSummary?: string;
   customMessage?: string;
@@ -46,6 +46,126 @@ interface EmailTemplate {
   body_template: string;
   variables: string[];
 }
+
+/**
+ * Escape HTML to prevent XSS attacks
+ */
+const escapeHtml = (text: string): string => {
+  const map: Record<string, string> = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#039;'
+  };
+  return text.replace(/[&<>"']/g, (m) => map[m]);
+};
+
+/**
+ * Builds dynamic HTML sections for all VC evaluations
+ * Handles unlimited number of VCs (not limited to 3)
+ */
+const buildVCFeedbackSections = async (
+  startupId: string,
+  roundName: string
+): Promise<string> => {
+  // Determine which table based on round
+  const evaluationTable = roundName === 'screening' 
+    ? 'screening_evaluations' 
+    : 'pitching_evaluations';
+  
+  console.log(`Building VC feedback sections for startup ${startupId} in ${roundName} round`);
+  
+  // Fetch ALL submitted evaluations for this startup
+  const { data: evaluations, error: evalError } = await supabase
+    .from(evaluationTable)
+    .select(`
+      *,
+      juror:evaluator_id (
+        id,
+        name,
+        company,
+        fund_focus
+      )
+    `)
+    .eq('startup_id', startupId)
+    .eq('status', 'submitted')
+    .order('created_at', { ascending: true });
+
+  if (evalError) {
+    console.error('Error fetching evaluations:', evalError);
+    return '<p><em>Error loading evaluations. Please contact support.</em></p>';
+  }
+
+  if (!evaluations || evaluations.length === 0) {
+    console.log('No evaluations found for startup:', startupId);
+    return '<p><em>No evaluations available yet.</em></p>';
+  }
+
+  console.log(`Found ${evaluations.length} evaluations for startup ${startupId}`);
+
+  // Build HTML for each VC evaluation
+  let sectionsHTML = '';
+  
+  evaluations.forEach((eval, index) => {
+    const vcNumber = index + 1;
+    const vcName = eval.juror?.company || eval.juror?.name || `VC Fund #${vcNumber}`;
+    
+    // Format strengths array as HTML list
+    let strengthsHTML = '<p style="color: #64748b; font-style: italic;"><em>No specific strengths provided.</em></p>';
+    if (eval.strengths && Array.isArray(eval.strengths) && eval.strengths.length > 0) {
+      strengthsHTML = '<ul style="margin: 10px 0; padding-left: 20px; color: #374151;">';
+      eval.strengths.forEach(strength => {
+        strengthsHTML += `<li style="margin-bottom: 8px; line-height: 1.6;">${escapeHtml(strength)}</li>`;
+      });
+      strengthsHTML += '</ul>';
+    }
+    
+    // Extract other fields with fallbacks
+    const improvements = eval.improvement_areas 
+      ? `<p style="color: #374151; line-height: 1.6;">${escapeHtml(eval.improvement_areas)}</p>`
+      : '<p style="color: #64748b; font-style: italic;"><em>No improvement areas specified.</em></p>';
+    
+    const pitchDevelopment = eval.pitch_development_aspects
+      ? `<p style="color: #374151; line-height: 1.6;">${escapeHtml(eval.pitch_development_aspects)}</p>`
+      : '<p style="color: #64748b; font-style: italic;"><em>No pitch development feedback provided.</em></p>';
+    
+    const focusAreas = eval.overall_notes
+      ? `<p style="color: #374151; line-height: 1.6;">${escapeHtml(eval.overall_notes)}</p>`
+      : '<p style="color: #64748b; font-style: italic;"><em>No specific focus areas mentioned.</em></p>';
+    
+    const additionalComments = eval.recommendation
+      ? `<p style="color: #374151; line-height: 1.6;">${escapeHtml(eval.recommendation)}</p>`
+      : '<p style="color: #64748b; font-style: italic;"><em>No additional comments provided.</em></p>';
+    
+    // Build the section HTML
+    sectionsHTML += `
+      <div style="margin-bottom: 40px;">
+        <h2 style="color: #1e40af; font-size: 22px; margin-bottom: 20px; font-weight: 600;">VC Fund #${vcNumber}: ${escapeHtml(vcName)}</h2>
+        
+        <h3 style="color: #475569; font-size: 17px; margin-top: 24px; margin-bottom: 12px; font-weight: 600;">Strengths of the startup:</h3>
+        ${strengthsHTML}
+        
+        <h3 style="color: #475569; font-size: 17px; margin-top: 24px; margin-bottom: 12px; font-weight: 600;">Main areas that need improvement:</h3>
+        ${improvements}
+        
+        <h3 style="color: #475569; font-size: 17px; margin-top: 24px; margin-bottom: 12px; font-weight: 600;">Aspects of the pitch that need further development:</h3>
+        ${pitchDevelopment}
+        
+        <h3 style="color: #475569; font-size: 17px; margin-top: 24px; margin-bottom: 12px; font-weight: 600;">Key areas the team should focus on:</h3>
+        ${focusAreas}
+        
+        <h3 style="color: #475569; font-size: 17px; margin-top: 24px; margin-bottom: 12px; font-weight: 600;">Additional comments:</h3>
+        ${additionalComments}
+      </div>
+      
+      ${index < evaluations.length - 1 ? '<hr style="margin: 40px 0; border: 0; border-top: 1px solid #e5e7eb;">' : ''}
+    `;
+  });
+  
+  console.log(`Successfully built ${evaluations.length} VC feedback sections`);
+  return sectionsHTML;
+};
 
 const handler = async (req: Request): Promise<Response> => {
   // Handle CORS preflight requests
@@ -67,7 +187,8 @@ const handler = async (req: Request): Promise<Response> => {
     const templateCategoryMap = {
       'selected': 'founder_selection',
       'rejected': 'founder_rejection',
-      'under-review': 'founder_under_review'
+      'under-review': 'founder_under_review',
+      'top-100-feedback': 'top-100-feedback'
     };
     
     const templateCategory = templateCategoryMap[requestData.communicationType];
@@ -104,13 +225,25 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // Prepare variables for substitution
-    const variables = {
+    const variables: Record<string, string> = {
       founder_name: requestData.startupName, // Using startup name as founder name for now
       startup_name: requestData.startupName,
       round_name: requestData.roundName,
       feedback_summary: requestData.feedbackSummary || 'No specific feedback provided',
       custom_message: requestData.customMessage || ''
     };
+
+    // Handle top-100-feedback template with dynamic VC sections
+    if (templateCategory === 'top-100-feedback') {
+      console.log('Building dynamic VC feedback sections for startup:', requestData.startupId);
+      const vcFeedbackSections = await buildVCFeedbackSections(
+        requestData.startupId,
+        requestData.roundName
+      );
+      variables['vc_feedback_sections'] = vcFeedbackSections;
+      variables['founder_name'] = requestData.startupName;
+      console.log('VC feedback sections built successfully');
+    }
 
     // Apply variable substitution
     for (const [key, value] of Object.entries(variables)) {

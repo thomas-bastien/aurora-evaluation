@@ -43,7 +43,7 @@ interface StartupResult {
 
 interface CommunicationTemplate {
   id: string;
-  type: 'selected' | 'not-selected' | 'under-review' | 'rejected' | 'juror-report';
+  type: 'selected' | 'not-selected' | 'under-review' | 'rejected' | 'juror-report' | 'top-100-feedback';
   subject: string;
   content: string;
 }
@@ -393,6 +393,22 @@ Please find the detailed results and your contribution report attached.
 
 Best regards,
 The Aurora Team`
+      },
+      {
+        id: '6',
+        type: 'top-100-feedback',
+        subject: '🎉 Your Aurora Tech Awards Top 100 VC Feedback',
+        content: `Congratulations once again on being selected for the Aurora Tech Awards Top 100! You've already proven yourself as one of the most promising founders in emerging markets.
+
+Below, you'll find detailed feedback from each VC fund that evaluated your startup.
+
+**VC FEEDBACK SECTIONS**
+[Dynamically generated from evaluations]
+
+These insights are designed to help you refine your strategy and accelerate your growth.
+
+Best regards,
+The Aurora Tech Awards Team`
       }
     ];
     setTemplates(defaultTemplates);
