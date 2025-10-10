@@ -288,9 +288,31 @@ export const ResultsCommunication = ({ currentRound }: ResultsCommunicationProps
         }
       });
 
+      // Fetch sent email communications for this round
+      const { data: sentEmailsData, error: sentEmailsError } = await supabase
+        .from('email_communications')
+        .select('recipient_id, status, sent_at')
+        .eq('recipient_type', 'startup')
+        .eq('round_name', currentRound === 'screeningRound' ? 'screening' : 'pitching')
+        .eq('communication_type', 'top-100-feedback')
+        .in('status', ['sent', 'delivered', 'opened', 'clicked']);
+
+      if (sentEmailsError) {
+        console.error('Error fetching sent emails:', sentEmailsError);
+      }
+
+      // Create a Set of startup IDs that have received feedback
+      const sentEmailsSet = new Set<string>();
+      sentEmailsData?.forEach(email => {
+        if (email.recipient_id) {
+          sentEmailsSet.add(email.recipient_id);
+        }
+      });
+
       console.log(`Loaded ${startupsData?.length || 0} startups for ${currentRound} communication`);
       console.log(`Found ${roundStatusesData?.length || 0} round statuses`);
       console.log(`Loaded ${vcFeedbackMap.size} approved VC feedback entries`);
+      console.log(`Found ${sentEmailsSet.size} startups that have received feedback emails`);
 
       const resultsData: StartupResult[] = startupsData?.map(startup => {
         const evaluationKey = currentRound === 'screeningRound' ? 'screening_evaluations' : 'pitching_evaluations';
@@ -336,7 +358,7 @@ export const ResultsCommunication = ({ currentRound }: ResultsCommunicationProps
           roundStatus,
           feedbackSummary,
           feedbackStatus,
-          communicationSent: false
+          communicationSent: sentEmailsSet.has(startup.id)
         };
       }) || [];
 
@@ -1072,7 +1094,19 @@ The Aurora Tech Awards Team`
   const selectedStartups = startupResults.filter(r => r.roundStatus === 'selected');
   const notSelectedStartups = startupResults.filter(r => r.roundStatus === 'rejected');
   const underReviewStartups = startupResults.filter(r => r.roundStatus === 'under-review' || r.roundStatus === 'pending');
-  const approvedFeedback = startupResults.filter(r => r.feedbackStatus === 'approved');
+  
+  // Email workflow stage counts
+  const pendingFeedback = startupResults.filter(r => 
+    r.feedbackSummary.includes('[AI Feedback not yet generated') || 
+    !r.feedbackSummary || 
+    r.feedbackStatus === undefined
+  );
+  const draftFeedback = startupResults.filter(r => 
+    r.feedbackStatus === 'draft' && !r.communicationSent
+  );
+  const approvedFeedback = startupResults.filter(r => 
+    r.feedbackStatus === 'approved' && !r.communicationSent
+  );
   const sentCommunications = startupResults.filter(r => r.communicationSent);
 
   return (
@@ -1164,26 +1198,22 @@ The Aurora Tech Awards Team`
       </CardHeader>
       
         <CardContent>
-          {/* Summary Stats */}
-        <div className="grid grid-cols-5 gap-4 mb-6">
-          <div className="text-center p-4 bg-success/10 rounded-lg">
-            <div className="text-2xl font-bold text-success">{selectedStartups.length}</div>
-            <div className="text-sm text-muted-foreground">Selected</div>
+          {/* Summary Stats - Email Workflow Stages */}
+        <div className="grid grid-cols-4 gap-4 mb-6">
+          <div className="text-center p-4 bg-muted/30 rounded-lg border border-border">
+            <div className="text-2xl font-bold text-muted-foreground">{pendingFeedback.length}</div>
+            <div className="text-sm text-muted-foreground">Pending</div>
           </div>
-          <div className="text-center p-4 bg-destructive/10 rounded-lg">
-            <div className="text-2xl font-bold text-destructive">{notSelectedStartups.length}</div>
-            <div className="text-sm text-muted-foreground">Rejected</div>
+          <div className="text-center p-4 bg-blue-50 rounded-lg border border-blue-200">
+            <div className="text-2xl font-bold text-blue-600">{draftFeedback.length}</div>
+            <div className="text-sm text-muted-foreground">Draft</div>
           </div>
-          <div className="text-center p-4 bg-blue-50 rounded-lg">
-            <div className="text-2xl font-bold text-blue-600">{underReviewStartups.length}</div>
-            <div className="text-sm text-muted-foreground">Under Review</div>
+          <div className="text-center p-4 bg-success/10 rounded-lg border border-success/20">
+            <div className="text-2xl font-bold text-success">{approvedFeedback.length}</div>
+            <div className="text-sm text-muted-foreground">Approved</div>
           </div>
-          <div className="text-center p-4 bg-primary/10 rounded-lg">
-            <div className="text-2xl font-bold text-primary">{approvedFeedback.length}</div>
-            <div className="text-sm text-muted-foreground">Approved Feedback</div>
-          </div>
-          <div className="text-center p-4 bg-accent/10 rounded-lg">
-            <div className="text-2xl font-bold text-accent">{sentCommunications.length}</div>
+          <div className="text-center p-4 bg-primary/10 rounded-lg border border-primary/20">
+            <div className="text-2xl font-bold text-primary">{sentCommunications.length}</div>
             <div className="text-sm text-muted-foreground">Sent</div>
           </div>
         </div>
