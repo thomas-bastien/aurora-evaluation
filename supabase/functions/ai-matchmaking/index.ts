@@ -32,12 +32,7 @@ interface AIMatchScore {
   juror_id: string;
   compatibility_score: number;
   confidence: number;
-  reasoning: {
-    vertical_match: { score: number; explanation: string };
-    stage_match: { score: number; explanation: string };
-    region_match: { score: number; explanation: string };
-    contextual_fit: { score: number; explanation: string };
-  };
+  brief_reasoning: string;
   recommendation: 'Highly Recommended' | 'Recommended' | 'Consider' | 'Not Recommended';
 }
 
@@ -66,7 +61,7 @@ serve(async (req) => {
 Analyze the compatibility between jurors and a startup for evaluation purposes.${seed ? ` Use seed ${seed} for deterministic results.` : ''}
 
 Consider:
-1. Semantic similarity in verticals (not just exact matches) - e.g., "AI/ML" ≈ "Artificial Intelligence", "HealthTech" ≈ "Medical Technology"
+1. Semantic similarity in verticals (not just exact matches)
 2. Industry expertise and investment focus depth
 3. Geographic relevance and market knowledge
 4. Stage expertise and investment patterns
@@ -76,16 +71,10 @@ Return a JSON array with one object per juror containing:
 - juror_id: string
 - compatibility_score: number (0-10, where 10 = perfect match, 0 = no match)
 - confidence: number (0-1, how confident you are in this score)
-- reasoning: {
-    vertical_match: { score: number (0-10), explanation: string },
-    stage_match: { score: number (0-10), explanation: string },
-    region_match: { score: number (0-10), explanation: string },
-    contextual_fit: { score: number (0-10), explanation: string }
-  }
+- brief_reasoning: string (1-2 concise sentences explaining the key compatibility factors)
 - recommendation: "Highly Recommended" | "Recommended" | "Consider" | "Not Recommended"
 
-Use a 0-10 scale where 10 = perfect match, 0 = no match. Be discerning - most scores should be 3-7.
-Be concise but specific in explanations. Focus on semantic understanding and real-world relevance.`;
+Be discerning with scores - most should fall between 3-7. Focus on the most important factors in your reasoning.`;
 
     const userPrompt = `Startup:
 Name: ${startup.name}

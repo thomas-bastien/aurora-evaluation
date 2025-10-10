@@ -460,14 +460,9 @@ export const StartupAssignmentModal = ({
                             Confidence: {Math.round((aiMatch.confidence || 0) * 100)}%
                           </span>
                         </div>
-                        {aiMatch.reasoning && (
-                          <div className="space-y-1 text-blue-800">
-                            {aiMatch.reasoning.vertical_match && (
-                              <div>• {aiMatch.reasoning.vertical_match.explanation}</div>
-                            )}
-                            {aiMatch.reasoning.contextual_fit && (
-                              <div>• {aiMatch.reasoning.contextual_fit.explanation}</div>
-                            )}
+                        {aiMatch.brief_reasoning && (
+                          <div className="text-blue-800">
+                            {aiMatch.brief_reasoning}
                           </div>
                         )}
                       </div>
