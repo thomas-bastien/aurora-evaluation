@@ -37,6 +37,19 @@ serve(async (req) => {
       throw new Error(`Failed to fetch startup: ${startupError.message}`);
     }
 
+    // Check for approved enhanced feedback first
+    const { data: approvedFeedback, error: feedbackError } = await supabaseClient
+      .from('startup_vc_feedback_details')
+      .select('plain_text_feedback')
+      .eq('startup_id', startupId)
+      .eq('round_name', roundName)
+      .eq('is_approved', true)
+      .maybeSingle();
+
+    if (feedbackError) {
+      console.log('[Preview Email] Error fetching approved feedback:', feedbackError);
+    }
+
     // Fetch evaluations based on round
     let evaluations = [];
     if (roundName === 'screening') {
@@ -96,52 +109,73 @@ serve(async (req) => {
       throw new Error(`Failed to fetch template: ${templateError.message}`);
     }
 
-    // Build VC feedback sections
+    // Build VC feedback sections - use approved enhanced feedback if available
     let vcFeedbackSections = '';
     
-    evaluations.forEach((evaluation: any, index: number) => {
-      const jurorName = evaluation.jurors?.name || 'Anonymous VC';
-      const jurorCompany = evaluation.jurors?.company || '';
-      
-      vcFeedbackSections += `
+    if (approvedFeedback?.plain_text_feedback) {
+      // Use approved enhanced feedback
+      console.log('[Preview Email] Using approved enhanced feedback');
+      vcFeedbackSections = `
         <div style="margin-bottom: 30px; padding: 20px; background-color: #f9f9f9; border-left: 4px solid #2563eb;">
-          <h3 style="color: #1e293b; margin-top: 0;">VC Fund #${index + 1}${jurorCompany ? ` - ${jurorCompany}` : ''}</h3>
-          
-          <div style="margin-bottom: 15px;">
-            <strong style="color: #475569;">Strengths of the startup:</strong>
-            <ul style="margin: 5px 0; padding-left: 20px;">
-              ${(evaluation.strengths || []).map((strength: string) => `<li style="margin: 5px 0;">${strength}</li>`).join('')}
-            </ul>
-          </div>
-          
-          <div style="margin-bottom: 15px;">
-            <strong style="color: #475569;">Main areas that need improvement:</strong>
-            <p style="margin: 5px 0;">${evaluation.improvement_areas || 'No specific areas identified'}</p>
-          </div>
-          
-          ${evaluation.pitch_development_aspects ? `
-            <div style="margin-bottom: 15px;">
-              <strong style="color: #475569;">Aspects of the pitch that need further development:</strong>
-              <p style="margin: 5px 0;">${evaluation.pitch_development_aspects}</p>
-            </div>
-          ` : ''}
-          
-          ${evaluation.overall_notes ? `
-            <div style="margin-bottom: 15px;">
-              <strong style="color: #475569;">Key areas the team should focus on:</strong>
-              <p style="margin: 5px 0;">${evaluation.overall_notes}</p>
-            </div>
-          ` : ''}
-          
-          ${evaluation.recommendation ? `
-            <div>
-              <strong style="color: #475569;">Additional comments:</strong>
-              <p style="margin: 5px 0;">${evaluation.recommendation}</p>
-            </div>
-          ` : ''}
+          ${approvedFeedback.plain_text_feedback.split('\n').map(line => {
+            if (line.trim().startsWith('**') && line.trim().endsWith('**')) {
+              return `<h3 style="color: #1e293b; margin-top: 15px; margin-bottom: 10px;">${line.trim().replace(/\*\*/g, '')}</h3>`;
+            } else if (line.trim().startsWith('- ')) {
+              return `<li style="margin: 5px 0;">${line.trim().substring(2)}</li>`;
+            } else if (line.trim()) {
+              return `<p style="margin: 5px 0;">${line.trim()}</p>`;
+            }
+            return '';
+          }).join('')}
         </div>
       `;
-    });
+    } else {
+      // Build from raw evaluations
+      console.log('[Preview Email] Building feedback from raw evaluations');
+      evaluations.forEach((evaluation: any, index: number) => {
+        const jurorName = evaluation.jurors?.name || 'Anonymous VC';
+        const jurorCompany = evaluation.jurors?.company || '';
+        
+        vcFeedbackSections += `
+          <div style="margin-bottom: 30px; padding: 20px; background-color: #f9f9f9; border-left: 4px solid #2563eb;">
+            <h3 style="color: #1e293b; margin-top: 0;">VC Fund #${index + 1}${jurorCompany ? ` - ${jurorCompany}` : ''}</h3>
+            
+            <div style="margin-bottom: 15px;">
+              <strong style="color: #475569;">Strengths of the startup:</strong>
+              <ul style="margin: 5px 0; padding-left: 20px;">
+                ${(evaluation.strengths || []).map((strength: string) => `<li style="margin: 5px 0;">${strength}</li>`).join('')}
+              </ul>
+            </div>
+            
+            <div style="margin-bottom: 15px;">
+              <strong style="color: #475569;">Main areas that need improvement:</strong>
+              <p style="margin: 5px 0;">${evaluation.improvement_areas || 'No specific areas identified'}</p>
+            </div>
+            
+            ${evaluation.pitch_development_aspects ? `
+              <div style="margin-bottom: 15px;">
+                <strong style="color: #475569;">Aspects of the pitch that need further development:</strong>
+                <p style="margin: 5px 0;">${evaluation.pitch_development_aspects}</p>
+              </div>
+            ` : ''}
+            
+            ${evaluation.overall_notes ? `
+              <div style="margin-bottom: 15px;">
+                <strong style="color: #475569;">Key areas the team should focus on:</strong>
+                <p style="margin: 5px 0;">${evaluation.overall_notes}</p>
+              </div>
+            ` : ''}
+            
+            ${evaluation.recommendation ? `
+              <div>
+                <strong style="color: #475569;">Additional comments:</strong>
+                <p style="margin: 5px 0;">${evaluation.recommendation}</p>
+              </div>
+            ` : ''}
+          </div>
+        `;
+      });
+    }
 
     // Generate subject and body
     const founderName = startup.founder_first_name || 'Founder';
