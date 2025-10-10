@@ -161,6 +161,43 @@ export const ResultsCommunication = ({ currentRound }: ResultsCommunicationProps
     refetchVCFeedback();
   };
 
+  const handleGenerateVCFeedback = async (startupId: string, startupName: string) => {
+    setGeneratingFeedback(startupId);
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-vc-feedback-details', {
+        body: {
+          startupId,
+          roundName: currentRound === 'screeningRound' ? 'screening' : 'pitching'
+        }
+      });
+      
+      if (error) throw error;
+
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
+      if (!data.success) {
+        throw new Error('Failed to generate VC feedback');
+      }
+      
+      await refetchVCFeedback();
+      toast.success(`VC feedback generated for ${startupName}`);
+    } catch (error: any) {
+      console.error('Error generating VC feedback:', error);
+      const errorMessage = error.message || 'Failed to generate VC feedback';
+      
+      if (error.message?.includes('No submitted evaluations')) {
+        toast.error(`${startupName} has no submitted evaluations yet.`);
+      } else {
+        toast.error(`Failed to generate VC feedback for ${startupName}`);
+      }
+    } finally {
+      setGeneratingFeedback(null);
+    }
+  };
+
   const fetchResultsData = async () => {
     try {
       // Determine which evaluation table to use based on current round
@@ -1133,7 +1170,7 @@ The Aurora Tech Awards Team`
 
         <Tabs defaultValue="feedback" className="space-y-6">
           <TabsList>
-            <TabsTrigger value="feedback">Feedback Review</TabsTrigger>
+            <TabsTrigger value="feedback">VC Feedback Review</TabsTrigger>
             <TabsTrigger value="selected">Selected ({selectedStartups.length})</TabsTrigger>
             <TabsTrigger value="under-review">Under Review ({underReviewStartups.length})</TabsTrigger>
             <TabsTrigger value="rejected">Rejected ({notSelectedStartups.length})</TabsTrigger>
@@ -1141,121 +1178,100 @@ The Aurora Tech Awards Team`
           </TabsList>
 
           <TabsContent value="feedback" className="space-y-4">
-            {startupResults.map(result => (
-              <div key={result.id} className="border border-border rounded-lg p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-3">
-                    <div>
-                      <h4 className="font-semibold text-foreground">{result.name}</h4>
-                      <p className="text-sm text-muted-foreground">
-                        {result.email} • Score: {formatScore(result.averageScore)}
-                      </p>
+            {startupResults.map(result => {
+              const vcStatus = vcFeedbackStatus?.[result.id];
+              const vcFeedbackStatusText = vcStatus 
+                ? (vcStatus.is_approved ? 'Approved' : 'Draft')
+                : 'Not Generated';
+              
+              return (
+                <div key={result.id} className="border border-border rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-3">
+                      <div>
+                        <h4 className="font-semibold text-foreground">{result.name}</h4>
+                        <p className="text-sm text-muted-foreground">
+                          {result.email} • Score: {formatScore(result.averageScore)}
+                        </p>
+                      </div>
+                      <StatusBadge 
+                        status={result.roundStatus || 'pending'} 
+                        roundName={currentRound === 'screeningRound' ? 'screening' : 'pitching'} 
+                      />
                     </div>
-                    <StatusBadge 
-                      status={result.roundStatus || 'pending'} 
-                      roundName={currentRound === 'screeningRound' ? 'screening' : 'pitching'} 
-                    />
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Badge 
-                      variant={
-                        result.feedbackStatus === 'draft' && result.feedbackSummary.includes('[AI Feedback not yet generated') ? 'outline' :
-                        result.feedbackStatus === 'draft' ? 'secondary' : 
-                        result.feedbackStatus === 'approved' ? 'default' : 
-                        'outline'
-                      }
-                    >
-                      {result.feedbackStatus === 'draft' && result.feedbackSummary.includes('[AI Feedback not yet generated') ? (
-                        'Not Generated'
-                      ) : result.feedbackStatus === 'draft' ? (
-                        <>
-                          <Sparkles className="h-3 w-3 mr-1" />
-                          AI Generated
-                        </>
-                      ) : result.feedbackStatus === 'reviewed' ? (
-                        <>
-                          <Edit className="h-3 w-3 mr-1" />
-                          Edited
-                        </>
-                      ) : result.feedbackStatus === 'approved' ? (
-                        <>
-                          <CheckCircle className="h-3 w-3 mr-1" />
-                          Approved
-                        </>
-                      ) : (
-                        result.feedbackStatus
-                      )}
-                    </Badge>
-                    {result.feedbackSummary.includes('[AI Feedback not yet generated') ? (
-                      <Button
-                        variant="default"
-                        size="sm"
-                        onClick={() => generateAIFeedback(result.id, result.name)}
-                        disabled={generatingFeedback === result.id}
+                    <div className="flex items-center gap-2">
+                      <Badge 
+                        variant={
+                          vcFeedbackStatusText === 'Approved' ? 'default' :
+                          vcFeedbackStatusText === 'Draft' ? 'secondary' :
+                          'outline'
+                        }
                       >
-                        {generatingFeedback === result.id ? (
+                        {vcFeedbackStatusText === 'Approved' ? (
                           <>
-                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                            Generating...
+                            <CheckCircle className="h-3 w-3 mr-1" />
+                            VC: Approved
+                          </>
+                        ) : vcFeedbackStatusText === 'Draft' ? (
+                          <>
+                            <FileText className="h-3 w-3 mr-1" />
+                            VC: Draft
                           </>
                         ) : (
-                          <>
-                            <Sparkles className="h-4 w-4 mr-2" />
-                            Generate
-                          </>
+                          'VC: Not Generated'
                         )}
-                      </Button>
-                    ) : (
-                      <>
-                        <Button size="sm" variant="outline" onClick={() => handleEditFeedback(result)}>
-                          <Eye className="w-4 h-4 mr-2" />
-                          Preview
-                        </Button>
+                      </Badge>
+                      {vcFeedbackStatusText === 'Not Generated' ? (
                         <Button
-                          variant="outline"
+                          variant="default"
                           size="sm"
-                          onClick={() => enhanceSingleFeedback(result.id, result.name)}
-                          disabled={enhancingFeedback === result.id || result.feedbackStatus === 'sent'}
-                        >
-                          {enhancingFeedback === result.id ? (
-                            <>
-                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                              Enhancing...
-                            </>
-                          ) : (
-                            <>
-                              <Sparkles className="h-4 w-4 mr-2" />
-                              Enhance
-                            </>
-                          )}
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => generateAIFeedback(result.id, result.name)}
+                          onClick={() => handleGenerateVCFeedback(result.id, result.name)}
                           disabled={generatingFeedback === result.id}
                         >
                           {generatingFeedback === result.id ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
+                            <>
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              Generating...
+                            </>
                           ) : (
-                            <RefreshCw className="h-4 w-4" />
+                            <>
+                              <FileText className="h-4 w-4 mr-2" />
+                              Generate VC Feedback
+                            </>
                           )}
                         </Button>
-                        {result.feedbackStatus !== 'approved' && (
-                          <Button size="sm" onClick={() => handleApproveFeedback(result.id)}>
-                            <CheckCircle className="w-4 h-4 mr-2" />
-                            Approve
+                      ) : (
+                        <>
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
+                            onClick={() => handleViewVCFeedback(result.id, result.name)}
+                          >
+                            <Eye className="w-4 h-4 mr-2" />
+                            VC Feedback
                           </Button>
-                        )}
-                      </>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handlePreviewEmail(result.id, result.name)}
+                          >
+                            <Mail className="w-4 h-4 mr-2" />
+                            Preview Email
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                  <div className="bg-muted p-3 rounded text-sm text-muted-foreground">
+                    {vcFeedbackStatusText === 'Not Generated' ? (
+                      <p>No VC feedback generated yet. Click "Generate VC Feedback" to create detailed feedback from evaluations.</p>
+                    ) : (
+                      <p>VC feedback ready from {vcStatus?.evaluation_count || 0} evaluation(s). Click "VC Feedback" to review or "Preview Email" to see the formatted email.</p>
                     )}
                   </div>
                 </div>
-                <div className="bg-muted p-3 rounded text-sm">
-                  <div className="line-clamp-3 whitespace-pre-wrap">{result.feedbackSummary}</div>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </TabsContent>
 
           <TabsContent value="selected" className="space-y-4">
