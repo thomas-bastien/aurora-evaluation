@@ -135,6 +135,7 @@ export function VCFeedbackDetailsModal({
         .from('startup_vc_feedback_details')
         .update({
           plain_text_feedback: editedFeedback,
+          updated_at: new Date().toISOString(),
         })
         .eq('id', feedbackData.id);
 
@@ -215,6 +216,7 @@ export function VCFeedbackDetailsModal({
           is_approved: true,
           approved_by: user.id,
           approved_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
         })
         .eq('id', feedbackData.id);
 
