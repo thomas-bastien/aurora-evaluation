@@ -49,6 +49,8 @@ export const EmailPreviewModal = ({
   const [previewHtml, setPreviewHtml] = useState('');
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
+  const [isStale, setIsStale] = useState(false);
+  const [hasBeenSent, setHasBeenSent] = useState(false);
   
   useEffect(() => {
     if (open) {
@@ -68,6 +70,19 @@ export const EmailPreviewModal = ({
         .eq('communication_type', communicationType)
         .maybeSingle();
 
+      // Check if email has been sent
+      const { data: sentEmails } = await supabase
+        .from('email_communications')
+        .select('id, status')
+        .eq('recipient_id', startupId)
+        .eq('round_name', roundName)
+        .eq('communication_type', communicationType)
+        .in('status', ['sent', 'delivered', 'opened', 'clicked'])
+        .limit(1);
+
+      const emailSent = (sentEmails && sentEmails.length > 0);
+      setHasBeenSent(emailSent);
+
       // Check if approved VC feedback exists
       const { data: vcFeedback } = await supabase
         .from('startup_vc_feedback_details')
@@ -76,6 +91,12 @@ export const EmailPreviewModal = ({
         .eq('round_name', roundName)
         .maybeSingle();
 
+      // Compute staleness: approved email but VC feedback changed after
+      const stale = existing?.is_approved && 
+        vcFeedback?.updated_at && existing.updated_at &&
+        new Date(vcFeedback.updated_at) > new Date(existing.updated_at);
+      setIsStale(!!stale);
+
       // Determine if we should auto-refresh
       const shouldRefresh =
         !existing ||
@@ -83,16 +104,24 @@ export const EmailPreviewModal = ({
         (vcFeedback?.updated_at && 
          new Date(vcFeedback.updated_at) > new Date(existing.updated_at || 0));
 
-      const safeToAutoRefresh = !existing?.is_approved;
+      // Safe to auto-refresh if not approved OR (approved but not sent and stale)
+      const safeToAutoRefresh = !existing?.is_approved || (!emailSent && !!stale);
 
       console.log('[Email Preview] existing.updated_at:', existing?.updated_at, 'vcFeedback.updated_at:', vcFeedback?.updated_at);
+      console.log('[Email Preview] hasBeenSent:', emailSent, 'isStale:', stale);
       console.log('[Email Preview] safeToAutoRefresh:', safeToAutoRefresh);
       console.log('[Email Preview] shouldRefresh:', shouldRefresh);
 
       if (shouldRefresh && safeToAutoRefresh) {
-        console.log('[Email Preview] Auto-refreshing from VC feedback changes');
-        await generatePreview();
-        toast.success('Email preview updated from VC feedback changes');
+        if (existing?.is_approved && !emailSent && stale) {
+          console.log('[Email Preview] Clearing approval and auto-refreshing stale email');
+          await generatePreview();
+          toast.success('VC feedback changed; previous approval cleared and preview updated.');
+        } else {
+          console.log('[Email Preview] Auto-refreshing from VC feedback changes');
+          await generatePreview();
+          toast.success('Email preview updated from VC feedback changes');
+        }
         return;
       }
 
@@ -263,6 +292,18 @@ export const EmailPreviewModal = ({
           </div>
         </DialogHeader>
 
+        {/* Stale email banners */}
+        {isStale && !hasBeenSent && status === 'approved' && (
+          <div className="bg-orange-100 border border-orange-300 rounded-md p-3 text-sm text-orange-800">
+            ⚠️ Feedback updated after approval. Preview refreshed and requires re-approval.
+          </div>
+        )}
+        {isStale && hasBeenSent && (
+          <div className="bg-gray-100 border border-gray-300 rounded-md p-3 text-sm text-gray-700">
+            ℹ️ Feedback changed after approval, but email was already sent — preview left unchanged.
+          </div>
+        )}
+
         {loading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -368,7 +409,7 @@ export const EmailPreviewModal = ({
               >
                 Close
               </Button>
-              {status !== 'approved' && (
+              {(status !== 'approved' || (isStale && !hasBeenSent)) && (
                 <Button
                   variant="secondary"
                   onClick={handleManualRefresh}
@@ -381,7 +422,7 @@ export const EmailPreviewModal = ({
               <Button
                 variant="secondary"
                 onClick={() => setEditing(true)}
-                disabled={status === 'approved'}
+                disabled={status === 'approved' && !(isStale && !hasBeenSent)}
               >
                 <Edit className="h-4 w-4 mr-2" />
                 Edit Email
