@@ -59,6 +59,39 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_guidance_cache: {
+        Row: {
+          computed_at: string
+          created_at: string | null
+          guidance_data: Json
+          id: string
+          metrics_snapshot: Json
+          role: string
+          round_name: string
+          user_id: string
+        }
+        Insert: {
+          computed_at?: string
+          created_at?: string | null
+          guidance_data: Json
+          id?: string
+          metrics_snapshot: Json
+          role: string
+          round_name: string
+          user_id: string
+        }
+        Update: {
+          computed_at?: string
+          created_at?: string | null
+          guidance_data?: Json
+          id?: string
+          metrics_snapshot?: Json
+          role?: string
+          round_name?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       cm_calendar_invitations: {
         Row: {
           attendee_emails: Json | null
@@ -488,6 +521,47 @@ export type Database = {
           version?: number
         }
         Relationships: []
+      }
+      founder_feedback_cache: {
+        Row: {
+          computed_at: string
+          created_at: string | null
+          evaluation_count: number
+          feedback_data: Json
+          id: string
+          metadata: Json
+          round_name: string
+          startup_id: string
+        }
+        Insert: {
+          computed_at?: string
+          created_at?: string | null
+          evaluation_count: number
+          feedback_data: Json
+          id?: string
+          metadata: Json
+          round_name: string
+          startup_id: string
+        }
+        Update: {
+          computed_at?: string
+          created_at?: string | null
+          evaluation_count?: number
+          feedback_data?: Json
+          id?: string
+          metadata?: Json
+          round_name?: string
+          startup_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "founder_feedback_cache_startup_id_fkey"
+            columns: ["startup_id"]
+            isOneToOne: false
+            referencedRelation: "startups"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       juror_conflicts: {
         Row: {

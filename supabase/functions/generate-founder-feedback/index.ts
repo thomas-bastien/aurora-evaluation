@@ -62,6 +62,31 @@ serve(async (req) => {
       );
     }
 
+    // Check cache first
+    const { data: cached } = await supabase
+      .from('founder_feedback_cache')
+      .select('*')
+      .eq('startup_id', startupId)
+      .eq('round_name', roundName)
+      .maybeSingle();
+
+    // If cache exists and evaluation count matches, return cached
+    if (cached && cached.evaluation_count === evaluations.length) {
+      console.log(`Using cached feedback for startup ${startupId}`);
+      return new Response(
+        JSON.stringify({
+          success: true,
+          feedback: cached.feedback_data,
+          metadata: {
+            ...cached.metadata,
+            cached: true,
+            cachedAt: cached.computed_at
+          }
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Extract evaluation data
     const scores = evaluations.map(e => e.overall_score).filter(Boolean);
     const averageScore = scores.length > 0 
@@ -186,17 +211,30 @@ Generate structured feedback using the generate_founder_feedback function.`;
 
     const feedbackData = geminiResponse.functionCall.args;
 
+    // Store in cache
+    const metadata = {
+      startupName: startup.name,
+      evaluationCount: evaluations.length,
+      averageScore: averageScore.toFixed(1),
+      generatedAt: new Date().toISOString(),
+      model: geminiResponse.model
+    };
+
+    await supabase
+      .from('founder_feedback_cache')
+      .upsert([{
+        startup_id: startupId,
+        round_name: roundName,
+        feedback_data: feedbackData,
+        metadata: metadata,
+        evaluation_count: evaluations.length
+      }]);
+
     return new Response(
       JSON.stringify({
         success: true,
         feedback: feedbackData,
-        metadata: {
-          startupName: startup.name,
-          evaluationCount: evaluations.length,
-          averageScore: averageScore.toFixed(1),
-          generatedAt: new Date().toISOString(),
-          model: geminiResponse.model
-        }
+        metadata
       }),
       {
         status: 200,

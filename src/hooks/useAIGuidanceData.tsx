@@ -23,9 +23,6 @@ interface GuidanceResult {
   refetch: () => Promise<void>;
 }
 
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
-let cachedData: { data: GuidanceData; timestamp: number; role: string; round: string } | null = null;
-
 export const useAIGuidanceData = (activeRoundName?: string): GuidanceResult => {
   const { user } = useAuth();
   const { profile } = useUserProfile();
@@ -39,20 +36,26 @@ export const useAIGuidanceData = (activeRoundName?: string): GuidanceResult => {
       return;
     }
 
-    // Check cache
-    const now = Date.now();
-    if (cachedData && 
-        cachedData.role === profile.role && 
-        cachedData.round === activeRoundName &&
-        (now - cachedData.timestamp) < CACHE_DURATION) {
-      setData(cachedData.data);
-      setLoading(false);
-      return;
-    }
-
     try {
       setLoading(true);
       setError(null);
+
+      // Check database cache first
+      const { data: cached } = await supabase
+        .from('ai_guidance_cache')
+        .select('guidance_data, computed_at')
+        .eq('user_id', user.id)
+        .eq('role', profile.role)
+        .eq('round_name', activeRoundName)
+        .maybeSingle();
+
+      if (cached) {
+        setData(cached.guidance_data as unknown as GuidanceData);
+        setLoading(false);
+        return;
+      }
+
+      // Cache miss - fetch metrics and generate new guidance
 
       let metrics = {};
 
@@ -168,13 +171,16 @@ export const useAIGuidanceData = (activeRoundName?: string): GuidanceResult => {
 
       const guidanceData = guidanceResponse as GuidanceData;
       
-      // Cache the result
-      cachedData = {
-        data: guidanceData,
-        timestamp: now,
-        role: profile.role,
-        round: activeRoundName
-      };
+      // Store in database cache
+      await supabase
+        .from('ai_guidance_cache')
+        .upsert([{
+          user_id: user.id,
+          role: profile.role,
+          round_name: activeRoundName,
+          guidance_data: guidanceData as any,
+          metrics_snapshot: metrics as any
+        }]);
 
       setData(guidanceData);
     } catch (err) {
