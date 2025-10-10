@@ -803,7 +803,8 @@ The Aurora Tech Awards Team`
               recipientEmail: startup.email,
               communicationType: pendingCommunicationType,
               roundName: currentRound === 'screeningRound' ? 'screening' : 'pitching',
-              feedbackSummary: startup.feedbackSummary
+              // Don't pass feedbackSummary for top-100-feedback - backend builds VC sections from raw evaluations
+              ...(pendingCommunicationType !== 'top-100-feedback' && { feedbackSummary: startup.feedbackSummary })
             }
           });
 
@@ -867,7 +868,8 @@ The Aurora Tech Awards Team`
           recipientEmail: result.email,
           communicationType,
           roundName: currentRound === 'screeningRound' ? 'screening' : 'pitching',
-          feedbackSummary: result.feedbackSummary
+          // Don't pass feedbackSummary for top-100-feedback - backend builds VC sections from raw evaluations
+          ...(communicationType !== 'top-100-feedback' && { feedbackSummary: result.feedbackSummary })
         }
       });
 

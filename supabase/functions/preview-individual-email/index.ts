@@ -73,11 +73,22 @@ serve(async (req) => {
       evaluations = data || [];
     }
 
+    // Map communication type to template category
+    const templateCategoryMap: Record<string, string> = {
+      'selected': 'founder_selection',
+      'rejected': 'founder_rejection',
+      'under-review': 'founder_under_review',
+      'top-100-feedback': 'top-100-feedback'
+    };
+    
+    const templateCategory = templateCategoryMap[communicationType] || 'founder_selection';
+    console.log('[Preview Email] Using template category:', templateCategory);
+
     // Fetch email template
     const { data: template, error: templateError } = await supabaseClient
       .from('email_templates')
       .select('*')
-      .eq('category', 'results-selected')
+      .eq('category', templateCategory)
       .eq('is_active', true)
       .single();
 
