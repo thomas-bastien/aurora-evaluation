@@ -146,3 +146,6 @@ verify_jwt = true
 
 [functions.precompute-matchmaking-scores]
 verify_jwt = true
+
+[functions.preview-individual-email]
+verify_jwt = true

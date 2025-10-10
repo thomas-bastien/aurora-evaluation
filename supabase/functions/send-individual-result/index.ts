@@ -195,61 +195,84 @@ const handler = async (req: Request): Promise<Response> => {
     const internalType = requestData.communicationType === 'selected' ? 'selection' : 
                         requestData.communicationType === 'rejected' ? 'rejection' : 'under-review';
 
+    // Check if there's a custom email approved for this startup
+    const { data: customEmail, error: customEmailError } = await supabase
+      .from('startup_custom_emails')
+      .select('*')
+      .eq('startup_id', requestData.startupId)
+      .eq('round_name', requestData.roundName === 'screening' ? 'screening' : 'pitching')
+      .eq('communication_type', requestData.communicationType)
+      .eq('is_approved', true)
+      .maybeSingle();
+
     // Get email template from database
     let template: EmailTemplate | null = null;
     let subject = "";
     let body = "";
+    let usingCustomEmail = false;
 
-    // Fetch template from database
-    const { data: templateData, error: templateError } = await supabase
-      .from('email_templates')
-      .select('*')
-      .eq('category', templateCategory)
-      .eq('is_active', true)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-      
-    if (templateError || !templateData) {
-      console.error("Template fetch error:", templateError);
-      console.log("Using fallback template for category:", templateCategory);
-      
-      // Use fallback template
-      const fallback = getDefaultContentByCategory(templateCategory);
-      subject = fallback.subject;
-      body = fallback.body;
+    // Use custom email if approved, otherwise use template
+    if (customEmail && !customEmailError) {
+      console.log('Using approved custom email for startup:', requestData.startupId);
+      subject = customEmail.custom_subject || 'Aurora Tech Awards Update';
+      body = customEmail.custom_body || '';
+      usingCustomEmail = true;
     } else {
-      template = templateData as EmailTemplate;
-      subject = template.subject_template;
-      body = template.body_template;
+
+      // Fetch template from database
+      const { data: templateData, error: templateError } = await supabase
+        .from('email_templates')
+        .select('*')
+        .eq('category', templateCategory)
+        .eq('is_active', true)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+        
+      if (templateError || !templateData) {
+        console.error("Template fetch error:", templateError);
+        console.log("Using fallback template for category:", templateCategory);
+        
+        // Use fallback template
+        const fallback = getDefaultContentByCategory(templateCategory);
+        subject = fallback.subject;
+        body = fallback.body;
+      } else {
+        template = templateData as EmailTemplate;
+        subject = template.subject_template;
+        body = template.body_template;
+      }
     }
 
-    // Prepare variables for substitution
-    const variables: Record<string, string> = {
-      founder_name: requestData.startupName, // Using startup name as founder name for now
-      startup_name: requestData.startupName,
-      round_name: requestData.roundName,
-      feedback_summary: requestData.feedbackSummary || 'No specific feedback provided',
-      custom_message: requestData.customMessage || ''
-    };
+    // Only apply variable substitution if not using custom email
+    if (!usingCustomEmail) {
+      // Prepare variables for substitution
+      const variables: Record<string, string> = {
+        founder_name: requestData.startupName, // Using startup name as founder name for now
+        startup_name: requestData.startupName,
+        round_name: requestData.roundName,
+        feedback_summary: requestData.feedbackSummary || 'No specific feedback provided',
+        custom_message: requestData.customMessage || ''
+      };
 
-    // Handle top-100-feedback template with dynamic VC sections
-    if (templateCategory === 'top-100-feedback') {
-      console.log('Building dynamic VC feedback sections for startup:', requestData.startupId);
-      const vcFeedbackSections = await buildVCFeedbackSections(
-        requestData.startupId,
-        requestData.roundName
-      );
-      variables['vc_feedback_sections'] = vcFeedbackSections;
-      variables['founder_name'] = requestData.startupName;
-      console.log('VC feedback sections built successfully');
-    }
+      // Handle top-100-feedback template with dynamic VC sections
+      if (templateCategory === 'top-100-feedback') {
+        console.log('Building dynamic VC feedback sections for startup:', requestData.startupId);
+        const vcFeedbackSections = await buildVCFeedbackSections(
+          requestData.startupId,
+          requestData.roundName
+        );
+        variables['vc_feedback_sections'] = vcFeedbackSections;
+        variables['founder_name'] = requestData.startupName;
+        console.log('VC feedback sections built successfully');
+      }
 
-    // Apply variable substitution
-    for (const [key, value] of Object.entries(variables)) {
-      const placeholder = `{{${key}}}`;
-      subject = subject.replace(new RegExp(placeholder, 'g'), String(value));
-      body = body.replace(new RegExp(placeholder, 'g'), String(value));
+      // Apply variable substitution
+      for (const [key, value] of Object.entries(variables)) {
+        const placeholder = `{{${key}}}`;
+        subject = subject.replace(new RegExp(placeholder, 'g'), String(value));
+        body = body.replace(new RegExp(placeholder, 'g'), String(value));
+      }
     }
 
     // Determine recipient email and test mode BEFORE creating communication record
@@ -326,7 +349,9 @@ const handler = async (req: Request): Promise<Response> => {
           custom_message_included: !!requestData.customMessage,
           test_mode: isTestEmail,
           original_recipient: isTestEmail ? requestData.recipientEmail : null,
-          sandbox_recipient: isTestEmail ? actualRecipient : null
+          sandbox_recipient: isTestEmail ? actualRecipient : null,
+          used_custom_email: usingCustomEmail,
+          custom_email_id: usingCustomEmail ? customEmail?.id : null
         }
       })
       .select()

@@ -27,6 +27,7 @@ import { StartupCommunicationConfirmationModal } from './StartupCommunicationCon
 import { validateStartupCommunications, type CommunicationValidationResult } from '@/utils/startupCommunicationValidation';
 import { StatusBadge } from '@/components/common/StatusBadge';
 import { AggregatedTemplateSection } from './AggregatedTemplateSection';
+import { EmailPreviewModal } from './EmailPreviewModal';
 
 interface StartupResult {
   id: string;
@@ -84,12 +85,46 @@ export const ResultsCommunication = ({ currentRound }: ResultsCommunicationProps
     improvements: string[];
   } | null>(null);
   const [showEnhancementPreview, setShowEnhancementPreview] = useState(false);
+  const [showEmailPreview, setShowEmailPreview] = useState(false);
+  const [selectedStartupForEmail, setSelectedStartupForEmail] = useState<{ id: string; name: string } | null>(null);
+  const [emailStatuses, setEmailStatuses] = useState<Record<string, 'not-generated' | 'draft' | 'approved'>>({});
   
 
   useEffect(() => {
     fetchResultsData();
     loadTemplates();
+    loadEmailStatuses();
   }, [currentRound]);
+
+  const loadEmailStatuses = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('startup_custom_emails')
+        .select('startup_id, is_approved')
+        .eq('round_name', currentRound === 'screeningRound' ? 'screening' : 'pitching')
+        .eq('communication_type', 'top-100-feedback');
+
+      if (error) throw error;
+
+      const statuses: Record<string, 'not-generated' | 'draft' | 'approved'> = {};
+      data?.forEach(item => {
+        statuses[item.startup_id] = item.is_approved ? 'approved' : 'draft';
+      });
+      setEmailStatuses(statuses);
+    } catch (error) {
+      console.error('Error loading email statuses:', error);
+    }
+  };
+
+  const handlePreviewEmail = (startupId: string, startupName: string) => {
+    setSelectedStartupForEmail({ id: startupId, name: startupName });
+    setShowEmailPreview(true);
+  };
+
+  const handleEmailStatusChange = () => {
+    loadEmailStatuses();
+    fetchResultsData();
+  };
 
   const fetchResultsData = async () => {
     try {
@@ -1187,28 +1222,52 @@ The Aurora Tech Awards Team`
           </TabsContent>
 
           <TabsContent value="selected" className="space-y-4">
-            {selectedStartups.map(result => (
-              <div key={result.id} className="border border-border rounded-lg p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="font-semibold text-foreground">{result.name}</h4>
-                    <p className="text-sm text-muted-foreground">
-                       {result.email} • Score: {formatScore(result.averageScore)}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {result.communicationSent ? (
-                      <Badge className="bg-accent text-accent-foreground">Email Sent</Badge>
-                    ) : (
-                      <Badge variant="outline">Pending</Badge>
-                    )}
-                    <Button size="sm" variant="outline">
-                      <Eye className="w-4 h-4" />
-                    </Button>
+            {selectedStartups.map(result => {
+              const emailStatus = emailStatuses[result.id] || 'not-generated';
+              return (
+                <div key={result.id} className="border border-border rounded-lg p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="font-semibold text-foreground">{result.name}</h4>
+                      <p className="text-sm text-muted-foreground">
+                         {result.email} • Score: {formatScore(result.averageScore)}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge 
+                        variant={
+                          emailStatus === 'approved' ? 'default' :
+                          emailStatus === 'draft' ? 'secondary' :
+                          'outline'
+                        }
+                      >
+                        {emailStatus === 'approved' ? (
+                          <>
+                            <CheckCircle className="h-3 w-3 mr-1" />
+                            Approved
+                          </>
+                        ) : emailStatus === 'draft' ? (
+                          'Draft'
+                        ) : (
+                          'Not Generated'
+                        )}
+                      </Badge>
+                      {result.communicationSent && (
+                        <Badge className="bg-accent text-accent-foreground">Email Sent</Badge>
+                      )}
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={() => handlePreviewEmail(result.id, result.name)}
+                      >
+                        <Eye className="w-4 h-4 mr-2" />
+                        Preview & Edit
+                      </Button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </TabsContent>
 
           <TabsContent value="under-review" className="space-y-4">
@@ -1285,6 +1344,19 @@ The Aurora Tech Awards Team`
             ))}
           </TabsContent>
         </Tabs>
+
+        {/* Email Preview Modal */}
+        {selectedStartupForEmail && (
+          <EmailPreviewModal
+            open={showEmailPreview}
+            onOpenChange={setShowEmailPreview}
+            startupId={selectedStartupForEmail.id}
+            startupName={selectedStartupForEmail.name}
+            roundName={currentRound === 'screeningRound' ? 'screening' : 'pitching'}
+            communicationType="top-100-feedback"
+            onEmailStatusChange={handleEmailStatusChange}
+          />
+        )}
 
         {/* Feedback Edit Dialog */}
         <Dialog open={showFeedbackDialog} onOpenChange={setShowFeedbackDialog}>

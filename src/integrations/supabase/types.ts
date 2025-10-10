@@ -1198,6 +1198,59 @@ export type Database = {
         }
         Relationships: []
       }
+      startup_custom_emails: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          communication_type: string
+          created_at: string | null
+          custom_body: string | null
+          custom_subject: string | null
+          id: string
+          is_approved: boolean | null
+          preview_html: string | null
+          round_name: string
+          startup_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          communication_type: string
+          created_at?: string | null
+          custom_body?: string | null
+          custom_subject?: string | null
+          id?: string
+          is_approved?: boolean | null
+          preview_html?: string | null
+          round_name: string
+          startup_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          communication_type?: string
+          created_at?: string | null
+          custom_body?: string | null
+          custom_subject?: string | null
+          id?: string
+          is_approved?: boolean | null
+          preview_html?: string | null
+          round_name?: string
+          startup_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "startup_custom_emails_startup_id_fkey"
+            columns: ["startup_id"]
+            isOneToOne: false
+            referencedRelation: "startups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       startup_juror_compatibility_cache: {
         Row: {
           brief_reasoning: string
