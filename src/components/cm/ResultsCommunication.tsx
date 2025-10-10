@@ -159,6 +159,7 @@ export const ResultsCommunication = ({ currentRound }: ResultsCommunicationProps
 
   const handleVCFeedbackStatusChange = () => {
     refetchVCFeedback();
+    fetchResultsData();
   };
 
   const handleGenerateVCFeedback = async (startupId: string, startupName: string) => {
@@ -269,8 +270,27 @@ export const ResultsCommunication = ({ currentRound }: ResultsCommunicationProps
         roundStatusMap.set(rs.startup_id, rs.status);
       });
 
+      // Fetch approved VC feedback details
+      const { data: vcFeedbackData, error: vcFeedbackError } = await supabase
+        .from('startup_vc_feedback_details')
+        .select('startup_id, plain_text_feedback, is_approved')
+        .eq('round_name', currentRound === 'screeningRound' ? 'screening' : 'pitching');
+
+      if (vcFeedbackError) {
+        console.error('Error fetching VC feedback:', vcFeedbackError);
+      }
+
+      // Create a map of startup IDs to their approved VC feedback
+      const vcFeedbackMap = new Map<string, string>();
+      vcFeedbackData?.forEach(vf => {
+        if (vf.is_approved && vf.plain_text_feedback) {
+          vcFeedbackMap.set(vf.startup_id, vf.plain_text_feedback);
+        }
+      });
+
       console.log(`Loaded ${startupsData?.length || 0} startups for ${currentRound} communication`);
       console.log(`Found ${roundStatusesData?.length || 0} round statuses`);
+      console.log(`Loaded ${vcFeedbackMap.size} approved VC feedback entries`);
 
       const resultsData: StartupResult[] = startupsData?.map(startup => {
         const evaluationKey = currentRound === 'screeningRound' ? 'screening_evaluations' : 'pitching_evaluations';
@@ -287,12 +307,24 @@ export const ResultsCommunication = ({ currentRound }: ResultsCommunicationProps
         // Use round-specific status from startup_round_statuses table
         const roundStatus = roundStatusMap.get(startup.id) || 'pending';
 
-        // Generate AI feedback summary (placeholder - would use actual AI)
-        const strengths = submittedEvaluations.flatMap(e => e.strengths || []);
-        const improvements = submittedEvaluations.map(e => e.improvement_areas).filter(Boolean);
-        const notes = submittedEvaluations.map(e => e.overall_notes).filter(Boolean);
+        // Check if approved VC feedback exists for this startup
+        const approvedVCFeedback = vcFeedbackMap.get(startup.id);
 
-        const feedbackSummary = generateFeedbackSummary(startup.name, strengths, improvements, notes, averageScore);
+        let feedbackSummary: string;
+        let feedbackStatus: 'draft' | 'reviewed' | 'approved' | 'sent';
+
+        if (approvedVCFeedback) {
+          // Use approved VC feedback
+          feedbackSummary = approvedVCFeedback;
+          feedbackStatus = 'approved';
+        } else {
+          // Fall back to placeholder
+          const strengths = submittedEvaluations.flatMap(e => e.strengths || []);
+          const improvements = submittedEvaluations.map(e => e.improvement_areas).filter(Boolean);
+          const notes = submittedEvaluations.map(e => e.overall_notes).filter(Boolean);
+          feedbackSummary = generateFeedbackSummary(startup.name, strengths, improvements, notes, averageScore);
+          feedbackStatus = 'draft';
+        }
 
         return {
           id: startup.id,
@@ -303,7 +335,7 @@ export const ResultsCommunication = ({ currentRound }: ResultsCommunicationProps
           isSelected: roundStatus === 'selected',
           roundStatus,
           feedbackSummary,
-          feedbackStatus: 'draft' as const,
+          feedbackStatus,
           communicationSent: false
         };
       }) || [];
