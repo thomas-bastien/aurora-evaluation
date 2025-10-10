@@ -43,13 +43,10 @@ serve(async (req) => {
       .from(evaluationTable)
       .select(`
         *,
-        evaluator:evaluator_id (
+        juror:evaluator_id (
           id,
-          jurors!inner (
-            id,
-            name,
-            company
-          )
+          name,
+          company
         )
       `)
       .eq('startup_id', startupId)
@@ -78,7 +75,7 @@ serve(async (req) => {
     let plainTextFeedback = '';
     
     evaluations.forEach((evaluation: any, index: number) => {
-      const jurorData = evaluation.evaluator?.jurors;
+      const jurorData = evaluation.juror;
       const vcName = jurorData?.company || 'VC Fund';
       const jurorName = jurorData?.name || 'Anonymous';
       
