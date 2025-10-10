@@ -243,6 +243,7 @@ serve(async (req) => {
 
     const body = template.body_template
       .replace(/\{\{founder_first_name\}\}/g, founderName)
+      .replace(/\{\{founder_name\}\}/g, founderName)
       .replace(/\{\{startup_name\}\}/g, startupName)
       .replace(/\{\{vc_feedback_sections\}\}/g, vcFeedbackSections || '<p>No feedback sections available yet.</p>');
 

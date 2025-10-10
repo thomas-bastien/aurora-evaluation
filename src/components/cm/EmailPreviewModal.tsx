@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Loader2, Eye, Edit, CheckCircle, XCircle } from "lucide-react";
+import { Loader2, Eye, Edit, CheckCircle, XCircle, RefreshCw, AlertCircle } from "lucide-react";
 
 interface EmailPreviewModalProps {
   open: boolean;
@@ -42,6 +42,7 @@ export const EmailPreviewModal = ({
   const [generating, setGenerating] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [customEmail, setCustomEmail] = useState<CustomEmail | null>(null);
   const [previewHtml, setPreviewHtml] = useState('');
   const [subject, setSubject] = useState('');
@@ -65,6 +66,31 @@ export const EmailPreviewModal = ({
         .eq('communication_type', communicationType)
         .maybeSingle();
 
+      // Check if approved VC feedback exists
+      const { data: vcFeedback } = await supabase
+        .from('startup_vc_feedback_details')
+        .select('is_approved, approved_at, updated_at')
+        .eq('startup_id', startupId)
+        .eq('round_name', roundName)
+        .maybeSingle();
+
+      // Determine if we should auto-refresh
+      const shouldRefresh =
+        !existing ||
+        !existing.preview_html ||
+        (vcFeedback?.is_approved && 
+         vcFeedback?.approved_at && 
+         new Date(vcFeedback.approved_at) > new Date(existing.updated_at || 0));
+
+      const safeToAutoRefresh = !existing?.is_approved;
+
+      if (shouldRefresh && safeToAutoRefresh) {
+        console.log('[Email Preview] Auto-refreshing from approved VC feedback');
+        await generatePreview();
+        toast.success('Email preview updated from approved VC feedback');
+        return;
+      }
+
       if (existing && !fetchError) {
         setCustomEmail(existing);
         setSubject(existing.custom_subject || '');
@@ -82,8 +108,9 @@ export const EmailPreviewModal = ({
     }
   };
 
-  const generatePreview = async () => {
-    setGenerating(true);
+  const generatePreview = async (isManualRefresh = false) => {
+    const loadingState = isManualRefresh ? setRefreshing : setGenerating;
+    loadingState(true);
     try {
       const { data, error } = await supabase.functions.invoke('preview-individual-email', {
         body: {
@@ -119,13 +146,21 @@ export const EmailPreviewModal = ({
       if (saveError) throw saveError;
 
       setCustomEmail(saved);
-      toast.success('Email preview generated');
+      if (isManualRefresh) {
+        toast.success('Email refreshed from VC feedback');
+      } else {
+        toast.success('Email preview generated');
+      }
     } catch (error) {
       console.error('Error generating preview:', error);
       toast.error('Failed to generate email preview');
     } finally {
-      setGenerating(false);
+      loadingState(false);
     }
+  };
+
+  const handleManualRefresh = async () => {
+    await generatePreview(true);
   };
 
   const handleSaveDraft = async () => {
@@ -328,6 +363,16 @@ export const EmailPreviewModal = ({
               >
                 Close
               </Button>
+              {status !== 'approved' && (
+                <Button
+                  variant="secondary"
+                  onClick={handleManualRefresh}
+                  disabled={refreshing}
+                >
+                  {refreshing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+                  Refresh from VC Feedback
+                </Button>
+              )}
               <Button
                 variant="secondary"
                 onClick={() => setEditing(true)}
@@ -353,5 +398,3 @@ export const EmailPreviewModal = ({
   );
 };
 
-// Missing import
-import { AlertCircle } from "lucide-react";
