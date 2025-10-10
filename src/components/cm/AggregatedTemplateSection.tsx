@@ -3,8 +3,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Loader2, Mail, CheckCircle, Eye, FileText, Sparkles } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
+import { Loader2, Mail, CheckCircle, Eye, FileText, Sparkles, Send } from "lucide-react";
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 interface StartupResult {
   id: string;
   name: string;
@@ -19,6 +22,7 @@ interface AggregatedTemplateSectionProps {
   onBatchGenerateFeedback: (type: 'top-100-feedback') => Promise<void>;
   onBatchApproveFeedback: (type: 'top-100-feedback') => void;
   onBatchEnhanceFeedback: (type: 'top-100-feedback') => Promise<void>;
+  onSendCommunication: (type: 'top-100-feedback') => Promise<void>;
   batchGenerating: boolean;
   batchApproving: boolean;
   batchEnhancing: boolean;
@@ -29,14 +33,63 @@ export const AggregatedTemplateSection = ({
   onBatchGenerateFeedback,
   onBatchApproveFeedback,
   onBatchEnhanceFeedback,
+  onSendCommunication,
   batchGenerating,
   batchApproving,
   batchEnhancing
 }: AggregatedTemplateSectionProps) => {
   const [feedbackPreviewOpen, setFeedbackPreviewOpen] = useState(false);
+  const [htmlPreviewOpen, setHtmlPreviewOpen] = useState(false);
+  const [loadingPreviews, setLoadingPreviews] = useState(false);
+  const [emailPreviews, setEmailPreviews] = useState<Array<{
+    startupId: string;
+    startupName: string;
+    email: string;
+    previewHtml: string;
+    status: 'approved' | 'draft' | 'missing';
+  }>>([]);
+
+  const loadAllHTMLPreviews = async () => {
+    setLoadingPreviews(true);
+    try {
+      const { data: customEmails, error } = await supabase
+        .from('startup_custom_emails')
+        .select('startup_id, preview_html, is_approved')
+        .eq('round_name', currentRound === 'screeningRound' ? 'screening' : 'pitching')
+        .eq('communication_type', 'top-100-feedback')
+        .in('startup_id', top100FeedbackStartups.map(s => s.id));
+
+      if (error) throw error;
+
+      const previewsMap = new Map(
+        customEmails?.map(ce => [ce.startup_id, { 
+          html: ce.preview_html, 
+          isApproved: ce.is_approved 
+        }]) || []
+      );
+
+      const previews = top100FeedbackStartups.map(startup => ({
+        startupId: startup.id,
+        startupName: startup.name,
+        email: startup.email,
+        previewHtml: previewsMap.get(startup.id)?.html || '<p>Email preview not yet generated. Please generate and approve VC feedback first.</p>',
+        status: previewsMap.get(startup.id)?.isApproved ? 'approved' as const : 
+                previewsMap.get(startup.id)?.html ? 'draft' as const : 
+                'missing' as const
+      }));
+
+      setEmailPreviews(previews);
+      setHtmlPreviewOpen(true);
+    } catch (error) {
+      console.error('Error loading email previews:', error);
+      toast.error('Failed to load email previews');
+    } finally {
+      setLoadingPreviews(false);
+    }
+  };
 
   const handleFeedbackPreview = () => {
-    setFeedbackPreviewOpen(true);
+    loadAllHTMLPreviews();
   };
   const getFeedbackStats = (startups: StartupResult[]) => {
     const missingCount = startups.filter(s => s.feedbackSummary.includes('[AI Feedback not yet generated')).length;
@@ -76,36 +129,33 @@ export const AggregatedTemplateSection = ({
           </div>
 
           <div className="flex gap-2">
-            <Button onClick={() => onBatchGenerateFeedback('top-100-feedback')} disabled={batchGenerating || stats.missingCount === 0} size="sm" variant="outline">
-              {batchGenerating ? <>
+            <Button 
+              onClick={() => handleFeedbackPreview()} 
+              disabled={stats.total === 0 || loadingPreviews} 
+              size="sm" 
+              variant="outline"
+            >
+              {loadingPreviews ? (
+                <>
                   <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                  Generating...
-                </> : <>
-                  <Sparkles className="h-3 w-3 mr-1" />
-                  Generate Missing ({stats.missingCount})
-                </>}
+                  Loading...
+                </>
+              ) : (
+                <>
+                  <Eye className="h-3 w-3 mr-1" />
+                  Preview All
+                </>
+              )}
             </Button>
-            <Button onClick={() => onBatchEnhanceFeedback('top-100-feedback')} disabled={batchEnhancing || stats.generatedCount === 0} size="sm" variant="secondary">
-              {batchEnhancing ? <>
-                  <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                  Enhancing...
-                </> : <>
-                  <Sparkles className="h-3 w-3 mr-1" />
-                  Enhance All ({stats.generatedCount})
-                </>}
-            </Button>
-            <Button onClick={() => handleFeedbackPreview()} disabled={stats.total === 0} size="sm" variant="outline">
-              <Eye className="h-3 w-3 mr-1" />
-              Preview All
-            </Button>
-            <Button onClick={() => onBatchApproveFeedback('top-100-feedback')} disabled={batchApproving || stats.generatedCount === 0} size="sm" variant="default">
-              {batchApproving ? <>
-                  <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                  Approving...
-                </> : <>
-                  <CheckCircle className="h-3 w-3 mr-1" />
-                  Approve All ({stats.generatedCount})
-                </>}
+            
+            <Button 
+              onClick={() => onSendCommunication('top-100-feedback')} 
+              disabled={stats.approvedCount === 0} 
+              size="sm" 
+              variant="default"
+            >
+              <Send className="h-3 w-3 mr-1" />
+              Send Communication ({stats.approvedCount})
             </Button>
           </div>
         </div>;
@@ -176,8 +226,64 @@ export const AggregatedTemplateSection = ({
         </DialogContent>
       </Dialog>;
   };
+  const renderHTMLPreviewModal = () => {
+    return (
+      <Dialog open={htmlPreviewOpen} onOpenChange={setHtmlPreviewOpen}>
+        <DialogContent className="max-w-6xl max-h-[90vh]">
+          <DialogHeader>
+            <DialogTitle>Email Preview - Top 100 VC Feedback (Full HTML)</DialogTitle>
+            <DialogDescription>
+              Preview all {emailPreviews.length} emails in full HTML format as they will be sent to founders
+            </DialogDescription>
+          </DialogHeader>
+
+          <ScrollArea className="h-[70vh] pr-4">
+            <div className="space-y-6">
+              {emailPreviews.map((preview, index) => (
+                <div key={preview.startupId} className="space-y-2">
+                  {index > 0 && <Separator className="my-6" />}
+                  
+                  <div className="flex items-center justify-between mb-3">
+                    <div>
+                      <h3 className="font-semibold text-lg">{preview.startupName}</h3>
+                      <p className="text-sm text-muted-foreground">{preview.email}</p>
+                    </div>
+                    <Badge 
+                      variant={
+                        preview.status === 'approved' ? 'default' :
+                        preview.status === 'draft' ? 'secondary' :
+                        'destructive'
+                      }
+                    >
+                      {preview.status === 'approved' ? 'Approved' : 
+                       preview.status === 'draft' ? 'Draft' : 
+                       'Missing'}
+                    </Badge>
+                  </div>
+
+                  <div className="border rounded-lg p-4 bg-white">
+                    <div 
+                      className="email-preview-content"
+                      dangerouslySetInnerHTML={{ __html: preview.previewHtml }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </ScrollArea>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setHtmlPreviewOpen(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    );
+  };
+
   return <>
       {renderFeedbackProgressSection()}
-      {renderFeedbackPreviewModal()}
+      {renderHTMLPreviewModal()}
     </>;
 };

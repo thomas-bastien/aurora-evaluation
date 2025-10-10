@@ -1195,6 +1195,7 @@ The Aurora Tech Awards Team`
           onBatchGenerateFeedback={generateAllFeedback}
           onBatchApproveFeedback={batchApproveFeedback}
           onBatchEnhanceFeedback={enhanceAllFeedback}
+          onSendCommunication={initiateCommunications}
           batchGenerating={batchGenerating}
           batchApproving={batchApproving}
           batchEnhancing={enhancingFeedback?.startsWith('batch-') || false}
