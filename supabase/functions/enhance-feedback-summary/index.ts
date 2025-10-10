@@ -9,7 +9,7 @@ interface EnhancementRequest {
   feedbackSummary: string;
   startupName: string;
   roundName: string;
-  communicationType: 'selected' | 'rejected';
+  communicationType: 'selected' | 'rejected' | 'vc-feedback-details';
 }
 
 serve(async (req) => {
@@ -75,7 +75,7 @@ Focus on making it more specific, actionable, and professional while maintaining
       systemPrompt: systemPrompt,
       userPrompt: userPrompt,
       temperature: 0.7,
-      maxTokens: 1500
+      maxTokens: 3000
     });
 
     if (!aiResponse.success || !aiResponse.content) {

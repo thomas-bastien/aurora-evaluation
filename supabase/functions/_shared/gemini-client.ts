@@ -183,6 +183,16 @@ export async function callGemini(request: GeminiRequest): Promise<GeminiResponse
       };
     }
 
+    // Check for MAX_TOKENS finish reason before checking parts
+    if (candidate.finishReason === 'MAX_TOKENS') {
+      console.error('[Gemini] Response truncated due to MAX_TOKENS limit');
+      return {
+        success: false,
+        error: 'Response too long. The feedback text may be too large to enhance in one request. Try with shorter feedback or contact support.',
+        model
+      };
+    }
+
     const part = candidate.content?.parts?.[0];
     if (!part) {
       console.error('[Gemini] No parts in candidate:', candidate);
