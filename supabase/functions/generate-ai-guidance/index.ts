@@ -179,10 +179,10 @@ Consider:
       throw new Error(aiResponse.error || 'Failed to generate guidance');
     }
 
-    const guidanceData: GuidanceResponse = aiResponse.functionCall.args as any;
+    const guidanceData = aiResponse.functionCall.args as any;
 
     // Map AI-selected labels to full action objects
-    const aiLabels = guidanceData.quickActions as unknown as string[];
+    const aiLabels = (guidanceData.actions as string[]) || [];
     const mappedActions = aiLabels
       .map(label => validActions.find(a => a.label === label))
       .filter(Boolean) as QuickAction[];
@@ -192,9 +192,14 @@ Consider:
       mappedActions.push(validActions[0]);
     }
 
-    guidanceData.quickActions = mappedActions;
+    const response: GuidanceResponse = {
+      guidance: guidanceData.guidance,
+      priority: guidanceData.priority,
+      quickActions: mappedActions,
+      insights: guidanceData.insights || []
+    };
 
-    return new Response(JSON.stringify(guidanceData), {
+    return new Response(JSON.stringify(response), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 

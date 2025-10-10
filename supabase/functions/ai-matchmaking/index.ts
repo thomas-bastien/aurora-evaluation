@@ -115,7 +115,7 @@ Analyze compatibility for all ${jurors.length} jurors and return the JSON array.
       systemPrompt: systemPrompt,
       userPrompt: userPrompt,
       temperature: 0.3,
-      maxTokens: 4096
+      maxTokens: 16384
     });
 
     if (!aiResponse.success || !aiResponse.content) {

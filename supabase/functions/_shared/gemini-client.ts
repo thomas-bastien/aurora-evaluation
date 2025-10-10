@@ -34,6 +34,31 @@ export interface GeminiResponse {
 }
 
 /**
+ * Remove OpenAI-specific fields that Gemini doesn't support
+ */
+function cleanParametersForGemini(params: any): any {
+  if (!params || typeof params !== 'object') return params;
+  
+  const cleaned = { ...params };
+  
+  // Remove additionalProperties (OpenAI-specific)
+  delete cleaned.additionalProperties;
+  
+  // Recursively clean nested objects
+  if (cleaned.properties) {
+    Object.keys(cleaned.properties).forEach(key => {
+      cleaned.properties[key] = cleanParametersForGemini(cleaned.properties[key]);
+    });
+  }
+  
+  if (cleaned.items) {
+    cleaned.items = cleanParametersForGemini(cleaned.items);
+  }
+  
+  return cleaned;
+}
+
+/**
  * Call Google Gemini API with OpenAI-style inputs
  */
 export async function callGemini(request: GeminiRequest): Promise<GeminiResponse> {
@@ -69,7 +94,7 @@ export async function callGemini(request: GeminiRequest): Promise<GeminiResponse
       functionDeclarations: request.tools.map(tool => ({
         name: tool.function.name,
         description: tool.function.description,
-        parameters: tool.function.parameters
+        parameters: cleanParametersForGemini(tool.function.parameters)
       }))
     }];
 
