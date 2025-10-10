@@ -1,5 +1,4 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -12,17 +11,6 @@ interface EnhancementRequest {
   roundName: string;
   communicationType: 'selected' | 'rejected' | 'vc-feedback-details';
   mode?: 'auto' | 'chunked';
-  startupId?: string;
-  stream?: boolean;
-}
-
-// Helper to compute SHA-256 hash
-async function computeHash(text: string): Promise<string> {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(text);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
 serve(async (req) => {
@@ -30,18 +18,8 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  const startTime = Date.now();
-
   try {
-    const { 
-      feedbackSummary, 
-      startupName, 
-      roundName, 
-      communicationType, 
-      mode,
-      startupId,
-      stream = false 
-    }: EnhancementRequest = await req.json();
+    const { feedbackSummary, startupName, roundName, communicationType, mode }: EnhancementRequest = await req.json();
 
     if (!feedbackSummary || !startupName) {
       return new Response(
@@ -70,56 +48,6 @@ serve(async (req) => {
       );
     }
 
-    // Phase 3: Check cache first
-    let cachedResult: string | null = null;
-    if (startupId) {
-      const inputHash = await computeHash(feedbackSummary);
-      console.log(`Checking cache for hash: ${inputHash.substring(0, 12)}...`);
-      
-      const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-      const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-      const supabase = createClient(supabaseUrl, supabaseKey);
-
-      const { data: cached } = await supabase
-        .from('vc_feedback_enhancement_cache')
-        .select('enhanced_text, created_at')
-        .eq('startup_id', startupId)
-        .eq('round_name', roundName)
-        .eq('input_hash', inputHash)
-        .maybeSingle();
-
-      if (cached) {
-        const cacheAge = Date.now() - new Date(cached.created_at).getTime();
-        const sevenDays = 7 * 24 * 60 * 60 * 1000;
-        
-        if (cacheAge < sevenDays) {
-          console.log(`✅ Cache hit! Age: ${Math.floor(cacheAge / 1000 / 60)} minutes`);
-          cachedResult = cached.enhanced_text;
-        } else {
-          console.log(`⏰ Cache expired (${Math.floor(cacheAge / 1000 / 60 / 60)} hours old), refreshing...`);
-        }
-      }
-    }
-
-    if (cachedResult) {
-      return new Response(
-        JSON.stringify({
-          success: true,
-          enhancedFeedback: cachedResult,
-          improvements: ['Retrieved from cache'],
-          metadata: {
-            startupName,
-            roundName,
-            originalLength: feedbackSummary.length,
-            enhancedLength: cachedResult.length,
-            mode: 'cached',
-            timeTaken: Date.now() - startTime,
-          },
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
     const systemPrompt = `You are a professional feedback editor specializing in startup evaluations. Your role is to enhance existing feedback to be more specific, actionable, and professionally worded while preserving all key insights.
 
 Guidelines:
@@ -139,26 +67,15 @@ ${feedbackSummary}
 
 Focus on making it more specific, actionable, and professional while maintaining all the original insights and tone.`;
 
-    console.log(`Enhancing feedback for ${startupName} (length: ${feedbackSummary.length} chars)`);
+    console.log(`Enhancing feedback for ${startupName}`);
 
     const { callGemini } = await import('../_shared/gemini-client.ts');
 
-    // Phase 2: Optimistic chunking with smarter splitting
-    const splitIntoChunks = (text: string, maxChunkChars = 3500): string[] => {
-      // First try to split by VC sections (natural boundaries)
-      const vcSections = text.split(/\n(?=VC fund #)/);
-      
-      // If sections are small enough, use them directly
-      if (vcSections.every(s => s.length <= maxChunkChars) && vcSections.length > 1) {
-        console.log(`✂️ Split into ${vcSections.length} natural VC sections`);
-        return vcSections;
-      }
-      
-      // Otherwise, fall back to paragraph-based chunking
+    // Helpers for chunked enhancement
+    const splitIntoChunks = (text: string, maxChunkChars = 1800): string[] => {
       const paras = text.split(/\n{2,}/);
       const chunks: string[] = [];
       let current = '';
-      
       for (const p of paras) {
         const next = current ? `${current}\n\n${p}` : p;
         if (next.length > maxChunkChars) {
@@ -187,14 +104,14 @@ Focus on making it more specific, actionable, and professional while maintaining
         model: 'gemini-2.5-flash',
         systemPrompt,
         userPrompt: prompt,
-        temperature: 0.8,
-        maxTokens: 800,
+        temperature: 0.7,
+        maxTokens: 600,
       });
     };
 
     // Try single-shot first unless forced to chunk or obviously too long
     const forceChunked = mode === 'chunked';
-    const obviouslyLong = feedbackSummary.length > 5000;
+    const obviouslyLong = feedbackSummary.length > 8000;
 
     let enhancedFeedback: string | null = null;
 
@@ -203,109 +120,54 @@ Focus on making it more specific, actionable, and professional while maintaining
         model: 'gemini-2.5-flash',
         systemPrompt,
         userPrompt,
-        temperature: 0.8,
+        temperature: 0.7,
         maxTokens: 3000,
       });
 
       if (aiResponse.success && aiResponse.content) {
         enhancedFeedback = aiResponse.content;
-        console.log(`✅ Single-shot enhancement completed in ${Date.now() - startTime}ms`);
       } else {
-        console.warn('Single-shot enhancement failed, switching to chunked:', aiResponse.error);
+        console.warn('Single-shot enhancement failed, considering chunked fallback:', aiResponse.error);
         if (aiResponse.error?.toLowerCase().includes('rate limit')) {
           return new Response(
             JSON.stringify({ success: false, error: 'Rate limit exceeded. Please wait and try again.' }),
             { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
+        // Fall back to chunked mode for length/token related issues
       }
     }
 
-    // Phase 1: Parallel chunk processing
     if (!enhancedFeedback) {
-      console.log('🔀 Using parallel chunked enhancement');
+      console.log('Using chunked enhancement fallback');
       const chunks = splitIntoChunks(feedbackSummary);
-      console.log(`📦 Chunked into ${chunks.length} section(s), processing in parallel...`);
+      console.log(`Chunked into ${chunks.length} section(s)`);
 
-      // Process all chunks in parallel
-      const enhancementPromises = chunks.map((section, i) => 
-        enhanceOnce(section)
-          .then(res => {
-            console.log(`✓ Chunk ${i + 1}/${chunks.length} completed`);
-            return { index: i, result: res };
-          })
-      );
-
-      const results = await Promise.all(enhancementPromises);
-      console.log(`✅ All ${chunks.length} chunks processed in ${Date.now() - startTime}ms`);
-
-      // Sort by original order and combine with graceful fallback
       const enhancedParts: string[] = [];
-      let hasFailures = false;
-      
-      results
-        .sort((a, b) => a.index - b.index)
-        .forEach(r => {
-          if (!r.result.success || !r.result.content) {
-            console.warn(`Section ${r.index + 1} enhancement failed: ${r.result.error || 'Unknown error'}`);
-            hasFailures = true;
-            // Use original chunk as fallback
-            enhancedParts.push(chunks[r.index]);
-          } else {
-            enhancedParts.push(r.result.content);
-          }
-        });
-
-      enhancedFeedback = enhancedParts.join('\n\n');
-      
-      if (hasFailures) {
-        console.log('⚠️ Some sections failed to enhance, using original text for those sections');
+      for (let i = 0; i < chunks.length; i++) {
+        const section = chunks[i];
+        const res = await enhanceOnce(section);
+        if (!res.success || !res.content) {
+          console.error(`Chunk ${i + 1} enhancement failed:`, res.error);
+          // Known failures should not bubble as 500; provide helpful message
+          return new Response(
+            JSON.stringify({
+              success: false,
+              error: `AI enhancement failed on section ${i + 1}. Try again in a moment or shorten the text.`,
+            }),
+            { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+        enhancedParts.push(res.content);
       }
+      enhancedFeedback = enhancedParts.join('\n\n');
     }
 
     if (!enhancedFeedback) {
-      // Final fallback: return original feedback
-      console.warn('Enhancement failed completely, returning original feedback');
       return new Response(
-        JSON.stringify({ 
-          success: true,
-          enhancedFeedback: feedbackSummary,
-          improvements: ['Original feedback preserved (enhancement unavailable)'],
-          metadata: {
-            startupName,
-            roundName,
-            originalLength: feedbackSummary.length,
-            enhancedLength: feedbackSummary.length,
-            mode: 'fallback',
-            timeTaken: Date.now() - startTime,
-          },
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ success: false, error: 'No enhanced feedback produced.' }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
-    }
-
-    // Phase 3: Cache the result
-    if (startupId) {
-      const inputHash = await computeHash(feedbackSummary);
-      const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-      const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-      const supabase = createClient(supabaseUrl, supabaseKey);
-
-      await supabase
-        .from('vc_feedback_enhancement_cache')
-        .upsert({
-          startup_id: startupId,
-          round_name: roundName,
-          input_hash: inputHash,
-          enhanced_text: enhancedFeedback,
-          metadata: {
-            startup_name: startupName,
-            communication_type: communicationType,
-            original_length: feedbackSummary.length,
-            enhanced_length: enhancedFeedback.length,
-          },
-        });
-      console.log('💾 Cached enhancement result');
     }
 
     // Analyze improvements made
@@ -323,8 +185,7 @@ Focus on making it more specific, actionable, and professional while maintaining
       improvements.push('Improved clarity and professional tone');
     }
 
-    const timeTaken = Date.now() - startTime;
-    console.log(`✨ Enhanced feedback for ${startupName} successfully in ${timeTaken}ms`);
+    console.log(`Enhanced feedback for ${startupName} successfully`);
 
     return new Response(
       JSON.stringify({
@@ -336,8 +197,7 @@ Focus on making it more specific, actionable, and professional while maintaining
           roundName,
           originalLength: feedbackSummary.length,
           enhancedLength: enhancedFeedback.length,
-          mode: obviouslyLong || forceChunked ? 'chunked-parallel' : 'single',
-          timeTaken,
+          mode: enhancedFeedback.length > 0 && (forceChunked || obviouslyLong) ? 'chunked' : 'single',
         },
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
