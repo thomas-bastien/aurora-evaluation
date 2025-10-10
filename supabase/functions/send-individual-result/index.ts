@@ -107,35 +107,35 @@ async function buildVCFeedbackSections(
   // Build HTML for each VC evaluation
   let sectionsHTML = '';
   
-  evaluations.forEach((eval, index) => {
+  evaluations.forEach((evaluation, index) => {
     const vcNumber = index + 1;
-    const vcName = eval.juror?.company || eval.juror?.name || `VC Fund #${vcNumber}`;
+    const vcName = evaluation.juror?.company || evaluation.juror?.name || `VC Fund #${vcNumber}`;
     
     // Format strengths array as HTML list
     let strengthsHTML = '<p style="color: #64748b; font-style: italic;"><em>No specific strengths provided.</em></p>';
-    if (eval.strengths && Array.isArray(eval.strengths) && eval.strengths.length > 0) {
+    if (evaluation.strengths && Array.isArray(evaluation.strengths) && evaluation.strengths.length > 0) {
       strengthsHTML = '<ul style="margin: 10px 0; padding-left: 20px; color: #374151;">';
-      eval.strengths.forEach(strength => {
+      evaluation.strengths.forEach(strength => {
         strengthsHTML += `<li style="margin-bottom: 8px; line-height: 1.6;">${escapeHtml(strength)}</li>`;
       });
       strengthsHTML += '</ul>';
     }
     
     // Extract other fields with fallbacks
-    const improvements = eval.improvement_areas 
-      ? `<p style="color: #374151; line-height: 1.6;">${escapeHtml(eval.improvement_areas)}</p>`
+    const improvements = evaluation.improvement_areas 
+      ? `<p style="color: #374151; line-height: 1.6;">${escapeHtml(evaluation.improvement_areas)}</p>`
       : '<p style="color: #64748b; font-style: italic;"><em>No improvement areas specified.</em></p>';
     
-    const pitchDevelopment = eval.pitch_development_aspects
-      ? `<p style="color: #374151; line-height: 1.6;">${escapeHtml(eval.pitch_development_aspects)}</p>`
+    const pitchDevelopment = evaluation.pitch_development_aspects
+      ? `<p style="color: #374151; line-height: 1.6;">${escapeHtml(evaluation.pitch_development_aspects)}</p>`
       : '<p style="color: #64748b; font-style: italic;"><em>No pitch development feedback provided.</em></p>';
     
-    const focusAreas = eval.overall_notes
-      ? `<p style="color: #374151; line-height: 1.6;">${escapeHtml(eval.overall_notes)}</p>`
+    const focusAreas = evaluation.overall_notes
+      ? `<p style="color: #374151; line-height: 1.6;">${escapeHtml(evaluation.overall_notes)}</p>`
       : '<p style="color: #64748b; font-style: italic;"><em>No specific focus areas mentioned.</em></p>';
     
-    const additionalComments = eval.recommendation
-      ? `<p style="color: #374151; line-height: 1.6;">${escapeHtml(eval.recommendation)}</p>`
+    const additionalComments = evaluation.recommendation
+      ? `<p style="color: #374151; line-height: 1.6;">${escapeHtml(evaluation.recommendation)}</p>`
       : '<p style="color: #64748b; font-style: italic;"><em>No additional comments provided.</em></p>';
     
     // Build the section HTML
