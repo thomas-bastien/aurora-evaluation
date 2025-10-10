@@ -183,12 +183,22 @@ export async function callGemini(request: GeminiRequest): Promise<GeminiResponse
       };
     }
 
-    // Check for MAX_TOKENS finish reason before checking parts
+    // Check for MAX_TOKENS finish reason - return partial content instead of error
     if (candidate.finishReason === 'MAX_TOKENS') {
-      console.error('[Gemini] Response truncated due to MAX_TOKENS limit');
+      console.warn('[Gemini] Response truncated due to MAX_TOKENS limit, returning partial content');
+      const part = candidate.content?.parts?.[0];
+      if (part?.text) {
+        return {
+          success: true,
+          content: part.text,
+          model
+        };
+      }
+      // If no text in truncated response, fall through to error
+      console.error('[Gemini] MAX_TOKENS but no text content');
       return {
         success: false,
-        error: 'Response too long. The feedback text may be too large to enhance in one request. Try with shorter feedback or contact support.',
+        error: 'Response too long. Try with shorter feedback.',
         model
       };
     }

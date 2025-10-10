@@ -61,13 +61,13 @@ serve(async (req) => {
     const systemPrompt = `You are a professional feedback editor specializing in startup evaluations. Your role is to enhance existing feedback to be more specific, actionable, and professionally worded while preserving all key insights.
 
 Guidelines:
-1. Make strengths more specific by adding context and concrete examples
-2. Make challenges constructive and actionable with clear next steps
-3. Remove vague language (e.g., 'great', 'good', 'nice') and replace with specific descriptions
-4. Maintain a professional yet encouraging tone
-5. Ensure all recommendations are concrete and actionable
-6. Preserve the original structure and all key points
-7. Keep the overall length similar to the original
+1. Keep enhanced feedback similar in length to original (1.2-1.5x max)
+2. Focus on clarity and actionability, not adding extra content
+3. Make strengths more specific with concrete examples
+4. Make challenges constructive with clear next steps
+5. Remove vague language and replace with specific descriptions
+6. Maintain a professional yet encouraging tone
+7. Preserve the original structure and all key points
 
 DO NOT add information that wasn't in the original feedback. Only clarify and enhance what's already there.`;
 
@@ -87,7 +87,7 @@ Focus on making it more specific, actionable, and professional while maintaining
       systemPrompt,
       userPrompt,
       temperature: 0.8,
-      maxTokens: 2000,
+      maxTokens: 4000,
     });
 
     // Simple retry logic for network/temporary issues
@@ -98,7 +98,7 @@ Focus on making it more specific, actionable, and professional while maintaining
         systemPrompt,
         userPrompt,
         temperature: 0.8,
-        maxTokens: 2000,
+        maxTokens: 4000,
       });
     }
 
