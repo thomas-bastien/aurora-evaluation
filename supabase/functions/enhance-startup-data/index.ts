@@ -5,7 +5,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+const GOOGLE_GEMINI_API_KEY = Deno.env.get('GOOGLE_GEMINI_API_KEY');
 
 const STAGE_OPTIONS = ['Pre-Seed', 'Seed', 'Series A', 'Series B', 'Series C', 'Growth', 'IPO'];
 const REGION_OPTIONS = ['Africa', 'Asia Pacific (APAC)', 'Europe', 'Latin America (LATAM)', 'Middle East & North Africa (MENA)', 'North America'];
@@ -244,8 +244,8 @@ function fixURL(url: string, fieldType: string): string {
 }
 
 async function callAIForFuzzyMatching(startup: any): Promise<any> {
-  if (!LOVABLE_API_KEY) {
-    throw new Error('LOVABLE_API_KEY not configured');
+  if (!GOOGLE_GEMINI_API_KEY) {
+    throw new Error('GOOGLE_GEMINI_API_KEY not configured');
   }
 
   const systemPrompt = `You are a data normalization assistant. Your job is to map startup data fields to standardized values.
@@ -272,62 +272,50 @@ For example:
 
 Return your suggestions with confidence scores (0-1) and brief reasons.`;
 
-  const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: 'google/gemini-2.5-flash',
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt }
-      ],
-      tools: [
-        {
-          type: 'function',
-          function: {
-            name: 'normalize_startup_data',
-            description: 'Normalize startup data fields to standard formats',
-            parameters: {
-              type: 'object',
-              properties: {
-                stage: { type: 'string', enum: STAGE_OPTIONS },
-                stage_confidence: { type: 'number', minimum: 0, maximum: 1 },
-                stage_reason: { type: 'string' },
-                region: { type: 'string', enum: REGION_OPTIONS },
-                region_confidence: { type: 'number', minimum: 0, maximum: 1 },
-                region_reason: { type: 'string' },
-                business_model: { type: 'array', items: { type: 'string', enum: BUSINESS_MODELS } },
-                business_model_confidence: { type: 'number', minimum: 0, maximum: 1 },
-                business_model_reason: { type: 'string' },
-                verticals: { type: 'array', items: { type: 'string', enum: VERTICALS } },
-                verticals_confidence: { type: 'number', minimum: 0, maximum: 1 },
-                verticals_reason: { type: 'string' }
-              },
-              additionalProperties: false
-            }
+  console.log(`Calling AI for fuzzy matching: ${startup.name}`);
+
+  const { callGemini } = await import('../_shared/gemini-client.ts');
+  
+  const aiResponse = await callGemini({
+    model: 'gemini-2.5-flash',
+    systemPrompt: systemPrompt,
+    userPrompt: userPrompt,
+    temperature: 0.3,
+    maxTokens: 1000,
+    tools: [
+      {
+        type: 'function',
+        function: {
+          name: 'normalize_startup_data',
+          description: 'Normalize startup data fields to standard formats',
+          parameters: {
+            type: 'object',
+            properties: {
+              stage: { type: 'string', enum: STAGE_OPTIONS },
+              stage_confidence: { type: 'number', minimum: 0, maximum: 1 },
+              stage_reason: { type: 'string' },
+              region: { type: 'string', enum: REGION_OPTIONS },
+              region_confidence: { type: 'number', minimum: 0, maximum: 1 },
+              region_reason: { type: 'string' },
+              business_model: { type: 'array', items: { type: 'string', enum: BUSINESS_MODELS } },
+              business_model_confidence: { type: 'number', minimum: 0, maximum: 1 },
+              business_model_reason: { type: 'string' },
+              verticals: { type: 'array', items: { type: 'string', enum: VERTICALS } },
+              verticals_confidence: { type: 'number', minimum: 0, maximum: 1 },
+              verticals_reason: { type: 'string' }
+            },
+            additionalProperties: false
           }
         }
-      ],
-      tool_choice: { type: 'function', function: { name: 'normalize_startup_data' } }
-    }),
+      }
+    ],
+    toolChoice: { function: { name: 'normalize_startup_data' } }
   });
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error('AI API error:', response.status, errorText);
-    throw new Error(`AI API error: ${response.status}`);
+  if (!aiResponse.success || !aiResponse.functionCall) {
+    console.error('Gemini API error:', aiResponse.error);
+    throw new Error(aiResponse.error || 'Failed to normalize startup data');
   }
 
-  const data = await response.json();
-  const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
-  
-  if (toolCall && toolCall.function?.arguments) {
-    const args = JSON.parse(toolCall.function.arguments);
-    return args;
-  }
-
-  return {};
+  return aiResponse.functionCall.args;
 }

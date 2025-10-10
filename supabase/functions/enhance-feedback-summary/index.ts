@@ -38,9 +38,9 @@ serve(async (req) => {
       );
     }
 
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-    if (!LOVABLE_API_KEY) {
-      console.error('LOVABLE_API_KEY not configured');
+    const GOOGLE_GEMINI_API_KEY = Deno.env.get('GOOGLE_GEMINI_API_KEY');
+    if (!GOOGLE_GEMINI_API_KEY) {
+      console.error('GOOGLE_GEMINI_API_KEY not configured');
       return new Response(
         JSON.stringify({ success: false, error: 'AI service not configured' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -68,28 +68,20 @@ Focus on making it more specific, actionable, and professional while maintaining
 
     console.log(`Enhancing feedback for ${startupName}`);
 
-    const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
-        ],
-        temperature: 0.7,
-        max_tokens: 1500
-      }),
+    const { callGemini } = await import('../_shared/gemini-client.ts');
+    
+    const aiResponse = await callGemini({
+      model: 'gemini-2.5-flash',
+      systemPrompt: systemPrompt,
+      userPrompt: userPrompt,
+      temperature: 0.7,
+      maxTokens: 1500
     });
 
-    if (!aiResponse.ok) {
-      const errorText = await aiResponse.text();
-      console.error('AI API error:', aiResponse.status, errorText);
-
-      if (aiResponse.status === 429) {
+    if (!aiResponse.success || !aiResponse.content) {
+      console.error('Gemini API error:', aiResponse.error);
+      
+      if (aiResponse.error?.includes('rate limit')) {
         return new Response(
           JSON.stringify({ 
             success: false, 
@@ -99,21 +91,10 @@ Focus on making it more specific, actionable, and professional while maintaining
         );
       }
 
-      if (aiResponse.status === 402) {
-        return new Response(
-          JSON.stringify({ 
-            success: false, 
-            error: 'AI credits exhausted. Please add credits to continue.' 
-          }),
-          { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-
-      throw new Error(`AI API error: ${aiResponse.status}`);
+      throw new Error(aiResponse.error || 'Failed to enhance feedback');
     }
 
-    const aiData = await aiResponse.json();
-    const enhancedFeedback = aiData.choices?.[0]?.message?.content;
+    const enhancedFeedback = aiResponse.content;
 
     if (!enhancedFeedback) {
       throw new Error('No enhanced feedback received from AI');
@@ -142,7 +123,7 @@ Focus on making it more specific, actionable, and professional while maintaining
         success: true,
         enhancedFeedback,
         improvements,
-        model: 'google/gemini-2.5-flash',
+        model: aiResponse.model,
         metadata: {
           startupName,
           roundName,

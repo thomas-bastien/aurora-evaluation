@@ -45,9 +45,9 @@ serve(async (req) => {
   }
 
   try {
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-    if (!LOVABLE_API_KEY) {
-      throw new Error('LOVABLE_API_KEY is not configured');
+    const GOOGLE_GEMINI_API_KEY = Deno.env.get('GOOGLE_GEMINI_API_KEY');
+    if (!GOOGLE_GEMINI_API_KEY) {
+      throw new Error('GOOGLE_GEMINI_API_KEY is not configured');
     }
 
     const { role, userName, roundName, metrics }: GuidanceRequest = await req.json();
@@ -134,69 +134,52 @@ Consider:
 - If completion > 90%: Prepare for round transition`;
     }
 
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
-        ],
-        tools: [{
+    console.log(`[AI Guidance] Generating for role: ${role}`);
+
+    const { callGemini } = await import('../_shared/gemini-client.ts');
+    
+    const aiResponse = await callGemini({
+      model: 'gemini-2.5-flash',
+      systemPrompt: systemPrompt,
+      userPrompt: userPrompt,
+      temperature: 0.7,
+      maxTokens: 1500,
+      tools: [
+        {
           type: 'function',
           function: {
             name: 'generate_guidance',
-            description: 'Generate personalized guidance for the user',
+            description: 'Generate contextual guidance with priority and actions',
             parameters: {
               type: 'object',
               properties: {
-                guidance: {
-                  type: 'string',
-                  description: 'Main guidance message (2-3 sentences)'
-                },
-                priority: {
-                  type: 'string',
-                  enum: ['high', 'medium', 'low'],
-                  description: 'Priority level based on urgency'
-                },
-                quickActions: {
+                guidance: { type: 'string', description: 'Main guidance text' },
+                priority: { type: 'string', enum: ['low', 'medium', 'high'] },
+                actions: { 
                   type: 'array',
                   items: { type: 'string' },
-                  description: `Choose 2-3 action labels from: ${actionLabels}. Return ONLY the exact labels.`
+                  description: 'List of action labels to take'
                 },
-                insights: {
+                insights: { 
                   type: 'array',
                   items: { type: 'string' },
-                  description: '2-4 key insights or highlights'
+                  description: 'Key insights or observations'
                 }
               },
-              required: ['guidance', 'priority', 'quickActions', 'insights'],
-              additionalProperties: false
+              required: ['guidance', 'priority', 'actions', 'insights']
             }
           }
-        }],
-        tool_choice: { type: 'function', function: { name: 'generate_guidance' } }
-      }),
+        }
+      ],
+      toolChoice: { function: { name: 'generate_guidance' } }
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('AI API error:', response.status, errorText);
-      throw new Error(`AI API error: ${response.status}`);
+    if (!aiResponse.success || !aiResponse.functionCall) {
+      console.error('[AI Guidance] API error:', aiResponse.error);
+      throw new Error(aiResponse.error || 'Failed to generate guidance');
     }
 
-    const data = await response.json();
-    const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
-    
-    if (!toolCall?.function?.arguments) {
-      throw new Error('No tool call in AI response');
-    }
-
-    const guidanceData: GuidanceResponse = JSON.parse(toolCall.function.arguments);
+    const guidanceData: GuidanceResponse = aiResponse.functionCall.args as any;
 
     // Map AI-selected labels to full action objects
     const aiLabels = guidanceData.quickActions as unknown as string[];

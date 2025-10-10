@@ -56,9 +56,9 @@ serve(async (req) => {
       );
     }
 
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-    if (!LOVABLE_API_KEY) {
-      throw new Error('LOVABLE_API_KEY not configured');
+    const GOOGLE_GEMINI_API_KEY = Deno.env.get('GOOGLE_GEMINI_API_KEY');
+    if (!GOOGLE_GEMINI_API_KEY) {
+      throw new Error('GOOGLE_GEMINI_API_KEY not configured');
     }
 
     // Build the AI prompt
@@ -106,60 +106,45 @@ ${i + 1}. ID: ${j.id}
 
 Analyze compatibility for all ${jurors.length} jurors and return the JSON array.`;
 
-    // Call Lovable AI
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
-        ],
-        temperature: 0.3, // Lower temperature for more consistent scoring
-      }),
+    console.log(`Sending ${jurors.length} jurors and 1 startup to AI for matchmaking`);
+
+    const { callGemini } = await import('../_shared/gemini-client.ts');
+    
+    const aiResponse = await callGemini({
+      model: 'gemini-2.5-flash',
+      systemPrompt: systemPrompt,
+      userPrompt: userPrompt,
+      temperature: 0.3,
+      maxTokens: 4096
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Lovable AI error:', response.status, errorText);
+    if (!aiResponse.success || !aiResponse.content) {
+      console.error('Gemini API error:', aiResponse.error);
       
-      if (response.status === 429) {
+      if (aiResponse.error?.includes('rate limit')) {
         return new Response(
           JSON.stringify({ error: 'Rate limit exceeded. Please try again in a moment.' }),
           { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
       
-      if (response.status === 402) {
-        return new Response(
-          JSON.stringify({ error: 'AI credits depleted. Please add credits to your workspace.' }),
-          { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-      
-      throw new Error(`AI API error: ${response.status} - ${errorText}`);
+      throw new Error(aiResponse.error || 'Failed to get AI matchmaking response');
     }
 
-    const aiResponse = await response.json();
-    const aiContent = aiResponse.choices?.[0]?.message?.content;
-    
-    if (!aiContent) {
-      throw new Error('No content in AI response');
-    }
-
-    // Parse AI response (handle JSON in markdown code blocks)
+    // Parse JSON response
     let matchScores: AIMatchScore[];
     try {
-      // Remove markdown code blocks if present
-      const cleanContent = aiContent.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-      matchScores = JSON.parse(cleanContent);
+      // Gemini sometimes wraps JSON in markdown code blocks
+      let jsonStr = aiResponse.content.trim();
+      if (jsonStr.startsWith('```json')) {
+        jsonStr = jsonStr.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+      } else if (jsonStr.startsWith('```')) {
+        jsonStr = jsonStr.replace(/```\n?/g, '').trim();
+      }
+      matchScores = JSON.parse(jsonStr);
     } catch (parseError) {
-      console.error('Failed to parse AI response:', aiContent);
-      throw new Error('Failed to parse AI recommendations');
+      console.error('Failed to parse AI response as JSON:', aiResponse.content);
+      throw new Error('Invalid JSON response from AI');
     }
 
     // Validate response structure

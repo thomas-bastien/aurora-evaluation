@@ -78,9 +78,9 @@ serve(async (req) => {
       );
     }
 
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-    if (!LOVABLE_API_KEY) {
-      throw new Error('LOVABLE_API_KEY is not configured');
+    const GOOGLE_GEMINI_API_KEY = Deno.env.get('GOOGLE_GEMINI_API_KEY');
+    if (!GOOGLE_GEMINI_API_KEY) {
+      throw new Error('GOOGLE_GEMINI_API_KEY is not configured');
     }
 
     // Build context strings
@@ -172,69 +172,63 @@ ${relevantCriteria.map(section =>
 Task: Suggest 1-2 improvements to make feedback more specific and actionable. Reference scores when relevant.`;
     }
 
-    // Call Lovable AI with structured output
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
-        ],
-        tools: [
-          {
-            type: 'function',
-            function: {
-              name: 'suggest_feedback_improvements',
-              description: 'Return 2-3 actionable suggestions to improve evaluation feedback',
-              parameters: {
-                type: 'object',
-                properties: {
-                  suggestions: {
-                    type: 'array',
-                    items: {
-                      type: 'object',
-                      properties: {
-                        text: {
-                          type: 'string',
-                          description: 'Suggestion text (max 20 words)'
-                        },
-                        reason: {
-                          type: 'string',
-                          description: 'Why this helps (references rubric if relevant)'
-                        },
-                        priority: {
-                          type: 'string',
-                          enum: ['high', 'medium', 'low'],
-                          description: 'Importance of this suggestion'
-                        }
+    console.log(`Generating suggestions for ${fieldType} field`);
+
+    const { callGemini } = await import('../_shared/gemini-client.ts');
+    
+    const aiResponse = await callGemini({
+      model: 'gemini-2.5-flash',
+      systemPrompt: systemPrompt,
+      userPrompt: userPrompt,
+      temperature: 0.5,
+      maxTokens: 1000,
+      tools: [
+        {
+          type: 'function',
+          function: {
+            name: 'suggest_feedback_improvements',
+            description: 'Return 2-3 actionable suggestions to improve evaluation feedback',
+            parameters: {
+              type: 'object',
+              properties: {
+                suggestions: {
+                  type: 'array',
+                  items: {
+                    type: 'object',
+                    properties: {
+                      text: {
+                        type: 'string',
+                        description: 'Suggestion text (max 20 words)'
                       },
-                      required: ['text', 'reason', 'priority'],
-                      additionalProperties: false
+                      reason: {
+                        type: 'string',
+                        description: 'Why this helps (references rubric if relevant)'
+                      },
+                      priority: {
+                        type: 'string',
+                        enum: ['high', 'medium', 'low'],
+                        description: 'Importance of this suggestion'
+                      }
                     },
-                    maxItems: 3
-                  }
-                },
-                required: ['suggestions'],
-                additionalProperties: false
-              }
+                    required: ['text', 'reason', 'priority'],
+                    additionalProperties: false
+                  },
+                  maxItems: 3
+                }
+              },
+              required: ['suggestions'],
+              additionalProperties: false
             }
           }
-        ],
-        tool_choice: {
-          type: 'function',
-          function: { name: 'suggest_feedback_improvements' }
         }
-      }),
+      ],
+      toolChoice: { function: { name: 'suggest_feedback_improvements' } }
     });
 
-    if (!response.ok) {
-      if (response.status === 429) {
-        console.error('Rate limit exceeded');
+    if (!aiResponse.success || !aiResponse.functionCall) {
+      console.error('Gemini API error:', aiResponse.error);
+
+      if (aiResponse.error?.includes('rate limit')) {
         return new Response(
           JSON.stringify({ 
             error: 'Rate limit exceeded. Please try again in a moment.',
@@ -246,40 +240,14 @@ Task: Suggest 1-2 improvements to make feedback more specific and actionable. Re
           }
         );
       }
-      if (response.status === 402) {
-        console.error('Payment required');
-        return new Response(
-          JSON.stringify({ 
-            error: 'AI service credits exhausted. Please contact support.',
-            suggestions: []
-          }),
-          { 
-            status: 402,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-          }
-        );
-      }
-      
-      const errorText = await response.text();
-      console.error('AI API error:', response.status, errorText);
-      throw new Error(`AI API error: ${response.status}`);
-    }
 
-    const data = await response.json();
-    console.log('AI response:', JSON.stringify(data, null, 2));
-
-    // Extract suggestions from tool call
-    const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
-    if (!toolCall) {
-      console.error('No tool call in response');
       return new Response(
         JSON.stringify({ suggestions: [] }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const functionArgs = JSON.parse(toolCall.function.arguments);
-    const suggestions: Suggestion[] = functionArgs.suggestions || [];
+    const suggestions: Suggestion[] = aiResponse.functionCall.args.suggestions || [];
 
     console.log(`Generated ${suggestions.length} suggestions for ${fieldType}`);
 

@@ -54,10 +54,10 @@ serve(async (req) => {
     
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
+    const GOOGLE_GEMINI_API_KEY = Deno.env.get('GOOGLE_GEMINI_API_KEY');
     
-    if (!lovableApiKey) {
-      throw new Error('LOVABLE_API_KEY not configured');
+    if (!GOOGLE_GEMINI_API_KEY) {
+      throw new Error('GOOGLE_GEMINI_API_KEY not configured');
     }
 
     const supabase = createClient(supabaseUrl, supabaseKey);
@@ -190,24 +190,22 @@ Common Feedback Themes:
 
 Generate comprehensive insights covering executive summary, cohort patterns, outliers, bias checks, and risk themes.`;
 
-    // Call Lovable AI
-    const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${lovableApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
-        ],
-        tools: [{
+    console.log(`Generating AI insights for round: ${roundName}`);
+
+    const { callGemini } = await import('../_shared/gemini-client.ts');
+    
+    const aiResponse = await callGemini({
+      model: 'gemini-2.5-flash',
+      systemPrompt: systemPrompt,
+      userPrompt: userPrompt,
+      temperature: 0.4,
+      maxTokens: 3000,
+      tools: [
+        {
           type: 'function',
           function: {
             name: 'generate_insights',
-            description: 'Generate structured insights from evaluation data',
+            description: 'Generate comprehensive cohort insights from evaluation data',
             parameters: {
               type: 'object',
               properties: {
@@ -270,25 +268,17 @@ Generate comprehensive insights covering executive summary, cohort patterns, out
               required: ['executive_summary', 'cohort_patterns', 'outliers', 'bias_check', 'risk_themes']
             }
           }
-        }],
-        tool_choice: { type: 'function', function: { name: 'generate_insights' } }
-      })
+        }
+      ],
+      toolChoice: { function: { name: 'generate_insights' } }
     });
 
-    if (!aiResponse.ok) {
-      const errorText = await aiResponse.text();
-      console.error('AI gateway error:', aiResponse.status, errorText);
-      throw new Error(`AI gateway error: ${aiResponse.status}`);
+    if (!aiResponse.success || !aiResponse.functionCall) {
+      console.error('Gemini API error:', aiResponse.error);
+      throw new Error(aiResponse.error || 'Failed to generate insights');
     }
 
-    const aiData = await aiResponse.json();
-    const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
-    
-    if (!toolCall) {
-      throw new Error('No tool call in AI response');
-    }
-
-    const insights: AIInsightsResponse = JSON.parse(toolCall.function.arguments);
+    const insights: AIInsightsResponse = aiResponse.functionCall.args as any;
 
     return new Response(
       JSON.stringify({

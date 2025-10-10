@@ -117,10 +117,10 @@ ${allRecommendations.map((rec, i) => `${i + 1}. ${rec}`).join('\n')}
 
 Generate structured feedback using the generate_founder_feedback function.`;
 
-    // Call Lovable AI with structured output
-    const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
-    if (!lovableApiKey) {
-      throw new Error('LOVABLE_API_KEY not configured');
+    // Call Gemini AI with structured output
+    const GOOGLE_GEMINI_API_KEY = Deno.env.get('GOOGLE_GEMINI_API_KEY');
+    if (!GOOGLE_GEMINI_API_KEY) {
+      throw new Error('GOOGLE_GEMINI_API_KEY not configured');
     }
 
     const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
@@ -212,7 +212,7 @@ Generate structured feedback using the generate_founder_feedback function.`;
           evaluationCount: evaluations.length,
           averageScore: averageScore.toFixed(1),
           generatedAt: new Date().toISOString(),
-          model: 'google/gemini-2.5-flash'
+          model: aiResponse.model
         }
       }),
       {

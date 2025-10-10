@@ -112,10 +112,10 @@ Return a JSON object with:
   "aggregatedInsights": "Brief summary of key patterns found across evaluations"
 }`;
 
-    // Call Lovable AI
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-    if (!LOVABLE_API_KEY) {
-      throw new Error('LOVABLE_API_KEY not configured');
+    // Call Gemini AI
+    const GOOGLE_GEMINI_API_KEY = Deno.env.get('GOOGLE_GEMINI_API_KEY');
+    if (!GOOGLE_GEMINI_API_KEY) {
+      throw new Error('GOOGLE_GEMINI_API_KEY not configured');
     }
 
     const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
@@ -163,7 +163,7 @@ Return a JSON object with:
           startupCount: startupIds.length,
           averageScore: avgScore,
           evaluationCount: evaluations.length,
-          model: 'google/gemini-2.5-flash'
+          model: aiResponse.model
         }
       }),
       {
