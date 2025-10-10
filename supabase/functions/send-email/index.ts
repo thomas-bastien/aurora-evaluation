@@ -280,7 +280,7 @@ const createProfessionalEmailTemplate = (content: { title: string; body: string;
       <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 30px; text-align: center; border-radius: 12px 12px 0 0;">
         <h1 style="color: white; margin: 0; font-size: 32px; font-weight: bold; letter-spacing: -0.5px;">Aurora Tech Awards</h1>
         <div style="height: 3px; width: 60px; background: rgba(255,255,255,0.3); margin: 15px auto; border-radius: 2px;"></div>
-        <p style="color: rgba(255,255,255,0.9); margin: 0; font-size: 16px; font-weight: 500;">Excellence in Innovation</p>
+        <p style="color: rgba(255,255,255,0.9); margin: 0; font-size: 16px; font-weight: 500;">Backing the boldest female tech founders in emerging markets</p>
       </div>
       
       <!-- Main content -->
