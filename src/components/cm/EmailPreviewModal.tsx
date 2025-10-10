@@ -79,8 +79,8 @@ export const EmailPreviewModal = ({
         !existing ||
         !existing.preview_html ||
         (vcFeedback?.is_approved && 
-         vcFeedback?.approved_at && 
-         new Date(vcFeedback.approved_at) > new Date(existing.updated_at || 0));
+         vcFeedback?.updated_at && 
+         new Date(vcFeedback.updated_at) > new Date(existing.updated_at || 0));
 
       const safeToAutoRefresh = !existing?.is_approved;
 
