@@ -5,7 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { Loader2, CheckCircle2, FileText, Save, ThumbsUp, Sparkles } from "lucide-react";
+import { Loader2, CheckCircle2, FileText, Save, ThumbsUp, Sparkles, Edit } from "lucide-react";
 
 interface VCFeedbackDetailsModalProps {
   open: boolean;
@@ -42,6 +42,8 @@ export function VCFeedbackDetailsModal({
   const [enhancing, setEnhancing] = useState(false);
   const [feedbackData, setFeedbackData] = useState<VCFeedbackData | null>(null);
   const [editedFeedback, setEditedFeedback] = useState("");
+  const [isEditing, setIsEditing] = useState(false);
+  const [originalFeedback, setOriginalFeedback] = useState("");
 
   useEffect(() => {
     if (open) {
@@ -64,9 +66,13 @@ export function VCFeedbackDetailsModal({
       if (data) {
         setFeedbackData(data);
         setEditedFeedback(data.plain_text_feedback);
+        setOriginalFeedback(data.plain_text_feedback);
+        setIsEditing(false);
       } else {
         setFeedbackData(null);
         setEditedFeedback("");
+        setOriginalFeedback("");
+        setIsEditing(false);
       }
     } catch (error: any) {
       console.error('Error loading VC feedback:', error);
@@ -233,6 +239,15 @@ export function VCFeedbackDetailsModal({
     }
   };
 
+  const handleEdit = () => {
+    setIsEditing(true);
+  };
+
+  const handleCancelEdit = () => {
+    setEditedFeedback(originalFeedback);
+    setIsEditing(false);
+  };
+
   const getStatus = () => {
     if (!feedbackData) return 'not-generated';
     if (feedbackData.is_approved) return 'approved';
@@ -314,6 +329,7 @@ export function VCFeedbackDetailsModal({
                   onChange={(e) => setEditedFeedback(e.target.value)}
                   className="min-h-[400px] font-mono text-sm"
                   placeholder="VC feedback will appear here..."
+                  disabled={status === 'approved' && !isEditing}
                 />
                 <p className="text-xs text-muted-foreground">
                   Edit the feedback sections as needed. Each VC's feedback is separated by a line.
@@ -326,7 +342,7 @@ export function VCFeedbackDetailsModal({
                   <Button
                     variant="outline"
                     onClick={handleGenerate}
-                    disabled={generating || saving || approving || enhancing}
+                    disabled={generating || saving || approving || enhancing || isEditing}
                   >
                     {generating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     Regenerate
@@ -335,7 +351,7 @@ export function VCFeedbackDetailsModal({
                   <Button
                     variant="outline"
                     onClick={handleEnhance}
-                    disabled={enhancing || saving || approving || status === 'approved' || !editedFeedback}
+                    disabled={enhancing || saving || approving || (status === 'approved' && !isEditing) || !editedFeedback}
                   >
                     {enhancing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     <Sparkles className="mr-2 h-4 w-4" />
@@ -344,10 +360,30 @@ export function VCFeedbackDetailsModal({
                 </div>
 
                 <div className="flex gap-2">
+                  {status === 'approved' && !isEditing && (
+                    <Button
+                      variant="outline"
+                      onClick={handleEdit}
+                    >
+                      <Edit className="mr-2 h-4 w-4" />
+                      Edit
+                    </Button>
+                  )}
+                  
+                  {isEditing && (
+                    <Button
+                      variant="outline"
+                      onClick={handleCancelEdit}
+                      disabled={saving || approving || enhancing}
+                    >
+                      Cancel
+                    </Button>
+                  )}
+                  
                   <Button
                     variant="outline"
                     onClick={handleSaveDraft}
-                    disabled={saving || approving || enhancing || status === 'approved'}
+                    disabled={saving || approving || enhancing || (status === 'approved' && !isEditing)}
                   >
                     {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     <Save className="mr-2 h-4 w-4" />
@@ -356,18 +392,24 @@ export function VCFeedbackDetailsModal({
 
                   <Button
                     onClick={handleApprove}
-                    disabled={approving || saving || enhancing || status === 'approved'}
+                    disabled={approving || saving || enhancing || (status === 'approved' && !isEditing)}
                   >
                     {approving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     <ThumbsUp className="mr-2 h-4 w-4" />
-                    {status === 'approved' ? 'Approved' : 'Approve'}
+                    {status === 'approved' && !isEditing ? 'Approved' : 'Approve'}
                   </Button>
                 </div>
               </div>
 
-              {status === 'approved' && feedbackData.approved_at && (
+              {status === 'approved' && feedbackData.approved_at && !isEditing && (
                 <p className="text-xs text-muted-foreground text-center">
                   Approved on {new Date(feedbackData.approved_at).toLocaleString()}
+                </p>
+              )}
+
+              {isEditing && (
+                <p className="text-xs text-amber-600 text-center">
+                  ⚠️ Editing approved feedback. Save as draft or re-approve after making changes.
                 </p>
               )}
             </>
