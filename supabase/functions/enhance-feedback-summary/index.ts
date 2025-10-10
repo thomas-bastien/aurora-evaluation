@@ -144,7 +144,7 @@ Focus on making it more specific, actionable, and professional while maintaining
     const { callGemini } = await import('../_shared/gemini-client.ts');
 
     // Phase 2: Optimistic chunking with smarter splitting
-    const splitIntoChunks = (text: string, maxChunkChars = 2500): string[] => {
+    const splitIntoChunks = (text: string, maxChunkChars = 3500): string[] => {
       // First try to split by VC sections (natural boundaries)
       const vcSections = text.split(/\n(?=VC fund #)/);
       
@@ -187,14 +187,14 @@ Focus on making it more specific, actionable, and professional while maintaining
         model: 'gemini-2.5-flash',
         systemPrompt,
         userPrompt: prompt,
-        temperature: 0.8, // Phase 1: Increased for faster generation
-        maxTokens: 400, // Phase 1: Reduced from 600
+        temperature: 0.8,
+        maxTokens: 800,
       });
     };
 
     // Try single-shot first unless forced to chunk or obviously too long
     const forceChunked = mode === 'chunked';
-    const obviouslyLong = feedbackSummary.length > 8000;
+    const obviouslyLong = feedbackSummary.length > 5000;
 
     let enhancedFeedback: string | null = null;
 
@@ -203,8 +203,8 @@ Focus on making it more specific, actionable, and professional while maintaining
         model: 'gemini-2.5-flash',
         systemPrompt,
         userPrompt,
-        temperature: 0.8, // Phase 1: Increased from 0.7
-        maxTokens: 2000, // Phase 1: Reduced from 3000
+        temperature: 0.8,
+        maxTokens: 3000,
       });
 
       if (aiResponse.success && aiResponse.content) {
@@ -239,23 +239,48 @@ Focus on making it more specific, actionable, and professional while maintaining
       const results = await Promise.all(enhancementPromises);
       console.log(`✅ All ${chunks.length} chunks processed in ${Date.now() - startTime}ms`);
 
-      // Sort by original order and combine
-      const enhancedParts: string[] = results
+      // Sort by original order and combine with graceful fallback
+      const enhancedParts: string[] = [];
+      let hasFailures = false;
+      
+      results
         .sort((a, b) => a.index - b.index)
-        .map(r => {
+        .forEach(r => {
           if (!r.result.success || !r.result.content) {
-            throw new Error(`Section ${r.index + 1} enhancement failed: ${r.result.error || 'Unknown error'}`);
+            console.warn(`Section ${r.index + 1} enhancement failed: ${r.result.error || 'Unknown error'}`);
+            hasFailures = true;
+            // Use original chunk as fallback
+            enhancedParts.push(chunks[r.index]);
+          } else {
+            enhancedParts.push(r.result.content);
           }
-          return r.result.content;
         });
 
       enhancedFeedback = enhancedParts.join('\n\n');
+      
+      if (hasFailures) {
+        console.log('⚠️ Some sections failed to enhance, using original text for those sections');
+      }
     }
 
     if (!enhancedFeedback) {
+      // Final fallback: return original feedback
+      console.warn('Enhancement failed completely, returning original feedback');
       return new Response(
-        JSON.stringify({ success: false, error: 'No enhanced feedback produced.' }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ 
+          success: true,
+          enhancedFeedback: feedbackSummary,
+          improvements: ['Original feedback preserved (enhancement unavailable)'],
+          metadata: {
+            startupName,
+            roundName,
+            originalLength: feedbackSummary.length,
+            enhancedLength: feedbackSummary.length,
+            mode: 'fallback',
+            timeTaken: Date.now() - startTime,
+          },
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
