@@ -17,6 +17,7 @@ interface EmailPreviewModalProps {
   roundName: 'screening' | 'pitching';
   communicationType: 'top-100-feedback' | 'selected' | 'rejected' | 'under-review';
   onEmailStatusChange?: () => void;
+  refreshSignal?: number;
 }
 
 interface CustomEmail {
@@ -36,7 +37,8 @@ export const EmailPreviewModal = ({
   startupName,
   roundName,
   communicationType,
-  onEmailStatusChange
+  onEmailStatusChange,
+  refreshSignal = 0
 }: EmailPreviewModalProps) => {
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
@@ -52,7 +54,7 @@ export const EmailPreviewModal = ({
     if (open) {
       loadOrGeneratePreview();
     }
-  }, [open, startupId]);
+  }, [open, startupId, roundName, communicationType, refreshSignal]);
 
   const loadOrGeneratePreview = async () => {
     setLoading(true);
@@ -83,10 +85,14 @@ export const EmailPreviewModal = ({
 
       const safeToAutoRefresh = !existing?.is_approved;
 
+      console.log('[Email Preview] existing.updated_at:', existing?.updated_at, 'vcFeedback.updated_at:', vcFeedback?.updated_at);
+      console.log('[Email Preview] safeToAutoRefresh:', safeToAutoRefresh);
+      console.log('[Email Preview] shouldRefresh:', shouldRefresh);
+
       if (shouldRefresh && safeToAutoRefresh) {
-        console.log('[Email Preview] Auto-refreshing from approved VC feedback');
+        console.log('[Email Preview] Auto-refreshing from VC feedback changes');
         await generatePreview();
-        toast.success('Email preview updated from approved VC feedback');
+        toast.success('Email preview updated from VC feedback changes');
         return;
       }
 

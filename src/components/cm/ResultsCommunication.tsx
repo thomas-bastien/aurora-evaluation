@@ -92,7 +92,7 @@ export const ResultsCommunication = ({ currentRound }: ResultsCommunicationProps
   const [emailStatuses, setEmailStatuses] = useState<Record<string, 'not-generated' | 'draft' | 'approved'>>({});
   const [vcFeedbackOpen, setVcFeedbackOpen] = useState(false);
   const [selectedStartupForVCFeedback, setSelectedStartupForVCFeedback] = useState<{ id: string; name: string } | null>(null);
-  
+  const [vcFeedbackRefreshSignal, setVcFeedbackRefreshSignal] = useState(0);
 
   // Fetch VC feedback details status
   const { data: vcFeedbackStatus, refetch: refetchVCFeedback } = useQuery({
@@ -160,6 +160,7 @@ export const ResultsCommunication = ({ currentRound }: ResultsCommunicationProps
   const handleVCFeedbackStatusChange = () => {
     refetchVCFeedback();
     fetchResultsData();
+    setVcFeedbackRefreshSignal(s => s + 1);
   };
 
   const handleGenerateVCFeedback = async (startupId: string, startupName: string) => {
@@ -1687,6 +1688,7 @@ The Aurora Tech Awards Team`
             roundName={currentRound === 'screeningRound' ? 'screening' : 'pitching'}
             communicationType="top-100-feedback"
             onEmailStatusChange={handleEmailStatusChange}
+            refreshSignal={vcFeedbackRefreshSignal}
           />
         )}
 
