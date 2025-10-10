@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4';
+import { callGemini } from '../_shared/gemini-client.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -123,85 +124,67 @@ Generate structured feedback using the generate_founder_feedback function.`;
       throw new Error('GOOGLE_GEMINI_API_KEY not configured');
     }
 
-    const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${lovableApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
-        ],
-        tools: [
-          {
-            type: 'function',
-            function: {
-              name: 'generate_founder_feedback',
-              description: 'Generate structured feedback for startup founders',
-              parameters: {
-                type: 'object',
-                properties: {
-                  strengths: {
-                    type: 'array',
-                    items: { type: 'string' },
-                    description: '3-5 specific strengths that impressed the evaluation panel, with context about WHY they stood out'
-                  },
-                  challenges: {
-                    type: 'array',
-                    items: { type: 'string' },
-                    description: '2-3 constructive areas for improvement or risks to address, framed positively'
-                  },
-                  next_steps: {
-                    type: 'array',
-                    items: { type: 'string' },
-                    description: '3-4 specific, actionable recommendations that founders can implement'
-                  },
-                  overall_summary: {
-                    type: 'string',
-                    description: '2-3 sentence summary that captures the essence of the evaluation and sets a constructive tone'
-                  }
+    const geminiResponse = await callGemini({
+      model: 'gemini-2.5-flash',
+      systemPrompt,
+      userPrompt,
+      temperature: 0.7,
+      tools: [
+        {
+          type: 'function',
+          function: {
+            name: 'generate_founder_feedback',
+            description: 'Generate structured feedback for startup founders',
+            parameters: {
+              type: 'object',
+              properties: {
+                strengths: {
+                  type: 'array',
+                  items: { type: 'string' },
+                  description: '3-5 specific strengths that impressed the evaluation panel, with context about WHY they stood out'
                 },
-                required: ['strengths', 'challenges', 'next_steps', 'overall_summary'],
-                additionalProperties: false
-              }
+                challenges: {
+                  type: 'array',
+                  items: { type: 'string' },
+                  description: '2-3 constructive areas for improvement or risks to address, framed positively'
+                },
+                next_steps: {
+                  type: 'array',
+                  items: { type: 'string' },
+                  description: '3-4 specific, actionable recommendations that founders can implement'
+                },
+                overall_summary: {
+                  type: 'string',
+                  description: '2-3 sentence summary that captures the essence of the evaluation and sets a constructive tone'
+                }
+              },
+              required: ['strengths', 'challenges', 'next_steps', 'overall_summary'],
+              additionalProperties: false
             }
           }
-        ],
-        tool_choice: { type: 'function', function: { name: 'generate_founder_feedback' } }
-      }),
+        }
+      ],
+      toolChoice: { function: { name: 'generate_founder_feedback' } }
     });
 
-    if (!aiResponse.ok) {
-      if (aiResponse.status === 429) {
+    if (!geminiResponse.success) {
+      if (geminiResponse.error?.includes('rate limit')) {
         return new Response(
-          JSON.stringify({ error: 'AI rate limit exceeded. Please try again in a few moments.' }),
+          JSON.stringify({ error: 'Gemini API rate limit exceeded. Please try again shortly.' }),
           { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
-      if (aiResponse.status === 402) {
-        return new Response(
-          JSON.stringify({ error: 'AI credits exhausted. Please add credits to your Lovable workspace.' }),
-          { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-      const errorText = await aiResponse.text();
-      console.error('AI API error:', aiResponse.status, errorText);
-      throw new Error(`AI API error: ${aiResponse.status}`);
+      throw new Error(geminiResponse.error || 'Gemini API error');
     }
 
-    const aiData = await aiResponse.json();
-    console.log('AI response:', JSON.stringify(aiData, null, 2));
+    console.log('Gemini response:', JSON.stringify(geminiResponse, null, 2));
 
     // Extract the function call result
-    const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
-    if (!toolCall || toolCall.function.name !== 'generate_founder_feedback') {
-      throw new Error('AI did not return expected structured output');
+    if (!geminiResponse.functionCall || geminiResponse.functionCall.name !== 'generate_founder_feedback') {
+      throw new Error('Gemini did not return expected structured output');
     }
 
-    const feedbackData = JSON.parse(toolCall.function.arguments);
+    const feedbackData = geminiResponse.functionCall.args;
 
     return new Response(
       JSON.stringify({
@@ -212,7 +195,7 @@ Generate structured feedback using the generate_founder_feedback function.`;
           evaluationCount: evaluations.length,
           averageScore: averageScore.toFixed(1),
           generatedAt: new Date().toISOString(),
-          model: aiResponse.model
+          model: geminiResponse.model
         }
       }),
       {

@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
+import { callGemini } from '../_shared/gemini-client.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -118,38 +119,58 @@ Return a JSON object with:
       throw new Error('GOOGLE_GEMINI_API_KEY not configured');
     }
 
-    const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
-        ],
-        response_format: { type: "json_object" }
-      }),
+    const geminiResponse = await callGemini({
+      model: 'gemini-2.5-flash',
+      systemPrompt,
+      userPrompt,
+      temperature: 0.7,
+      tools: [
+        {
+          type: 'function',
+          function: {
+            name: 'enhance_template',
+            description: 'Enhance email template with aggregated insights',
+            parameters: {
+              type: 'object',
+              properties: {
+                subject: {
+                  type: 'string',
+                  description: 'Enhanced email subject line'
+                },
+                body: {
+                  type: 'string',
+                  description: 'Enhanced email body with proper formatting'
+                },
+                aggregatedInsights: {
+                  type: 'string',
+                  description: 'Brief summary of key patterns found across evaluations'
+                }
+              },
+              required: ['subject', 'body', 'aggregatedInsights'],
+              additionalProperties: false
+            }
+          }
+        }
+      ],
+      toolChoice: { function: { name: 'enhance_template' } }
     });
 
-    if (!aiResponse.ok) {
-      const errorText = await aiResponse.text();
-      console.error('AI API Error:', aiResponse.status, errorText);
-      
-      if (aiResponse.status === 429) {
-        throw new Error('Rate limit exceeded. Please try again in a moment.');
+    if (!geminiResponse.success) {
+      if (geminiResponse.error?.includes('rate limit')) {
+        throw new Error('Gemini API rate limit exceeded. Please try again shortly.');
       }
-      if (aiResponse.status === 402) {
-        throw new Error('AI credits exhausted. Please add credits to your workspace.');
+      if (geminiResponse.error?.includes('403')) {
+        throw new Error('Gemini API key invalid or insufficient permissions');
       }
-      
-      throw new Error(`AI enhancement failed: ${errorText}`);
+      throw new Error(geminiResponse.error || 'Gemini API error');
     }
 
-    const aiData = await aiResponse.json();
-    const enhancedContent = JSON.parse(aiData.choices[0].message.content);
+    // Extract the function call result
+    if (!geminiResponse.functionCall || geminiResponse.functionCall.name !== 'enhance_template') {
+      throw new Error('Gemini did not return expected structured output');
+    }
+
+    const enhancedContent = geminiResponse.functionCall.args;
 
     return new Response(
       JSON.stringify({
@@ -163,7 +184,7 @@ Return a JSON object with:
           startupCount: startupIds.length,
           averageScore: avgScore,
           evaluationCount: evaluations.length,
-          model: aiResponse.model
+          model: geminiResponse.model
         }
       }),
       {
