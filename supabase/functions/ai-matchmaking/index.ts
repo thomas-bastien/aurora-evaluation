@@ -36,6 +36,75 @@ interface AIMatchScore {
   recommendation: 'Highly Recommended' | 'Recommended' | 'Consider' | 'Not Recommended';
 }
 
+// Batch processing configuration
+const BATCH_SIZE = 5; // Process 5 jurors at a time for optimal speed
+const MAX_PARALLEL_BATCHES = 4; // Maximum concurrent API calls
+
+// Process a single batch of jurors
+async function processBatch(
+  batch: any[],
+  startup: any,
+  roundType: string,
+  systemPrompt: string,
+  batchIndex: number,
+  totalBatches: number,
+  seed?: number
+): Promise<AIMatchScore[]> {
+  const userPrompt = `Startup:
+Name: ${startup.name}
+Verticals: ${startup.verticals.join(', ')}
+Stage: ${startup.stage}
+Regions: ${startup.regions.join(', ')}
+Description: ${startup.description || 'N/A'}
+
+Jurors to evaluate (batch ${batchIndex + 1} of ${totalBatches}, ${batch.length} jurors):
+${batch.map((j, i) => `
+${i + 1}. ID: ${j.id}
+   Name: ${j.name}
+   Role: ${j.job_title} at ${j.company}
+   Verticals: ${j.target_verticals?.join(', ') || 'Not specified'}
+   Stages: ${j.preferred_stages?.join(', ') || 'Not specified'}
+   Regions: ${j.preferred_regions?.join(', ') || 'Not specified'}
+`).join('\n')}
+
+Analyze compatibility for these ${batch.length} jurors and return the JSON array.`;
+
+  console.log(`[Batch ${batchIndex + 1}/${totalBatches}] Processing ${batch.length} jurors`);
+
+  const { callGemini } = await import('../_shared/gemini-client.ts');
+  
+  const aiResponse = await callGemini({
+    model: 'gemini-2.5-flash',
+    systemPrompt: systemPrompt,
+    userPrompt: userPrompt,
+    temperature: 0.3,
+    maxTokens: 8192 // Reduced since processing fewer jurors
+  });
+
+  if (!aiResponse.success || !aiResponse.content) {
+    console.error(`[Batch ${batchIndex + 1}] Gemini API error:`, aiResponse.error);
+    throw new Error(aiResponse.error || 'Failed to get AI matchmaking response');
+  }
+
+  // Parse JSON response
+  let jsonStr = aiResponse.content.trim();
+  if (jsonStr.startsWith('```json')) {
+    jsonStr = jsonStr.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+  } else if (jsonStr.startsWith('```')) {
+    jsonStr = jsonStr.replace(/```\n?/g, '').trim();
+  }
+  
+  const matchScores = JSON.parse(jsonStr);
+  
+  if (!Array.isArray(matchScores)) {
+    throw new Error(`[Batch ${batchIndex + 1}] Invalid AI response format`);
+  }
+
+  console.log(`[Batch ${batchIndex + 1}/${totalBatches}] Completed: ${matchScores.length} jurors scored`);
+  
+  return matchScores;
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -76,82 +145,61 @@ Return a JSON array with one object per juror containing:
 
 Be discerning with scores - most should fall between 3-7. Focus on the most important factors in your reasoning.`;
 
-    const userPrompt = `Startup:
-Name: ${startup.name}
-Verticals: ${startup.verticals.join(', ')}
-Stage: ${startup.stage}
-Regions: ${startup.regions.join(', ')}
-Description: ${startup.description || 'N/A'}
+    // Split jurors into batches for parallel processing
+    const batches: any[][] = [];
+    for (let i = 0; i < jurors.length; i += BATCH_SIZE) {
+      batches.push(jurors.slice(i, i + BATCH_SIZE));
+    }
 
-Jurors to evaluate (${jurors.length} total):
-${jurors.map((j, i) => `
-${i + 1}. ID: ${j.id}
-   Name: ${j.name}
-   Role: ${j.job_title} at ${j.company}
-   Verticals: ${j.target_verticals?.join(', ') || 'Not specified'}
-   Stages: ${j.preferred_stages?.join(', ') || 'Not specified'}
-   Regions: ${j.preferred_regions?.join(', ') || 'Not specified'}
-`).join('\n')}
+    console.log(`Processing ${jurors.length} jurors in ${batches.length} parallel batches of ~${BATCH_SIZE} each`);
+    const startTime = Date.now();
 
-Analyze compatibility for all ${jurors.length} jurors and return the JSON array.`;
-
-    console.log(`Sending ${jurors.length} jurors and 1 startup to AI for matchmaking`);
-
-    const { callGemini } = await import('../_shared/gemini-client.ts');
-    
-    const aiResponse = await callGemini({
-      model: 'gemini-2.5-flash',
-      systemPrompt: systemPrompt,
-      userPrompt: userPrompt,
-      temperature: 0.3,
-      maxTokens: 16384
-    });
-
-    if (!aiResponse.success || !aiResponse.content) {
-      console.error('Gemini API error:', aiResponse.error);
+    // Process all batches in parallel
+    let allScores: AIMatchScore[] = [];
+    try {
+      const batchResults = await Promise.all(
+        batches.map((batch, index) => 
+          processBatch(batch, startup, roundType, systemPrompt, index, batches.length, seed)
+        )
+      );
       
-      if (aiResponse.error?.includes('rate limit')) {
+      // Flatten all results
+      allScores = batchResults.flat();
+      
+      const duration = ((Date.now() - startTime) / 1000).toFixed(1);
+      console.log(`All ${batches.length} batches completed in ${duration}s. Total jurors scored: ${allScores.length}`);
+      
+    } catch (error) {
+      console.error('Batch processing error:', error);
+      
+      if (error instanceof Error && error.message?.includes('rate limit')) {
         return new Response(
           JSON.stringify({ error: 'Rate limit exceeded. Please try again in a moment.' }),
           { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
       
-      throw new Error(aiResponse.error || 'Failed to get AI matchmaking response');
+      throw error;
     }
 
-    // Parse JSON response
-    let matchScores: AIMatchScore[];
-    try {
-      // Gemini sometimes wraps JSON in markdown code blocks
-      let jsonStr = aiResponse.content.trim();
-      if (jsonStr.startsWith('```json')) {
-        jsonStr = jsonStr.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-      } else if (jsonStr.startsWith('```')) {
-        jsonStr = jsonStr.replace(/```\n?/g, '').trim();
-      }
-      matchScores = JSON.parse(jsonStr);
-    } catch (parseError) {
-      console.error('Failed to parse AI response as JSON:', aiResponse.content);
-      throw new Error('Invalid JSON response from AI');
-    }
-
-    // Validate response structure
-    if (!Array.isArray(matchScores) || matchScores.length === 0) {
-      throw new Error('Invalid AI response format');
+    // Validate we got scores for all jurors
+    if (allScores.length !== jurors.length) {
+      console.warn(`Expected ${jurors.length} scores but got ${allScores.length}`);
     }
 
     // Sort by compatibility score (highest first)
-    matchScores.sort((a, b) => b.compatibility_score - a.compatibility_score);
+    allScores.sort((a, b) => b.compatibility_score - a.compatibility_score);
 
-    console.log(`AI matchmaking completed for startup ${startup.name}: ${matchScores.length} jurors scored`);
+    console.log(`AI matchmaking completed for startup ${startup.name}: ${allScores.length} jurors scored`);
 
     return new Response(
       JSON.stringify({ 
         success: true,
-        scores: matchScores,
+        scores: allScores,
         startup_id: startup.id,
-        round_type: roundType
+        round_type: roundType,
+        processing_time_seconds: ((Date.now() - startTime) / 1000).toFixed(1),
+        batches_processed: batches.length
       }),
       { 
         status: 200,
