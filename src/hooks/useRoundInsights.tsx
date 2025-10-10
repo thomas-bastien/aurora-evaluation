@@ -67,15 +67,17 @@ export function useRoundInsights(roundName: string): UseRoundInsightsReturn {
       setLoading(true);
       setError(null);
 
-      // Check cache
-      const cacheKey = `round-insights-${roundName}`;
-      const cached = localStorage.getItem(cacheKey);
-      
-      if (cached && !force) {
-        const { data, timestamp } = JSON.parse(cached);
-        if (Date.now() - timestamp < CACHE_TTL) {
-          setInsights(data);
-          setLastGenerated(data.generated_at);
+      if (!force) {
+        // Check database cache first
+        const { data: cached, error: cacheError } = await supabase
+          .from('round_insights_cache')
+          .select('insights, computed_at')
+          .eq('round_name', roundName)
+          .maybeSingle();
+        
+        if (!cacheError && cached) {
+          setInsights(cached.insights as unknown as RoundInsights);
+          setLastGenerated(cached.computed_at);
           setLoading(false);
           return;
         }
@@ -91,11 +93,14 @@ export function useRoundInsights(roundName: string): UseRoundInsightsReturn {
 
       if (functionError) throw functionError;
 
-      // Cache the results
-      localStorage.setItem(cacheKey, JSON.stringify({
-        data,
-        timestamp: Date.now()
-      }));
+      // Store in database cache
+      await supabase
+        .from('round_insights_cache')
+        .upsert({
+          round_name: roundName,
+          insights: data,
+          evaluation_count: data.total_evaluations || 0
+        });
 
       setInsights(data);
       setLastGenerated(data.generated_at);

@@ -69,45 +69,110 @@ export const StartupAssignmentModal = ({
   const [useAI, setUseAI] = useState(true);
   const { toast } = useToast();
 
-  // Fetch AI scores on modal open
+  // Fetch AI scores with smart caching
   useEffect(() => {
     if (open && useAI && jurors.length > 0) {
-      setLoadingAI(true);
-      supabase.functions.invoke('ai-matchmaking', {
-        body: {
-          startup: {
-            id: startup.id,
-            name: startup.name,
-            verticals: startup.verticals || [],
-            stage: startup.stage || 'N/A',
-            regions: startup.regions || [],
-            description: startup.description || ''
-          },
-          jurors: jurors.map(j => ({
-            id: j.id,
-            name: j.name,
-            company: j.company || '',
-            job_title: j.job_title || '',
-            target_verticals: j.target_verticals || [],
-            preferred_stages: j.preferred_stages || [],
-            preferred_regions: j.preferred_regions || []
-          })),
-          roundType: currentRound === 'screeningRound' ? 'screening' : 'pitching'
+      const fetchCachedScores = async () => {
+        setLoadingAI(true);
+        
+        try {
+          const roundType = currentRound === 'screeningRound' ? 'screening' : 'pitching';
+          
+          // Get config hash
+          const { data: config } = await supabase
+            .from('matchmaking_config')
+            .select('*')
+            .eq('round_name', roundType)
+            .single();
+          
+          const configHash = JSON.stringify(config || {});
+          
+          // Check cache first
+          const { data: cachedScores, error: cacheError } = await supabase
+            .from('startup_juror_compatibility_cache')
+            .select('*')
+            .eq('startup_id', startup.id)
+            .eq('round_type', roundType)
+            .eq('config_hash', configHash);
+          
+          if (!cacheError && cachedScores && cachedScores.length === jurors.length) {
+            // Use cached scores
+            console.log('✅ Loaded cached AI scores:', cachedScores.length);
+            setAiScores(cachedScores);
+            setLoadingAI(false);
+            toast({
+              title: "Loaded cached AI scores",
+              description: "Using previously computed matchmaking scores"
+            });
+            return;
+          }
+          
+          console.log('⚡ Cache miss - computing fresh AI scores...');
+          
+          // Compute fresh scores
+          const { data, error: invokeError } = await supabase.functions.invoke('ai-matchmaking', {
+            body: {
+              startup: {
+                id: startup.id,
+                name: startup.name,
+                verticals: startup.verticals || [],
+                stage: startup.stage || 'N/A',
+                regions: startup.regions || [],
+                description: startup.description || ''
+              },
+              jurors: jurors.map(j => ({
+                id: j.id,
+                name: j.name,
+                company: j.company || '',
+                job_title: j.job_title || '',
+                target_verticals: j.target_verticals || [],
+                preferred_stages: j.preferred_stages || [],
+                preferred_regions: j.preferred_regions || []
+              })),
+              roundType: roundType
+            }
+          });
+          
+          if (invokeError) throw invokeError;
+          
+          if (data?.success && data?.scores) {
+            // Store in cache
+            const cacheRecords = data.scores.map((score: any) => ({
+              startup_id: startup.id,
+              juror_id: score.juror_id,
+              round_type: roundType,
+              compatibility_score: score.compatibility_score,
+              confidence: score.confidence,
+              brief_reasoning: score.brief_reasoning,
+              recommendation: score.recommendation,
+              config_hash: configHash
+            }));
+            
+            await supabase
+              .from('startup_juror_compatibility_cache')
+              .upsert(cacheRecords, {
+                onConflict: 'startup_id,juror_id,round_type,config_hash'
+              });
+            
+            console.log('✅ Cached AI scores for future use');
+            setAiScores(data.scores);
+          }
+          
+          setLoadingAI(false);
+        } catch (err) {
+          console.error('AI matchmaking error:', err);
+          toast({
+            variant: "destructive",
+            title: "Failed to load AI scores",
+            description: "Using rule-based matching only"
+          });
+          setLoadingAI(false);
         }
-      }).then(({ data, error }) => {
-        setLoadingAI(false);
-        if (!error && data?.success && data?.scores) {
-          setAiScores(data.scores);
-          console.log('AI scores loaded:', data.scores.length);
-        } else {
-          console.warn('AI matchmaking failed, using rule-based only');
-        }
-      }).catch(err => {
-        console.error('AI matchmaking error:', err);
-        setLoadingAI(false);
-      });
+      };
+      
+      fetchCachedScores();
     }
-  }, [open, useAI]);
+  }, [open, useAI, startup.id, currentRound]);
   useEffect(() => {
     setSelectedJurorIds(existingAssignments.map(a => a.juror_id));
   }, [existingAssignments]);

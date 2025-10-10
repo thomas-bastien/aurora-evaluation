@@ -143,3 +143,6 @@ verify_jwt = true
 
 [functions.enhance-feedback-summary]
 verify_jwt = true
+
+[functions.precompute-matchmaking-scores]
+verify_jwt = true

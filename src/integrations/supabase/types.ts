@@ -905,6 +905,30 @@ export type Database = {
         }
         Relationships: []
       }
+      round_insights_cache: {
+        Row: {
+          computed_at: string
+          evaluation_count: number
+          id: string
+          insights: Json
+          round_name: string
+        }
+        Insert: {
+          computed_at?: string
+          evaluation_count: number
+          id?: string
+          insights: Json
+          round_name: string
+        }
+        Update: {
+          computed_at?: string
+          evaluation_count?: number
+          id?: string
+          insights?: Json
+          round_name?: string
+        }
+        Relationships: []
+      }
       rounds: {
         Row: {
           completed_at: string | null
@@ -1099,6 +1123,63 @@ export type Database = {
           vc_participants?: number | null
         }
         Relationships: []
+      }
+      startup_juror_compatibility_cache: {
+        Row: {
+          brief_reasoning: string
+          compatibility_score: number
+          computed_at: string
+          confidence: number
+          config_hash: string
+          created_at: string | null
+          id: string
+          juror_id: string
+          recommendation: string
+          round_type: string
+          startup_id: string
+        }
+        Insert: {
+          brief_reasoning: string
+          compatibility_score: number
+          computed_at?: string
+          confidence: number
+          config_hash: string
+          created_at?: string | null
+          id?: string
+          juror_id: string
+          recommendation: string
+          round_type: string
+          startup_id: string
+        }
+        Update: {
+          brief_reasoning?: string
+          compatibility_score?: number
+          computed_at?: string
+          confidence?: number
+          config_hash?: string
+          created_at?: string | null
+          id?: string
+          juror_id?: string
+          recommendation?: string
+          round_type?: string
+          startup_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "startup_juror_compatibility_cache_juror_id_fkey"
+            columns: ["juror_id"]
+            isOneToOne: false
+            referencedRelation: "jurors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "startup_juror_compatibility_cache_startup_id_fkey"
+            columns: ["startup_id"]
+            isOneToOne: false
+            referencedRelation: "startups"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       startup_round_statuses: {
         Row: {
