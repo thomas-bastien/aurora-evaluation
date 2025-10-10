@@ -1389,6 +1389,53 @@ export type Database = {
           },
         ]
       }
+      startup_vc_feedback_details: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          evaluation_count: number
+          id: string
+          is_approved: boolean | null
+          plain_text_feedback: string
+          round_name: string
+          startup_id: string
+          updated_at: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          evaluation_count: number
+          id?: string
+          is_approved?: boolean | null
+          plain_text_feedback: string
+          round_name: string
+          startup_id: string
+          updated_at?: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          evaluation_count?: number
+          id?: string
+          is_approved?: boolean | null
+          plain_text_feedback?: string
+          round_name?: string
+          startup_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "startup_vc_feedback_details_startup_id_fkey"
+            columns: ["startup_id"]
+            isOneToOne: false
+            referencedRelation: "startups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       startups: {
         Row: {
           business_model: string[] | null

@@ -149,3 +149,6 @@ verify_jwt = true
 
 [functions.preview-individual-email]
 verify_jwt = true
+
+[functions.generate-vc-feedback-details]
+verify_jwt = true

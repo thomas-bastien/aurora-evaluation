@@ -28,6 +28,8 @@ import { validateStartupCommunications, type CommunicationValidationResult } fro
 import { StatusBadge } from '@/components/common/StatusBadge';
 import { AggregatedTemplateSection } from './AggregatedTemplateSection';
 import { EmailPreviewModal } from './EmailPreviewModal';
+import { VCFeedbackDetailsModal } from './VCFeedbackDetailsModal';
+import { useQuery } from '@tanstack/react-query';
 
 interface StartupResult {
   id: string;
@@ -88,7 +90,31 @@ export const ResultsCommunication = ({ currentRound }: ResultsCommunicationProps
   const [showEmailPreview, setShowEmailPreview] = useState(false);
   const [selectedStartupForEmail, setSelectedStartupForEmail] = useState<{ id: string; name: string } | null>(null);
   const [emailStatuses, setEmailStatuses] = useState<Record<string, 'not-generated' | 'draft' | 'approved'>>({});
+  const [vcFeedbackOpen, setVcFeedbackOpen] = useState(false);
+  const [selectedStartupForVCFeedback, setSelectedStartupForVCFeedback] = useState<{ id: string; name: string } | null>(null);
   
+
+  // Fetch VC feedback details status
+  const { data: vcFeedbackStatus, refetch: refetchVCFeedback } = useQuery({
+    queryKey: ['vc-feedback-status', currentRound],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('startup_vc_feedback_details')
+        .select('startup_id, is_approved, evaluation_count')
+        .eq('round_name', currentRound === 'screeningRound' ? 'screening' : 'pitching');
+
+      if (error) throw error;
+
+      const statusMap: Record<string, { is_approved: boolean; evaluation_count: number }> = {};
+      data?.forEach(item => {
+        statusMap[item.startup_id] = {
+          is_approved: item.is_approved,
+          evaluation_count: item.evaluation_count
+        };
+      });
+      return statusMap;
+    },
+  });
 
   useEffect(() => {
     fetchResultsData();
@@ -124,6 +150,15 @@ export const ResultsCommunication = ({ currentRound }: ResultsCommunicationProps
   const handleEmailStatusChange = () => {
     loadEmailStatuses();
     fetchResultsData();
+  };
+
+  const handleViewVCFeedback = (startupId: string, startupName: string) => {
+    setSelectedStartupForVCFeedback({ id: startupId, name: startupName });
+    setVcFeedbackOpen(true);
+  };
+
+  const handleVCFeedbackStatusChange = () => {
+    refetchVCFeedback();
   };
 
   const fetchResultsData = async () => {
@@ -1224,45 +1259,71 @@ The Aurora Tech Awards Team`
           <TabsContent value="selected" className="space-y-4">
             {selectedStartups.map(result => {
               const emailStatus = emailStatuses[result.id] || 'not-generated';
+              const vcStatus = vcFeedbackStatus?.[result.id];
+              const vcFeedbackStatusText = vcStatus 
+                ? (vcStatus.is_approved ? 'Approved' : 'Draft')
+                : 'Not Generated';
+              
               return (
                 <div key={result.id} className="border border-border rounded-lg p-4">
                   <div className="flex items-center justify-between">
-                    <div>
+                    <div className="flex-1">
                       <h4 className="font-semibold text-foreground">{result.name}</h4>
                       <p className="text-sm text-muted-foreground">
                          {result.email} • Score: {formatScore(result.averageScore)}
                       </p>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Badge 
-                        variant={
-                          emailStatus === 'approved' ? 'default' :
-                          emailStatus === 'draft' ? 'secondary' :
-                          'outline'
-                        }
-                      >
-                        {emailStatus === 'approved' ? (
-                          <>
-                            <CheckCircle className="h-3 w-3 mr-1" />
-                            Approved
-                          </>
-                        ) : emailStatus === 'draft' ? (
-                          'Draft'
-                        ) : (
-                          'Not Generated'
+                    <div className="flex flex-col items-end gap-2">
+                      <div className="flex items-center gap-2">
+                        <div className="flex flex-col gap-1 items-end">
+                          <Badge 
+                            variant={
+                              emailStatus === 'approved' ? 'default' :
+                              emailStatus === 'draft' ? 'secondary' :
+                              'outline'
+                            }
+                            className="text-xs"
+                          >
+                            Email: {emailStatus === 'approved' ? (
+                              <>
+                                <CheckCircle className="h-3 w-3 mr-1" />
+                                Approved
+                              </>
+                            ) : emailStatus === 'draft' ? (
+                              'Draft'
+                            ) : (
+                              'Not Generated'
+                            )}
+                          </Badge>
+                          <Badge 
+                            variant={vcStatus?.is_approved ? 'default' : 'outline'}
+                            className="text-xs"
+                          >
+                            VC: {vcFeedbackStatusText}
+                          </Badge>
+                        </div>
+                        {result.communicationSent && (
+                          <Badge className="bg-accent text-accent-foreground">Email Sent</Badge>
                         )}
-                      </Badge>
-                      {result.communicationSent && (
-                        <Badge className="bg-accent text-accent-foreground">Email Sent</Badge>
-                      )}
-                      <Button 
-                        size="sm" 
-                        variant="outline"
-                        onClick={() => handlePreviewEmail(result.id, result.name)}
-                      >
-                        <Eye className="w-4 h-4 mr-2" />
-                        Preview & Edit
-                      </Button>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => handleViewVCFeedback(result.id, result.name)}
+                        >
+                          <FileText className="w-4 h-4 mr-2" />
+                          VC Feedback
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => handlePreviewEmail(result.id, result.name)}
+                        >
+                          <Eye className="w-4 h-4 mr-2" />
+                          Preview Email
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1534,6 +1595,31 @@ The Aurora Tech Awards Team`
           onConfirm={sendCommunications}
           isLoading={sendingEmails}
         />
+
+        {/* Email Preview Modal */}
+        {showEmailPreview && selectedStartupForEmail && (
+          <EmailPreviewModal
+            open={showEmailPreview}
+            onOpenChange={setShowEmailPreview}
+            startupId={selectedStartupForEmail.id}
+            startupName={selectedStartupForEmail.name}
+            roundName={currentRound === 'screeningRound' ? 'screening' : 'pitching'}
+            communicationType="top-100-feedback"
+            onEmailStatusChange={handleEmailStatusChange}
+          />
+        )}
+
+        {/* VC Feedback Details Modal */}
+        {vcFeedbackOpen && selectedStartupForVCFeedback && (
+          <VCFeedbackDetailsModal
+            open={vcFeedbackOpen}
+            onOpenChange={setVcFeedbackOpen}
+            startupId={selectedStartupForVCFeedback.id}
+            startupName={selectedStartupForVCFeedback.name}
+            roundName={currentRound === 'screeningRound' ? 'screening' : 'pitching'}
+            onStatusChange={handleVCFeedbackStatusChange}
+          />
+        )}
       </CardContent>
     </Card>
   );
