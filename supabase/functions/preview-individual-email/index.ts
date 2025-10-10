@@ -113,20 +113,76 @@ serve(async (req) => {
     let vcFeedbackSections = '';
     
     if (approvedFeedback?.plain_text_feedback) {
-      // Use approved enhanced feedback
       console.log('[Preview Email] Using approved enhanced feedback');
+      
+      // Smart parsing: handle headings, paragraphs, and bullets
+      const lines = approvedFeedback.plain_text_feedback.split('\n');
+      const htmlParts: string[] = [];
+      let currentParagraph: string[] = [];
+      let inBulletList = false;
+      
+      const flushParagraph = () => {
+        if (currentParagraph.length > 0) {
+          htmlParts.push(`<p style="margin: 10px 0; line-height: 1.6;">${currentParagraph.join(' ')}</p>`);
+          currentParagraph = [];
+        }
+      };
+      
+      const flushBulletList = () => {
+        if (inBulletList) {
+          htmlParts.push('</ul>');
+          inBulletList = false;
+        }
+      };
+      
+      for (const line of lines) {
+        const trimmed = line.trim();
+        
+        // Skip the intro line "Here's the enhanced feedback..."
+        if (trimmed.toLowerCase().includes("here's the enhanced feedback")) {
+          continue;
+        }
+        
+        // Blank line = paragraph/section break
+        if (!trimmed) {
+          flushParagraph();
+          flushBulletList();
+          continue;
+        }
+        
+        // Heading: **Text** or **Text:**
+        if (trimmed.startsWith('**') && (trimmed.endsWith('**') || trimmed.endsWith(':**'))) {
+          flushParagraph();
+          flushBulletList();
+          const headingText = trimmed.replace(/\*\*/g, '').replace(/:$/, '');
+          htmlParts.push(`<h3 style="color: #1e293b; margin-top: 20px; margin-bottom: 10px; font-weight: 600;">${headingText}${trimmed.endsWith(':**') ? ':' : ''}</h3>`);
+          continue;
+        }
+        
+        // Bullet point: *   text or - text
+        if (trimmed.match(/^(\*\s{2,}|-\s)/)) {
+          flushParagraph();
+          if (!inBulletList) {
+            htmlParts.push('<ul style="margin: 10px 0; padding-left: 25px;">');
+            inBulletList = true;
+          }
+          const bulletText = trimmed.replace(/^(\*\s{2,}|-\s)/, '');
+          htmlParts.push(`<li style="margin: 5px 0;">${bulletText}</li>`);
+          continue;
+        }
+        
+        // Regular text: accumulate into current paragraph
+        flushBulletList();
+        currentParagraph.push(trimmed);
+      }
+      
+      // Flush any remaining content
+      flushParagraph();
+      flushBulletList();
+      
       vcFeedbackSections = `
-        <div style="margin-bottom: 30px; padding: 20px; background-color: #f9f9f9; border-left: 4px solid #2563eb;">
-          ${approvedFeedback.plain_text_feedback.split('\n').map(line => {
-            if (line.trim().startsWith('**') && line.trim().endsWith('**')) {
-              return `<h3 style="color: #1e293b; margin-top: 15px; margin-bottom: 10px;">${line.trim().replace(/\*\*/g, '')}</h3>`;
-            } else if (line.trim().startsWith('- ')) {
-              return `<li style="margin: 5px 0;">${line.trim().substring(2)}</li>`;
-            } else if (line.trim()) {
-              return `<p style="margin: 5px 0;">${line.trim()}</p>`;
-            }
-            return '';
-          }).join('')}
+        <div style="margin-bottom: 30px; padding: 25px; background-color: #f9fafb; border-left: 4px solid #3b82f6; border-radius: 4px;">
+          ${htmlParts.join('\n')}
         </div>
       `;
     } else {
