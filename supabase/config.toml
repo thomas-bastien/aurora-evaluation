@@ -152,3 +152,6 @@ verify_jwt = true
 
 [functions.generate-vc-feedback-details]
 verify_jwt = true
+
+[functions.update-email-tagline]
+verify_jwt = true
