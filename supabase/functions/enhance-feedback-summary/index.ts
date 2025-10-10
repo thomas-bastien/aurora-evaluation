@@ -60,16 +60,20 @@ serve(async (req) => {
 
     const systemPrompt = `You are a professional feedback editor specializing in startup evaluations. Your role is to enhance existing feedback to be more specific, actionable, and professionally worded while preserving all key insights.
 
-Guidelines:
-1. Keep enhanced feedback similar in length to original (1.2-1.5x max)
-2. Focus on clarity and actionability, not adding extra content
-3. Make strengths more specific with concrete examples
-4. Make challenges constructive with clear next steps
-5. Remove vague language and replace with specific descriptions
-6. Maintain a professional yet encouraging tone
-7. Preserve the original structure and all key points
+CRITICAL LENGTH CONSTRAINT: Enhanced feedback MUST be 1.2-1.3x original length MAX.
+- If original = 300 chars → enhanced = 360-390 chars MAX
+- If original = 500 chars → enhanced = 600-650 chars MAX
+- If original = 1000 chars → enhanced = 1200-1300 chars MAX
 
-DO NOT add information that wasn't in the original feedback. Only clarify and enhance what's already there.`;
+Enhancement Rules (STRICT):
+1. Remove vague words ONLY (e.g., "good"→"demonstrated 40% growth")
+2. Add ONE concrete example per strength (not multiple)
+3. Make ONE actionable step per improvement (not lists)
+4. NO expanding, NO adding context, NO elaborating beyond original scope
+5. Keep professional but CONCISE tone
+6. Preserve original structure exactly
+
+DO NOT add information that wasn't in the original feedback. Only clarify what's there - nothing more.`;
 
     const userPrompt = `Enhance this ${communicationType} feedback for ${startupName} (${roundName} round):
 
@@ -81,13 +85,13 @@ Focus on making it more specific, actionable, and professional while maintaining
 
     const { callGemini } = await import('../_shared/gemini-client.ts');
 
-    // Single API call with reasonable token limit
+    // Single API call with constrained token limit to enforce brevity
     let aiResponse = await callGemini({
       model: 'gemini-2.5-flash',
       systemPrompt,
       userPrompt,
-      temperature: 0.8,
-      maxTokens: 4000,
+      temperature: 0.7, // Lower temperature for more focused output
+      maxTokens: 2500, // Reduced to enforce brevity
     });
 
     // Simple retry logic for network/temporary issues
@@ -97,8 +101,8 @@ Focus on making it more specific, actionable, and professional while maintaining
         model: 'gemini-2.5-flash',
         systemPrompt,
         userPrompt,
-        temperature: 0.8,
-        maxTokens: 4000,
+        temperature: 0.7,
+        maxTokens: 2500,
       });
     }
 
@@ -122,17 +126,29 @@ Focus on making it more specific, actionable, and professional while maintaining
       );
     }
 
-    console.log(`✨ Enhanced feedback for ${startupName} successfully`);
+    // Validate output length - truncate if too long
+    let enhancedContent = aiResponse.content;
+    let wasTruncated = false;
+    const maxAllowedLength = feedbackSummary.length * 2; // 2x original max
+
+    if (enhancedContent.length > maxAllowedLength) {
+      console.warn(`Enhanced feedback too long (${enhancedContent.length} chars). Truncating to ${maxAllowedLength} chars.`);
+      enhancedContent = enhancedContent.substring(0, maxAllowedLength - 50) + '... [Enhanced feedback truncated for brevity]';
+      wasTruncated = true;
+    }
+
+    console.log(`✨ Enhanced feedback for ${startupName} successfully (${feedbackSummary.length} → ${enhancedContent.length} chars${wasTruncated ? ', truncated' : ''})`);
 
     return new Response(
       JSON.stringify({
         success: true,
-        enhancedFeedback: aiResponse.content,
+        enhancedFeedback: enhancedContent,
+        wasTruncated,
         metadata: {
           startupName,
           roundName,
           originalLength: feedbackSummary.length,
-          enhancedLength: aiResponse.content.length,
+          enhancedLength: enhancedContent.length,
         },
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

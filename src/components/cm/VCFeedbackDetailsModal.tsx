@@ -40,6 +40,8 @@ export function VCFeedbackDetailsModal({
   const [saving, setSaving] = useState(false);
   const [approving, setApproving] = useState(false);
   const [enhancing, setEnhancing] = useState(false);
+  const [enhancementProgress, setEnhancementProgress] = useState<string>('');
+  const [enhancementAbortController, setEnhancementAbortController] = useState<AbortController | null>(null);
   const [feedbackData, setFeedbackData] = useState<VCFeedbackData | null>(null);
   const [editedFeedback, setEditedFeedback] = useState("");
   const [isEditing, setIsEditing] = useState(false);
@@ -161,9 +163,31 @@ export function VCFeedbackDetailsModal({
   };
 
   const handleEnhance = async () => {
-    if (!feedbackData) return;
+    if (!feedbackData || !editedFeedback.trim()) {
+      toast({
+        title: 'Error',
+        description: 'No feedback to enhance',
+        variant: 'destructive',
+      });
+      return;
+    }
 
+    // Create abort controller for cancellation
+    const abortController = new AbortController();
+    setEnhancementAbortController(abortController);
     setEnhancing(true);
+    setEnhancementProgress('Starting enhancement...');
+
+    // Simulate progress updates
+    const progressTimer = setInterval(() => {
+      setEnhancementProgress(prev => {
+        if (prev === 'Starting enhancement...') return 'Analyzing feedback...';
+        if (prev === 'Analyzing feedback...') return 'Enhancing clarity...';
+        if (prev === 'Enhancing clarity...') return 'Finalizing...';
+        return prev;
+      });
+    }, 1200);
+
     try {
       const { data, error } = await supabase.functions.invoke('enhance-feedback-summary', {
         body: {
@@ -174,18 +198,40 @@ export function VCFeedbackDetailsModal({
         },
       });
 
+      clearInterval(progressTimer);
+
+      if (abortController.signal.aborted) {
+        toast({
+          title: 'Cancelled',
+          description: 'Enhancement cancelled',
+        });
+        return;
+      }
+
       if (error) throw error;
 
       if (data.success) {
         setEditedFeedback(data.enhancedFeedback);
+        
+        let description = 'Feedback enhanced successfully';
+        if (data.wasTruncated) {
+          description = 'Feedback enhanced (output was truncated for brevity). You can edit further if needed.';
+        }
+        
         toast({
-          title: "Enhanced",
-          description: `AI improved the feedback. ${data.improvements.join('. ')}.`,
+          title: 'Success',
+          description,
         });
       } else {
         throw new Error(data.error || 'Enhancement failed');
       }
     } catch (error: any) {
+      clearInterval(progressTimer);
+      
+      if (abortController.signal.aborted) {
+        return; // Already handled above
+      }
+
       console.error('Error enhancing VC feedback:', error);
       const raw = typeof error?.message === 'string' ? error.message : '';
       const description = raw?.includes('non-2xx')
@@ -197,7 +243,16 @@ export function VCFeedbackDetailsModal({
         variant: 'destructive',
       });
     } finally {
+      clearInterval(progressTimer);
       setEnhancing(false);
+      setEnhancementProgress('');
+      setEnhancementAbortController(null);
+    }
+  };
+
+  const handleCancelEnhancement = () => {
+    if (enhancementAbortController) {
+      enhancementAbortController.abort();
     }
   };
 
@@ -350,15 +405,29 @@ export function VCFeedbackDetailsModal({
                     Regenerate
                   </Button>
 
-                  <Button
-                    variant="outline"
-                    onClick={handleEnhance}
-                    disabled={enhancing || saving || approving || (status === 'approved' && !isEditing) || !editedFeedback}
-                  >
-                    {enhancing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    <Sparkles className="mr-2 h-4 w-4" />
-                    Enhance with AI
-                  </Button>
+                  {enhancing ? (
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleCancelEnhancement}
+                      >
+                        Cancel
+                      </Button>
+                      <span className="text-sm text-muted-foreground">
+                        {enhancementProgress} (Est. 3-5s)
+                      </span>
+                    </div>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      onClick={handleEnhance}
+                      disabled={saving || approving || (status === 'approved' && !isEditing) || !editedFeedback}
+                    >
+                      <Sparkles className="mr-2 h-4 w-4" />
+                      Enhance with AI
+                    </Button>
+                  )}
                 </div>
 
                 <div className="flex gap-2">
