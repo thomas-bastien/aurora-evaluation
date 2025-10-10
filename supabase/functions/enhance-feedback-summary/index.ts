@@ -10,6 +10,7 @@ interface EnhancementRequest {
   startupName: string;
   roundName: string;
   communicationType: 'selected' | 'rejected' | 'vc-feedback-details';
+  mode?: 'auto' | 'chunked';
 }
 
 serve(async (req) => {
@@ -18,7 +19,7 @@ serve(async (req) => {
   }
 
   try {
-    const { feedbackSummary, startupName, roundName, communicationType }: EnhancementRequest = await req.json();
+    const { feedbackSummary, startupName, roundName, communicationType, mode }: EnhancementRequest = await req.json();
 
     if (!feedbackSummary || !startupName) {
       return new Response(
@@ -69,40 +70,108 @@ Focus on making it more specific, actionable, and professional while maintaining
     console.log(`Enhancing feedback for ${startupName}`);
 
     const { callGemini } = await import('../_shared/gemini-client.ts');
-    
-    const aiResponse = await callGemini({
-      model: 'gemini-2.5-flash',
-      systemPrompt: systemPrompt,
-      userPrompt: userPrompt,
-      temperature: 0.7,
-      maxTokens: 3000
-    });
 
-    if (!aiResponse.success || !aiResponse.content) {
-      console.error('Gemini API error:', aiResponse.error);
-      
-      if (aiResponse.error?.includes('rate limit')) {
-        return new Response(
-          JSON.stringify({ 
-            success: false, 
-            error: 'Rate limit exceeded. Please wait a moment and try again.' 
-          }),
-          { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+    // Helpers for chunked enhancement
+    const splitIntoChunks = (text: string, maxChunkChars = 1800): string[] => {
+      const paras = text.split(/\n{2,}/);
+      const chunks: string[] = [];
+      let current = '';
+      for (const p of paras) {
+        const next = current ? `${current}\n\n${p}` : p;
+        if (next.length > maxChunkChars) {
+          if (current) chunks.push(current);
+          if (p.length <= maxChunkChars) {
+            current = p;
+          } else {
+            // Hard-wrap very long single paragraphs
+            for (let i = 0; i < p.length; i += maxChunkChars) {
+              chunks.push(p.slice(i, i + maxChunkChars));
+            }
+            current = '';
+          }
+        } else {
+          current = next;
+        }
       }
+      if (current) chunks.push(current);
+      return chunks.filter(Boolean);
+    };
 
-      throw new Error(aiResponse.error || 'Failed to enhance feedback');
+    const enhanceOnce = async (text: string) => {
+      const prompt = `Enhance this section for ${startupName} (${roundName} round):\n\n${text}\n\n` +
+        `Focus on clarity, specificity, and actionable recommendations. Preserve structure and meaning. Do not add new facts.`;
+      return await callGemini({
+        model: 'gemini-2.5-flash',
+        systemPrompt,
+        userPrompt: prompt,
+        temperature: 0.7,
+        maxTokens: 600,
+      });
+    };
+
+    // Try single-shot first unless forced to chunk or obviously too long
+    const forceChunked = mode === 'chunked';
+    const obviouslyLong = feedbackSummary.length > 8000;
+
+    let enhancedFeedback: string | null = null;
+
+    if (!forceChunked && !obviouslyLong) {
+      const aiResponse = await callGemini({
+        model: 'gemini-2.5-flash',
+        systemPrompt,
+        userPrompt,
+        temperature: 0.7,
+        maxTokens: 3000,
+      });
+
+      if (aiResponse.success && aiResponse.content) {
+        enhancedFeedback = aiResponse.content;
+      } else {
+        console.warn('Single-shot enhancement failed, considering chunked fallback:', aiResponse.error);
+        if (aiResponse.error?.toLowerCase().includes('rate limit')) {
+          return new Response(
+            JSON.stringify({ success: false, error: 'Rate limit exceeded. Please wait and try again.' }),
+            { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+        // Fall back to chunked mode for length/token related issues
+      }
     }
 
-    const enhancedFeedback = aiResponse.content;
+    if (!enhancedFeedback) {
+      console.log('Using chunked enhancement fallback');
+      const chunks = splitIntoChunks(feedbackSummary);
+      console.log(`Chunked into ${chunks.length} section(s)`);
+
+      const enhancedParts: string[] = [];
+      for (let i = 0; i < chunks.length; i++) {
+        const section = chunks[i];
+        const res = await enhanceOnce(section);
+        if (!res.success || !res.content) {
+          console.error(`Chunk ${i + 1} enhancement failed:`, res.error);
+          // Known failures should not bubble as 500; provide helpful message
+          return new Response(
+            JSON.stringify({
+              success: false,
+              error: `AI enhancement failed on section ${i + 1}. Try again in a moment or shorten the text.`,
+            }),
+            { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+        enhancedParts.push(res.content);
+      }
+      enhancedFeedback = enhancedParts.join('\n\n');
+    }
 
     if (!enhancedFeedback) {
-      throw new Error('No enhanced feedback received from AI');
+      return new Response(
+        JSON.stringify({ success: false, error: 'No enhanced feedback produced.' }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     // Analyze improvements made
     const improvements: string[] = [];
-    
     if (enhancedFeedback.length > feedbackSummary.length * 1.1) {
       improvements.push('Added more specific details and context');
     }
@@ -123,13 +192,13 @@ Focus on making it more specific, actionable, and professional while maintaining
         success: true,
         enhancedFeedback,
         improvements,
-        model: aiResponse.model,
         metadata: {
           startupName,
           roundName,
           originalLength: feedbackSummary.length,
-          enhancedLength: enhancedFeedback.length
-        }
+          enhancedLength: enhancedFeedback.length,
+          mode: enhancedFeedback.length > 0 && (forceChunked || obviouslyLong) ? 'chunked' : 'single',
+        },
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

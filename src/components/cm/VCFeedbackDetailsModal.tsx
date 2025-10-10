@@ -180,10 +180,14 @@ export function VCFeedbackDetailsModal({
       }
     } catch (error: any) {
       console.error('Error enhancing VC feedback:', error);
+      const raw = typeof error?.message === 'string' ? error.message : '';
+      const description = raw?.includes('non-2xx')
+        ? 'AI enhancement failed due to size or temporary limits. Please retry; long feedback is now auto-split. If it persists, try shortening the text.'
+        : (raw || 'Failed to enhance VC feedback');
       toast({
-        title: "Error",
-        description: error.message || "Failed to enhance VC feedback",
-        variant: "destructive",
+        title: 'Error',
+        description,
+        variant: 'destructive',
       });
     } finally {
       setEnhancing(false);
