@@ -44,6 +44,7 @@ export function VCFeedbackDetailsModal({
   const [editedFeedback, setEditedFeedback] = useState("");
   const [isEditing, setIsEditing] = useState(false);
   const [originalFeedback, setOriginalFeedback] = useState("");
+  const [lastEnhanceTime, setLastEnhanceTime] = useState(0);
 
   useEffect(() => {
     if (open) {
@@ -163,7 +164,20 @@ export function VCFeedbackDetailsModal({
   const handleEnhance = async () => {
     if (!feedbackData) return;
 
+    // Phase 1: Request debouncing (2 second cooldown)
+    const now = Date.now();
+    if (now - lastEnhanceTime < 2000) {
+      toast({
+        title: "Please Wait",
+        description: "Enhancement in progress, please wait a moment",
+      });
+      return;
+    }
+    setLastEnhanceTime(now);
+
     setEnhancing(true);
+    const enhanceStartTime = Date.now();
+    
     try {
       const { data, error } = await supabase.functions.invoke('enhance-feedback-summary', {
         body: {
@@ -171,6 +185,7 @@ export function VCFeedbackDetailsModal({
           startupName,
           roundName,
           communicationType: 'vc-feedback-details',
+          startupId, // Pass for caching
         },
       });
 
@@ -178,9 +193,12 @@ export function VCFeedbackDetailsModal({
 
       if (data.success) {
         setEditedFeedback(data.enhancedFeedback);
+        const timeTaken = data.metadata?.timeTaken || (Date.now() - enhanceStartTime);
+        const mode = data.metadata?.mode || 'unknown';
+        
         toast({
-          title: "Enhanced",
-          description: `AI improved the feedback. ${data.improvements.join('. ')}.`,
+          title: mode === 'cached' ? "✨ Enhanced (from cache)" : "✨ Enhanced with AI",
+          description: `${data.improvements.join('. ')}. Completed in ${(timeTaken / 1000).toFixed(1)}s.`,
         });
       } else {
         throw new Error(data.error || 'Enhancement failed');
@@ -189,7 +207,7 @@ export function VCFeedbackDetailsModal({
       console.error('Error enhancing VC feedback:', error);
       const raw = typeof error?.message === 'string' ? error.message : '';
       const description = raw?.includes('non-2xx')
-        ? 'AI enhancement failed due to size or temporary limits. Please retry; long feedback is now auto-split. If it persists, try shortening the text.'
+        ? 'AI enhancement failed. The system now uses parallel processing and caching for better performance. Please try again.'
         : (raw || 'Failed to enhance VC feedback');
       toast({
         title: 'Error',
