@@ -5,7 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { Loader2, CheckCircle2, FileText, Save, ThumbsUp } from "lucide-react";
+import { Loader2, CheckCircle2, FileText, Save, ThumbsUp, Sparkles } from "lucide-react";
 
 interface VCFeedbackDetailsModalProps {
   open: boolean;
@@ -39,6 +39,7 @@ export function VCFeedbackDetailsModal({
   const [generating, setGenerating] = useState(false);
   const [saving, setSaving] = useState(false);
   const [approving, setApproving] = useState(false);
+  const [enhancing, setEnhancing] = useState(false);
   const [feedbackData, setFeedbackData] = useState<VCFeedbackData | null>(null);
   const [editedFeedback, setEditedFeedback] = useState("");
 
@@ -149,6 +150,43 @@ export function VCFeedbackDetailsModal({
       });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleEnhance = async () => {
+    if (!feedbackData) return;
+
+    setEnhancing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('enhance-feedback-summary', {
+        body: {
+          feedbackSummary: editedFeedback,
+          startupName,
+          roundName,
+          communicationType: 'vc-feedback-details',
+        },
+      });
+
+      if (error) throw error;
+
+      if (data.success) {
+        setEditedFeedback(data.enhancedFeedback);
+        toast({
+          title: "Enhanced",
+          description: `AI improved the feedback. ${data.improvements.join('. ')}.`,
+        });
+      } else {
+        throw new Error(data.error || 'Enhancement failed');
+      }
+    } catch (error: any) {
+      console.error('Error enhancing VC feedback:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to enhance VC feedback",
+        variant: "destructive",
+      });
+    } finally {
+      setEnhancing(false);
     }
   };
 
@@ -280,20 +318,32 @@ export function VCFeedbackDetailsModal({
 
               {/* Action Buttons */}
               <div className="flex items-center justify-between pt-4 border-t">
-                <Button
-                  variant="outline"
-                  onClick={handleGenerate}
-                  disabled={generating || saving || approving}
-                >
-                  {generating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Regenerate
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={handleGenerate}
+                    disabled={generating || saving || approving || enhancing}
+                  >
+                    {generating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Regenerate
+                  </Button>
+
+                  <Button
+                    variant="outline"
+                    onClick={handleEnhance}
+                    disabled={enhancing || saving || approving || status === 'approved' || !editedFeedback}
+                  >
+                    {enhancing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    <Sparkles className="mr-2 h-4 w-4" />
+                    Enhance with AI
+                  </Button>
+                </div>
 
                 <div className="flex gap-2">
                   <Button
                     variant="outline"
                     onClick={handleSaveDraft}
-                    disabled={saving || approving || status === 'approved'}
+                    disabled={saving || approving || enhancing || status === 'approved'}
                   >
                     {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     <Save className="mr-2 h-4 w-4" />
@@ -302,7 +352,7 @@ export function VCFeedbackDetailsModal({
 
                   <Button
                     onClick={handleApprove}
-                    disabled={approving || saving || status === 'approved'}
+                    disabled={approving || saving || enhancing || status === 'approved'}
                   >
                     {approving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     <ThumbsUp className="mr-2 h-4 w-4" />
