@@ -75,9 +75,14 @@ serve(async (req) => {
     }
 
     // Skip if already well-structured
+    const numberedList = /(^|\n)\s*\d+[.)]\s/.test(feedbackSummary);
+    const dashedList = /(^|\n)\s*[-•]\s/.test(feedbackSummary);
     const hasStructure = feedbackSummary.includes('•') || 
-                        feedbackSummary.includes('\n\n') ||
-                        feedbackSummary.match(/\d\.|-/) !== null;
+                        feedbackSummary.includes('\n\n') || 
+                        numberedList || 
+                        dashedList;
+    
+    console.log('hasStructure?', { numberedList, dashedList, hasStructure, length: feedbackSummary.length });
 
     if (hasStructure && feedbackSummary.length < 500) {
       console.log(`Skipping enhancement for ${startupName} - already well-structured`);
