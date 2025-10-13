@@ -77,8 +77,8 @@ serve(async (req) => {
     if (role === 'vc') {
       // Juror guidance
       systemPrompt = `You are a helpful assistant guiding a juror (VC partner) through startup evaluations. 
-Be encouraging, specific, and actionable. Keep messages concise and motivating.
-Generate 2-3 quick action suggestions based on their progress.`;
+Write in a warm, conversational tone. Generate guidance as flowing prose without section labels or structural markers.
+Keep it concise (2-3 sentences), encouraging, and actionable.`;
 
       userPrompt = `Juror: ${userName}
 Round: ${roundName}
@@ -90,24 +90,25 @@ Progress:
 
 Available actions: ${actionLabels}
 
-Generate personalized guidance with:
-1. A warm greeting
-2. Progress summary with encouragement
-3. Next steps suggestion
-4. 2-3 action labels from the available actions list
+Write 2-3 sentences of personalized guidance that naturally:
+- Acknowledges their progress
+- Provides encouragement
+- Suggests next steps
 
-Consider:
-- If 0 completed: Encourage to start
-- If 0-30% complete: Motivate to continue
-- If 30-70% complete: Acknowledge progress, push to finish
-- If 70-99% complete: Almost there, final push
-- If 100% complete: Congratulate, suggest next phase prep`;
+Select 2-3 action labels from the available actions list.
+
+Tone guidelines:
+- If 0 completed: Encouraging to start
+- If 0-30%: Motivating to continue  
+- If 30-70%: Acknowledge progress
+- If 70-99%: Final push
+- If 100%: Congratulate, suggest prep`;
 
     } else {
       // CM guidance
       systemPrompt = `You are a strategic assistant helping a Community Manager oversee a startup evaluation program.
-Be analytical, flag bottlenecks, and prioritize actions. Keep messages clear and actionable.
-Suggest 2-3 high-priority actions based on round status.`;
+Write in a clear, professional tone. Generate guidance as flowing prose without section labels, quotes, or structural markers.
+Keep it concise (2-4 sentences), analytical, and actionable.`;
 
       userPrompt = `Community Manager
 Round: ${roundName}
@@ -121,17 +122,18 @@ Status:
 
 Available actions: ${actionLabels}
 
-Generate strategic guidance with:
-1. Status overview
-2. Bottleneck analysis
-3. Priority action recommendations
-4. 2-3 action labels from the available actions list
+Write 2-4 sentences of strategic guidance that naturally:
+- Summarizes the current round status
+- Identifies any critical bottlenecks
+- Recommends priority actions
 
-Consider:
-- If completion < 30%: Flag as high priority, suggest reminders
+Select 2-3 action labels from the available actions list.
+
+Priority guidelines:
+- If completion < 30%: Flag urgency
 - If pending communications > 5: Highlight communication needs
-- If unscheduled pitches > 0: Direct to pitch coordination
-- If completion > 90%: Prepare for round transition`;
+- If unscheduled pitches > 0: Address coordination
+- If completion > 90%: Prepare for transition`;
     }
 
     console.log(`[AI Guidance] Generating for role: ${role}`);
@@ -153,7 +155,7 @@ Consider:
             parameters: {
               type: 'object',
               properties: {
-                guidance: { type: 'string', description: 'Main guidance text' },
+                guidance: { type: 'string', description: 'Conversational guidance in flowing prose. No section labels, quotes, or structural markers. 2-4 sentences maximum.' },
                 priority: { type: 'string', enum: ['low', 'medium', 'high'] },
                 actions: { 
                   type: 'array',
