@@ -59,13 +59,21 @@ const mapCategoryToCommunicationType = (category?: string): string => {
     'juror_invitation': 'under-review',
     'admin_invitation': 'under-review',
     'cm_invitation': 'under-review',
+    'juror_reminder': 'under-review',
     'juror-reminder': 'under-review',
     'assignment-notification': 'under-review',
     'founder_selection': 'selection',
     'founder_rejection': 'rejection',
     'pitch-scheduling': 'under-review',
+    'pitch_scheduling': 'under-review',
     'screening-results': 'selection',
-    'pitching-results': 'selection'
+    'pitching-results': 'selection',
+    'juror-welcome': 'under-review',
+    'juror-access': 'under-review',
+    'juror-completion': 'under-review',
+    'pitch-invitation': 'under-review',
+    'pitch-reminder': 'under-review',
+    'juror-final-thankyou': 'under-review'
   };
   
   return mapping[category] || 'general';
