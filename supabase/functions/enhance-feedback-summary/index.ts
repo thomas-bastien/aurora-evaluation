@@ -77,7 +77,7 @@ serve(async (req) => {
     // Skip if already well-structured
     const hasStructure = feedbackSummary.includes('•') || 
                         feedbackSummary.includes('\n\n') ||
-                        feedbackSummary.match(/\d\.|-)/) !== null;
+                        feedbackSummary.match(/\d\.|-/) !== null;
 
     if (hasStructure && feedbackSummary.length < 500) {
       console.log(`Skipping enhancement for ${startupName} - already well-structured`);
