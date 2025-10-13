@@ -457,9 +457,8 @@ export function exportAIInsightsCSV(insights: RoundInsights, roundName: string):
         '',
         outlier.startup_name,
         outlier.type,
-        outlier.score.toFixed(2),
-        outlier.score_variance.toFixed(2),
-        outlier.explanation
+        outlier.average_score,
+        outlier.description
       ]);
     });
     sections.push(['']);
@@ -467,16 +466,14 @@ export function exportAIInsightsCSV(insights: RoundInsights, roundName: string):
   
   // Bias Check
   if (insights.bias_check.length > 0) {
-    sections.push(['BIAS CHECK', 'Juror', 'Pattern', 'Avg Score', 'Cohort Avg', 'Deviation', 'Assessment']);
+    sections.push(['BIAS CHECK', 'Juror', 'Pattern', 'Significance', 'Description']);
     insights.bias_check.forEach(bias => {
       sections.push([
         '',
         bias.juror_name,
         bias.pattern,
-        bias.avg_score_given.toFixed(2),
-        bias.cohort_avg.toFixed(2),
-        bias.deviation.toFixed(2),
-        bias.assessment
+        bias.significance,
+        bias.description
       ]);
     });
     sections.push(['']);
@@ -484,13 +481,14 @@ export function exportAIInsightsCSV(insights: RoundInsights, roundName: string):
   
   // Risk Themes
   if (insights.risk_themes.length > 0) {
-    sections.push(['RISK THEMES', 'Theme', 'Frequency', 'Examples']);
+    sections.push(['RISK THEMES', 'Theme', 'Frequency', 'Severity', 'Description']);
     insights.risk_themes.forEach(theme => {
       sections.push([
         '',
         theme.theme,
         theme.frequency.toString(),
-        theme.examples.join('; ')
+        theme.severity,
+        theme.description
       ]);
     });
   }
@@ -597,18 +595,17 @@ export async function exportAIInsightsPDF(insights: RoundInsights, roundName: st
     const outlierData = insights.outliers.map(outlier => [
       outlier.startup_name,
       outlier.type,
-      outlier.score.toFixed(2),
-      outlier.score_variance.toFixed(2),
-      outlier.explanation
+      outlier.average_score,
+      outlier.description
     ]);
     
     autoTable(doc, {
-      head: [['Startup', 'Type', 'Score', 'Variance', 'Explanation']],
+      head: [['Startup', 'Type', 'Avg Score', 'Description']],
       body: outlierData,
       startY: yPos,
       styles: { fontSize: 7 },
       headStyles: { fillColor: AURORA_COLORS.primary, textColor: AURORA_COLORS.white },
-      columnStyles: { 4: { cellWidth: 60 } }
+      columnStyles: { 3: { cellWidth: 80 } }
     });
     
     yPos = (doc as any).lastAutoTable.finalY + 15;
@@ -633,18 +630,17 @@ export async function exportAIInsightsPDF(insights: RoundInsights, roundName: st
     const biasData = insights.bias_check.map(bias => [
       bias.juror_name,
       bias.pattern,
-      bias.avg_score_given.toFixed(2),
-      bias.cohort_avg.toFixed(2),
-      bias.deviation.toFixed(2),
-      bias.assessment
+      bias.significance,
+      bias.description
     ]);
     
     autoTable(doc, {
-      head: [['Juror', 'Pattern', 'Avg Score', 'Cohort Avg', 'Deviation', 'Assessment']],
+      head: [['Juror', 'Pattern', 'Significance', 'Description']],
       body: biasData,
       startY: yPos,
       styles: { fontSize: 7 },
-      headStyles: { fillColor: AURORA_COLORS.primary, textColor: AURORA_COLORS.white }
+      headStyles: { fillColor: AURORA_COLORS.primary, textColor: AURORA_COLORS.white },
+      columnStyles: { 3: { cellWidth: 80 } }
     });
     
     yPos = (doc as any).lastAutoTable.finalY + 15;
@@ -669,16 +665,17 @@ export async function exportAIInsightsPDF(insights: RoundInsights, roundName: st
     const riskData = insights.risk_themes.map(theme => [
       theme.theme,
       theme.frequency.toString(),
-      theme.examples.slice(0, 2).join('; ')
+      theme.severity,
+      theme.description
     ]);
     
     autoTable(doc, {
-      head: [['Theme', 'Frequency', 'Examples']],
+      head: [['Theme', 'Frequency', 'Severity', 'Description']],
       body: riskData,
       startY: yPos,
       styles: { fontSize: 8 },
       headStyles: { fillColor: AURORA_COLORS.primary, textColor: AURORA_COLORS.white },
-      columnStyles: { 2: { cellWidth: 80 } }
+      columnStyles: { 3: { cellWidth: 80 } }
     });
   }
   

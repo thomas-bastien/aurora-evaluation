@@ -10,25 +10,23 @@ interface CohortPattern {
 
 interface OutlierAnalysis {
   startup_name: string;
-  type: 'high_score' | 'low_score' | 'polarized';
-  score: number;
-  score_variance: number;
-  explanation: string;
+  type: 'top_performer' | 'needs_attention';
+  average_score: string;
+  description: string;
 }
 
 interface BiasAnalysis {
   juror_name: string;
   pattern: string;
-  avg_score_given: number;
-  cohort_avg: number;
-  deviation: number;
-  assessment: string;
+  description: string;
+  significance: 'high' | 'medium' | 'low';
 }
 
 interface RiskTheme {
   theme: string;
   frequency: number;
-  examples: string[];
+  severity: 'high' | 'medium' | 'low';
+  description: string;
 }
 
 export interface RoundInsights {
@@ -39,6 +37,7 @@ export interface RoundInsights {
   outliers: OutlierAnalysis[];
   bias_check: BiasAnalysis[];
   risk_themes: RiskTheme[];
+  ai_enhanced?: boolean;
 }
 
 interface UseRoundInsightsReturn {

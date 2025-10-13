@@ -223,9 +223,8 @@ export const AIInsightsReport = ({ currentRound }: AIInsightsReportProps) => {
                   <TableRow>
                     <TableHead>Startup</TableHead>
                     <TableHead>Type</TableHead>
-                    <TableHead>Score</TableHead>
-                    <TableHead>Variance</TableHead>
-                    <TableHead>Explanation</TableHead>
+                    <TableHead>Avg Score</TableHead>
+                    <TableHead>Description</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -238,10 +237,9 @@ export const AIInsightsReport = ({ currentRound }: AIInsightsReportProps) => {
                           {outlier.type.replace('_', ' ')}
                         </span>
                       </TableCell>
-                      <TableCell>{outlier.score.toFixed(2)}</TableCell>
-                      <TableCell>{outlier.score_variance.toFixed(2)}</TableCell>
+                      <TableCell className="font-semibold">{outlier.average_score}</TableCell>
                       <TableCell className="text-sm text-muted-foreground">
-                        {outlier.explanation}
+                        {outlier.description}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -262,28 +260,24 @@ export const AIInsightsReport = ({ currentRound }: AIInsightsReportProps) => {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Juror</TableHead>
+                    <TableHead>Juror / Finding</TableHead>
                     <TableHead>Pattern</TableHead>
-                    <TableHead>Avg Score Given</TableHead>
-                    <TableHead>Cohort Avg</TableHead>
-                    <TableHead>Deviation</TableHead>
-                    <TableHead>Assessment</TableHead>
+                    <TableHead>Significance</TableHead>
+                    <TableHead>Description</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {insights.bias_check.map((bias, index) => (
                     <TableRow key={index}>
                       <TableCell className="font-medium">{bias.juror_name}</TableCell>
-                      <TableCell className="text-sm">{bias.pattern}</TableCell>
-                      <TableCell>{bias.avg_score_given.toFixed(2)}</TableCell>
-                      <TableCell>{bias.cohort_avg.toFixed(2)}</TableCell>
+                      <TableCell className="text-sm capitalize">{bias.pattern.replace('_', ' ')}</TableCell>
                       <TableCell>
-                        <Badge variant={Math.abs(bias.deviation) > 1 ? 'destructive' : 'secondary'}>
-                          {bias.deviation > 0 ? '+' : ''}{bias.deviation.toFixed(2)}
+                        <Badge variant={bias.significance === 'high' ? 'destructive' : bias.significance === 'medium' ? 'secondary' : 'outline'}>
+                          {bias.significance}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
-                        {bias.assessment}
+                        {bias.description}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -300,31 +294,34 @@ export const AIInsightsReport = ({ currentRound }: AIInsightsReportProps) => {
               <AlertCircle className="w-5 h-5" />
               Common Risk Themes
             </h3>
-            <Accordion type="single" collapsible className="border rounded-lg">
-              {insights.risk_themes.map((theme, index) => (
-                <AccordionItem key={index} value={`theme-${index}`}>
-                  <AccordionTrigger className="px-4 hover:bg-muted/50">
-                    <div className="flex items-center justify-between w-full pr-4">
-                      <span className="font-medium">{theme.theme}</span>
-                      <Badge variant="outline">{theme.frequency} mentions</Badge>
-                    </div>
-                  </AccordionTrigger>
-                  <AccordionContent className="px-4 pb-4">
-                    <div className="space-y-2">
-                      <p className="text-sm font-medium text-muted-foreground mb-2">Examples:</p>
-                      <ul className="space-y-1">
-                        {theme.examples.map((example, exIndex) => (
-                          <li key={exIndex} className="text-sm flex items-start gap-2">
-                            <span className="text-muted-foreground">•</span>
-                            <span>{example}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  </AccordionContent>
-                </AccordionItem>
-              ))}
-            </Accordion>
+            <div className="border rounded-lg overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Theme</TableHead>
+                    <TableHead>Frequency</TableHead>
+                    <TableHead>Severity</TableHead>
+                    <TableHead>Description</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {insights.risk_themes.map((theme, index) => (
+                    <TableRow key={index}>
+                      <TableCell className="font-medium">{theme.theme}</TableCell>
+                      <TableCell>{theme.frequency} mentions</TableCell>
+                      <TableCell>
+                        <Badge variant={theme.severity === 'high' ? 'destructive' : theme.severity === 'medium' ? 'secondary' : 'outline'}>
+                          {theme.severity}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {theme.description}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           </div>
         )}
 
