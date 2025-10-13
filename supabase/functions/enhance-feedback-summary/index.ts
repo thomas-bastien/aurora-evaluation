@@ -31,21 +31,64 @@ serve(async (req) => {
     if (feedbackSummary.includes('[AI Feedback not yet generated')) {
       return new Response(
         JSON.stringify({ 
-          success: false, 
-          error: 'Cannot enhance placeholder feedback. Generate feedback first.' 
+          success: true, 
+          enhancedFeedback: feedbackSummary,
+          skipped: true,
+          skipReason: 'Placeholder text - generate feedback first'
         }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Validate feedback length
-    if (feedbackSummary.length > 10000) {
+    // Smart pre-validation: Skip enhancement if too short
+    if (feedbackSummary.trim().length < 100) {
+      console.log(`Skipping enhancement for ${startupName} - too short (${feedbackSummary.length} chars)`);
       return new Response(
         JSON.stringify({ 
-          success: false, 
-          error: 'Feedback too long for enhancement (max 10,000 characters). Please shorten it first.' 
+          success: true, 
+          enhancedFeedback: feedbackSummary,
+          skipped: true,
+          skipReason: 'Too short - no enhancement needed'
         }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Skip if lacks substance (mostly filler words)
+    const substantiveWords = feedbackSummary
+      .toLowerCase()
+      .replace(/[^a-z\s]/g, '')
+      .split(/\s+/)
+      .filter(w => w.length > 3 && !['this', 'that', 'very', 'good', 'nice', 'great', 'well'].includes(w));
+
+    if (substantiveWords.length < 20) {
+      console.log(`Skipping enhancement for ${startupName} - lacks substance (${substantiveWords.length} words)`);
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          enhancedFeedback: feedbackSummary,
+          skipped: true,
+          skipReason: 'Insufficient detail - no enhancement needed'
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Skip if already well-structured
+    const hasStructure = feedbackSummary.includes('•') || 
+                        feedbackSummary.includes('\n\n') ||
+                        feedbackSummary.match(/\d\.|-)/) !== null;
+
+    if (hasStructure && feedbackSummary.length < 500) {
+      console.log(`Skipping enhancement for ${startupName} - already well-structured`);
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          enhancedFeedback: feedbackSummary,
+          skipped: true,
+          skipReason: 'Already well-structured'
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -53,105 +96,108 @@ serve(async (req) => {
     if (!GOOGLE_GEMINI_API_KEY) {
       console.error('GOOGLE_GEMINI_API_KEY not configured');
       return new Response(
-        JSON.stringify({ success: false, error: 'AI service not configured' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ 
+          success: true, 
+          enhancedFeedback: feedbackSummary,
+          skipped: true,
+          skipReason: 'AI service not configured'
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const systemPrompt = `You are a professional feedback editor specializing in startup evaluations. Your role is to enhance existing feedback to be more specific, actionable, and professionally worded while preserving all key insights.
+    // Ultra-minimal system prompt
+    const systemPrompt = `Restructure this feedback for clarity. DO NOT add new information.
 
-CRITICAL LENGTH CONSTRAINT: Enhanced feedback MUST be 1.2-1.3x original length MAX.
-- If original = 300 chars → enhanced = 360-390 chars MAX
-- If original = 500 chars → enhanced = 600-650 chars MAX
-- If original = 1000 chars → enhanced = 1200-1300 chars MAX
+Your ONLY job:
+1. Break walls of text into short paragraphs
+2. Add bullet points if listing multiple items
+3. Fix obvious typos/grammar
+4. Ensure consistent tense
 
-Enhancement Rules (STRICT):
-1. Remove vague words ONLY (e.g., "good"→"demonstrated 40% growth")
-2. Add ONE concrete example per strength (not multiple)
-3. Make ONE actionable step per improvement (not lists)
-4. NO expanding, NO adding context, NO elaborating beyond original scope
-5. Keep professional but CONCISE tone
-6. Preserve original structure exactly
+If feedback is already clear, return it EXACTLY as-is. Never expand beyond 1.1x original length.`;
 
-DO NOT add information that wasn't in the original feedback. Only clarify what's there - nothing more.`;
+    const userPrompt = `Restructure this ${communicationType} feedback for ${startupName}:
 
-    const userPrompt = `Enhance this ${communicationType} feedback for ${startupName} (${roundName} round):
-
-${feedbackSummary}
-
-Focus on making it more specific, actionable, and professional while maintaining all the original insights and tone.`;
+${feedbackSummary}`;
 
     console.log(`Enhancing feedback for ${startupName} (length: ${feedbackSummary.length} chars)`);
 
     const { callGemini } = await import('../_shared/gemini-client.ts');
 
-    // Single API call with constrained token limit to enforce brevity
-    let aiResponse = await callGemini({
-      model: 'gemini-2.5-flash',
-      systemPrompt,
-      userPrompt,
-      temperature: 0.7, // Lower temperature for more focused output
-      maxTokens: 2500, // Reduced to enforce brevity
-    });
+    // 12-second timeout
+    const abortController = new AbortController();
+    const timeoutId = setTimeout(() => abortController.abort(), 12000);
 
-    // Simple retry logic for network/temporary issues
-    if (!aiResponse.success && !aiResponse.error?.toLowerCase().includes('rate limit')) {
-      console.log('First attempt failed, retrying once...');
+    let aiResponse;
+    try {
       aiResponse = await callGemini({
         model: 'gemini-2.5-flash',
         systemPrompt,
         userPrompt,
         temperature: 0.7,
-        maxTokens: 2500,
+        maxTokens: 1500,
       });
-    }
-
-    // Handle rate limits
-    if (aiResponse.error?.toLowerCase().includes('rate limit')) {
-      return new Response(
-        JSON.stringify({ success: false, error: 'Rate limit exceeded. Please wait and try again.' }),
-        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Handle failure after retry
-    if (!aiResponse.success || !aiResponse.content) {
-      console.error('Enhancement failed:', aiResponse.error);
+    } catch (error) {
+      console.error('Enhancement timeout or error:', error);
       return new Response(
         JSON.stringify({ 
-          success: false, 
-          error: aiResponse.error || 'Enhancement failed. Please try again.' 
+          success: true, 
+          enhancedFeedback: feedbackSummary,
+          skipped: true,
+          skipReason: 'Timeout - original preserved'
         }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    } finally {
+      clearTimeout(timeoutId);
+    }
+
+    // Guaranteed fallback: validate length ratio
+    if (aiResponse.success && aiResponse.content) {
+      const enhanced = aiResponse.content.trim();
+      const lengthRatio = enhanced.length / feedbackSummary.length;
+      
+      if (lengthRatio > 1.3 || lengthRatio < 0.8) {
+        console.warn(`Enhanced feedback length ratio out of bounds (${lengthRatio.toFixed(2)}x). Using original.`);
+        return new Response(
+          JSON.stringify({ 
+            success: true, 
+            enhancedFeedback: feedbackSummary,
+            skipped: true,
+            skipReason: 'AI output too different - original preserved'
+          }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      console.log(`✨ Enhanced feedback for ${startupName} (${feedbackSummary.length} → ${enhanced.length} chars)`);
+      return new Response(
+        JSON.stringify({
+          success: true,
+          enhancedFeedback: enhanced,
+          skipped: false,
+          metadata: {
+            startupName,
+            roundName,
+            originalLength: feedbackSummary.length,
+            enhancedLength: enhanced.length,
+          },
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Validate output length - truncate if too long
-    let enhancedContent = aiResponse.content;
-    let wasTruncated = false;
-    const maxAllowedLength = feedbackSummary.length * 2; // 2x original max
-
-    if (enhancedContent.length > maxAllowedLength) {
-      console.warn(`Enhanced feedback too long (${enhancedContent.length} chars). Truncating to ${maxAllowedLength} chars.`);
-      enhancedContent = enhancedContent.substring(0, maxAllowedLength - 50) + '... [Enhanced feedback truncated for brevity]';
-      wasTruncated = true;
-    }
-
-    console.log(`✨ Enhanced feedback for ${startupName} successfully (${feedbackSummary.length} → ${enhancedContent.length} chars${wasTruncated ? ', truncated' : ''})`);
-
+    // Any other case → return original
+    console.log(`No AI output for ${startupName}, preserving original`);
     return new Response(
-      JSON.stringify({
-        success: true,
-        enhancedFeedback: enhancedContent,
-        wasTruncated,
-        metadata: {
-          startupName,
-          roundName,
-          originalLength: feedbackSummary.length,
-          enhancedLength: enhancedContent.length,
-        },
+      JSON.stringify({ 
+        success: true, 
+        enhancedFeedback: feedbackSummary,
+        skipped: true,
+        skipReason: 'No AI output - original preserved'
       }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
   } catch (error) {

@@ -213,15 +213,19 @@ export function VCFeedbackDetailsModal({
       if (data.success) {
         setEditedFeedback(data.enhancedFeedback);
         
-        let description = 'Feedback enhanced successfully';
-        if (data.wasTruncated) {
-          description = 'Feedback enhanced (output was truncated for brevity). You can edit further if needed.';
+        if (data.skipped) {
+          toast({
+            title: data.skipReason?.includes('short') || data.skipReason?.includes('substance') 
+              ? "No Changes Needed" 
+              : "Feedback Preserved",
+            description: data.skipReason || "Feedback is already well-structured.",
+          });
+        } else {
+          toast({
+            title: 'Feedback Restructured',
+            description: 'The feedback has been improved for clarity.',
+          });
         }
-        
-        toast({
-          title: 'Success',
-          description,
-        });
       } else {
         throw new Error(data.error || 'Enhancement failed');
       }

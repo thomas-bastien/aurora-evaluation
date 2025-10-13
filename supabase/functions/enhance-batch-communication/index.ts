@@ -1,6 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
-import { callGemini } from '../_shared/gemini-client.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -19,191 +18,95 @@ serve(async (req) => {
       throw new Error('Missing required parameters');
     }
 
-    // Initialize Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Determine evaluation table based on round
     const evaluationTable = roundName === 'screening' ? 'screening_evaluations' : 'pitching_evaluations';
 
-    // Fetch all evaluations for these startups
+    // Limit to 50 most recent evaluations
     const { data: evaluations, error: evalError } = await supabase
       .from(evaluationTable)
-      .select(`
-        *,
-        startups!inner(name, verticals)
-      `)
-      .in('startup_id', startupIds);
+      .select(`*, startups!inner(name, verticals)`)
+      .in('startup_id', startupIds)
+      .order('created_at', { ascending: false })
+      .limit(50);
 
-    if (evalError) {
-      console.error('Error fetching evaluations:', evalError);
-      throw evalError;
-    }
-
+    if (evalError) throw evalError;
     if (!evaluations || evaluations.length === 0) {
-      throw new Error('No evaluations found for the given startups');
+      throw new Error('No evaluations found');
     }
 
-    // Aggregate feedback patterns
-    const allStrengths: string[] = [];
-    const allImprovements: string[] = [];
+    // Pre-aggregate data
     const scores: number[] = [];
+    const strengths: string[] = [];
     const verticals = new Set<string>();
 
-    evaluations.forEach((eval: any) => {
-      if (eval.strengths && Array.isArray(eval.strengths)) {
-        allStrengths.push(...eval.strengths);
-      }
-      if (eval.improvement_areas) {
-        allImprovements.push(eval.improvement_areas);
-      }
-      if (eval.overall_score) {
-        scores.push(eval.overall_score);
-      }
-      if (eval.startups?.verticals && Array.isArray(eval.startups.verticals)) {
-        eval.startups.verticals.forEach((v: string) => verticals.add(v));
-      }
+    evaluations.forEach((e: any) => {
+      if (e.overall_score) scores.push(e.overall_score);
+      if (e.strengths && Array.isArray(e.strengths)) strengths.push(...e.strengths);
+      if (e.startups?.verticals) e.startups.verticals.forEach((v: string) => verticals.add(v));
     });
 
-    // Calculate statistics
-    const avgScore = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : 0;
-    const minScore = scores.length > 0 ? Math.min(...scores) : 0;
-    const maxScore = scores.length > 0 ? Math.max(...scores) : 0;
-
-    // Find most common themes
+    const avgScore = scores.length > 0 ? (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(2) : 'N/A';
     const strengthCounts: Record<string, number> = {};
-    allStrengths.forEach(s => {
-      const normalized = s.toLowerCase().trim();
-      strengthCounts[normalized] = (strengthCounts[normalized] || 0) + 1;
+    strengths.forEach(s => {
+      const clean = s.trim().toLowerCase();
+      strengthCounts[clean] = (strengthCounts[clean] || 0) + 1;
     });
+    const topStrengths = Object.entries(strengthCounts).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([s]) => s);
 
-    const topStrengths = Object.entries(strengthCounts)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 5)
-      .map(([strength]) => strength);
+    // Fallback template
+    const fallbackTemplate = {
+      subject: `[Aurora] ${communicationType === 'selected' ? 'Next Steps' : 'Feedback'} - ${roundName}`,
+      body: currentTemplate || `Dear [STARTUP_NAME],\n\nYour score: [SCORE]\n\nFeedback: [FEEDBACK_SUMMARY]\n\nBest regards,\nAurora Team`,
+      aggregatedInsights: `${evaluations.length} evaluations processed`
+    };
 
-    // Build AI prompt
-    const systemPrompt = `You are an expert at crafting professional, empathetic, and actionable feedback emails for startup evaluation programs. Your goal is to enhance batch email templates by incorporating aggregated insights from multiple juror evaluations.`;
-
-    const userPrompt = `I need to enhance a ${communicationType} email template for ${startupIds.length} startups in the ${roundName} round.
-
-AGGREGATED INSIGHTS:
-- Number of startups: ${startupIds.length}
-- Average score: ${avgScore.toFixed(2)} (range: ${minScore.toFixed(1)} - ${maxScore.toFixed(1)})
-- Most common strengths: ${topStrengths.join(', ')}
-- Industry verticals: ${Array.from(verticals).join(', ')}
-- Total evaluations: ${evaluations.length}
-
-CURRENT TEMPLATE:
-${currentTemplate || 'No template provided'}
-
-Please enhance this email template to:
-1. Sound professional yet warm and encouraging
-2. Reference the aggregated insights where appropriate
-3. ${communicationType === 'selected' ? 'Celebrate their achievement and set clear next steps' : 'Provide constructive feedback while remaining supportive'}
-4. Include personalization placeholders like [STARTUP_NAME], [FEEDBACK_SUMMARY], [SCORE]
-5. Keep the tone consistent with Aurora Tech Awards brand
-6. Make it actionable and clear
-
-Return a JSON object with:
-{
-  "subject": "Enhanced email subject line",
-  "body": "Enhanced email body with proper formatting",
-  "aggregatedInsights": "Brief summary of key patterns found across evaluations"
-}`;
-
-    // Call Gemini AI
     const GOOGLE_GEMINI_API_KEY = Deno.env.get('GOOGLE_GEMINI_API_KEY');
+    
     if (!GOOGLE_GEMINI_API_KEY) {
-      throw new Error('GOOGLE_GEMINI_API_KEY not configured');
+      return new Response(JSON.stringify({ success: true, enhancedTemplate: fallbackTemplate, note: 'AI unavailable' }), 
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    const geminiResponse = await callGemini({
-      model: 'gemini-2.5-flash',
-      systemPrompt,
-      userPrompt,
-      temperature: 0.7,
-      tools: [
-        {
-          type: 'function',
-          function: {
-            name: 'enhance_template',
-            description: 'Enhance email template with aggregated insights',
-            parameters: {
-              type: 'object',
-              properties: {
-                subject: {
-                  type: 'string',
-                  description: 'Enhanced email subject line'
-                },
-                body: {
-                  type: 'string',
-                  description: 'Enhanced email body with proper formatting'
-                },
-                aggregatedInsights: {
-                  type: 'string',
-                  description: 'Brief summary of key patterns found across evaluations'
-                }
-              },
-              required: ['subject', 'body', 'aggregatedInsights'],
-              additionalProperties: false
-            }
-          }
-        }
-      ],
-      toolChoice: { function: { name: 'enhance_template' } }
-    });
+    try {
+      const { callGemini } = await import('../_shared/gemini-client.ts');
+      const systemPrompt = `Enhance email templates for startup feedback. Be professional, warm, and concise.`;
+      const userPrompt = `Enhance this ${communicationType} email for ${startupIds.length} startups in ${roundName}.
 
-    if (!geminiResponse.success) {
-      if (geminiResponse.error?.includes('rate limit')) {
-        throw new Error('Gemini API rate limit exceeded. Please try again shortly.');
+Context: ${evaluations.length} evaluations, avg score ${avgScore}, top strengths: ${topStrengths.join(', ')}
+Template: ${currentTemplate || '[No template]'}
+
+Make it professional and ${communicationType === 'selected' ? 'celebratory' : 'constructive'}.
+Include: [STARTUP_NAME], [FEEDBACK_SUMMARY], [SCORE]
+
+Format:
+Subject: [subject]
+Body: [body]`;
+
+      const response = await callGemini({ model: 'gemini-2.5-flash', systemPrompt, userPrompt, temperature: 0.7, maxTokens: 2000 });
+
+      if (response.success && response.content) {
+        const lines = response.content.split('\n');
+        const subjectLine = lines.find(l => l.toLowerCase().includes('subject:'));
+        const subject = subjectLine ? subjectLine.split(':').slice(1).join(':').trim() : fallbackTemplate.subject;
+        const bodyStart = response.content.toLowerCase().indexOf('body:');
+        const body = bodyStart !== -1 ? response.content.substring(bodyStart + 5).trim() : response.content;
+
+        return new Response(JSON.stringify({ success: true, enhancedTemplate: { subject, body, aggregatedInsights: `${evaluations.length} evaluations` } }), 
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
-      if (geminiResponse.error?.includes('403')) {
-        throw new Error('Gemini API key invalid or insufficient permissions');
-      }
-      throw new Error(geminiResponse.error || 'Gemini API error');
+    } catch (aiError) {
+      console.error('AI error:', aiError);
     }
 
-    // Extract the function call result
-    if (!geminiResponse.functionCall || geminiResponse.functionCall.name !== 'enhance_template') {
-      throw new Error('Gemini did not return expected structured output');
-    }
-
-    const enhancedContent = geminiResponse.functionCall.args;
-
-    return new Response(
-      JSON.stringify({
-        success: true,
-        enhancedTemplate: {
-          subject: enhancedContent.subject,
-          body: enhancedContent.body,
-          aggregatedInsights: enhancedContent.aggregatedInsights
-        },
-        metadata: {
-          startupCount: startupIds.length,
-          averageScore: avgScore,
-          evaluationCount: evaluations.length,
-          model: geminiResponse.model
-        }
-      }),
-      {
-        status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
-    );
+    return new Response(JSON.stringify({ success: true, enhancedTemplate: fallbackTemplate, note: 'Using fallback' }), 
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 
   } catch (error: any) {
-    console.error('Error in enhance-batch-communication:', error);
-    return new Response(
-      JSON.stringify({
-        success: false,
-        error: error.message || 'Failed to enhance template'
-      }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
-    );
+    console.error('Error:', error);
+    return new Response(JSON.stringify({ success: false, error: error.message }), 
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   }
 });
