@@ -1594,6 +1594,44 @@ export type Database = {
         }
         Relationships: []
       }
+      vc_feedback_enhancement_cache: {
+        Row: {
+          created_at: string | null
+          enhanced_text: string
+          id: string
+          input_hash: string
+          metadata: Json | null
+          round_name: string
+          startup_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          enhanced_text: string
+          id?: string
+          input_hash: string
+          metadata?: Json | null
+          round_name: string
+          startup_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          enhanced_text?: string
+          id?: string
+          input_hash?: string
+          metadata?: Json | null
+          round_name?: string
+          startup_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vc_feedback_enhancement_cache_startup_id_fkey"
+            columns: ["startup_id"]
+            isOneToOne: false
+            referencedRelation: "startups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vc_sessions: {
         Row: {
           created_at: string
