@@ -77,7 +77,7 @@ const handler = async (req: Request): Promise<Response> => {
       const fallback = await supabase
         .from('email_templates')
         .select('*')
-        .eq('category', 'juror_phase_transition')
+        .in('category', ['juror-completion', 'evaluation-reminder'])
         .eq('is_active', true)
         .order('display_order', { ascending: true, nullsLast: true })
         .order('created_at', { ascending: true })

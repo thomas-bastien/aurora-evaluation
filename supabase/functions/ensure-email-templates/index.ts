@@ -13,7 +13,7 @@ interface TemplateSpec {
   body_template: string;
   variables: string[];
   lifecycle_stage?: string | null;
-  evaluation_phase?: 'screening' | 'pitching' | null;
+  evaluation_phase?: 'pre_evaluation' | 'active_evaluation' | 'post_evaluation' | 'pitching_phase' | 'final' | 'results' | null;
   display_order?: number | null;
   is_active: boolean;
   trigger_priority?: number;
@@ -42,16 +42,16 @@ const templates: TemplateSpec[] = [
     category: 'pitch_scheduling',
     subject_template: '🚀 Time to Schedule Your Pitch Sessions!',
     variables: ['startup_name','juror_count','jurors_html'],
-    lifecycle_stage: 'pitch_scheduling',
-    evaluation_phase: 'pitching',
+    lifecycle_stage: 'pitching',
+    evaluation_phase: 'pitching_phase',
     display_order: 13,
     is_active: true,
     trigger_priority: 1,
     body_template:
       baseWrapperStart +
       `
-        <h1 style="margin:0 0 12px 0;font-size:22px;">Hi {{startup_name}}, let’s schedule your pitch</h1>
-        <p>You’ve been matched with our VC partners. Pick a time with each using their links below.</p>
+        <h1 style="margin:0 0 12px 0;font-size:22px;">Hi {{startup_name}}, let's schedule your pitch</h1>
+        <p>You've been matched with our VC partners. Pick a time with each using their links below.</p>
         <p><strong>Total VCs:</strong> {{juror_count}}</p>
         <div style="margin-top:16px;">{{jurors_html}}</div>
       ` +
@@ -62,16 +62,16 @@ const templates: TemplateSpec[] = [
     category: 'founder_selection',
     subject_template: "🎉 Congratulations! You've been selected for the Pitching Round",
     variables: ['startup_name','feedback_summary','next_steps'],
-    lifecycle_stage: 'screening_selected',
-    evaluation_phase: 'screening',
+    lifecycle_stage: 'screening',
+    evaluation_phase: 'results',
     display_order: 16,
     is_active: true,
     trigger_priority: 1,
     body_template:
       baseWrapperStart +
       `
-        <h1 style="margin:0 0 12px 0;font-size:22px;">Congrats {{startup_name}} — you’re moving forward!</h1>
-        <p>Here’s a brief summary of feedback from the screening round:</p>
+        <h1 style="margin:0 0 12px 0;font-size:22px;">Congrats {{startup_name}} — you're moving forward!</h1>
+        <p>Here's a brief summary of feedback from the screening round:</p>
         <div style="background:#0b1220;border:1px solid #1e293b;border-radius:8px;padding:12px 14px;margin:12px 0;">{{feedback_summary}}</div>
         <p>{{next_steps}}</p>
       ` +
@@ -82,8 +82,8 @@ const templates: TemplateSpec[] = [
     category: 'founder_rejection',
     subject_template: 'Thank you for participating in our evaluation process',
     variables: ['startup_name','feedback_summary','encouragement_message'],
-    lifecycle_stage: 'screening_rejected',
-    evaluation_phase: 'screening',
+    lifecycle_stage: 'screening',
+    evaluation_phase: 'results',
     display_order: 17,
     is_active: true,
     trigger_priority: 1,
@@ -91,7 +91,7 @@ const templates: TemplateSpec[] = [
       baseWrapperStart +
       `
         <h1 style="margin:0 0 12px 0;font-size:22px;">Thank you, {{startup_name}}</h1>
-        <p>We appreciate your time and effort. While you won’t proceed to pitching this time, here’s a brief summary:</p>
+        <p>We appreciate your time and effort. While you won't proceed to pitching this time, here's a brief summary:</p>
         <div style="background:#0b1220;border:1px solid #1e293b;border-radius:8px;padding:12px 14px;margin:12px 0;">{{feedback_summary}}</div>
         <p>{{encouragement_message}}</p>
       ` +
@@ -99,11 +99,11 @@ const templates: TemplateSpec[] = [
   },
   {
     name: 'Juror Screening Complete - Pitching Assignments Coming',
-    category: 'juror_phase_transition',
+    category: 'juror-completion',
     subject_template: 'Screening Complete - Pitching Round Assignments Coming Soon',
     variables: ['juror_name','evaluation_count','next_steps'],
-    lifecycle_stage: 'screening_complete',
-    evaluation_phase: 'screening',
+    lifecycle_stage: 'juror_completed_screening',
+    evaluation_phase: 'post_evaluation',
     display_order: 14,
     is_active: true,
     trigger_priority: 1,
@@ -111,17 +111,17 @@ const templates: TemplateSpec[] = [
       baseWrapperStart +
       `
         <h1 style="margin:0 0 12px 0;font-size:22px;">Thank you, {{juror_name}}</h1>
-        <p>You’ve completed {{evaluation_count}} screening evaluations. We’re preparing pitching assignments next.</p>
+        <p>You've completed {{evaluation_count}} screening evaluations. We're preparing pitching assignments next.</p>
         <p>{{next_steps}}</p>
       ` +
       baseWrapperEnd,
   },
   {
     name: 'Juror Round Transition - Generic',
-    category: 'juror_phase_transition',
+    category: 'evaluation-reminder',
     subject_template: 'Round Transition: {{from_round}} → {{to_round}}',
     variables: ['juror_name','from_round','to_round'],
-    lifecycle_stage: 'round_transition',
+    lifecycle_stage: null,
     evaluation_phase: null,
     display_order: 15,
     is_active: true,
@@ -130,7 +130,7 @@ const templates: TemplateSpec[] = [
       baseWrapperStart +
       `
         <h1 style="margin:0 0 12px 0;font-size:22px;">Next up: {{to_round}}</h1>
-        <p>Hi {{juror_name}}, we’re transitioning from {{from_round}} to {{to_round}}. Details will follow shortly.</p>
+        <p>Hi {{juror_name}}, we're transitioning from {{from_round}} to {{to_round}}. Details will follow shortly.</p>
       ` +
       baseWrapperEnd,
   },
