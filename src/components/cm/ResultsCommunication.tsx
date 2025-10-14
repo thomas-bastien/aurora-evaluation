@@ -53,7 +53,7 @@ export const ResultsCommunication = ({
   const [showSendDialog, setShowSendDialog] = useState(false);
   const [sendingEmails, setSendingEmails] = useState(false);
   const [showConfirmationModal, setShowConfirmationModal] = useState(false);
-  const [pendingCommunicationType, setPendingCommunicationType] = useState<'selected' | 'rejected' | 'under-review' | 'top-100-feedback' | null>(null);
+  const [pendingCommunicationType, setPendingCommunicationType] = useState<'selected' | 'rejected' | 'under-review' | 'top-100-feedback' | 'approved' | null>(null);
   const [validationResult, setValidationResult] = useState<CommunicationValidationResult | null>(null);
   const [validatingEmails, setValidatingEmails] = useState(false);
   const [generatingFeedback, setGeneratingFeedback] = useState<string | null>(null);
@@ -702,12 +702,18 @@ The Aurora Tech Awards Team`
   };
 
   // Enhanced communication sending with validation
-  const initiateCommunications = async (type: 'selected' | 'rejected' | 'under-review' | 'top-100-feedback') => {
+  const initiateCommunications = async (type: 'selected' | 'rejected' | 'under-review' | 'top-100-feedback' | 'approved') => {
     setValidatingEmails(true);
     try {
       // Filter startups based on type
       let targetResults = startupResults;
-      if (type === 'selected') {
+      if (type === 'approved') {
+        // Send to all startups with approved VC feedback
+        targetResults = startupResults.filter(r => {
+          const vcStatus = vcFeedbackStatus?.[r.id];
+          return vcStatus?.is_approved === true;
+        });
+      } else if (type === 'selected') {
         targetResults = startupResults.filter(r => r.roundStatus === 'selected');
       } else if (type === 'rejected') {
         targetResults = startupResults.filter(r => r.roundStatus === 'rejected');
@@ -1066,7 +1072,10 @@ The Aurora Tech Awards Team`
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
-                <Button className="w-full" onClick={() => initiateCommunications('selected')} disabled={sendingEmails || validatingEmails}>
+                <Button className="w-full" onClick={() => initiateCommunications('approved')} disabled={sendingEmails || validatingEmails || approvedVCFeedback.length === 0}>
+                  {validatingEmails ? 'Validating...' : `Send to Approved Startups (${approvedVCFeedback.length})`}
+                </Button>
+                <Button className="w-full" variant="outline" onClick={() => initiateCommunications('selected')} disabled={sendingEmails || validatingEmails}>
                   {validatingEmails ? 'Validating...' : `Send to Selected Startups (${selectedStartups.length})`}
                 </Button>
                 <Button className="w-full" variant="outline" onClick={() => initiateCommunications('rejected')} disabled={sendingEmails || validatingEmails}>

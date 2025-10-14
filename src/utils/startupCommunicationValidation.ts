@@ -21,7 +21,7 @@ interface StartupValidationResult {
   roundStatus: string;
   isValid: boolean;
   skipReasons: string[];
-  communicationType: 'selected' | 'rejected' | 'under-review' | 'top-100-feedback';
+  communicationType: 'selected' | 'rejected' | 'under-review' | 'top-100-feedback' | 'approved';
 }
 
 interface ValidationSummary {
@@ -54,7 +54,7 @@ const isValidEmail = (email: string): boolean => {
  */
 export const validateStartupCommunications = async (
   startups: StartupResult[],
-  communicationType: 'selected' | 'rejected' | 'under-review' | 'top-100-feedback',
+  communicationType: 'selected' | 'rejected' | 'under-review' | 'top-100-feedback' | 'approved',
   currentRound: 'screeningRound' | 'pitchingRound'
 ): Promise<CommunicationValidationResult> => {
   
@@ -117,6 +117,10 @@ export const validateStartupCommunications = async (
     // 2. Check if startup status matches communication type
     let expectedStatus: string;
     switch (communicationType) {
+      case 'approved':
+        // For approved, we don't check round status - just that they have approved feedback
+        expectedStatus = actualRoundStatus || 'any';
+        break;
       case 'selected':
         expectedStatus = 'selected';
         break;
@@ -133,7 +137,7 @@ export const validateStartupCommunications = async (
         expectedStatus = 'pending';
     }
 
-    if (actualRoundStatus && actualRoundStatus !== expectedStatus) {
+    if (communicationType !== 'approved' && actualRoundStatus && actualRoundStatus !== expectedStatus) {
       // For under-review, also accept 'pending' status
       if (!(communicationType === 'under-review' && actualRoundStatus === 'pending')) {
         skipReasons.push('wrong status');
@@ -213,7 +217,7 @@ export const validateStartupCommunications = async (
  */
 export const validateWithTemplateRequirements = async (
   startups: StartupResult[],
-  communicationType: 'selected' | 'rejected' | 'under-review' | 'top-100-feedback',
+  communicationType: 'selected' | 'rejected' | 'under-review' | 'top-100-feedback' | 'approved',
   currentRound: 'screeningRound' | 'pitchingRound',
   requireApprovedFeedback: boolean = false
 ): Promise<CommunicationValidationResult> => {
