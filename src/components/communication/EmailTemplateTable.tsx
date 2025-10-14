@@ -48,6 +48,7 @@ export const EmailTemplateTable = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const [selectedTemplate, setSelectedTemplate] = useState<EmailTemplate | null>(null);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showPreviewDialog, setShowPreviewDialog] = useState(false);
@@ -64,7 +65,6 @@ export const EmailTemplateTable = () => {
       const { data, error } = await supabase
         .from('email_templates')
         .select('*')
-        .eq('is_active', true)
         .order('display_order', { ascending: true, nullsFirst: false })
         .order('trigger_priority', { ascending: true, nullsFirst: false });
 
@@ -219,7 +219,10 @@ export const EmailTemplateTable = () => {
     const matchesSearch = template.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          template.category.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = categoryFilter === 'all' || template.category === categoryFilter;
-    return matchesSearch && matchesCategory;
+    const matchesStatus = statusFilter === 'all' || 
+                         (statusFilter === 'active' && template.is_active) ||
+                         (statusFilter === 'inactive' && !template.is_active);
+    return matchesSearch && matchesCategory && matchesStatus;
   });
 
   const categories = [...new Set(templates.map(t => t.category))];
@@ -279,6 +282,17 @@ export const EmailTemplateTable = () => {
                 ))}
               </SelectContent>
             </Select>
+            <Select value={statusFilter} onValueChange={(value: 'all' | 'active' | 'inactive') => setStatusFilter(value)}>
+              <SelectTrigger className="w-[180px]">
+                <Filter className="w-4 h-4 mr-2" />
+                <SelectValue placeholder="Filter by status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Templates</SelectItem>
+                <SelectItem value="active">Active Only</SelectItem>
+                <SelectItem value="inactive">Inactive Only</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Templates Table */}
@@ -288,6 +302,7 @@ export const EmailTemplateTable = () => {
                 <TableRow>
                   <TableHead className="w-12">#</TableHead>
                   <TableHead>Template Name</TableHead>
+                  <TableHead>Status</TableHead>
                   <TableHead>Category</TableHead>
                   <TableHead>Subject</TableHead>
                   <TableHead>Stage/Phase</TableHead>
@@ -300,11 +315,22 @@ export const EmailTemplateTable = () => {
                 {filteredTemplates.map(template => {
                   const usage = getTemplateUsage(template.id);
                   return (
-                    <TableRow key={template.id}>
+                    <TableRow key={template.id} className={!template.is_active ? 'opacity-60' : ''}>
                       <TableCell className="font-mono text-sm text-muted-foreground">
                         {template.display_order ? `#${template.display_order}` : '-'}
                       </TableCell>
                       <TableCell className="font-medium">{template.name}</TableCell>
+                      <TableCell>
+                        {template.is_active ? (
+                          <Badge variant="default" className="bg-green-500/10 text-green-600 border-green-500/20">
+                            ✅ Active
+                          </Badge>
+                        ) : (
+                          <Badge variant="secondary" className="bg-muted text-muted-foreground">
+                            ⚠️ Inactive
+                          </Badge>
+                        )}
+                      </TableCell>
                       <TableCell>{getCategoryBadge(template.category)}</TableCell>
                       <TableCell className="max-w-xs truncate">{template.subject_template}</TableCell>
                       <TableCell>
