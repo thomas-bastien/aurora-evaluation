@@ -30,6 +30,7 @@ interface EmailTemplate {
   is_active: boolean;
   lifecycle_stage?: string;
   evaluation_phase?: string;
+  display_order?: number;
   created_at: string;
   updated_at: string;
 }
@@ -64,7 +65,8 @@ export const EmailTemplateTable = () => {
         .from('email_templates')
         .select('*')
         .eq('is_active', true)
-        .order('category', { ascending: true });
+        .order('display_order', { ascending: true, nullsFirst: false })
+        .order('trigger_priority', { ascending: true, nullsFirst: false });
 
       if (error) throw error;
       setTemplates(data || []);
@@ -183,6 +185,13 @@ export const EmailTemplateTable = () => {
 
   const getCategoryBadge = (category: string) => {
     const variants: Record<string, string> = {
+      'juror-welcome': 'bg-blue-500/10 text-blue-600 border-blue-500/20',
+      'juror-access': 'bg-green-500/10 text-green-600 border-green-500/20',
+      'juror-reminder': 'bg-amber-500/10 text-amber-600 border-amber-500/20',
+      'juror-completion': 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20',
+      'pitch-invitation': 'bg-purple-500/10 text-purple-600 border-purple-500/20',
+      'pitch-reminder': 'bg-violet-500/10 text-violet-600 border-violet-500/20',
+      'juror-final-thankyou': 'bg-indigo-500/10 text-indigo-600 border-indigo-500/20',
       'assignment-notification': 'bg-blue-500/10 text-blue-600 border-blue-500/20',
       'evaluation-reminder': 'bg-amber-500/10 text-amber-600 border-amber-500/20',
       'urgent-reminder': 'bg-red-500/10 text-red-600 border-red-500/20',
@@ -190,9 +199,14 @@ export const EmailTemplateTable = () => {
       'meeting-scheduling': 'bg-purple-500/10 text-purple-600 border-purple-500/20'
     };
 
+    const displayName = category
+      .replace(/-/g, ' ')
+      .replace(/_/g, ' ')
+      .replace(/\b\w/g, l => l.toUpperCase());
+
     return (
       <Badge variant="outline" className={variants[category] || 'bg-muted text-muted-foreground'}>
-        {category.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+        {displayName}
       </Badge>
     );
   };
@@ -272,6 +286,7 @@ export const EmailTemplateTable = () => {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-12">#</TableHead>
                   <TableHead>Template Name</TableHead>
                   <TableHead>Category</TableHead>
                   <TableHead>Subject</TableHead>
@@ -286,6 +301,9 @@ export const EmailTemplateTable = () => {
                   const usage = getTemplateUsage(template.id);
                   return (
                     <TableRow key={template.id}>
+                      <TableCell className="font-mono text-sm text-muted-foreground">
+                        {template.display_order ? `#${template.display_order}` : '-'}
+                      </TableCell>
                       <TableCell className="font-medium">{template.name}</TableCell>
                       <TableCell>{getCategoryBadge(template.category)}</TableCell>
                       <TableCell className="max-w-xs truncate">{template.subject_template}</TableCell>
