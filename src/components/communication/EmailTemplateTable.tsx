@@ -451,8 +451,36 @@ export const EmailTemplateTable = () => {
 
             <div className="space-y-2">
               <label className="text-sm font-medium">Body:</label>
-              <div className="p-4 bg-muted rounded-lg max-h-96 overflow-y-auto">
-                <div dangerouslySetInnerHTML={{ __html: previewData.body }} />
+              <div className="bg-muted rounded-lg overflow-hidden">
+                {(() => {
+                  const isFullHtmlDoc = /<!doctype html|<html/i.test(previewData.body);
+                  const hasHtmlTags = /<[a-z][\s\S]*>/i.test(previewData.body);
+                  
+                  if (isFullHtmlDoc) {
+                    // Full HTML document - render in iframe
+                    return (
+                      <iframe 
+                        srcDoc={previewData.body}
+                        className="w-full h-96 border-0"
+                        title="Email Preview"
+                      />
+                    );
+                  } else if (hasHtmlTags) {
+                    // Partial HTML - render in div
+                    return (
+                      <div className="p-4 max-h-96 overflow-y-auto">
+                        <div dangerouslySetInnerHTML={{ __html: previewData.body }} />
+                      </div>
+                    );
+                  } else {
+                    // Plain text - convert newlines to breaks
+                    return (
+                      <div className="p-4 max-h-96 overflow-y-auto whitespace-pre-wrap">
+                        {previewData.body}
+                      </div>
+                    );
+                  }
+                })()}
               </div>
             </div>
           </div>
