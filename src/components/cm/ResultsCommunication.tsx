@@ -293,6 +293,7 @@ export const ResultsCommunication = ({
       console.log(`Loaded ${startupsData?.length || 0} startups for ${currentRound} communication`);
       console.log(`Found ${roundStatusesData?.length || 0} round statuses`);
       console.log(`Loaded ${vcFeedbackMap.size} approved VC feedback entries`);
+      console.log('VC Feedback approved startup IDs:', Array.from(vcFeedbackMap.keys()));
       console.log(`Found ${sentEmailsSet.size} startups that have received feedback emails`);
       const resultsData: StartupResult[] = startupsData?.map(startup => {
         const evaluationKey = currentRound === 'screeningRound' ? 'screening_evaluations' : 'pitching_evaluations';
@@ -713,6 +714,8 @@ The Aurora Tech Awards Team`
           const vcStatus = vcFeedbackStatus?.[r.id];
           return vcStatus?.is_approved === true;
         });
+        console.log(`Approved communication: Found ${targetResults.length} startups with approved VC feedback`);
+        console.log('Approved startup IDs:', targetResults.map(r => ({ id: r.id, name: r.name, status: r.roundStatus })));
       } else if (type === 'selected') {
         targetResults = startupResults.filter(r => r.roundStatus === 'selected');
       } else if (type === 'rejected') {
