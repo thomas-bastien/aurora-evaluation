@@ -2,10 +2,10 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { Download, FileUser, Loader2 } from 'lucide-react';
+import { Download, FileUser, Loader2, PackageOpen } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { generateStartupReportDocx } from '@/utils/individualStartupReportDocx';
+import { generateStartupReportDocx, generateAndDownloadAllReports } from '@/utils/individualStartupReportDocx';
 import {
   Select,
   SelectContent,
@@ -30,6 +30,8 @@ export const IndividualStartupReportCard = ({ currentRound }: IndividualStartupR
   const { toast } = useToast();
   const [selectedStartup, setSelectedStartup] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
+  const [generatingAll, setGeneratingAll] = useState(false);
+  const [bulkProgress, setBulkProgress] = useState({ current: 0, total: 0, name: '' });
   const [loading, setLoading] = useState(true);
   const [startups, setStartups] = useState<StartupOption[]>([]);
 
@@ -113,6 +115,40 @@ export const IndividualStartupReportCard = ({ currentRound }: IndividualStartupR
     }
   };
 
+  const handleDownloadAll = async () => {
+    if (startups.length === 0) return;
+
+    setGeneratingAll(true);
+    setBulkProgress({ current: 0, total: startups.length, name: '' });
+
+    try {
+      const startupIds = startups.map(s => s.id);
+      
+      await generateAndDownloadAllReports(
+        startupIds,
+        roundName,
+        (current, total, startupName) => {
+          setBulkProgress({ current, total, name: startupName });
+        }
+      );
+
+      toast({
+        title: "Success",
+        description: `Generated ${startups.length} feedback letter${startups.length > 1 ? 's' : ''} successfully! ZIP file downloaded.`
+      });
+    } catch (error: any) {
+      console.error('Error generating bulk reports:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to generate reports",
+        variant: "destructive"
+      });
+    } finally {
+      setGeneratingAll(false);
+      setBulkProgress({ current: 0, total: 0, name: '' });
+    }
+  };
+
   const selectedStartupData = startups.find(s => s.id === selectedStartup);
 
   return (
@@ -130,13 +166,87 @@ export const IndividualStartupReportCard = ({ currentRound }: IndividualStartupR
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
+          {/* Bulk Download Section */}
+          {startups.length > 1 && (
+            <div className="border border-primary/20 rounded-lg p-4 bg-primary/5 space-y-3">
+              <div className="flex items-start gap-3">
+                <PackageOpen className="w-5 h-5 text-primary mt-0.5" />
+                <div className="flex-1">
+                  <h4 className="font-semibold text-sm mb-1">
+                    Download All Reports at Once
+                  </h4>
+                  <p className="text-xs text-muted-foreground mb-3">
+                    Generate Word documents for all {startups.length} startups with approved feedback 
+                    and download as a single ZIP file.
+                  </p>
+                  
+                  {/* Progress indicator during bulk generation */}
+                  {generatingAll && bulkProgress.total > 0 && (
+                    <div className="mb-3 space-y-2">
+                      <div className="flex justify-between text-xs text-muted-foreground">
+                        <span>
+                          Processing: {bulkProgress.name}
+                        </span>
+                        <span>
+                          {bulkProgress.current} / {bulkProgress.total}
+                        </span>
+                      </div>
+                      <div className="w-full bg-secondary/20 rounded-full h-2">
+                        <div 
+                          className="bg-primary h-2 rounded-full transition-all duration-300"
+                          style={{ 
+                            width: `${(bulkProgress.current / bulkProgress.total) * 100}%` 
+                          }}
+                        />
+                      </div>
+                    </div>
+                  )}
+                  
+                  <Button
+                    onClick={handleDownloadAll}
+                    disabled={generatingAll || loading}
+                    variant="default"
+                    size="sm"
+                    className="w-full"
+                  >
+                    {generatingAll ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Generating {bulkProgress.current}/{bulkProgress.total} documents...
+                      </>
+                    ) : (
+                      <>
+                        <PackageOpen className="w-4 h-4 mr-2" />
+                        Download All {startups.length} Reports (ZIP)
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Divider if both sections present */}
+          {startups.length > 1 && (
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-muted"></div>
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-2 text-muted-foreground">
+                  Or download individually
+                </span>
+              </div>
+            </div>
+          )}
+
           {/* Startup Selector */}
           <div>
             <Label>Select Startup</Label>
             <Select
               value={selectedStartup || ''}
               onValueChange={setSelectedStartup}
-              disabled={loading || startups.length === 0}
+              disabled={loading || startups.length === 0 || generatingAll}
             >
               <SelectTrigger>
                 <SelectValue 
@@ -181,11 +291,11 @@ export const IndividualStartupReportCard = ({ currentRound }: IndividualStartupR
             </ol>
           </div>
 
-          {/* Action Button */}
+          {/* Individual Download Button */}
           <Button
             onClick={handleDownload}
-            disabled={!selectedStartup || generating || loading}
-            variant="default"
+            disabled={!selectedStartup || generating || loading || generatingAll}
+            variant="outline"
             className="w-full"
           >
             {generating ? (
@@ -196,7 +306,7 @@ export const IndividualStartupReportCard = ({ currentRound }: IndividualStartupR
             ) : (
               <>
                 <Download className="w-4 h-4 mr-2" />
-                Download Word Document (.docx)
+                Download Selected Report (.docx)
               </>
             )}
           </Button>

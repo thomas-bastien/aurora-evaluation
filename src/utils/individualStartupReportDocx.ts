@@ -1,5 +1,6 @@
 import { Document, Paragraph, TextRun, AlignmentType, HeadingLevel, ImageRun, BorderStyle, Packer } from 'docx';
 import { saveAs } from 'file-saver';
+import JSZip from 'jszip';
 import { supabase } from '@/integrations/supabase/client';
 
 interface VCFeedbackSection {
@@ -393,33 +394,28 @@ function createClosingParagraphs(): Paragraph[] {
 }
 
 /**
- * Generate Word document for startup report and download
+ * Generate document blob from startup data (reusable for single and bulk generation)
  */
-export async function generateStartupReportDocx(
-  startupId: string,
-  roundName: 'screening' | 'pitching'
-): Promise<void> {
-  // Fetch data
-  const data = await fetchStartupReportData(startupId, roundName);
+async function generateDocumentBlob(
+  data: StartupReportData,
+  cachedLogos?: { aurora: Uint8Array | null; indrive: Uint8Array | null }
+): Promise<Blob> {
+  // Load logo images (use cached if available)
+  let auroraLogo: Uint8Array | null = cachedLogos?.aurora ?? null;
+  let indriveLogo: Uint8Array | null = cachedLogos?.indrive ?? null;
 
-  if (!data.vcFeedback || data.evaluations.length === 0) {
-    throw new Error('No approved VC feedback available for this startup');
-  }
+  if (!cachedLogos) {
+    try {
+      auroraLogo = await fetchImageAsBase64('/images/aurora-tech-award-logo.jpg');
+    } catch (error) {
+      console.warn('Failed to load Aurora logo:', error);
+    }
 
-  // Load logo images
-  let auroraLogo: Uint8Array | null = null;
-  let indriveLogo: Uint8Array | null = null;
-
-  try {
-    auroraLogo = await fetchImageAsBase64('/images/aurora-tech-award-logo.jpg');
-  } catch (error) {
-    console.warn('Failed to load Aurora logo:', error);
-  }
-
-  try {
-    indriveLogo = await fetchImageAsBase64('/images/indrive-branding.jpg');
-  } catch (error) {
-    console.warn('Failed to load inDrive branding:', error);
+    try {
+      indriveLogo = await fetchImageAsBase64('/images/indrive-branding.jpg');
+    } catch (error) {
+      console.warn('Failed to load inDrive branding:', error);
+    }
   }
 
   // Build document sections
@@ -524,8 +520,124 @@ export async function generateStartupReportDocx(
     }]
   });
 
-  // Generate and download
-  const blob = await Packer.toBlob(doc);
+  // Return blob
+  return await Packer.toBlob(doc);
+}
+
+/**
+ * Generate Word document for startup report and download
+ */
+export async function generateStartupReportDocx(
+  startupId: string,
+  roundName: 'screening' | 'pitching'
+): Promise<void> {
+  const data = await fetchStartupReportData(startupId, roundName);
+
+  if (!data.vcFeedback || data.evaluations.length === 0) {
+    throw new Error('No approved VC feedback available for this startup');
+  }
+
+  const blob = await generateDocumentBlob(data);
   const fileName = `${data.startup.name.replace(/\s+/g, '-')}-VC-Feedback-Letter.docx`;
   saveAs(blob, fileName);
+}
+
+/**
+ * Generate Word documents for multiple startups and return as blobs
+ */
+export async function generateMultipleReports(
+  startupIds: string[],
+  roundName: 'screening' | 'pitching',
+  onProgress?: (current: number, total: number, startupName: string) => void
+): Promise<Array<{ fileName: string; blob: Blob; startupName: string }>> {
+  const results: Array<{ fileName: string; blob: Blob; startupName: string }> = [];
+  
+  // Load logos once for all reports
+  let cachedLogos = { aurora: null as Uint8Array | null, indrive: null as Uint8Array | null };
+  try {
+    cachedLogos.aurora = await fetchImageAsBase64('/images/aurora-tech-award-logo.jpg');
+  } catch (error) {
+    console.warn('Failed to load Aurora logo:', error);
+  }
+  try {
+    cachedLogos.indrive = await fetchImageAsBase64('/images/indrive-branding.jpg');
+  } catch (error) {
+    console.warn('Failed to load inDrive branding:', error);
+  }
+  
+  for (let i = 0; i < startupIds.length; i++) {
+    const startupId = startupIds[i];
+    
+    try {
+      // Fetch data
+      const data = await fetchStartupReportData(startupId, roundName);
+      
+      if (!data.vcFeedback || data.evaluations.length === 0) {
+        console.warn(`Skipping ${data.startup.name} - no approved feedback`);
+        continue;
+      }
+      
+      // Generate document with cached logos
+      const blob = await generateDocumentBlob(data, cachedLogos);
+      const fileName = `${data.startup.name.replace(/\s+/g, '-')}-VC-Feedback-Letter.docx`;
+      
+      results.push({
+        fileName,
+        blob,
+        startupName: data.startup.name
+      });
+      
+      // Call progress callback
+      if (onProgress) {
+        onProgress(i + 1, startupIds.length, data.startup.name);
+      }
+      
+    } catch (error) {
+      console.error(`Failed to generate report for startup ${startupId}:`, error);
+      // Continue with next startup instead of failing entire batch
+    }
+  }
+  
+  return results;
+}
+
+/**
+ * Generate all reports for approved startups and download as ZIP
+ */
+export async function generateAndDownloadAllReports(
+  startupIds: string[],
+  roundName: 'screening' | 'pitching',
+  onProgress?: (current: number, total: number, startupName: string) => void
+): Promise<void> {
+  if (startupIds.length === 0) {
+    throw new Error('No startups to generate reports for');
+  }
+
+  // Generate all documents
+  const reports = await generateMultipleReports(startupIds, roundName, onProgress);
+
+  if (reports.length === 0) {
+    throw new Error('No reports were generated successfully');
+  }
+
+  // Create ZIP file
+  const zip = new JSZip();
+  
+  reports.forEach(({ fileName, blob }) => {
+    zip.file(fileName, blob);
+  });
+
+  // Generate ZIP blob
+  const zipBlob = await zip.generateAsync({ 
+    type: 'blob',
+    compression: 'DEFLATE',
+    compressionOptions: { level: 6 }
+  });
+
+  // Download ZIP
+  const roundLabel = roundName === 'screening' ? 'Screening' : 'Pitching';
+  const timestamp = new Date().toISOString().split('T')[0];
+  const zipFileName = `Aurora-VC-Feedback-Letters-${roundLabel}-${timestamp}.zip`;
+  
+  saveAs(zipBlob, zipFileName);
 }
