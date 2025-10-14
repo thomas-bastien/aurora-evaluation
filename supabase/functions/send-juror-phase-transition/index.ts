@@ -61,16 +61,34 @@ const handler = async (req: Request): Promise<Response> => {
       templateDisplayOrder = 15; // Template #22: Generic Transition
     }
 
-    // Fetch template from database
-    const { data: template, error: templateError } = await supabase
+    // Fetch template by display_order; fallback by category
+    let template: any = null;
+    let templateError: any = null;
+    const primary = await supabase
       .from('email_templates')
       .select('*')
       .eq('display_order', templateDisplayOrder)
       .eq('is_active', true)
-      .single();
+      .maybeSingle();
 
-    if (templateError || !template) {
-      console.error('Failed to fetch juror phase transition template:', templateError);
+    if (!primary.error && primary.data) {
+      template = primary.data;
+    } else {
+      const fallback = await supabase
+        .from('email_templates')
+        .select('*')
+        .eq('category', 'juror_phase_transition')
+        .eq('is_active', true)
+        .order('display_order', { ascending: true, nullsLast: true })
+        .order('created_at', { ascending: true })
+        .limit(1)
+        .maybeSingle();
+      templateError = primary.error || fallback.error;
+      template = fallback.data || null;
+    }
+
+    if (!template) {
+      console.error('Failed to find juror phase transition template. Tip: run ensure-email-templates function to seed required templates.', templateError);
       throw new Error('Email template not found');
     }
 

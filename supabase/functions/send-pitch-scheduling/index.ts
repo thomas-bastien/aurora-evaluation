@@ -58,16 +58,34 @@ const handler = async (req: Request): Promise<Response> => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Fetch template #20 from database
-    const { data: template, error: templateError } = await supabase
+    // Fetch template by display_order=13; fallback by category
+    let template: any = null;
+    let templateError: any = null;
+    const primary = await supabase
       .from('email_templates')
       .select('*')
       .eq('display_order', 13)
       .eq('is_active', true)
-      .single();
+      .maybeSingle();
 
-    if (templateError || !template) {
-      console.error('Failed to fetch pitch scheduling template:', templateError);
+    if (!primary.error && primary.data) {
+      template = primary.data;
+    } else {
+      const fallback = await supabase
+        .from('email_templates')
+        .select('*')
+        .eq('category', 'pitch_scheduling')
+        .eq('is_active', true)
+        .order('display_order', { ascending: true, nullsLast: true })
+        .order('created_at', { ascending: true })
+        .limit(1)
+        .maybeSingle();
+      templateError = primary.error || fallback.error;
+      template = fallback.data || null;
+    }
+
+    if (!template) {
+      console.error('Failed to find pitch scheduling template. Tip: run ensure-email-templates function to seed required templates.', templateError);
       throw new Error('Email template not found');
     }
 
@@ -125,8 +143,10 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // Substitute variables in template
-    const subject = template.subject_template;
-    const htmlContent = template.body_template
+    const subject = (template.subject_template || '')
+      .replace(/\{\{startup_name\}\}/g, startupName)
+      .replace(/\{\{juror_count\}\}/g, assignedJurors.length.toString());
+    const htmlContent = (template.body_template || '')
       .replace(/\{\{startup_name\}\}/g, startupName)
       .replace(/\{\{juror_count\}\}/g, assignedJurors.length.toString())
       .replace(/\{\{jurors_html\}\}/g, jurorListHtml);

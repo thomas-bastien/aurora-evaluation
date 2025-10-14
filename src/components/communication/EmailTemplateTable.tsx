@@ -19,6 +19,7 @@ import {
   Activity
 } from "lucide-react";
 import { toast } from "sonner";
+import { Loader2 } from "lucide-react";
 
 interface EmailTemplate {
   id: string;
@@ -54,7 +55,8 @@ export const EmailTemplateTable = () => {
   const [showPreviewDialog, setShowPreviewDialog] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<Partial<EmailTemplate>>({});
   const [previewData, setPreviewData] = useState({ subject: '', body: '' });
-
+  const [repairing, setRepairing] = useState(false);
+ 
   useEffect(() => {
     fetchTemplates();
     fetchTemplateUsage();
@@ -113,6 +115,22 @@ export const EmailTemplateTable = () => {
       setTemplateUsage(usage);
     } catch (error) {
       console.error('Error fetching template usage:', error);
+    }
+  };
+
+  const handleRepairTemplates = async () => {
+    try {
+      setRepairing(true);
+      const { data, error } = await supabase.functions.invoke('ensure-email-templates', { body: {} });
+      if (error) throw error as any;
+      toast.success(`Templates repaired: ${data?.inserted || 0} inserted, ${data?.updated || 0} updated`);
+      await fetchTemplates();
+      await fetchTemplateUsage();
+    } catch (e: any) {
+      console.error('Repair templates failed', e);
+      toast.error('Failed to repair templates');
+    } finally {
+      setRepairing(false);
     }
   };
 
@@ -257,6 +275,12 @@ export const EmailTemplateTable = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
+          <div className="flex items-center justify-between mb-4">
+            <div />
+            <Button onClick={handleRepairTemplates} disabled={repairing}>
+              {repairing ? (<><Loader2 className="w-4 h-4 mr-2 animate-spin"/>Repairing…</>) : 'Fix Missing Templates'}
+            </Button>
+          </div>
           {/* Search and Filter Controls */}
           <div className="flex flex-col sm:flex-row gap-4 mb-6">
             <div className="relative flex-1">

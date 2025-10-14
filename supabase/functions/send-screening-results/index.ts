@@ -53,18 +53,37 @@ const handler = async (req: Request): Promise<Response> => {
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     // Determine which template to use based on selection status
-    const templateDisplayOrder = isSelected ? 16 : 17; // Template #23 or #24
+    const templateDisplayOrder = isSelected ? 16 : 17;
 
-    // Fetch template from database
-    const { data: template, error: templateError } = await supabase
+    // Fetch template by display_order; fallback by category
+    let template: any = null;
+    let templateError: any = null;
+    const primary = await supabase
       .from('email_templates')
       .select('*')
       .eq('display_order', templateDisplayOrder)
       .eq('is_active', true)
-      .single();
+      .maybeSingle();
 
-    if (templateError || !template) {
-      console.error('Failed to fetch screening results template:', templateError);
+    if (!primary.error && primary.data) {
+      template = primary.data;
+    } else {
+      const category = isSelected ? 'founder_selection' : 'founder_rejection';
+      const fallback = await supabase
+        .from('email_templates')
+        .select('*')
+        .eq('category', category)
+        .eq('is_active', true)
+        .order('display_order', { ascending: true, nullsLast: true })
+        .order('created_at', { ascending: true })
+        .limit(1)
+        .maybeSingle();
+      templateError = primary.error || fallback.error;
+      template = fallback.data || null;
+    }
+
+    if (!template) {
+      console.error('Failed to find screening results template. Tip: run ensure-email-templates function to seed required templates.', templateError);
       throw new Error('Email template not found');
     }
 
