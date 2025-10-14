@@ -46,81 +46,53 @@ const handler = async (req: Request): Promise<Response> => {
   try {
     const { jurorId, name, email, fromRound, toRound, evaluationCount }: JurorTransitionRequest = await req.json();
     
-    // Determine recipient based on test mode
-    const actualRecipient = TEST_MODE ? TEST_EMAIL : email;
-    const fromAddress = getFromAddress();
-    
-    console.log(`📧 EMAIL CONFIG: TEST_MODE=${TEST_MODE}, From=${fromAddress}, Original recipient=${email}, Actual recipient=${actualRecipient}`);
     console.log(`Sending round transition notification to: ${name} (${email}), from ${fromRound} to ${toRound}`);
-    
-    if (TEST_MODE) {
-      console.log(`🧪 SANDBOX MODE: Redirecting email from ${email} to ${TEST_EMAIL}`);
-    }
 
     // Initialize Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    let subject: string;
-    let htmlContent: string;
-
+    // Determine which template to use based on transition type
+    let templateDisplayOrder: number;
     if (fromRound === 'screening' && toRound === 'pitching') {
-      // Screening complete, transitioning to pitching
-      subject = "Screening Complete - Pitching Round Assignments Coming Soon";
-      htmlContent = `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h1 style="color: #2563eb;">Screening Round Complete!</h1>
-          
-          <p>Dear ${name},</p>
-          
-          <p>Thank you for your valuable participation as an evaluator in the <strong>Screening Round</strong> of our startup evaluation process.</p>
-          
-          <div style="background-color: #f0f9ff; padding: 20px; border-left: 4px solid #2563eb; margin: 20px 0;">
-            <h3 style="margin-top: 0; color: #1e40af;">Your Contribution:</h3>
-            <ul>
-              <li>You completed evaluations for <strong>${evaluationCount || 'multiple'}</strong> startups</li>
-              <li>Your insights helped us identify the finalists</li>
-              <li>The Pitching Round is now beginning</li>
-            </ul>
-          </div>
-          
-          <div style="background-color: #fef3c7; padding: 20px; border-left: 4px solid #f59e0b; margin: 20px 0;">
-            <h3 style="margin-top: 0; color: #92400e;">What's Next - Pitching Round:</h3>
-            <ul>
-              <li><strong>You will be assigned 2–3 finalists</strong> for pitch calls in the coming days</li>
-              <li>Once assignments are ready, you'll receive full instructions and startup details</li>
-              <li>Each pitch session will be 15-20 minutes (10 min pitch + Q&A)</li>
-              <li>You'll evaluate startups based on their live presentations</li>
-            </ul>
-          </div>
-          
-          <p><strong>No action required right now.</strong> Simply wait for your pitch assignments and scheduling details.</p>
-          
-          <p>Thank you again for your expertise and time. The startup community benefits greatly from your involvement!</p>
-          
-          <p>Best regards,<br>
-          <strong>The Aurora Evaluation Team</strong></p>
-        </div>
-      `;
+      templateDisplayOrder = 14; // Template #21: Screening Complete
     } else {
-      // Generic transition message
-      subject = `Round Transition: ${fromRound} → ${toRound}`;
-      htmlContent = `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h1 style="color: #2563eb;">Round Transition Update</h1>
-          
-          <p>Dear ${name},</p>
-          
-          <p>The evaluation process is transitioning from <strong>${fromRound}</strong> to <strong>${toRound}</strong> round.</p>
-          
-          <p>You will receive detailed instructions for the next round shortly.</p>
-          
-          <p>Best regards,<br>
-          <strong>The Aurora Evaluation Team</strong></p>
-        </div>
-      `;
+      templateDisplayOrder = 15; // Template #22: Generic Transition
     }
+
+    // Fetch template from database
+    const { data: template, error: templateError } = await supabase
+      .from('email_templates')
+      .select('*')
+      .eq('display_order', templateDisplayOrder)
+      .eq('is_active', true)
+      .single();
+
+    if (templateError || !template) {
+      console.error('Failed to fetch juror phase transition template:', templateError);
+      throw new Error('Email template not found');
+    }
+
+    const actualRecipient = TEST_MODE ? TEST_EMAIL : email;
+    const fromAddress = getFromAddress();
+    
+    console.log(`📧 EMAIL CONFIG: TEST_MODE=${TEST_MODE}, From=${fromAddress}, Original recipient=${email}, Actual recipient=${actualRecipient}`);
+    
+    if (TEST_MODE) {
+      console.log(`🧪 SANDBOX MODE: Redirecting email from ${email} to ${TEST_EMAIL}`);
+    }
+
+    // Substitute variables in template
+    const subject = template.subject_template
+      .replace(/\{\{from_round\}\}/g, fromRound)
+      .replace(/\{\{to_round\}\}/g, toRound);
+    
+    const htmlContent = template.body_template
+      .replace(/\{\{juror_name\}\}/g, name)
+      .replace(/\{\{evaluation_count\}\}/g, evaluationCount?.toString() || '0')
+      .replace(/\{\{from_round\}\}/g, fromRound)
+      .replace(/\{\{to_round\}\}/g, toRound);
 
     // Send email using Resend
     const emailResponse = await resend.emails.send({

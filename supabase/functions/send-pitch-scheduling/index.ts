@@ -58,17 +58,28 @@ const handler = async (req: Request): Promise<Response> => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
+    // Fetch template #20 from database
+    const { data: template, error: templateError } = await supabase
+      .from('email_templates')
+      .select('*')
+      .eq('display_order', 13)
+      .eq('is_active', true)
+      .single();
+
+    if (templateError || !template) {
+      console.error('Failed to fetch pitch scheduling template:', templateError);
+      throw new Error('Email template not found');
+    }
+
     // Generate juror list HTML
     const jurorListHtml = assignedJurors.map(juror => `
-      <div style="background-color: #f8fafc; padding: 15px; border-radius: 8px; margin: 10px 0;">
-        <h4 style="margin: 0 0 8px 0; color: #1e40af;">${juror.name}</h4>
-        <p style="margin: 0 0 8px 0; color: #64748b; font-size: 14px;">${juror.company}</p>
-        <p style="margin: 0 0 12px 0; font-size: 14px;">
-          <strong>Email:</strong> ${juror.email}
-        </p>
-        <a href="${juror.calendlyLink}" 
-           style="display: inline-block; background-color: #2563eb; color: white; padding: 8px 16px; text-decoration: none; border-radius: 6px; font-size: 14px; font-weight: 500;">
-          📅 Schedule with ${juror.name.split(' ')[0]}
+      <div style="background: white; border: 1px solid #e5e7eb; padding: 15px; margin-bottom: 10px; border-radius: 6px;">
+        <strong style="color: #1f2937; font-size: 16px;">${juror.name}</strong>
+        <br/>
+        <span style="color: #6b7280; font-size: 14px;">${juror.company || 'Investment Professional'}</span>
+        <br/>
+        <a href="${juror.calendlyLink}" style="display: inline-block; margin-top: 10px; padding: 8px 16px; background: #2563eb; color: white; text-decoration: none; border-radius: 4px; font-size: 14px;">
+          📅 Schedule Meeting
         </a>
       </div>
     `).join('');
@@ -113,52 +124,12 @@ const handler = async (req: Request): Promise<Response> => {
       }
     }
 
-    const subject = "🚀 Time to Schedule Your Pitch Sessions!";
-    const htmlContent = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h1 style="color: #2563eb;">Ready for Your Pitch Sessions!</h1>
-        
-        <p>Dear ${startupName} team,</p>
-        
-        <p>Congratulations again on making it to the <strong>Pitching Round</strong>! It's time to schedule your pitch sessions with our investor panel.</p>
-        
-        <div style="background-color: #f0f9ff; padding: 20px; border-left: 4px solid #2563eb; margin: 20px 0;">
-          <h3 style="margin-top: 0; color: #1e40af;">Your Assigned Investors:</h3>
-          <p style="margin-bottom: 15px;">You have been assigned <strong>${assignedJurors.length} investors</strong> for your pitch sessions. Please schedule a call with each investor using their individual calendar links below:</p>
-          ${jurorListHtml}
-        </div>
-        
-        <div style="background-color: #fef3c7; padding: 20px; border-left: 4px solid #f59e0b; margin: 20px 0;">
-          <h3 style="margin-top: 0; color: #92400e;">Pitch Session Guidelines:</h3>
-          <ul style="margin: 0; padding-left: 20px;">
-            <li><strong>Duration:</strong> 15-20 minutes total (10 min pitch + 5-10 min Q&A)</li>
-            <li><strong>Format:</strong> Video call (link provided by each investor)</li>
-            <li><strong>Preparation:</strong> Have your pitch deck ready and test your audio/video</li>
-            <li><strong>Follow-up:</strong> Investors may request additional materials after the call</li>
-          </ul>
-        </div>
-        
-        <div style="background-color: #fee2e2; padding: 20px; border-left: 4px solid #ef4444; margin: 20px 0;">
-          <h3 style="margin-top: 0; color: #dc2626;">Important Reminders:</h3>
-          <ul style="margin: 0; padding-left: 20px;">
-            <li><strong>Schedule promptly:</strong> Please book your sessions within the next 2-3 days</li>
-            <li><strong>Professional setup:</strong> Ensure good lighting, audio, and minimal distractions</li>
-            <li><strong>Be punctual:</strong> Join calls 2-3 minutes early</li>
-            <li><strong>Questions?</strong> Reply to this email if you need any assistance</li>
-          </ul>
-        </div>
-        
-        <p>Best of luck with your pitches! We're excited to see what you'll present.</p>
-        
-        <p>Best regards,<br>
-        <strong>The Aurora Evaluation Team</strong></p>
-        
-        <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
-        <p style="font-size: 12px; color: #9ca3af;">
-          This email has been sent to the assigned investors as well for coordination purposes.
-        </p>
-      </div>
-    `;
+    // Substitute variables in template
+    const subject = template.subject_template;
+    const htmlContent = template.body_template
+      .replace(/\{\{startup_name\}\}/g, startupName)
+      .replace(/\{\{juror_count\}\}/g, assignedJurors.length.toString())
+      .replace(/\{\{jurors_html\}\}/g, jurorListHtml);
 
     // Send email to all recipients (no CC needed now)
     const emailResponse = await resend.emails.send({
