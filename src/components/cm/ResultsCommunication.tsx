@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Mail, CheckCircle, Edit, Send, Users, Building, FileText, Eye, AlertCircle, MessageSquare, Sparkles, RefreshCw, Loader2 } from "lucide-react";
+import { Mail, CheckCircle, Edit, Send, Users, Building, FileText, Eye, AlertCircle, MessageSquare, Sparkles, RefreshCw, Loader2, Clock, Filter } from "lucide-react";
 import { toast } from "sonner";
 import { StartupCommunicationConfirmationModal } from './StartupCommunicationConfirmationModal';
 import { validateStartupCommunications, type CommunicationValidationResult } from '@/utils/startupCommunicationValidation';
@@ -16,12 +16,16 @@ import { AggregatedTemplateSection } from './AggregatedTemplateSection';
 import { EmailPreviewModal } from './EmailPreviewModal';
 import { VCFeedbackDetailsModal } from './VCFeedbackDetailsModal';
 import { useQuery } from '@tanstack/react-query';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+
 interface StartupResult {
   id: string;
   name: string;
   email: string;
   industry: string;
   averageScore: number;
+  evaluationCount: number;
   isSelected: boolean;
   roundStatus?: string;
   feedbackSummary: string;
@@ -83,6 +87,7 @@ export const ResultsCommunication = ({
     name: string;
   } | null>(null);
   const [vcFeedbackRefreshSignal, setVcFeedbackRefreshSignal] = useState(0);
+  const [evaluationFilter, setEvaluationFilter] = useState<'all' | 'approved' | 'under-review' | 'in-progress' | 'pending'>('all');
 
   // Fetch VC feedback details status
   const {
@@ -295,6 +300,7 @@ export const ResultsCommunication = ({
         const submittedEvaluations = evaluations.filter(e => e.status === 'submitted');
         const scores = submittedEvaluations.map(e => e.overall_score).filter(score => score !== null) as number[];
         const averageScore = scores.length > 0 ? scores.reduce((sum, score) => sum + score, 0) / scores.length : 0;
+        const evaluationCount = submittedEvaluations.length;
 
         // Use round-specific status from startup_round_statuses table
         const roundStatus = roundStatusMap.get(startup.id) || 'pending';
@@ -321,6 +327,7 @@ export const ResultsCommunication = ({
           email: startup.contact_email || 'no-email@example.com',
           verticals: startup.verticals?.join(', ') || 'N/A',
           averageScore,
+          evaluationCount,
           isSelected: roundStatus === 'selected',
           roundStatus,
           feedbackSummary,
@@ -933,6 +940,54 @@ The Aurora Tech Awards Team`
       toast.error('Round transition notifications failed');
     }
   };
+  const getFilteredStartups = (startups: StartupResult[]) => {
+    switch (evaluationFilter) {
+      case 'approved':
+        return startups.filter(s => {
+          const vcStatus = vcFeedbackStatus?.[s.id];
+          return vcStatus?.is_approved === true;
+        });
+      
+      case 'under-review':
+        return startups.filter(s => s.evaluationCount >= 3);
+      
+      case 'in-progress':
+        return startups.filter(s => s.evaluationCount >= 1 && s.evaluationCount <= 2);
+      
+      case 'pending':
+        return startups.filter(s => s.evaluationCount === 0);
+      
+      case 'all':
+      default:
+        return startups;
+    }
+  };
+
+  const getEvaluationBadge = (count: number) => {
+    if (count === 0) {
+      return (
+        <Badge variant="secondary" className="bg-muted text-muted-foreground">
+          <AlertCircle className="w-3 h-3 mr-1" />
+          0 evaluations
+        </Badge>
+      );
+    } else if (count >= 1 && count <= 2) {
+      return (
+        <Badge variant="secondary" className="bg-warning/20 text-warning-foreground">
+          <Clock className="w-3 h-3 mr-1" />
+          {count} evaluation{count !== 1 ? 's' : ''}
+        </Badge>
+      );
+    } else if (count >= 3) {
+      return (
+        <Badge variant="default" className="bg-success/20 text-success-foreground">
+          <CheckCircle className="w-3 h-3 mr-1" />
+          {count} evaluations
+        </Badge>
+      );
+    }
+  };
+
   const getFeedbackStatusBadge = (status: string) => {
     switch (status) {
       case 'approved':
@@ -960,6 +1015,15 @@ The Aurora Tech Awards Team`
   const selectedStartups = startupResults.filter(r => r.roundStatus === 'selected');
   const notSelectedStartups = startupResults.filter(r => r.roundStatus === 'rejected');
   const underReviewStartups = startupResults.filter(r => r.roundStatus === 'under-review' || r.roundStatus === 'pending');
+
+  // Calculate filter counts
+  const filterCounts = {
+    all: startupResults.length,
+    approved: startupResults.filter(s => vcFeedbackStatus?.[s.id]?.is_approved === true).length,
+    underReview: startupResults.filter(s => s.evaluationCount >= 3).length,
+    inProgress: startupResults.filter(s => s.evaluationCount >= 1 && s.evaluationCount <= 2).length,
+    pending: startupResults.filter(s => s.evaluationCount === 0).length
+  };
 
   // Email workflow stage counts
   const pendingFeedback = startupResults.filter(r => r.feedbackSummary.includes('[AI Feedback not yet generated') || !r.feedbackSummary || r.feedbackStatus === undefined);
@@ -1053,6 +1117,61 @@ The Aurora Tech Awards Team`
         {/* Top 100 VC Feedback Section */}
         <AggregatedTemplateSection top100FeedbackStartups={selectedStartups} currentRound={currentRound} onBatchGenerateFeedback={generateAllFeedback} onBatchApproveFeedback={batchApproveFeedback} onBatchEnhanceFeedback={enhanceAllFeedback} onSendCommunication={initiateCommunications} batchGenerating={batchGenerating} batchApproving={batchApproving} batchEnhancing={enhancingFeedback?.startsWith('batch-') || false} />
 
+        {/* Evaluation Count Filter */}
+        <div className="mb-4 flex items-center gap-3">
+          <Label className="text-sm font-medium flex items-center gap-2">
+            <Filter className="w-4 h-4" />
+            Filter by Evaluation Status:
+          </Label>
+          <Select value={evaluationFilter} onValueChange={(value: any) => setEvaluationFilter(value)}>
+            <SelectTrigger className="w-[280px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">
+                <div className="flex items-center justify-between w-full gap-4">
+                  <span>All Startups</span>
+                  <Badge variant="secondary">{filterCounts.all}</Badge>
+                </div>
+              </SelectItem>
+              <SelectItem value="approved">
+                <div className="flex items-center justify-between w-full gap-4">
+                  <span>✓ Approved VC Feedback</span>
+                  <Badge variant="default">{filterCounts.approved}</Badge>
+                </div>
+              </SelectItem>
+              <SelectItem value="under-review">
+                <div className="flex items-center justify-between w-full gap-4">
+                  <span>📋 Under Review (3+ evals)</span>
+                  <Badge variant="outline">{filterCounts.underReview}</Badge>
+                </div>
+              </SelectItem>
+              <SelectItem value="in-progress">
+                <div className="flex items-center justify-between w-full gap-4">
+                  <span>⏳ In Progress (1-2 evals)</span>
+                  <Badge variant="outline">{filterCounts.inProgress}</Badge>
+                </div>
+              </SelectItem>
+              <SelectItem value="pending">
+                <div className="flex items-center justify-between w-full gap-4">
+                  <span>⏸️ Pending (0 evals)</span>
+                  <Badge variant="outline">{filterCounts.pending}</Badge>
+                </div>
+              </SelectItem>
+            </SelectContent>
+          </Select>
+          
+          {evaluationFilter !== 'all' && (
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => setEvaluationFilter('all')}
+            >
+              Clear Filter
+            </Button>
+          )}
+        </div>
+
         <Tabs defaultValue="feedback" className="space-y-6">
           <TabsList>
             <TabsTrigger value="feedback">VC Feedback Review</TabsTrigger>
@@ -1063,16 +1182,23 @@ The Aurora Tech Awards Team`
           </TabsList>
 
           <TabsContent value="feedback" className="space-y-4">
-            {startupResults.map(result => {
-            const vcStatus = vcFeedbackStatus?.[result.id];
-            const vcFeedbackStatusText = vcStatus ? vcStatus.is_approved ? 'Approved' : 'Draft' : 'Not Generated';
-            return <div key={result.id} className="border border-border rounded-lg p-4">
+            {getFilteredStartups(startupResults).length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">
+                <AlertCircle className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                <p className="text-lg font-medium mb-1">No startups match this filter</p>
+                <p className="text-sm">Try selecting a different filter option</p>
+              </div>
+            ) : (
+              getFilteredStartups(startupResults).map(result => {
+                const vcStatus = vcFeedbackStatus?.[result.id];
+                const vcFeedbackStatusText = vcStatus ? vcStatus.is_approved ? 'Approved' : 'Draft' : 'Not Generated';
+                return <div key={result.id} className="border border-border rounded-lg p-4">
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-3">
                       <div>
                         <h4 className="font-semibold text-foreground">{result.name}</h4>
                         <p className="text-sm text-muted-foreground">
-                          {result.email} • Score: {formatScore(result.averageScore)}
+                          {result.email} • Score: {formatScore(result.averageScore)} • {getEvaluationBadge(result.evaluationCount)}
                         </p>
                       </div>
                       <StatusBadge status={result.roundStatus || 'pending'} roundName={currentRound === 'screeningRound' ? 'screening' : 'pitching'} />
@@ -1111,7 +1237,8 @@ The Aurora Tech Awards Team`
                     {vcFeedbackStatusText === 'Not Generated' ? <p>No VC feedback generated yet. Click "Generate VC Feedback" to create detailed feedback from evaluations.</p> : <p>VC feedback ready from {vcStatus?.evaluation_count || 0} evaluation(s). Click "VC Feedback" to review or "Preview Email" to see the formatted email.</p>}
                   </div>
                 </div>;
-          })}
+              })
+            )}
           </TabsContent>
 
           <TabsContent value="selected" className="space-y-4">
