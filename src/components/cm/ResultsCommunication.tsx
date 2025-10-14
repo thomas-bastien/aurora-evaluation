@@ -949,7 +949,11 @@ The Aurora Tech Awards Team`
         });
       
       case 'under-review':
-        return startups.filter(s => s.evaluationCount >= 3);
+        // Exclude startups that already have approved VC feedback
+        return startups.filter(s => {
+          const vcStatus = vcFeedbackStatus?.[s.id];
+          return s.evaluationCount >= 3 && vcStatus?.is_approved !== true;
+        });
       
       case 'in-progress':
         return startups.filter(s => s.evaluationCount >= 1 && s.evaluationCount <= 2);
@@ -1020,7 +1024,10 @@ The Aurora Tech Awards Team`
   const filterCounts = {
     all: startupResults.length,
     approved: startupResults.filter(s => vcFeedbackStatus?.[s.id]?.is_approved === true).length,
-    underReview: startupResults.filter(s => s.evaluationCount >= 3).length,
+    underReview: startupResults.filter(s => {
+      const vcStatus = vcFeedbackStatus?.[s.id];
+      return s.evaluationCount >= 3 && vcStatus?.is_approved !== true;
+    }).length,
     inProgress: startupResults.filter(s => s.evaluationCount >= 1 && s.evaluationCount <= 2).length,
     pending: startupResults.filter(s => s.evaluationCount === 0).length
   };
@@ -1028,7 +1035,10 @@ The Aurora Tech Awards Team`
   // Evaluation count stage counts
   const pendingEvaluations = startupResults.filter(s => s.evaluationCount === 0);
   const inProgressEvaluations = startupResults.filter(s => s.evaluationCount >= 1 && s.evaluationCount <= 2);
-  const underReviewEvaluations = startupResults.filter(s => s.evaluationCount >= 3);
+  const underReviewEvaluations = startupResults.filter(s => {
+    const vcStatus = vcFeedbackStatus?.[s.id];
+    return s.evaluationCount >= 3 && vcStatus?.is_approved !== true;
+  });
   const approvedVCFeedback = startupResults.filter(s => vcFeedbackStatus?.[s.id]?.is_approved === true);
   return <Card>
       <CardHeader>
