@@ -723,25 +723,11 @@ The Aurora Tech Awards Team`
       } else if (type === 'under-review') {
         targetResults = startupResults.filter(r => r.roundStatus === 'under-review' || r.roundStatus === 'pending');
       } else if (type === 'top-100-feedback') {
-        // Only include selected startups with submitted evaluations
-        targetResults = startupResults.filter(r => r.roundStatus === 'selected');
-
-        // Check if each startup has at least 1 submitted evaluation
-        const startupsWithEvals = await Promise.all(targetResults.map(async startup => {
-          const {
-            count
-          } = await supabase.from('screening_evaluations').select('*', {
-            count: 'exact',
-            head: true
-          }).eq('startup_id', startup.id).eq('status', 'submitted');
-          return {
-            startup,
-            hasEvaluations: (count || 0) > 0
-          };
-        }));
-        targetResults = startupsWithEvals.filter(s => s.hasEvaluations).map(s => s.startup);
+        // Only include startups with approved VC feedback (regardless of round status)
+        targetResults = approvedVCFeedback;
+        
         if (targetResults.length === 0) {
-          toast.error('No selected startups with submitted evaluations found');
+          toast.error('No startups with approved VC feedback found');
           setValidatingEmails(false);
           return;
         }
@@ -1094,7 +1080,7 @@ The Aurora Tech Awards Team`
                     Detailed VC feedback with dynamic evaluation sections
                   </div>
                   <Button className="w-full" variant="default" onClick={() => initiateCommunications('top-100-feedback')} disabled={sendingEmails || validatingEmails}>
-                    {validatingEmails ? 'Validating...' : `Send Top 100 VC Feedback (${selectedStartups.length})`}
+                    {validatingEmails ? 'Validating...' : `Send Top 100 VC Feedback (${approvedVCFeedback.length})`}
                   </Button>
                 </div>
                 
@@ -1180,7 +1166,7 @@ The Aurora Tech Awards Team`
         </div>
 
         {/* Top 100 VC Feedback Section */}
-        <AggregatedTemplateSection top100FeedbackStartups={selectedStartups} currentRound={currentRound} onBatchGenerateFeedback={generateAllFeedback} onBatchApproveFeedback={batchApproveFeedback} onBatchEnhanceFeedback={enhanceAllFeedback} onSendCommunication={initiateCommunications} batchGenerating={batchGenerating} batchApproving={batchApproving} batchEnhancing={enhancingFeedback?.startsWith('batch-') || false} />
+        <AggregatedTemplateSection top100FeedbackStartups={approvedVCFeedback} currentRound={currentRound} onBatchGenerateFeedback={generateAllFeedback} onBatchApproveFeedback={batchApproveFeedback} onBatchEnhanceFeedback={enhanceAllFeedback} onSendCommunication={initiateCommunications} batchGenerating={batchGenerating} batchApproving={batchApproving} batchEnhancing={enhancingFeedback?.startsWith('batch-') || false} />
 
         {/* Evaluation Count Filter */}
         <div className="mb-4 flex items-center gap-3">
