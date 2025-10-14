@@ -118,7 +118,9 @@ export const validateStartupCommunications = async (
     let expectedStatus: string;
     switch (communicationType) {
       case 'approved':
-        // For approved, we don't check round status - just that they have approved feedback
+      case 'top-100-feedback':
+        // For these types, we don't check round status
+        // Eligibility is based on having approved VC feedback
         expectedStatus = actualRoundStatus || 'any';
         break;
       case 'selected':
@@ -130,14 +132,13 @@ export const validateStartupCommunications = async (
       case 'under-review':
         expectedStatus = 'under-review';
         break;
-      case 'top-100-feedback':
-        expectedStatus = 'selected';
-        break;
       default:
         expectedStatus = 'pending';
     }
 
-    if (communicationType !== 'approved' && actualRoundStatus && actualRoundStatus !== expectedStatus) {
+    // Skip status check for 'approved' and 'top-100-feedback' (status-agnostic types)
+    if (communicationType !== 'approved' && communicationType !== 'top-100-feedback' && 
+        actualRoundStatus && actualRoundStatus !== expectedStatus) {
       // For under-review, also accept 'pending' status
       if (!(communicationType === 'under-review' && actualRoundStatus === 'pending')) {
         skipReasons.push('wrong status');
