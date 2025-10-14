@@ -35,6 +35,7 @@ import {
 } from "@/utils/reportExports";
 import { EvaluationDecisionReportCard } from "@/components/cm/EvaluationDecisionReportCard";
 import { AIInsightsReport } from "@/components/cm/AIInsightsReport";
+import { IndividualStartupReportCard } from "@/components/cm/IndividualStartupReportCard";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { StatusBadge } from '@/components/common/StatusBadge';
 
@@ -586,6 +587,9 @@ export const ReportingDocumentation = ({ currentRound }: ReportingDocumentationP
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Evaluation Decision Report Card */}
         <EvaluationDecisionReportCard currentRound={currentRound} />
+        
+        {/* Individual Startup Report Card */}
+        <IndividualStartupReportCard currentRound={currentRound} />
         
         {reports.map(report => {
         const IconComponent = report.icon;
