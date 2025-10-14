@@ -1025,11 +1025,11 @@ The Aurora Tech Awards Team`
     pending: startupResults.filter(s => s.evaluationCount === 0).length
   };
 
-  // Email workflow stage counts
-  const pendingFeedback = startupResults.filter(r => r.feedbackSummary.includes('[AI Feedback not yet generated') || !r.feedbackSummary || r.feedbackStatus === undefined);
-  const draftFeedback = startupResults.filter(r => r.feedbackStatus === 'draft' && !r.communicationSent);
-  const approvedFeedback = startupResults.filter(r => r.feedbackStatus === 'approved' && !r.communicationSent);
-  const sentCommunications = startupResults.filter(r => r.communicationSent);
+  // Evaluation count stage counts
+  const pendingEvaluations = startupResults.filter(s => s.evaluationCount === 0);
+  const inProgressEvaluations = startupResults.filter(s => s.evaluationCount >= 1 && s.evaluationCount <= 2);
+  const underReviewEvaluations = startupResults.filter(s => s.evaluationCount >= 3);
+  const approvedVCFeedback = startupResults.filter(s => vcFeedbackStatus?.[s.id]?.is_approved === true);
   return <Card>
       <CardHeader>
         <div className="flex items-center justify-between">
@@ -1094,23 +1094,66 @@ The Aurora Tech Awards Team`
       </CardHeader>
       
         <CardContent>
-          {/* Summary Stats - Email Workflow Stages */}
+          {/* Summary Stats - Evaluation Count Stages */}
         <div className="grid grid-cols-4 gap-4 mb-6">
-          <div className="text-center p-4 bg-muted/30 rounded-lg border border-border">
-            <div className="text-2xl font-bold text-muted-foreground">{pendingFeedback.length}</div>
+          {/* Pending - 0 evaluations */}
+          <div 
+            className="text-center p-4 bg-muted/30 rounded-lg border border-border hover:bg-muted/50 transition-colors cursor-pointer"
+            onClick={() => setEvaluationFilter('pending')}
+          >
+            <div className="flex items-center justify-center gap-2 mb-2">
+              <AlertCircle className="w-5 h-5 text-muted-foreground" />
+            </div>
+            <div className="text-2xl font-bold text-muted-foreground">
+              {pendingEvaluations.length}
+            </div>
             <div className="text-sm text-muted-foreground">Pending</div>
+            <div className="text-xs text-muted-foreground mt-1">0 evaluations</div>
           </div>
-          <div className="text-center p-4 bg-blue-50 rounded-lg border border-blue-200">
-            <div className="text-2xl font-bold text-blue-600">{draftFeedback.length}</div>
-            <div className="text-sm text-muted-foreground">Draft</div>
+
+          {/* In Progress - 1-2 evaluations */}
+          <div 
+            className="text-center p-4 bg-yellow-50 dark:bg-yellow-950/20 rounded-lg border border-yellow-200 dark:border-yellow-800 hover:bg-yellow-100 dark:hover:bg-yellow-950/30 transition-colors cursor-pointer"
+            onClick={() => setEvaluationFilter('in-progress')}
+          >
+            <div className="flex items-center justify-center gap-2 mb-2">
+              <Clock className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
+            </div>
+            <div className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">
+              {inProgressEvaluations.length}
+            </div>
+            <div className="text-sm text-muted-foreground">In Progress</div>
+            <div className="text-xs text-muted-foreground mt-1">1-2 evaluations</div>
           </div>
-          <div className="text-center p-4 bg-success/10 rounded-lg border border-success/20">
-            <div className="text-2xl font-bold text-success">{approvedFeedback.length}</div>
+
+          {/* Under Review - 3+ evaluations */}
+          <div 
+            className="text-center p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-950/30 transition-colors cursor-pointer"
+            onClick={() => setEvaluationFilter('under-review')}
+          >
+            <div className="flex items-center justify-center gap-2 mb-2">
+              <FileText className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+            </div>
+            <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+              {underReviewEvaluations.length}
+            </div>
+            <div className="text-sm text-muted-foreground">Under Review</div>
+            <div className="text-xs text-muted-foreground mt-1">3+ evaluations</div>
+          </div>
+
+          {/* Approved - VC Feedback approved */}
+          <div 
+            className="text-center p-4 bg-success/10 rounded-lg border border-success/20 hover:bg-success/15 transition-colors cursor-pointer"
+            onClick={() => setEvaluationFilter('approved')}
+          >
+            <div className="flex items-center justify-center gap-2 mb-2">
+              <CheckCircle className="w-5 h-5 text-success" />
+            </div>
+            <div className="text-2xl font-bold text-success">
+              {approvedVCFeedback.length}
+            </div>
             <div className="text-sm text-muted-foreground">Approved</div>
-          </div>
-          <div className="text-center p-4 bg-primary/10 rounded-lg border border-primary/20">
-            <div className="text-2xl font-bold text-primary">{sentCommunications.length}</div>
-            <div className="text-sm text-muted-foreground">Sent</div>
+            <div className="text-xs text-muted-foreground mt-1">VC feedback ready</div>
           </div>
         </div>
 
