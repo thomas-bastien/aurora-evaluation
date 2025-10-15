@@ -1,4 +1,18 @@
-import { Document, Paragraph, TextRun, AlignmentType, HeadingLevel, ImageRun, BorderStyle, Packer } from 'docx';
+import { 
+  Document, 
+  Paragraph, 
+  TextRun, 
+  AlignmentType, 
+  HeadingLevel, 
+  ImageRun, 
+  BorderStyle, 
+  Packer,
+  Table,
+  TableRow,
+  TableCell,
+  WidthType,
+  VerticalAlign
+} from 'docx';
 import { saveAs } from 'file-saver';
 import JSZip from 'jszip';
 import { supabase } from '@/integrations/supabase/client';
@@ -180,172 +194,130 @@ function createIntroParagraphs(): Paragraph[] {
 }
 
 /**
- * Create VC feedback section with all subsections
+ * Helper function to format strengths array for table display
  */
-function createVCFeedbackSection(vc: VCFeedbackSection): Paragraph[] {
-  const paragraphs: Paragraph[] = [];
+function formatStrengths(strengths: string[]): string {
+  return strengths.map(s => `• ${s}`).join('\n');
+}
 
-  // Separator line
-  paragraphs.push(
-    new Paragraph({
-      border: {
-        bottom: {
-          color: '4169E1',
-          space: 1,
-          style: BorderStyle.SINGLE,
-          size: 12
+/**
+ * Helper function to create a feedback table row
+ */
+function createFeedbackRow(label: string, content: string): TableRow {
+  return new TableRow({
+    children: [
+      // Left cell: Label (bold)
+      new TableCell({
+        children: [
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: label,
+                bold: true,
+                size: 22
+              })
+            ]
+          })
+        ],
+        width: { size: 40, type: WidthType.PERCENTAGE },
+        verticalAlign: VerticalAlign.TOP,
+        margins: {
+          top: 100,
+          bottom: 100,
+          left: 100,
+          right: 100
         }
-      },
-      spacing: { before: 400, after: 400 }
-    })
-  );
+      }),
+      
+      // Right cell: Content
+      new TableCell({
+        children: [
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: content,
+                size: 22
+              })
+            ]
+          })
+        ],
+        width: { size: 60, type: WidthType.PERCENTAGE },
+        verticalAlign: VerticalAlign.TOP,
+        margins: {
+          top: 100,
+          bottom: 100,
+          left: 100,
+          right: 100
+        }
+      })
+    ]
+  });
+}
 
-  // VC heading
-  paragraphs.push(
+/**
+ * Create VC feedback section with table-based layout matching template
+ */
+function createVCFeedbackSection(vc: VCFeedbackSection): (Paragraph | Table)[] {
+  const elements: (Paragraph | Table)[] = [];
+
+  // VC heading in BLUE color
+  elements.push(
     new Paragraph({
       children: [
         new TextRun({
           text: `Feedback from VC #${vc.vcNumber}`,
           bold: true,
-          size: 28 // 14pt
+          size: 28, // 14pt
+          color: '4169E1' // Blue color matching template
         })
       ],
-      spacing: { after: 200 }
+      spacing: { before: 400, after: 200 }
     })
   );
 
-  // Strengths section
-  paragraphs.push(
-    new Paragraph({
-      children: [
-        new TextRun({
-          text: "Strengths of the startup:",
-          bold: true,
-          size: 22
-        })
-      ],
-      spacing: { before: 200, after: 100 }
-    })
-  );
-
-  vc.strengths.forEach(strength => {
-    paragraphs.push(
-      new Paragraph({
-        children: [
-          new TextRun({
-            text: strength,
-            size: 22
-          })
-        ],
-        bullet: { level: 0 },
-        spacing: { after: 100 }
-      })
-    );
+  // Create table with feedback in structured format
+  const feedbackTable = new Table({
+    width: { size: 100, type: WidthType.PERCENTAGE },
+    borders: {
+      top: { style: BorderStyle.SINGLE, size: 1, color: '000000' },
+      bottom: { style: BorderStyle.SINGLE, size: 1, color: '000000' },
+      left: { style: BorderStyle.SINGLE, size: 1, color: '000000' },
+      right: { style: BorderStyle.SINGLE, size: 1, color: '000000' },
+      insideHorizontal: { style: BorderStyle.SINGLE, size: 1, color: '000000' },
+      insideVertical: { style: BorderStyle.SINGLE, size: 1, color: '000000' }
+    },
+    rows: [
+      // Row 1: Strengths
+      createFeedbackRow('Strengths of the startup:', formatStrengths(vc.strengths)),
+      
+      // Row 2: Improvements
+      createFeedbackRow('Main areas that need improvement:', vc.improvements),
+      
+      // Row 3: Pitch Development
+      createFeedbackRow('Aspects of the pitch that need further development:', vc.pitchDevelopment),
+      
+      // Row 4: Focus Areas
+      createFeedbackRow('Key areas the team should focus on:', vc.focusAreas),
+      
+      // Row 5: Additional Comments
+      createFeedbackRow('Additional comments:', vc.additionalComments)
+    ]
   });
 
-  // Improvements section
-  paragraphs.push(
-    new Paragraph({
-      children: [
-        new TextRun({
-          text: "Main areas that need improvement:",
-          bold: true,
-          size: 22
-        })
-      ],
-      spacing: { before: 200, after: 100 }
-    }),
-    new Paragraph({
-      children: [
-        new TextRun({
-          text: vc.improvements,
-          size: 22
-        })
-      ],
-      spacing: { after: 200 }
-    })
-  );
+  elements.push(feedbackTable);
 
-  // Pitch development section
-  paragraphs.push(
-    new Paragraph({
-      children: [
-        new TextRun({
-          text: "Aspects of the pitch that need further development:",
-          bold: true,
-          size: 22
-        })
-      ],
-      spacing: { before: 200, after: 100 }
-    }),
-    new Paragraph({
-      children: [
-        new TextRun({
-          text: vc.pitchDevelopment,
-          size: 22
-        })
-      ],
-      spacing: { after: 200 }
-    })
-  );
-
-  // Focus areas section
-  paragraphs.push(
-    new Paragraph({
-      children: [
-        new TextRun({
-          text: "Key areas the team should focus on:",
-          bold: true,
-          size: 22
-        })
-      ],
-      spacing: { before: 200, after: 100 }
-    }),
-    new Paragraph({
-      children: [
-        new TextRun({
-          text: vc.focusAreas,
-          size: 22
-        })
-      ],
-      spacing: { after: 200 }
-    })
-  );
-
-  // Additional comments section
-  paragraphs.push(
-    new Paragraph({
-      children: [
-        new TextRun({
-          text: "Additional comments:",
-          bold: true,
-          size: 22
-        })
-      ],
-      spacing: { before: 200, after: 100 }
-    }),
-    new Paragraph({
-      children: [
-        new TextRun({
-          text: vc.additionalComments,
-          size: 22
-        })
-      ],
-      spacing: { after: 400 }
-    })
-  );
-
-  return paragraphs;
+  return elements;
 }
 
 /**
- * Create closing paragraphs
+ * Create closing paragraphs with blue separator
  */
 function createClosingParagraphs(): Paragraph[] {
   return [
+    // Blue separator before closing
     new Paragraph({
       border: {
-        bottom: {
+        top: {
           color: '4169E1',
           space: 1,
           style: BorderStyle.SINGLE,
@@ -419,7 +391,7 @@ async function generateDocumentBlob(
   }
 
   // Build document sections
-  const children: Paragraph[] = [];
+  const children: (Paragraph | Table)[] = [];
 
   // Header with logos (if available)
   if (auroraLogo || indriveLogo) {
@@ -463,7 +435,7 @@ async function generateDocumentBlob(
     );
   }
 
-  // Blue separator line
+  // Blue separator line (thicker to match template)
   children.push(
     new Paragraph({
       border: {
@@ -471,7 +443,7 @@ async function generateDocumentBlob(
           color: '4169E1',
           space: 1,
           style: BorderStyle.SINGLE,
-          size: 12
+          size: 24
         }
       },
       spacing: { after: 400 }
@@ -495,8 +467,25 @@ async function generateDocumentBlob(
   // Intro paragraphs
   children.push(...createIntroParagraphs());
 
-  // VC Feedback sections
-  data.evaluations.forEach(vc => {
+  // VC Feedback sections with separators between them
+  data.evaluations.forEach((vc, index) => {
+    // Add separator before each VC section (except first)
+    if (index > 0) {
+      children.push(
+        new Paragraph({
+          border: {
+            top: {
+              color: '4169E1',
+              space: 1,
+              style: BorderStyle.SINGLE,
+              size: 12
+            }
+          },
+          spacing: { before: 400, after: 400 }
+        })
+      );
+    }
+    
     children.push(...createVCFeedbackSection(vc));
   });
 
@@ -607,14 +596,23 @@ export async function generateMultipleReports(
 export async function generateAndDownloadAllReports(
   startupIds: string[],
   roundName: 'screening' | 'pitching',
+  format: 'docx' | 'pdf' = 'docx',
   onProgress?: (current: number, total: number, startupName: string) => void
 ): Promise<void> {
   if (startupIds.length === 0) {
     throw new Error('No startups to generate reports for');
   }
 
-  // Generate all documents
-  const reports = await generateMultipleReports(startupIds, roundName, onProgress);
+  let reports: Array<{ fileName: string; blob: Blob; startupName: string }> = [];
+
+  // Generate all documents in selected format
+  if (format === 'docx') {
+    reports = await generateMultipleReports(startupIds, roundName, onProgress);
+  } else {
+    // Dynamic import for PDF to avoid loading heavy dependencies if not needed
+    const { generateMultiplePdfReports } = await import('./individualStartupReportPdf');
+    reports = await generateMultiplePdfReports(startupIds, roundName, onProgress);
+  }
 
   if (reports.length === 0) {
     throw new Error('No reports were generated successfully');
@@ -637,7 +635,8 @@ export async function generateAndDownloadAllReports(
   // Download ZIP
   const roundLabel = roundName === 'screening' ? 'Screening' : 'Pitching';
   const timestamp = new Date().toISOString().split('T')[0];
-  const zipFileName = `Aurora-VC-Feedback-Letters-${roundLabel}-${timestamp}.zip`;
+  const formatLabel = format.toUpperCase();
+  const zipFileName = `Aurora-VC-Feedback-Letters-${roundLabel}-${formatLabel}-${timestamp}.zip`;
   
   saveAs(zipBlob, zipFileName);
 }

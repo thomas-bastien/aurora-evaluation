@@ -2,10 +2,11 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { Download, FileUser, Loader2, PackageOpen } from 'lucide-react';
+import { Download, FileUser, Loader2, PackageOpen, FileText, File } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { generateStartupReportDocx, generateAndDownloadAllReports } from '@/utils/individualStartupReportDocx';
+import { generateStartupReportPdf } from '@/utils/individualStartupReportPdf';
 import {
   Select,
   SelectContent,
@@ -34,6 +35,8 @@ export const IndividualStartupReportCard = ({ currentRound }: IndividualStartupR
   const [bulkProgress, setBulkProgress] = useState({ current: 0, total: 0, name: '' });
   const [loading, setLoading] = useState(true);
   const [startups, setStartups] = useState<StartupOption[]>([]);
+  const [exportFormat, setExportFormat] = useState<'docx' | 'pdf'>('docx');
+  const [bulkExportFormat, setBulkExportFormat] = useState<'docx' | 'pdf'>('docx');
 
   const roundName = currentRound === 'screeningRound' ? 'screening' : 'pitching';
 
@@ -98,16 +101,20 @@ export const IndividualStartupReportCard = ({ currentRound }: IndividualStartupR
 
     setGenerating(true);
     try {
-      await generateStartupReportDocx(selectedStartup, roundName);
+      if (exportFormat === 'docx') {
+        await generateStartupReportDocx(selectedStartup, roundName);
+      } else {
+        await generateStartupReportPdf(selectedStartup, roundName);
+      }
       toast({
         title: "Success",
-        description: "Word document generated successfully! You can now upload it to Google Drive."
+        description: `${exportFormat.toUpperCase()} document generated successfully!${exportFormat === 'docx' ? ' You can now upload it to Google Drive.' : ''}`
       });
     } catch (error: any) {
       console.error('Error generating document:', error);
       toast({
         title: "Error",
-        description: error.message || "Failed to generate Word document",
+        description: error.message || `Failed to generate ${exportFormat.toUpperCase()} document`,
         variant: "destructive"
       });
     } finally {
@@ -127,6 +134,7 @@ export const IndividualStartupReportCard = ({ currentRound }: IndividualStartupR
       await generateAndDownloadAllReports(
         startupIds,
         roundName,
+        bulkExportFormat,
         (current, total, startupName) => {
           setBulkProgress({ current, total, name: startupName });
         }
@@ -134,7 +142,7 @@ export const IndividualStartupReportCard = ({ currentRound }: IndividualStartupR
 
       toast({
         title: "Success",
-        description: `Generated ${startups.length} feedback letter${startups.length > 1 ? 's' : ''} successfully! ZIP file downloaded.`
+        description: `Generated ${startups.length} feedback letter${startups.length > 1 ? 's' : ''} as ${bulkExportFormat.toUpperCase()} successfully! ZIP file downloaded.`
       });
     } catch (error: any) {
       console.error('Error generating bulk reports:', error);
@@ -176,9 +184,37 @@ export const IndividualStartupReportCard = ({ currentRound }: IndividualStartupR
                     Download All Reports at Once
                   </h4>
                   <p className="text-xs text-muted-foreground mb-3">
-                    Generate Word documents for all {startups.length} startups with approved feedback 
+                    Generate feedback letters for all {startups.length} startups with approved feedback 
                     and download as a single ZIP file.
                   </p>
+                  
+                  {/* Format selector for bulk download */}
+                  <div className="mb-3">
+                    <Label className="text-xs mb-1 block">Export Format</Label>
+                    <Select
+                      value={bulkExportFormat}
+                      onValueChange={(v) => setBulkExportFormat(v as 'docx' | 'pdf')}
+                      disabled={generatingAll}
+                    >
+                      <SelectTrigger className="w-full h-8">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="docx">
+                          <div className="flex items-center gap-2">
+                            <FileText className="w-3 h-3" />
+                            Word Document (.docx)
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="pdf">
+                          <div className="flex items-center gap-2">
+                            <File className="w-3 h-3" />
+                            PDF Document (.pdf)
+                          </div>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                   
                   {/* Progress indicator during bulk generation */}
                   {generatingAll && bulkProgress.total > 0 && (
@@ -212,12 +248,12 @@ export const IndividualStartupReportCard = ({ currentRound }: IndividualStartupR
                     {generatingAll ? (
                       <>
                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Generating {bulkProgress.current}/{bulkProgress.total} documents...
+                        Generating {bulkProgress.current}/{bulkProgress.total} {bulkExportFormat.toUpperCase()} files...
                       </>
                     ) : (
                       <>
                         <PackageOpen className="w-4 h-4 mr-2" />
-                        Download All {startups.length} Reports (ZIP)
+                        Download All {startups.length} Reports as {bulkExportFormat.toUpperCase()} (ZIP)
                       </>
                     )}
                   </Button>
@@ -271,13 +307,15 @@ export const IndividualStartupReportCard = ({ currentRound }: IndividualStartupR
 
           {/* Info Box */}
           <div className="text-sm text-muted-foreground bg-muted p-3 rounded-md space-y-2">
-            <p className="font-medium">This will generate an editable Word document that:</p>
+            <p className="font-medium">This will generate a professional feedback letter that:</p>
             <ul className="list-disc list-inside space-y-1 ml-2">
-              <li>Matches the Aurora feedback letter template</li>
+              <li>Matches the official Aurora Tech Awards feedback letter template</li>
+              <li>Uses professional table-based layout for VC feedback</li>
               <li>Includes personalized greeting with founder name</li>
-              <li>Contains VC feedback from {selectedStartupData?.evaluationCount || 'all'} evaluator{selectedStartupData?.evaluationCount !== 1 ? 's' : ''}</li>
-              <li>Has Aurora branding and professional formatting</li>
-              <li>Can be uploaded to Google Drive and edited there</li>
+              <li>Contains feedback from {selectedStartupData?.evaluationCount || 'all'} VC evaluator{selectedStartupData?.evaluationCount !== 1 ? 's' : ''}</li>
+              <li>Has Aurora branding with blue accent lines</li>
+              <li>Export as editable Word document or print-ready PDF</li>
+              <li>Batch download all reports as ZIP file</li>
             </ul>
           </div>
 
@@ -285,31 +323,71 @@ export const IndividualStartupReportCard = ({ currentRound }: IndividualStartupR
           <div className="text-sm bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 p-3 rounded-md space-y-1">
             <p className="font-medium text-blue-900 dark:text-blue-100">After downloading:</p>
             <ol className="list-decimal list-inside space-y-1 ml-2 text-blue-800 dark:text-blue-200">
-              <li>Upload the .docx file to Google Drive</li>
-              <li>Open with Google Docs to edit if needed</li>
-              <li>Share the link with the founder</li>
+              {exportFormat === 'docx' ? (
+                <>
+                  <li>Upload the .docx file to Google Drive</li>
+                  <li>Open with Google Docs to edit if needed</li>
+                  <li>Share the link with the founder</li>
+                </>
+              ) : (
+                <>
+                  <li>Review the PDF document</li>
+                  <li>Send directly to the founder via email</li>
+                  <li>Or upload to your document management system</li>
+                </>
+              )}
             </ol>
           </div>
 
-          {/* Individual Download Button */}
-          <Button
-            onClick={handleDownload}
-            disabled={!selectedStartup || generating || loading || generatingAll}
-            variant="outline"
-            className="w-full"
-          >
-            {generating ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Generating Word Document...
-              </>
-            ) : (
-              <>
-                <Download className="w-4 h-4 mr-2" />
-                Download Selected Report (.docx)
-              </>
-            )}
-          </Button>
+          {/* Individual Download Section with Format Selector */}
+          <div className="space-y-2">
+            <Label>Export Format</Label>
+            <div className="flex gap-2">
+              <Select
+                value={exportFormat}
+                onValueChange={(v) => setExportFormat(v as 'docx' | 'pdf')}
+                disabled={loading || generating || generatingAll}
+              >
+                <SelectTrigger className="w-40">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="docx">
+                    <div className="flex items-center gap-2">
+                      <FileText className="w-4 h-4" />
+                      Word (.docx)
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="pdf">
+                    <div className="flex items-center gap-2">
+                      <File className="w-4 h-4" />
+                      PDF (.pdf)
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+
+              {/* Individual Download Button */}
+              <Button
+                onClick={handleDownload}
+                disabled={!selectedStartup || generating || loading || generatingAll}
+                variant="outline"
+                className="flex-1"
+              >
+                {generating ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Generating {exportFormat.toUpperCase()}...
+                  </>
+                ) : (
+                  <>
+                    <Download className="w-4 h-4 mr-2" />
+                    Download Selected Report (.{exportFormat})
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
 
           {!loading && startups.length === 0 && (
             <p className="text-sm text-muted-foreground text-center">
