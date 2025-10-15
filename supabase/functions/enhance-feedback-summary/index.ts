@@ -104,22 +104,19 @@ function needsCleaning(text: string): boolean {
     return false;
   }
   
-  // Skip if already well-formatted (has bullet points or clear structure)
+  // Skip if already well-formatted with bullet points or numbered lists
   if (/(^|\n)\s*[-•]\s/.test(text) || /(^|\n)\s*\d+[.)]\s/.test(text)) {
     return false;
   }
   
-  // Skip if it's just one short sentence
-  if (text.length < 100 && !text.includes('.') && !text.includes(',')) {
+  // Skip if it's just one very short, clear sentence (e.g., "Improve the pitch deck")
+  if (text.length < 50 && text.split('. ').length <= 1) {
     return false;
   }
   
-  // Needs cleaning if it's a wall of text (no paragraph breaks and > 200 chars)
-  if (text.length > 200 && !text.includes('\n') && text.split('. ').length > 3) {
-    return true;
-  }
-  
-  return false;
+  // Default: assume text could benefit from cleaning
+  // This includes: medium-length text, run-on sentences, grammar issues, etc.
+  return true;
 }
 
 async function cleanTextSection(
