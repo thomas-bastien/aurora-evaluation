@@ -51,6 +51,7 @@ export const EmailPreviewModal = ({
   const [body, setBody] = useState('');
   const [isStale, setIsStale] = useState(false);
   const [hasBeenSent, setHasBeenSent] = useState(false);
+  const [vcFeedbackApproved, setVcFeedbackApproved] = useState(false);
   
   useEffect(() => {
     if (open) {
@@ -90,6 +91,9 @@ export const EmailPreviewModal = ({
         .eq('startup_id', startupId)
         .eq('round_name', roundName)
         .maybeSingle();
+
+      // Store VC feedback approval status
+      setVcFeedbackApproved(vcFeedback?.is_approved || false);
 
       // Compute staleness: approved email but VC feedback changed after
       const stale = existing?.is_approved && 
@@ -314,6 +318,11 @@ export const EmailPreviewModal = ({
 
   const getEmailStatus = () => {
     if (!customEmail) return 'not-generated';
+    
+    // If VC feedback is approved, treat email as approved
+    if (vcFeedbackApproved) return 'approved';
+    
+    // Otherwise, check email's own approval status
     if (customEmail.is_approved) return 'approved';
     if (customEmail.custom_subject || customEmail.custom_body) return 'draft';
     return 'not-generated';
