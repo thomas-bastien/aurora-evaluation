@@ -221,10 +221,23 @@ export function VCFeedbackDetailsModal({
             description: data.skipReason || "Feedback is already well-structured.",
           });
         } else {
-          toast({
-            title: 'Feedback Restructured',
-            description: 'The feedback has been improved for clarity.',
-          });
+          const metadata = data.metadata;
+          if (metadata) {
+            const cleanedPercentage = Math.round(
+              (metadata.sectionsCleaned / (metadata.sectionsCleaned + metadata.sectionsPreserved)) * 100
+            );
+            
+            toast({
+              title: 'Feedback Enhanced',
+              description: `${metadata.vcSectionsProcessed} VC evaluation${metadata.vcSectionsProcessed > 1 ? 's' : ''} processed. ${metadata.sectionsCleaned} section${metadata.sectionsCleaned !== 1 ? 's' : ''} improved, ${metadata.sectionsPreserved} section${metadata.sectionsPreserved !== 1 ? 's' : ''} preserved as-is. (${cleanedPercentage}% enhanced)`,
+            });
+          } else {
+            // Fallback for old responses without metadata
+            toast({
+              title: 'Feedback Restructured',
+              description: 'The feedback has been improved for clarity.',
+            });
+          }
         }
       } else {
         throw new Error(data.error || 'Enhancement failed');
