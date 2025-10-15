@@ -484,7 +484,7 @@ export function VCFeedbackDetailsModal({
                   >
                     {approving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     <ThumbsUp className="mr-2 h-4 w-4" />
-                    {status === 'approved' && !isEditing ? 'Approved' : 'Approve'}
+                    Approve
                   </Button>
                 </div>
               </div>

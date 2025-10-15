@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Loader2, Eye, Edit, CheckCircle, XCircle, RefreshCw, AlertCircle } from "lucide-react";
+import { Loader2, Eye, Edit, CheckCircle, XCircle, RefreshCw, AlertCircle, Send } from "lucide-react";
 
 interface EmailPreviewModalProps {
   open: boolean;
@@ -259,6 +259,59 @@ export const EmailPreviewModal = ({
     }
   };
 
+  const handleSendEmail = async () => {
+    if (!customEmail?.id) return;
+    
+    setSaving(true);
+    try {
+      // First ensure it's approved
+      if (!customEmail.is_approved) {
+        await handleApprove();
+      }
+
+      // Fetch startup email address
+      const { data: startup, error: startupError } = await supabase
+        .from('startups')
+        .select('contact_email')
+        .eq('id', startupId)
+        .single();
+
+      if (startupError || !startup) {
+        throw new Error('Could not find startup email address');
+      }
+
+      if (!startup.contact_email) {
+        throw new Error('Startup does not have an email address on file');
+      }
+
+      // Call send-individual-result edge function
+      const { data, error } = await supabase.functions.invoke('send-individual-result', {
+        body: {
+          startupId,
+          startupName,
+          recipientEmail: startup.contact_email,
+          communicationType,
+          roundName,
+        },
+      });
+
+      if (error) throw error;
+
+      if (data?.error) {
+        throw new Error(data.error);
+      }
+
+      toast.success(`Email sent successfully to ${startupName}`);
+      onEmailStatusChange?.();
+      onOpenChange(false); // Close modal after sending
+    } catch (error: any) {
+      console.error('Error sending email:', error);
+      toast.error(`Failed to send email: ${error.message || 'Unknown error'}`);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const getEmailStatus = () => {
     if (!customEmail) return 'not-generated';
     if (customEmail.is_approved) return 'approved';
@@ -427,13 +480,21 @@ export const EmailPreviewModal = ({
                 <Edit className="h-4 w-4 mr-2" />
                 Edit Email
               </Button>
-              {status !== 'approved' && (
+              {status !== 'approved' ? (
                 <Button
                   onClick={handleApprove}
                   disabled={saving}
                 >
                   {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <CheckCircle className="h-4 w-4 mr-2" />}
                   Approve
+                </Button>
+              ) : (
+                <Button
+                  onClick={handleSendEmail}
+                  disabled={saving}
+                >
+                  {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}
+                  Send
                 </Button>
               )}
             </>
