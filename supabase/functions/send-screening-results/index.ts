@@ -103,6 +103,47 @@ const handler = async (req: Request): Promise<Response> => {
       console.log(`🧪 SANDBOX MODE: Redirecting email from ${email} to ${TEST_EMAIL}`);
     }
 
+    // ✅ PHASE 1: Create communication record for tracking
+    const communicationType = isSelected ? 'selection' : 'rejection';
+    
+    // Generate content hash using Web Crypto API
+    const contentString = `${email}:${subject}:screening:${communicationType}`;
+    const encoder = new TextEncoder();
+    const data = encoder.encode(contentString);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const contentHash = Array.from(new Uint8Array(hashBuffer))
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('');
+
+    const { data: communication, error: commError } = await supabase
+      .from('email_communications')
+      .insert({
+        template_id: template.id, // ✅ Now logging template ID
+        recipient_email: email,
+        recipient_type: 'startup',
+        recipient_id: startupId,
+        subject,
+        body: htmlContent,
+        content_hash: contentHash,
+        round_name: 'screening',
+        communication_type: communicationType,
+        status: 'pending',
+        metadata: {
+          template_category: isSelected ? 'founder_selection' : 'founder_rejection',
+          startup_name: name,
+          test_mode: TEST_MODE,
+          original_recipient: TEST_MODE ? email : null,
+          sandbox_recipient: TEST_MODE ? actualRecipient : null
+        }
+      })
+      .select()
+      .single();
+
+    if (commError) {
+      console.error('Error creating communication record:', commError);
+      throw new Error('Failed to create communication record');
+    }
+
     // Send email using Resend
     const emailResponse = await resend.emails.send({
       from: fromAddress,
@@ -118,10 +159,40 @@ const handler = async (req: Request): Promise<Response> => {
 
     if (emailResponse.error) {
       console.error('Resend API error:', emailResponse.error);
+      
+      // Update communication record with error
+      await supabase
+        .from('email_communications')
+        .update({
+          status: 'failed',
+          error_message: `Resend API error: ${emailResponse.error.message || 'Unknown error'}`
+        })
+        .eq('id', communication.id);
+      
       throw new Error(`Email send failed: ${emailResponse.error.message}`);
     }
 
     console.log('Email sent successfully:', emailResponse);
+
+    // Update communication record with success status
+    await supabase
+      .from('email_communications')
+      .update({
+        resend_email_id: emailResponse.data?.id,
+        status: 'sent',
+        sent_at: new Date().toISOString()
+      })
+      .eq('id', communication.id);
+
+    // Create delivery event
+    await supabase
+      .from('email_delivery_events')
+      .insert({
+        communication_id: communication.id,
+        event_type: 'sent',
+        resend_event_id: emailResponse.data?.id,
+        raw_payload: { resend_response: emailResponse }
+      });
 
     // Update startup status if selected
     if (isSelected) {
@@ -138,6 +209,7 @@ const handler = async (req: Request): Promise<Response> => {
     return new Response(JSON.stringify({
       success: true,
       emailId: emailResponse.data?.id,
+      communicationId: communication.id,
       message: `Screening results sent to ${name}`
     }), {
       status: 200,

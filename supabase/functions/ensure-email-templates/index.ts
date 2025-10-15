@@ -61,7 +61,7 @@ const templates: TemplateSpec[] = [
     name: 'Founder Selection',
     category: 'founder_selection',
     subject_template: "🎉 Congratulations! You've been selected for the Pitching Round",
-    variables: ['startup_name','feedback_summary','next_steps'],
+    variables: ['startup_name','feedback_summary','next_steps'], // ✅ PHASE 2: Standardized variable names
     lifecycle_stage: 'screening',
     evaluation_phase: 'results',
     display_order: 16,

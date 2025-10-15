@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { Resend } from "https://esm.sh/resend@4.0.0";
+import { validateTemplateVariables, detectUnreplacedPlaceholders, normalizeVariables } from "../_shared/email-types.ts";
 // Using Web Crypto API for hash generation
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
@@ -123,13 +124,44 @@ const handler = async (req: Request): Promise<Response> => {
 
     }
 
+    // Normalize and validate variables
+    let normalizedVariables = requestData.variables || {};
+    if (Object.keys(normalizedVariables).length > 0) {
+      normalizedVariables = normalizeVariables(normalizedVariables);
+    }
+
+    // Validate template variables if template exists
+    if (template && template.variables && template.variables.length > 0) {
+      const validation = validateTemplateVariables(template.variables, normalizedVariables);
+      
+      if (!validation.valid) {
+        console.warn('⚠️ Missing required template variables:', validation.missing);
+        console.warn('Template:', template.id, 'Category:', requestData.templateCategory);
+      }
+      
+      if (validation.warnings.length > 0) {
+        console.warn('⚠️ Template variable warnings:', validation.warnings);
+      }
+    }
+
     // Apply variable substitution
-    if (requestData.variables && Object.keys(requestData.variables).length > 0) {
-      for (const [key, value] of Object.entries(requestData.variables)) {
+    if (Object.keys(normalizedVariables).length > 0) {
+      for (const [key, value] of Object.entries(normalizedVariables)) {
         const placeholder = `{{${key}}}`;
         subject = subject.replace(new RegExp(placeholder, 'g'), String(value));
         body = body.replace(new RegExp(placeholder, 'g'), String(value));
       }
+    }
+
+    // Detect unreplaced placeholders after substitution
+    const unreplacedInSubject = detectUnreplacedPlaceholders(subject);
+    const unreplacedInBody = detectUnreplacedPlaceholders(body);
+    
+    if (unreplacedInSubject.length > 0) {
+      console.warn('⚠️ Unreplaced placeholders in subject:', unreplacedInSubject);
+    }
+    if (unreplacedInBody.length > 0) {
+      console.warn('⚠️ Unreplaced placeholders in body:', unreplacedInBody);
     }
 
     // Generate content hash for duplicate prevention using Web Crypto API
@@ -162,7 +194,7 @@ const handler = async (req: Request): Promise<Response> => {
       }
     }
 
-    // Create email communication record
+    // Create email communication record with enhanced metadata
     const { data: communication, error: commError } = await supabase
       .from('email_communications')
       .insert({
@@ -177,7 +209,11 @@ const handler = async (req: Request): Promise<Response> => {
         communication_type: requestData.communicationType || mapCategoryToCommunicationType(requestData.templateCategory),
         metadata: {
           template_category: requestData.templateCategory,
-          variables: requestData.variables
+          template_name: template?.id ? 'loaded_from_db' : 'fallback',
+          variables_provided: Object.keys(normalizedVariables),
+          unreplaced_subject: unreplacedInSubject,
+          unreplaced_body: unreplacedInBody.slice(0, 10), // Limit to first 10 to avoid huge metadata
+          test_mode: TEST_MODE
         }
       })
       .select()

@@ -334,6 +334,7 @@ const handler = async (req: Request): Promise<Response> => {
     const { data: communication, error: commError } = await supabase
       .from('email_communications')
       .insert({
+        template_id: template?.id, // ✅ PHASE 1: Now logging template ID
         recipient_email: requestData.recipientEmail,
         recipient_type: 'startup',
         recipient_id: requestData.startupId,
@@ -344,6 +345,7 @@ const handler = async (req: Request): Promise<Response> => {
         communication_type: internalType,
         status: 'pending',
         metadata: {
+          template_category: templateCategory,
           startup_name: requestData.startupName,
           feedback_included: !!requestData.feedbackSummary,
           custom_message_included: !!requestData.customMessage,
