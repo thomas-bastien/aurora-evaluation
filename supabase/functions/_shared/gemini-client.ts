@@ -185,20 +185,22 @@ export async function callGemini(request: GeminiRequest): Promise<GeminiResponse
 
     // Check for MAX_TOKENS finish reason - return partial content instead of error
     if (candidate.finishReason === 'MAX_TOKENS') {
-      console.warn('[Gemini] Response truncated due to MAX_TOKENS limit, returning partial content');
+      console.warn('[Gemini] Response truncated due to MAX_TOKENS limit');
       const part = candidate.content?.parts?.[0];
-      if (part?.text) {
+      if (part?.text && part.text.trim().length > 100) {
+        // Only accept partial content if it's substantial
+        console.log('[Gemini] Accepting partial content:', part.text.length, 'chars');
         return {
           success: true,
           content: part.text,
           model
         };
       }
-      // If no text in truncated response, fall through to error
-      console.error('[Gemini] MAX_TOKENS but no text content');
+      // If no text or too short, treat as error
+      console.error('[Gemini] MAX_TOKENS with insufficient content (', part?.text?.length || 0, 'chars)');
       return {
         success: false,
-        error: 'Response too long. Try with shorter feedback.',
+        error: 'Input too long for enhancement. Token limit reached.',
         model
       };
     }

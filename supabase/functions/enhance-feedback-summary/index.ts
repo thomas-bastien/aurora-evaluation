@@ -128,6 +128,11 @@ ${feedbackSummary}`;
 
     console.log(`Enhancing feedback for ${startupName} (length: ${feedbackSummary.length} chars)`);
 
+    // Warn if input is very long - may need longer output limit
+    if (feedbackSummary.length > 3000) {
+      console.warn(`⚠️ Long feedback (${feedbackSummary.length} chars) - using extended token limit`);
+    }
+
     const { callGemini } = await import('../_shared/gemini-client.ts');
 
     // 12-second timeout
@@ -141,7 +146,7 @@ ${feedbackSummary}`;
         systemPrompt,
         userPrompt,
         temperature: 0.7,
-        maxTokens: 1500,
+        maxTokens: 4096,
       });
     } catch (error) {
       console.error('Enhancement timeout or error:', error);
