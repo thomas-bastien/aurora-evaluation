@@ -1,14 +1,7 @@
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 import { addAuroraBrandedHeader, addAuroraBrandedFooter } from './pdfBranding';
 import { fetchStartupReportData } from './individualStartupReportDocx';
-import type { UserOptions } from 'jspdf-autotable';
-
-// Extend jsPDF with autoTable
-interface jsPDFWithAutoTable extends jsPDF {
-  autoTable: (options: UserOptions) => jsPDF;
-  lastAutoTable: { finalY: number };
-}
 
 /**
  * Generate PDF version of startup feedback letter
@@ -27,7 +20,7 @@ export async function generateStartupReportPdf(
     orientation: 'portrait',
     unit: 'pt',
     format: 'a4'
-  }) as jsPDFWithAutoTable;
+  });
 
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
@@ -101,7 +94,7 @@ export async function generateStartupReportPdf(
       ['Additional comments:', vc.additionalComments]
     ];
 
-    doc.autoTable({
+    autoTable(doc, {
       startY: yPos,
       head: [],
       body: tableData,
@@ -126,7 +119,7 @@ export async function generateStartupReportPdf(
       margin: { left: margin, right: margin }
     });
 
-    yPos = doc.lastAutoTable.finalY + 20;
+    yPos = (doc as any).lastAutoTable.finalY + 20;
   });
 
   // Closing section with separator
@@ -210,7 +203,7 @@ export async function generateMultiplePdfReports(
         orientation: 'portrait',
         unit: 'pt',
         format: 'a4'
-      }) as jsPDFWithAutoTable;
+      });
 
       const pageWidth = doc.internal.pageSize.getWidth();
       const pageHeight = doc.internal.pageSize.getHeight();
@@ -276,7 +269,7 @@ export async function generateMultiplePdfReports(
           ['Additional comments:', vc.additionalComments]
         ];
 
-        doc.autoTable({
+        autoTable(doc, {
           startY: yPos,
           head: [],
           body: tableData,
@@ -301,7 +294,7 @@ export async function generateMultiplePdfReports(
           margin: { left: margin, right: margin }
         });
 
-        yPos = doc.lastAutoTable.finalY + 20;
+        yPos = (doc as any).lastAutoTable.finalY + 20;
       });
 
       if (yPos > pageHeight - 150) {
