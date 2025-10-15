@@ -370,85 +370,75 @@ function createClosingParagraphs(): Paragraph[] {
  */
 async function generateDocumentBlob(
   data: StartupReportData,
-  cachedLogos?: { aurora: Uint8Array | null; indrive: Uint8Array | null }
+  cachedLogos?: { header: Uint8Array | null; separator: Uint8Array | null; footer: Uint8Array | null }
 ): Promise<Blob> {
-  // Load logo images (use cached if available)
-  let auroraLogo: Uint8Array | null = cachedLogos?.aurora ?? null;
-  let indriveLogo: Uint8Array | null = cachedLogos?.indrive ?? null;
+  // Load new header images (use cached if available)
+  let headerImage: Uint8Array | null = cachedLogos?.header ?? null;
+  let separatorImage: Uint8Array | null = cachedLogos?.separator ?? null;
+  let footerIcon: Uint8Array | null = cachedLogos?.footer ?? null;
 
   if (!cachedLogos) {
     try {
-      auroraLogo = await fetchImageAsBase64('/images/aurora-tech-award-logo.jpg');
+      headerImage = await fetchImageAsBase64('/images/aurora-header-full.jpg');
     } catch (error) {
-      console.warn('Failed to load Aurora logo:', error);
+      console.warn('Failed to load Aurora header:', error);
     }
 
     try {
-      indriveLogo = await fetchImageAsBase64('/images/indrive-branding.jpg');
+      separatorImage = await fetchImageAsBase64('/images/aurora-separator-bar.jpg');
     } catch (error) {
-      console.warn('Failed to load inDrive branding:', error);
+      console.warn('Failed to load separator:', error);
+    }
+
+    try {
+      footerIcon = await fetchImageAsBase64('/images/aurora-footer-icon.jpg');
+    } catch (error) {
+      console.warn('Failed to load footer icon:', error);
     }
   }
 
   // Build document sections
   const children: (Paragraph | Table)[] = [];
 
-  // Header with logos (if available)
-  if (auroraLogo || indriveLogo) {
-    const headerChildren: (ImageRun | TextRun)[] = [];
-
-    if (auroraLogo) {
-      headerChildren.push(
-        new ImageRun({
-          type: 'jpg',
-          data: auroraLogo,
-          transformation: {
-            width: 180,
-            height: 50
-          }
-        })
-      );
-    }
-
-    if (auroraLogo && indriveLogo) {
-      headerChildren.push(new TextRun({ text: '\t\t\t\t\t\t' }));
-    }
-
-    if (indriveLogo) {
-      headerChildren.push(
-        new ImageRun({
-          type: 'jpg',
-          data: indriveLogo,
-          transformation: {
-            width: 180,
-            height: 50
-          }
-        })
-      );
-    }
-
+  // Add full-width header image
+  if (headerImage) {
     children.push(
       new Paragraph({
-        children: headerChildren,
-        spacing: { after: 200 }
+        children: [
+          new ImageRun({
+            type: 'jpg',
+            data: headerImage,
+            transformation: {
+              width: 600,  // Full page width
+              height: 100   // Maintain aspect ratio from template
+            }
+          })
+        ],
+        alignment: AlignmentType.CENTER,
+        spacing: { after: 0 }  // No gap before separator
       })
     );
   }
 
-  // Blue separator line (thicker to match template)
-  children.push(
-    new Paragraph({
-      border: {
-        bottom: {
-          color: '4169E1',
-          space: 1,
-          style: BorderStyle.SINGLE,
-          size: 24
-        }
-      },
-      spacing: { after: 400 }
-    })
-  );
+  // Add blue separator bar immediately after header
+  if (separatorImage) {
+    children.push(
+      new Paragraph({
+        children: [
+          new ImageRun({
+            type: 'jpg',
+            data: separatorImage,
+            transformation: {
+              width: 600,
+              height: 8  // Thin separator bar
+            }
+          })
+        ],
+        alignment: AlignmentType.CENTER,
+        spacing: { after: 400 }  // Space before body content
+      })
+    );
+  }
 
   // Greeting
   const founderName = data.startup.founder_first_name || 'Founder';
@@ -491,6 +481,26 @@ async function generateDocumentBlob(
 
   // Closing paragraphs
   children.push(...createClosingParagraphs());
+
+  // Add footer icon (Aurora star)
+  if (footerIcon) {
+    children.push(
+      new Paragraph({
+        children: [
+          new ImageRun({
+            type: 'jpg',
+            data: footerIcon,
+            transformation: {
+              width: 24,
+              height: 24
+            }
+          })
+        ],
+        alignment: AlignmentType.RIGHT,
+        spacing: { before: 200, after: 100 }
+      })
+    );
+  }
 
   // Create document
   const doc = new Document({
@@ -541,17 +551,26 @@ export async function generateMultipleReports(
 ): Promise<Array<{ fileName: string; blob: Blob; startupName: string }>> {
   const results: Array<{ fileName: string; blob: Blob; startupName: string }> = [];
   
-  // Load logos once for all reports
-  let cachedLogos = { aurora: null as Uint8Array | null, indrive: null as Uint8Array | null };
+  // Load header images once for all reports
+  let cachedLogos = { 
+    header: null as Uint8Array | null, 
+    separator: null as Uint8Array | null,
+    footer: null as Uint8Array | null
+  };
   try {
-    cachedLogos.aurora = await fetchImageAsBase64('/images/aurora-tech-award-logo.jpg');
+    cachedLogos.header = await fetchImageAsBase64('/images/aurora-header-full.jpg');
   } catch (error) {
-    console.warn('Failed to load Aurora logo:', error);
+    console.warn('Failed to load Aurora header:', error);
   }
   try {
-    cachedLogos.indrive = await fetchImageAsBase64('/images/indrive-branding.jpg');
+    cachedLogos.separator = await fetchImageAsBase64('/images/aurora-separator-bar.jpg');
   } catch (error) {
-    console.warn('Failed to load inDrive branding:', error);
+    console.warn('Failed to load separator:', error);
+  }
+  try {
+    cachedLogos.footer = await fetchImageAsBase64('/images/aurora-footer-icon.jpg');
+  } catch (error) {
+    console.warn('Failed to load footer icon:', error);
   }
   
   for (let i = 0; i < startupIds.length; i++) {

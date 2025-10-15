@@ -1,6 +1,6 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { addAuroraBrandedHeader, addAuroraBrandedFooter } from './pdfBranding';
+import { addAuroraBrandedFooter, imageToBase64 } from './pdfBranding';
 import { fetchStartupReportData } from './individualStartupReportDocx';
 
 /**
@@ -26,10 +26,26 @@ export async function generateStartupReportPdf(
   const pageHeight = doc.internal.pageSize.getHeight();
   const margin = 72; // 1 inch margins
   const contentWidth = pageWidth - (margin * 2);
-  let yPos = 120;
+  let yPos = 20;
 
-  // Add header with branding
-  await addAuroraBrandedHeader(doc, 'VC Feedback Letter', roundName);
+  // Load and add full-width header image
+  try {
+    const headerBase64 = await imageToBase64('/images/aurora-header-full.jpg');
+    doc.addImage(headerBase64, 'JPEG', margin, yPos, contentWidth, 50);
+    yPos += 55;
+  } catch (error) {
+    console.warn('Failed to load header image:', error);
+    yPos = 72;
+  }
+
+  // Add blue separator bar
+  try {
+    const separatorBase64 = await imageToBase64('/images/aurora-separator-bar.jpg');
+    doc.addImage(separatorBase64, 'JPEG', margin, yPos, contentWidth, 4);
+    yPos += 20;
+  } catch (error) {
+    console.warn('Failed to load separator:', error);
+  }
 
   // Greeting
   const founderName = data.startup.founder_first_name || 'Founder';
@@ -164,6 +180,15 @@ export async function generateStartupReportPdf(
   yPos += 16;
   doc.setFont('helvetica', 'bold');
   doc.text('The Aurora Tech Awards Team', margin, yPos);
+  yPos += 20;
+
+  // Add Aurora footer icon
+  try {
+    const footerIconBase64 = await imageToBase64('/images/aurora-footer-icon.jpg');
+    doc.addImage(footerIconBase64, 'JPEG', pageWidth - margin - 15, yPos, 12, 12);
+  } catch (error) {
+    console.warn('Failed to load footer icon:', error);
+  }
 
   // Add footer to all pages
   const totalPages = doc.getNumberOfPages();
@@ -209,9 +234,26 @@ export async function generateMultiplePdfReports(
       const pageHeight = doc.internal.pageSize.getHeight();
       const margin = 72;
       const contentWidth = pageWidth - (margin * 2);
-      let yPos = 120;
+      let yPos = 20;
 
-      await addAuroraBrandedHeader(doc, 'VC Feedback Letter', roundName);
+      // Load and add full-width header image
+      try {
+        const headerBase64 = await imageToBase64('/images/aurora-header-full.jpg');
+        doc.addImage(headerBase64, 'JPEG', margin, yPos, contentWidth, 50);
+        yPos += 55;
+      } catch (error) {
+        console.warn('Failed to load header image:', error);
+        yPos = 72;
+      }
+
+      // Add blue separator bar
+      try {
+        const separatorBase64 = await imageToBase64('/images/aurora-separator-bar.jpg');
+        doc.addImage(separatorBase64, 'JPEG', margin, yPos, contentWidth, 4);
+        yPos += 20;
+      } catch (error) {
+        console.warn('Failed to load separator:', error);
+      }
 
       const founderName = data.startup.founder_first_name || 'Founder';
       doc.setFontSize(11);
@@ -334,6 +376,15 @@ export async function generateMultiplePdfReports(
       yPos += 16;
       doc.setFont('helvetica', 'bold');
       doc.text('The Aurora Tech Awards Team', margin, yPos);
+      yPos += 20;
+
+      // Add Aurora footer icon
+      try {
+        const footerIconBase64 = await imageToBase64('/images/aurora-footer-icon.jpg');
+        doc.addImage(footerIconBase64, 'JPEG', pageWidth - margin - 15, yPos, 12, 12);
+      } catch (error) {
+        console.warn('Failed to load footer icon:', error);
+      }
 
       const totalPages = doc.getNumberOfPages();
       for (let j = 1; j <= totalPages; j++) {
