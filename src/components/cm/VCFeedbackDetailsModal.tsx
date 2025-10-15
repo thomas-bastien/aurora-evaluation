@@ -442,7 +442,7 @@ export function VCFeedbackDetailsModal({
                       disabled={saving || approving || (status === 'approved' && !isEditing) || !editedFeedback}
                     >
                       <Sparkles className="mr-2 h-4 w-4" />
-                      Enhance with AI
+                      Clean
                     </Button>
                   )}
                 </div>
