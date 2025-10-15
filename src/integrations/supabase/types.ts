@@ -94,6 +94,10 @@ export type Database = {
       }
       cm_calendar_invitations: {
         Row: {
+          ai_match_confidence: number | null
+          ai_match_method: string | null
+          ai_match_timestamp: string | null
+          ai_suggested_matches: Json | null
           attendee_emails: Json | null
           calendar_uid: string | null
           created_at: string
@@ -117,6 +121,10 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          ai_match_confidence?: number | null
+          ai_match_method?: string | null
+          ai_match_timestamp?: string | null
+          ai_suggested_matches?: Json | null
           attendee_emails?: Json | null
           calendar_uid?: string | null
           created_at?: string
@@ -140,6 +148,10 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          ai_match_confidence?: number | null
+          ai_match_method?: string | null
+          ai_match_timestamp?: string | null
+          ai_suggested_matches?: Json | null
           attendee_emails?: Json | null
           calendar_uid?: string | null
           created_at?: string

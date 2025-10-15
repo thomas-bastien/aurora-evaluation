@@ -155,3 +155,6 @@ verify_jwt = true
 
 [functions.update-email-tagline]
 verify_jwt = true
+
+[functions.ai-fuzzy-match-attendees]
+verify_jwt = false

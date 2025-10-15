@@ -1,5 +1,18 @@
 // Unified meeting data types and utilities
 
+export interface AIMatchSuggestion {
+  startup_id: string;
+  startup_name: string;
+  startup_confidence: number;
+  startup_reasoning: string;
+  juror_id: string;
+  juror_name: string;
+  juror_confidence: number;
+  juror_reasoning: string;
+  combined_confidence: number;
+  match_method: string;
+}
+
 export interface UnifiedMeeting {
   id: string;
   startup_id: string;
@@ -21,6 +34,10 @@ export interface UnifiedMeeting {
     description?: string;
     location?: string;
   };
+  // AI matching fields
+  ai_suggested_matches?: AIMatchSuggestion[];
+  ai_match_confidence?: number;
+  ai_match_method?: string;
 }
 
 export type MeetingStatus = 

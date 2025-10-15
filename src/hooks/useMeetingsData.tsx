@@ -83,7 +83,11 @@ export const useMeetingsData = () => {
               summary: invitation.event_summary,
               description: invitation.event_description,
               location: invitation.event_location
-            }
+            },
+            // AI matching fields
+            ai_suggested_matches: invitation.ai_suggested_matches as any,
+            ai_match_confidence: invitation.ai_match_confidence as number | undefined,
+            ai_match_method: invitation.ai_match_method as string | undefined
           });
         } else if (invitation.startup_id && invitation.juror_id && invitation.status === 'in_review') {
           // Handle calendar invitations that are in review
@@ -107,7 +111,11 @@ export const useMeetingsData = () => {
               summary: invitation.event_summary,
               description: invitation.event_description,
               location: invitation.event_location
-            }
+            },
+            // AI matching fields
+            ai_suggested_matches: invitation.ai_suggested_matches as any,
+            ai_match_confidence: invitation.ai_match_confidence as number | undefined,
+            ai_match_method: invitation.ai_match_method as string | undefined
           });
         }
       });

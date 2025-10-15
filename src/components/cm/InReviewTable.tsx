@@ -10,7 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { CheckCircle, XCircle, Calendar, MapPin, FileText, Users } from "lucide-react";
+import { CheckCircle, XCircle, Calendar, MapPin, FileText, Users, Sparkles } from "lucide-react";
 import { UnifiedMeeting } from "@/types/meetings";
 import { format } from "date-fns";
 
@@ -58,9 +58,17 @@ export const InReviewTable = ({ meetings, onApprove, onReject }: InReviewTablePr
                 <Users className="h-5 w-5 text-purple-600" />
                 {meeting.startup_name} ↔ {meeting.juror_name}
               </CardTitle>
-              <Badge variant="secondary" className="bg-purple-100 text-purple-800 border-purple-200">
-                Awaiting CM Review
-              </Badge>
+              <div className="flex flex-col gap-1 items-end">
+                <Badge variant="secondary" className="bg-purple-100 text-purple-800 border-purple-200">
+                  Awaiting CM Review
+                </Badge>
+                {meeting.ai_match_confidence && meeting.ai_match_confidence >= 70 && (
+                  <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-xs">
+                    <Sparkles className="w-3 h-3 mr-1" />
+                    Gemini AI: {meeting.ai_match_confidence}%
+                  </Badge>
+                )}
+              </div>
             </div>
           </CardHeader>
           <CardContent className="space-y-4">

@@ -247,6 +247,74 @@ const handler = async (req: Request): Promise<Response> => {
       jurorsFound: jurors?.length || 0
     });
 
+    // If no exact match found, try AI fuzzy matching
+    let aiSuggestions = [];
+    let aiMatchConfidence = null;
+    let aiMatchMethod = null;
+
+    if (!startups?.length || !jurors?.length) {
+      console.log("No exact matches, invoking AI fuzzy matching...");
+      
+      try {
+        // Fetch all startups and jurors for AI comparison
+        const { data: allStartups } = await supabase
+          .from('startups')
+          .select('id, contact_email, name, description, verticals')
+          .limit(100); // Reasonable limit for AI context
+          
+        const { data: allJurors } = await supabase
+          .from('jurors')
+          .select('id, email, name, company')
+          .limit(100);
+        
+        if (allStartups?.length && allJurors?.length) {
+          // Call AI fuzzy matching function
+          const aiResponse = await supabase.functions.invoke('ai-fuzzy-match-attendees', {
+            body: {
+              attendeeEmails,
+              eventSummary: calendarEvent.summary,
+              eventDescription: calendarEvent.description,
+              eventLocation: calendarEvent.location,
+              startups: allStartups.map(s => ({
+                id: s.id,
+                name: s.name,
+                email: s.contact_email,
+                description: s.description,
+                verticals: s.verticals
+              })),
+              jurors: allJurors.map(j => ({
+                id: j.id,
+                name: j.name,
+                email: j.email,
+                company: j.company
+              }))
+            }
+          });
+
+          if (aiResponse.data?.success && aiResponse.data.suggestions?.length > 0) {
+            aiSuggestions = aiResponse.data.suggestions;
+            const topSuggestion = aiSuggestions[0];
+            
+            aiMatchConfidence = topSuggestion.combined_confidence;
+            aiMatchMethod = topSuggestion.match_method;
+            
+            console.log("AI Fuzzy Match suggestions:", {
+              count: aiSuggestions.length,
+              topConfidence: aiMatchConfidence,
+              topMethod: aiMatchMethod,
+              topStartup: topSuggestion.startup_name,
+              topJuror: topSuggestion.juror_name
+            });
+          } else {
+            console.log("AI Fuzzy Match: No confident suggestions");
+          }
+        }
+      } catch (aiError) {
+        console.error("AI Fuzzy Match failed:", aiError);
+        // Continue without AI suggestions - will fall back to manual assignment
+      }
+    }
+
     // Check for existing calendar invitation to detect lifecycle changes
     const { data: existingInvitation } = await supabase
       .from('cm_calendar_invitations')
@@ -479,6 +547,20 @@ const handler = async (req: Request): Promise<Response> => {
       }
     }
 
+    // Determine matching status based on match type
+    if (startups?.length && jurors?.length) {
+      // Exact match found - keep existing logic
+      matchingStatus = matchingStatus; // Already set above
+    } else if (aiMatchConfidence && aiMatchConfidence >= 85) {
+      // High confidence AI match
+      matchingStatus = 'ai_suggested_high';
+      lifecycleStatus = 'in_review';
+    } else if (aiMatchConfidence && aiMatchConfidence >= 70) {
+      // Medium confidence AI match
+      matchingStatus = 'ai_suggested_medium';
+      lifecycleStatus = 'in_review';
+    }
+
     // Create or update CM calendar invitation (always, regardless of matching success)
     const cmInvitationData = {
       calendar_uid: calendarEvent.uid,
@@ -498,7 +580,12 @@ const handler = async (req: Request): Promise<Response> => {
       event_method: eventMethod,
       sequence_number: sequenceNumber,
       previous_event_date: existingInvitation?.event_start_date || null,
-      lifecycle_history: lifecycleHistory
+      lifecycle_history: lifecycleHistory,
+      // AI matching fields
+      ai_suggested_matches: aiSuggestions.length > 0 ? aiSuggestions : null,
+      ai_match_confidence: aiMatchConfidence,
+      ai_match_method: aiMatchMethod,
+      ai_match_timestamp: aiSuggestions.length > 0 ? new Date().toISOString() : null
     };
 
     const cmResult = await supabase
