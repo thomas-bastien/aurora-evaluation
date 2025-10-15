@@ -150,6 +150,14 @@ serve(async (req) => {
           continue;
         }
         
+        // Separator line: ==== (4 or more equals signs)
+        if (trimmed.match(/^={4,}$/)) {
+          flushParagraph();
+          flushBulletList();
+          htmlParts.push('<hr style="margin: 30px 0; border: 0; border-top: 2px solid #e5e7eb;">');
+          continue;
+        }
+        
         // Heading: **Text** or **Text:**
         if (trimmed.startsWith('**') && (trimmed.endsWith('**') || trimmed.endsWith(':**'))) {
           flushParagraph();
