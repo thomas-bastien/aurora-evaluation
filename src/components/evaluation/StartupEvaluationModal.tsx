@@ -535,6 +535,11 @@ export const StartupEvaluationModal = ({
     investment_amount: null
   });
   const [validationErrors, setValidationErrors] = useState<TextFieldValidation>({});
+  
+  // Auto-save state management
+  const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   // Force view mode when impersonating
   const effectiveMode = isImpersonating ? 'view' : mode;
@@ -619,6 +624,129 @@ export const StartupEvaluationModal = ({
   const handleEditEvaluation = () => {
     setIsEditing(true);
   };
+
+  // Auto-save function
+  const autoSaveDraft = async () => {
+    // Don't auto-save if:
+    // - Already saving manually
+    // - In view mode / impersonating
+    // - No user authenticated
+    // - Evaluation is already submitted and not being edited
+    if (saving || !isEditing || !user?.id || (evaluationStatus === 'submitted' && !isEditing)) {
+      return;
+    }
+
+    try {
+      setAutoSaveStatus('saving');
+
+      // Verify session
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        console.warn('Auto-save skipped: No active session');
+        setAutoSaveStatus('idle');
+        return;
+      }
+
+      const overallScoreValue = overallScore;
+
+      // Prepare evaluation data (same as handleSave)
+      const evaluationData: any = {
+        startup_id: startup.id,
+        evaluator_id: user?.id,
+        status: 'draft', // Always save as draft
+        criteria_scores: formData.criteria_scores,
+        strengths: formData.strengths.filter(s => s.trim().length > 0),
+        improvement_areas: formData.improvement_areas || null,
+        pitch_development_aspects: formData.pitch_development_aspects || null,
+        wants_pitch_session: formData.wants_pitch_session,
+        guided_feedback: formData.guided_feedback,
+        overall_notes: formData.overall_notes || null,
+        overall_score: overallScoreValue
+      };
+
+      const evaluationsTable = currentRound === 'screening' 
+        ? 'screening_evaluations' 
+        : 'pitching_evaluations';
+
+      if (startup.evaluation_id) {
+        // Update existing evaluation
+        const { error } = await supabase
+          .from(evaluationsTable)
+          .update(evaluationData)
+          .eq('id', startup.evaluation_id);
+          
+        if (error) throw error;
+      } else {
+        // Create new evaluation and capture the ID
+        const { data, error } = await supabase
+          .from(evaluationsTable)
+          .insert([evaluationData])
+          .select('id')
+          .single();
+          
+        if (error) throw error;
+        
+        // Update startup object with new evaluation_id
+        if (data?.id) {
+          startup.evaluation_id = data.id;
+        }
+      }
+
+      setAutoSaveStatus('saved');
+      setLastSavedAt(new Date());
+      setHasUnsavedChanges(false);
+      
+      // Update evaluation status if it was 'not_started'
+      if (evaluationStatus === 'not_started') {
+        setEvaluationStatus('draft');
+      }
+
+    } catch (error) {
+      console.error('Auto-save failed:', error);
+      setAutoSaveStatus('error');
+    }
+  };
+
+  // Auto-save effect with debounce
+  useEffect(() => {
+    // Don't auto-save if not editing or no changes
+    if (!isEditing || !hasUnsavedChanges) {
+      return;
+    }
+
+    // Debounce: Wait 2 seconds after last change
+    const timeoutId = setTimeout(() => {
+      autoSaveDraft();
+    }, 2000);
+
+    return () => {
+      clearTimeout(timeoutId);
+    };
+  }, [formData, isEditing, hasUnsavedChanges]);
+
+  // Track when user makes changes
+  useEffect(() => {
+    if (isEditing) {
+      setHasUnsavedChanges(true);
+      setAutoSaveStatus('idle');
+    }
+  }, [formData, isEditing]);
+
+  // Warn user about unsaved changes when closing browser/tab
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges && isEditing) {
+        e.preventDefault();
+        e.returnValue = ''; // Required for Chrome
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [hasUnsavedChanges, isEditing]);
   // Memoized score calculation that updates in real-time with form changes
   const overallScore = useMemo(() => {
     // Use appropriate evaluation sections based on current round
@@ -825,6 +953,12 @@ export const StartupEvaluationModal = ({
         } = await supabase.from(evaluationsTable).insert([evaluationData]);
         if (error) throw error;
       }
+      
+      // Reset auto-save states after successful save
+      setHasUnsavedChanges(false);
+      setAutoSaveStatus('saved');
+      setLastSavedAt(new Date());
+      
       toast.success(status === 'submitted' ? 'Evaluation submitted successfully!' : 'Evaluation saved as draft');
       onEvaluationUpdate();
       onClose();
@@ -928,6 +1062,36 @@ export const StartupEvaluationModal = ({
                     <Edit className="w-3 h-3" />
                     Draft
                   </Badge>
+                )}
+                
+                {/* Auto-save status indicator */}
+                {isEditing && (
+                  <div className="flex items-center gap-2 text-xs">
+                    {autoSaveStatus === 'saving' && (
+                      <Badge variant="outline" className="flex items-center gap-1 animate-pulse">
+                        <Save className="w-3 h-3 animate-spin" />
+                        Saving...
+                      </Badge>
+                    )}
+                    {autoSaveStatus === 'saved' && lastSavedAt && (
+                      <Badge variant="outline" className="flex items-center gap-1 text-green-600 border-green-600">
+                        <CheckCircle className="w-3 h-3" />
+                        Saved {lastSavedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </Badge>
+                    )}
+                    {autoSaveStatus === 'error' && (
+                      <Badge variant="destructive" className="flex items-center gap-1">
+                        <AlertTriangle className="w-3 h-3" />
+                        Save failed
+                      </Badge>
+                    )}
+                    {hasUnsavedChanges && autoSaveStatus === 'idle' && (
+                      <Badge variant="outline" className="flex items-center gap-1 text-orange-600 border-orange-600">
+                        <Info className="w-3 h-3" />
+                        Unsaved changes
+                      </Badge>
+                    )}
+                  </div>
                 )}
               </div>
             </div>
