@@ -30,21 +30,12 @@ export async function generateStartupReportPdf(
 
   // Load and add full-width header image
   try {
-    const headerBase64 = await imageToBase64('/images/aurora-header-full.jpg');
-    doc.addImage(headerBase64, 'JPEG', margin, yPos, contentWidth, 50);
-    yPos += 55;
+    const headerBase64 = await imageToBase64('/images/aurora-report-header.png');
+    doc.addImage(headerBase64, 'PNG', margin, yPos, contentWidth, 40);
+    yPos += 50;
   } catch (error) {
     console.warn('Failed to load header image:', error);
     yPos = 72;
-  }
-
-  // Add blue separator bar
-  try {
-    const separatorBase64 = await imageToBase64('/images/aurora-separator-bar.jpg');
-    doc.addImage(separatorBase64, 'JPEG', margin, yPos, contentWidth, 4);
-    yPos += 20;
-  } catch (error) {
-    console.warn('Failed to load separator:', error);
   }
 
   // Greeting
@@ -180,14 +171,15 @@ export async function generateStartupReportPdf(
   yPos += 16;
   doc.setFont('helvetica', 'bold');
   doc.text('The Aurora Tech Awards Team', margin, yPos);
-  yPos += 20;
+  yPos += 30;
 
-  // Add Aurora footer icon
+  // Add Aurora footer bar
   try {
-    const footerIconBase64 = await imageToBase64('/images/aurora-footer-icon.jpg');
-    doc.addImage(footerIconBase64, 'JPEG', pageWidth - margin - 15, yPos, 12, 12);
+    const footerBase64 = await imageToBase64('/images/aurora-report-footer.png');
+    doc.addImage(footerBase64, 'PNG', margin, yPos, contentWidth, 25);
+    yPos += 30;
   } catch (error) {
-    console.warn('Failed to load footer icon:', error);
+    console.warn('Failed to load footer:', error);
   }
 
   // Add footer to all pages
@@ -238,21 +230,12 @@ export async function generateMultiplePdfReports(
 
       // Load and add full-width header image
       try {
-        const headerBase64 = await imageToBase64('/images/aurora-header-full.jpg');
-        doc.addImage(headerBase64, 'JPEG', margin, yPos, contentWidth, 50);
-        yPos += 55;
+        const headerBase64 = await imageToBase64('/images/aurora-report-header.png');
+        doc.addImage(headerBase64, 'PNG', margin, yPos, contentWidth, 40);
+        yPos += 50;
       } catch (error) {
         console.warn('Failed to load header image:', error);
         yPos = 72;
-      }
-
-      // Add blue separator bar
-      try {
-        const separatorBase64 = await imageToBase64('/images/aurora-separator-bar.jpg');
-        doc.addImage(separatorBase64, 'JPEG', margin, yPos, contentWidth, 4);
-        yPos += 20;
-      } catch (error) {
-        console.warn('Failed to load separator:', error);
       }
 
       const founderName = data.startup.founder_first_name || 'Founder';
@@ -376,14 +359,15 @@ export async function generateMultiplePdfReports(
       yPos += 16;
       doc.setFont('helvetica', 'bold');
       doc.text('The Aurora Tech Awards Team', margin, yPos);
-      yPos += 20;
+      yPos += 30;
 
-      // Add Aurora footer icon
+      // Add Aurora footer bar
       try {
-        const footerIconBase64 = await imageToBase64('/images/aurora-footer-icon.jpg');
-        doc.addImage(footerIconBase64, 'JPEG', pageWidth - margin - 15, yPos, 12, 12);
+        const footerBase64 = await imageToBase64('/images/aurora-report-footer.png');
+        doc.addImage(footerBase64, 'PNG', margin, yPos, contentWidth, 25);
+        yPos += 30;
       } catch (error) {
-        console.warn('Failed to load footer icon:', error);
+        console.warn('Failed to load footer:', error);
       }
 
       const totalPages = doc.getNumberOfPages();

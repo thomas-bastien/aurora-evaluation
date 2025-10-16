@@ -370,30 +370,23 @@ function createClosingParagraphs(): Paragraph[] {
  */
 async function generateDocumentBlob(
   data: StartupReportData,
-  cachedLogos?: { header: Uint8Array | null; separator: Uint8Array | null; footer: Uint8Array | null }
+  cachedLogos?: { header: Uint8Array | null; footer: Uint8Array | null }
 ): Promise<Blob> {
   // Load new header images (use cached if available)
   let headerImage: Uint8Array | null = cachedLogos?.header ?? null;
-  let separatorImage: Uint8Array | null = cachedLogos?.separator ?? null;
-  let footerIcon: Uint8Array | null = cachedLogos?.footer ?? null;
+  let footerImage: Uint8Array | null = cachedLogos?.footer ?? null;
 
   if (!cachedLogos) {
     try {
-      headerImage = await fetchImageAsBase64('/images/aurora-header-full.jpg');
+      headerImage = await fetchImageAsBase64('/images/aurora-report-header.png');
     } catch (error) {
       console.warn('Failed to load Aurora header:', error);
     }
 
     try {
-      separatorImage = await fetchImageAsBase64('/images/aurora-separator-bar.jpg');
+      footerImage = await fetchImageAsBase64('/images/aurora-report-footer.png');
     } catch (error) {
-      console.warn('Failed to load separator:', error);
-    }
-
-    try {
-      footerIcon = await fetchImageAsBase64('/images/aurora-footer-icon.jpg');
-    } catch (error) {
-      console.warn('Failed to load footer icon:', error);
+      console.warn('Failed to load footer:', error);
     }
   }
 
@@ -406,36 +399,16 @@ async function generateDocumentBlob(
       new Paragraph({
         children: [
           new ImageRun({
-            type: 'jpg',
+            type: 'png',
             data: headerImage,
             transformation: {
-              width: 600,  // Full page width
-              height: 100   // Maintain aspect ratio from template
-            }
-          })
-        ],
-        alignment: AlignmentType.CENTER,
-        spacing: { after: 0 }  // No gap before separator
-      })
-    );
-  }
-
-  // Add blue separator bar immediately after header
-  if (separatorImage) {
-    children.push(
-      new Paragraph({
-        children: [
-          new ImageRun({
-            type: 'jpg',
-            data: separatorImage,
-            transformation: {
               width: 600,
-              height: 8  // Thin separator bar
+              height: 75
             }
           })
         ],
         alignment: AlignmentType.CENTER,
-        spacing: { after: 400 }  // Space before body content
+        spacing: { after: 400 }
       })
     );
   }
@@ -482,22 +455,22 @@ async function generateDocumentBlob(
   // Closing paragraphs
   children.push(...createClosingParagraphs());
 
-  // Add footer icon (Aurora star)
-  if (footerIcon) {
+  // Add footer bar
+  if (footerImage) {
     children.push(
       new Paragraph({
         children: [
           new ImageRun({
-            type: 'jpg',
-            data: footerIcon,
+            type: 'png',
+            data: footerImage,
             transformation: {
-              width: 24,
-              height: 24
+              width: 600,
+              height: 45
             }
           })
         ],
-        alignment: AlignmentType.RIGHT,
-        spacing: { before: 200, after: 100 }
+        alignment: AlignmentType.CENTER,
+        spacing: { before: 400, after: 100 }
       })
     );
   }
@@ -553,24 +526,18 @@ export async function generateMultipleReports(
   
   // Load header images once for all reports
   let cachedLogos = { 
-    header: null as Uint8Array | null, 
-    separator: null as Uint8Array | null,
+    header: null as Uint8Array | null,
     footer: null as Uint8Array | null
   };
   try {
-    cachedLogos.header = await fetchImageAsBase64('/images/aurora-header-full.jpg');
+    cachedLogos.header = await fetchImageAsBase64('/images/aurora-report-header.png');
   } catch (error) {
     console.warn('Failed to load Aurora header:', error);
   }
   try {
-    cachedLogos.separator = await fetchImageAsBase64('/images/aurora-separator-bar.jpg');
+    cachedLogos.footer = await fetchImageAsBase64('/images/aurora-report-footer.png');
   } catch (error) {
-    console.warn('Failed to load separator:', error);
-  }
-  try {
-    cachedLogos.footer = await fetchImageAsBase64('/images/aurora-footer-icon.jpg');
-  } catch (error) {
-    console.warn('Failed to load footer icon:', error);
+    console.warn('Failed to load footer:', error);
   }
   
   for (let i = 0; i < startupIds.length; i++) {
